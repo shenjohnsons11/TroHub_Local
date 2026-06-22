@@ -1,13 +1,14 @@
 const { MongoClient } = require("mongodb");
 const bcrypt = require("bcryptjs"); // Sử dụng bcryptjs để mã hóa mật khẩu
+require("dotenv").config();
 
 async function seed() {
-  const uri = "mongodb://127.0.0.1:27017";
+  const uri = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/trohub";
   const client = new MongoClient(uri);
 
   try {
     await client.connect();
-    const db = client.db("trohub");
+    const db = client.db("TroHubDB");
     const accounts = db.collection("accounts");
 
     // Xóa hết tài khoản cũ không hợp lệ
