@@ -4,6 +4,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { COLORS } from "../constants/theme";
 import { adminService, AdminInvoice, AdminRoom, AdminContract } from "../services/adminService";
+import InvoiceDetailModal from "../components/InvoiceDetailModal";
+import { Invoice } from "../types/Invoice";
 type Props = {
   params?: any;
   onNavigate?: (tab: any, params?: any) => void;
@@ -15,6 +17,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
   const [contracts, setContracts] = useState<AdminContract[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "unpaid" | "paid">("all");
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
 
   // Modal states for creating invoice
   const [modalVisible, setModalVisible] = useState(params?.action === "create");
@@ -229,6 +232,47 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
     }
   };
 
+  const handleOpenDetail = (item: AdminInvoice) => {
+    const statusVal = item.status as any;
+    const isPaid = statusVal === 2 || statusVal === "PAID" || statusVal === "Đã thanh toán";
+    
+    setSelectedInvoice({
+      id: item._id,
+      month: item.period || "",
+      room: item.room || item.contractId?.roomId?.roomCode || "",
+      amount: `${(item.totalAmount || 0).toLocaleString("vi-VN")}đ`,
+      status: isPaid ? "paid" : "unpaid",
+      statusText: getStatusText(item.status),
+      dueDate: item.dueDate || "",
+      details: {
+        roomFee: `${(item.roomAmount || 0).toLocaleString("vi-VN")}đ`,
+        electric: {
+          amount: `${((item.electricityNew || 0) - (item.electricityOld || 0)) * (item.electricityPrice || 4000)}đ`,
+          oldIndex: item.electricityOld || 0,
+          newIndex: item.electricityNew || 0,
+        },
+        water: {
+          amount: `${((item.waterNew || 0) - (item.waterOld || 0)) * (item.waterPrice || 20000)}đ`,
+          oldIndex: item.waterOld || 0,
+          newIndex: item.waterNew || 0,
+        },
+        parking: "0đ",
+        internet: `${(item.services || 0).toLocaleString("vi-VN")}đ`,
+      }
+    });
+  };
+
+  const handleConfirmPaid = async (invoiceId: string) => {
+    try {
+      await adminService.confirmPaidInvoice(invoiceId);
+      Alert.alert("Thành công", "Đã xác nhận thanh toán!");
+      setSelectedInvoice(null);
+      loadData();
+    } catch (error) {
+      Alert.alert("Lỗi", "Xác nhận thất bại!");
+    }
+  };
+
   const filteredInvoices = invoices.filter(invoice => {
     const status = invoice.status as any;
     const isUnpaid = status === 1 || status === 0 || status === 3 || status === "UNPAID" || status === "DRAFT" || status === "OVERDUE" || status === "Chưa thanh toán" || status === "Nháp" || status === "Quá hạn";
@@ -292,7 +336,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
-          <View style={styles.invoiceCard}>
+          <Pressable style={styles.invoiceCard} onPress={() => handleOpenDetail(item)}>
             <View style={styles.invoiceInfo}>
               <Text style={styles.roomCode}>Phòng {item.room || item.contractId?.roomId?.roomCode || "N/A"}</Text>
               <Text style={styles.invoicePeriod}>Kỳ hóa đơn: {item.period}</Text>
@@ -306,13 +350,13 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
               {((item.status as any) === 1 || (item.status as any) === "UNPAID" || (item.status as any) === "Chưa thanh toán") && (
                 <Pressable
                   style={{ marginTop: 8, backgroundColor: COLORS.orange, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}
-                  onPress={() => handleRemind(item._id)}
+                  onPress={(e) => { e.stopPropagation(); handleRemind(item._id); }}
                 >
                   <Text style={{ color: "#FFF", fontSize: 11, fontWeight: "700" }}>Nhắc nhở</Text>
                 </Pressable>
               )}
             </View>
-          </View>
+          </Pressable>
         )}
       />
 
@@ -437,6 +481,14 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
           </View>
         </View>
       </Modal>
+
+      <InvoiceDetailModal
+        visible={selectedInvoice !== null}
+        invoice={selectedInvoice}
+        role="admin"
+        onClose={() => setSelectedInvoice(null)}
+        onConfirmPaid={handleConfirmPaid}
+      />
     </View>
   );
 }
