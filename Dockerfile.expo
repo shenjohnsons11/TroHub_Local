@@ -1,0 +1,16 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy package.json và cài đặt thư viện
+COPY package*.json ./
+RUN npm install
+
+# Copy toàn bộ source code App
+COPY . .
+
+# Mở port 8081 cho Metro Bundler / Web
+EXPOSE 8081
+
+# Chạy Expo ở chế độ Web và lắng nghe trên tất cả IP
+CMD ["npx", "expo", "start", "--web", "--port", "8081", "--host", "lan"]
