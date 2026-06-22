@@ -8,7 +8,7 @@ async function seed() {
 
   try {
     await client.connect();
-    const db = client.db("TroHubDB");
+    const db = client.db("trohub");
     const accounts = db.collection("accounts");
 
     // Xóa hết tài khoản cũ không hợp lệ
