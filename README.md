@@ -1,58 +1,58 @@
-# 🏡 TroHub - Nền tảng Quản Lý Phòng Trọ Toàn Diện
+# 🏡 TroHub - Hướng Dẫn Chạy Dự Án Bằng Docker (1-Click)
 
-TroHub là giải pháp ứng dụng (Mobile) và quản trị (Web Admin) giúp tối ưu hóa luồng vận hành, quản lý hợp đồng, hóa đơn, điện nước và sự cố phòng trọ dành cho chủ trọ và người thuê.
+Dự án này là hệ thống Quản lý Phòng Trọ (TroHub) bao gồm App dành cho Khách thuê (Tenant) và Web Admin dành cho Chủ trọ. Toàn bộ kiến trúc (Frontend, Backend, Database) đã được gộp chung và đóng gói bằng Docker.
 
-## 🏗 Cấu trúc dự án (Monorepo)
-
-Dự án này sử dụng mô hình chia tách thư mục nhưng tái sử dụng chung bộ UI Core của **Expo / React Native**.
-- **`/` (Root):** Ứng dụng dành cho Người thuê (Tenant App). Cung cấp tính năng xem hóa đơn, báo cáo sự cố, thanh toán, v.v.
-- **`/webadmin`:** Ứng dụng Quản trị Web (Admin Dashboard). Dành cho Chủ trọ quản lý các phòng, tạo hóa đơn tự động lấy chỉ số cũ/mới, quản lý hợp đồng.
-
-## 🚀 Hướng Dẫn Cài Đặt & Chạy Cục Bộ (Localhost)
-
-Yêu cầu hệ thống: NodeJS (v18+) và npm/yarn. Bạn cần phải bật sẵn Backend API (chạy ở cổng 3000) trước khi chạy Frontend.
-
-### 1. Chạy App cho Khách Thuê (Tenant App)
-```bash
-# Tại thư mục gốc
-npm install
-npm run start
-```
-Mở ứng dụng **Expo Go** trên điện thoại và quét mã QR, hoặc chạy phím `i` để mở iOS Simulator, `a` để mở Android Emulator.
-
-### 2. Chạy Web Admin cho Chủ Trọ (Admin Portal)
-```bash
-cd webadmin
-npm install
-npm run web
-```
-Truy cập vào trình duyệt: `http://localhost:8081` (Hoặc cổng mà Expo cung cấp, thường là 8081, 8082, 8084).
-Tài khoản test mặc định:
-- **Admin**: `admin@trohub.vn` / `123456`
-- **Tenant**: `user@trohub.vn` / `123456`
+## 📌 Yêu Cầu Cần Có
+1. **Git** (Để tải mã nguồn)
+2. **Docker Desktop** (Phải bật phần mềm này lên trước khi chạy lệnh)
 
 ---
 
-## 🐳 Hướng Dẫn Test Chung Bằng Docker (Dành cho Đồng Nghiệp)
+## 🚀 Các Bước Chạy Dự Án (Dành Cho Đồng Nghiệp/Tester)
 
-Nếu bạn muốn đóng gói data local để gửi cho đồng nghiệp (Ví dụ QA/Tester) tự cài đặt và test không cần clone DB, bạn có 2 phương án:
+### Bước 1: Clone (Tải) mã nguồn về máy
+Mở Terminal (hoặc Command Prompt) và chạy lệnh:
+```bash
+git clone https://github.com/shenjohnsons11/TroHub_Local.git
+cd TroHub_Local
+```
 
-### Phương Án 1: Chia Sẻ Nhanh Không Cần Docker (Qua Mạng LAN)
-Nếu đồng nghiệp ngồi chung một WiFi, bạn không cần phải gửi file gì cho họ cả:
-1. Bật Backend và Database trên máy tính của bạn.
-2. Đổi địa chỉ API trong file `constants/api.ts` từ `localhost` thành địa chỉ IP máy bạn (ví dụ: `192.168.1.12`).
-3. Chạy `npm run web` cho thư mục `webadmin`. Gửi đường link `http://192.168.1.12:8081` cho họ truy cập.
-
-### Phương Án 2: Đóng Gói Docker Compose (Máy Tách Biệt)
-Sử dụng file `docker-compose.yml` có sẵn ở thư mục gốc:
-1. Copy thư mục source code Backend của bạn vào chung repo này.
-2. Mở file `docker-compose.yml` lên và bỏ comment phần cấu hình Backend & Database.
-3. Xuất file `init.sql` (Database hiện tại của bạn) vào thư mục Backend để Docker tự mồi data khi chạy.
-4. Đồng nghiệp của bạn chỉ cần cài Docker Desktop và chạy lệnh:
+### Bước 2: Khởi chạy bằng Docker
+Chỉ cần chạy **duy nhất 1 lệnh** sau (nhớ thêm sudo nếu dùng Linux/Mac cần quyền admin):
 ```bash
 docker-compose up --build -d
 ```
-5. Đợi 2-3 phút, họ có thể truy cập thẳng vào trang WebAdmin cục bộ trên máy họ với dữ liệu đã được mồi sẵn.
+*Lưu ý: Quá trình này có thể mất 2-3 phút trong lần chạy đầu tiên vì Docker cần tải image Nodejs, MongoDB và tự động cài đặt thư viện.*
+
+### Bước 3: Truy Cập Ứng Dụng
+Sau khi Terminal báo `Started` cho tất cả các container, dự án đã chạy thành công tại các địa chỉ sau:
+
+- 💻 **Web Admin (Dành cho Chủ Trọ):** [http://localhost:8084](http://localhost:8084)
+- 📱 **Tenant App (Dành cho Người Thuê):** [http://localhost:8081](http://localhost:8081)
+- ⚙️ **Backend API:** `http://localhost:3000`
+- 🗄️ **Database (MongoDB):** `localhost:27017`
 
 ---
-*Developed & Maintained by [hmh2k6hehe](https://github.com/hmh2k6hehe)*
+
+## ❓ Câu Hỏi: "Dữ Liệu Lấy Từ Đâu?"
+Bạn không cần import hay setup Database bằng tay!
+Hệ thống được thiết lập cơ chế **Auto-Seeding**. Ngay khi container Backend khởi động, nó sẽ tự động chạy file `backend/seed.js` để kết nối vào MongoDB (nằm trong container) và bơm sẵn toàn bộ dữ liệu mẫu bao gồm:
+- Danh sách phòng trọ
+- Cấu hình phí dịch vụ
+- Dữ liệu hóa đơn, hợp đồng mẫu
+- Các tài khoản đăng nhập (Admin & User)
+
+Do đó, mỗi người clone dự án về đều có một Database cục bộ riêng biệt, đầy đủ data để test mà không sợ ảnh hưởng đến nhau.
+
+---
+
+## 🔐 Tài Khoản Test Mặc Định
+Sử dụng các tài khoản sau để đăng nhập vào Web Admin hoặc App:
+
+- **Tài khoản Admin (Chủ trọ):** 
+  - Email: `admin@trohub.vn`
+  - Mật khẩu: `123456`
+
+- **Tài khoản Khách Thuê (Tenant):**
+  - Email: `user@trohub.vn`
+  - Mật khẩu: `123456`
