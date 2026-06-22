@@ -41,3 +41,8 @@ app-example
 # generated native folders
 /ios
 /android
+
+# Agent and documentation
+GEMINI.md
+README.md
+*.md
