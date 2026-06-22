@@ -149,6 +149,13 @@ export const adminService = {
     return response.success;
   },
 
+  async confirmPaidInvoice(invoiceId: string): Promise<boolean> {
+    const token = await authService.getToken();
+    // Assuming the API allows PUT to update invoice status
+    const response = await apiClient.put<{ success: boolean }>(`/invoices/${invoiceId}`, { status: 2 }, token);
+    return response.success;
+  },
+
   async getContracts(): Promise<AdminContract[]> {
     const token = await authService.getToken();
     const response = await apiClient.get<{ success: boolean; data: AdminContract[] }>("/contracts", token);
