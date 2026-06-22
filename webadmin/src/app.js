@@ -141,7 +141,7 @@ const calculateInvoice = () => {
   const waterUsage = Math.max(0, numberValue(state.calcWaterNew) - numberValue(state.calcWaterOld));
   const electricityAmount = electricityUsage * numberValue(state.calcElectricityPrice);
   const waterAmount = waterUsage * numberValue(state.calcWaterPrice);
-  const subtotal = Math.max(0, numberValue(state.calcRoomAmount) + electricityAmount + waterAmount + numberValue(state.calcServiceAmount) - numberValue(state.calcDiscount));
+  const subtotal = Math.max(0, numberValue(state.calcRoomAmount) + electricityAmount + waterAmount + numberValue(state.calcParking) + numberValue(state.calcInternet) + numberValue(state.calcGarbage) + numberValue(state.calcServiceAmount) - numberValue(state.calcDiscount));
   const daysAfterExport = daysBetween(state.createExportDate, state.createCheckDate);
   const isLate = state.calcPaidStatus !== "Đã thanh toán" && daysAfterExport > 7;
   const penalty = isLate ? Math.round(subtotal * 0.1) : 0;
@@ -778,6 +778,9 @@ const renderInvoiceCreate = () => {
       autoRent = activeContract.rent;
       if (activeContract.services && activeContract.services.length > 0) {
         let otherServiceTotal = 0;
+        let parkingTotal = 0;
+        let internetTotal = 0;
+        let garbageTotal = 0;
         for (const s of activeContract.services) {
           if (!s.serviceId) continue;
           const name = (s.serviceId.name || "").toLowerCase();
@@ -786,10 +789,19 @@ const renderInvoiceCreate = () => {
             autoElectricityPrice = price;
           } else if (name.includes("nước")) {
             autoWaterPrice = price;
+          } else if (name.includes("xe") || name.includes("parking")) {
+            parkingTotal += price;
+          } else if (name.includes("wifi") || name.includes("internet") || name.includes("mạng") || name.includes("mang")) {
+            internetTotal += price;
+          } else if (name.includes("rác") || name.includes("rac") || name.includes("vệ sinh") || name.includes("ve sinh")) {
+            garbageTotal += price;
           } else {
             otherServiceTotal += price;
           }
         }
+        if (parkingTotal > 0) state.calcParking = parkingTotal;
+        if (internetTotal > 0) state.calcInternet = internetTotal;
+        if (garbageTotal > 0) state.calcGarbage = garbageTotal;
         if (otherServiceTotal > 0) {
           autoServiceAmount = otherServiceTotal;
         }
@@ -842,7 +854,10 @@ const renderInvoiceCreate = () => {
           ${calcField("Chỉ số nước cũ", "calcWaterOld")}
           ${calcField("Chỉ số nước mới", "calcWaterNew")}
           ${calcField("Đơn giá nước / m3", "calcWaterPrice")}
-          ${calcField("Phí xe + internet + rác", "calcServiceAmount")}
+          ${calcField("Phí gửi xe", "calcParking")}
+          ${calcField("Phí Internet", "calcInternet")}
+          ${calcField("Phí Rác / Vệ sinh", "calcGarbage")}
+          ${calcField("Dịch vụ khác", "calcServiceAmount")}
           ${calcField("Giảm giá", "calcDiscount")}
 
         </div>
@@ -858,7 +873,10 @@ const renderInvoiceCreate = () => {
           <div><span>Nước tiêu thụ</span>${calcOutput("waterUsage", `${calc.waterUsage} m3`)}</div>
           <div><span>Tiền nước</span>${calcOutput("waterAmount", money(calc.waterAmount))}</div>
           <div><span>Tiền phòng</span>${calcOutput("roomAmount", money(numberValue(state.calcRoomAmount)))}</div>
-          <div><span>Dịch vụ</span>${calcOutput("serviceAmount", money(numberValue(state.calcServiceAmount)))}</div>
+          <div><span>Gửi xe</span>${calcOutput("parkingAmount", money(numberValue(state.calcParking)))}</div>
+          <div><span>Internet</span>${calcOutput("internetAmount", money(numberValue(state.calcInternet)))}</div>
+          <div><span>Rác / Vệ sinh</span>${calcOutput("garbageAmount", money(numberValue(state.calcGarbage)))}</div>
+          <div><span>Dịch vụ khác</span>${calcOutput("serviceAmount", money(numberValue(state.calcServiceAmount)))}</div>
           <div><span>Giảm giá</span>${calcOutput("discount", money(numberValue(state.calcDiscount)))}</div>
           <div><span>Tạm tính trước phạt</span>${calcOutput("subtotal", money(calc.subtotal))}</div>
           <div><span>Số ngày sau khi xuất</span>${calcOutput("daysAfterExport", `${calc.daysAfterExport} ngày`)}</div>
@@ -885,7 +903,10 @@ const renderInvoiceDetail = () => {
     ["Tiền phòng", invoice.roomAmount],
     ["Tiền điện", invoice.electricity],
     ["Tiền nước", invoice.water],
-    ["Phí xe + internet + rác", invoice.services],
+    ["Gửi xe", invoice.parking || 0],
+    ["Internet", invoice.internet || 0],
+    ["Rác / Vệ sinh", invoice.garbage || 0],
+    ["Phí dịch vụ khác", invoice.services || 0],
     ["Giảm giá", invoice.discount],
     ["Phí phạt", invoice.penalty]
   ];
@@ -1246,9 +1267,9 @@ const renderTenantInvoiceTable = () => `
             <td>${money(invoice.roomAmount || 0)}</td>
             <td>${money(invoice.electricity || 0)}</td>
             <td>${money(invoice.water || 0)}</td>
-            <td>${money(invoice.services || 0)}</td>
+            <td>${money((invoice.services || 0) + (invoice.parking || 0) + (invoice.internet || 0) + (invoice.garbage || 0))}</td>
             <td>${money(invoice.penalty || 0)}</td>
-            <td><b>${money(invoice.total || 0)}</b></td>
+            <td><b>${money(invoice.total || invoice.totalAmount || 0)}</b></td>
             <td>${badge(invoice.status)}</td>
             <td>${invoice.status !== "Đã thanh toán" ? `<button data-tenant-pay="${invoice.id}">Thanh toán</button>` : "-"}</td>
           </tr>
@@ -1535,6 +1556,9 @@ const renderInvoiceBulk = () => {
             <th style="padding: 10px;">Khách</th>
             <th style="padding: 10px;">Tiền phòng</th>
             <th style="padding: 10px;">Dịch vụ</th>
+            <th style="padding: 10px;">Gửi xe</th>
+            <th style="padding: 10px;">Internet</th>
+            <th style="padding: 10px;">Rác</th>
             <th style="padding: 10px;">Điện Cũ</th>
             <th style="padding: 10px; width: 120px;">Điện Mới</th>
             <th style="padding: 10px;">Nước Cũ</th>
@@ -1543,29 +1567,38 @@ const renderInvoiceBulk = () => {
           </tr>
         </thead>
         <tbody id="bulk-invoice-tbody">
-          ${list.length === 0 ? '<tr><td colspan="9" style="text-align:center; padding: 20px;">Không có hợp đồng nào đang hiệu lực để lập hóa đơn</td></tr>' : ''}
+          ${list.length === 0 ? '<tr><td colspan="12" style="text-align:center; padding: 20px;">Không có hợp đồng nào đang hiệu lực để lập hóa đơn</td></tr>' : ''}
           ${list.map((item, index) => {
             const electricityAmount = Math.max(0, (item.electricityNew || 0) - item.electricityOld) * item.electricityPrice;
             const waterAmount = Math.max(0, (item.waterNew || 0) - item.waterOld) * item.waterPrice;
-            const total = item.roomAmount + item.services + electricityAmount + waterAmount;
+            const total = item.roomAmount + (item.services || 0) + (item.parking || 0) + (item.internet || 0) + (item.garbage || 0) + electricityAmount + waterAmount;
             return `
             <tr style="border-bottom: 1px solid var(--border);" data-index="${index}">
               <td style="padding: 10px;"><input type="checkbox" class="bulk-select-item" data-index="${index}" ${item.selected ? "checked" : ""}></td>
               <td style="padding: 10px;"><strong>${item.room}</strong></td>
               <td style="padding: 10px;">${item.tenant}</td>
               <td style="padding: 10px;">
-                <input type="number" class="bulk-input" data-field="roomAmount" data-index="${index}" value="${item.roomAmount || 0}" style="width:100px; padding: 6px; border: 1px solid var(--border); border-radius: 4px;">
+                <input type="number" class="bulk-input" data-field="roomAmount" data-index="${index}" value="${item.roomAmount || 0}" style="width:80px; padding: 6px; border: 1px solid var(--border); border-radius: 4px;">
               </td>
               <td style="padding: 10px;">
-                <input type="number" class="bulk-input" data-field="services" data-index="${index}" value="${item.services || 0}" style="width:100px; padding: 6px; border: 1px solid var(--border); border-radius: 4px;">
+                <input type="number" class="bulk-input" data-field="services" data-index="${index}" value="${item.services || 0}" style="width:70px; padding: 6px; border: 1px solid var(--border); border-radius: 4px;">
+              </td>
+              <td style="padding: 10px;">
+                <input type="number" class="bulk-input" data-field="parking" data-index="${index}" value="${item.parking || 0}" style="width:70px; padding: 6px; border: 1px solid var(--border); border-radius: 4px;">
+              </td>
+              <td style="padding: 10px;">
+                <input type="number" class="bulk-input" data-field="internet" data-index="${index}" value="${item.internet || 0}" style="width:70px; padding: 6px; border: 1px solid var(--border); border-radius: 4px;">
+              </td>
+              <td style="padding: 10px;">
+                <input type="number" class="bulk-input" data-field="garbage" data-index="${index}" value="${item.garbage || 0}" style="width:70px; padding: 6px; border: 1px solid var(--border); border-radius: 4px;">
               </td>
               <td style="padding: 10px;">${item.electricityOld}</td>
               <td style="padding: 10px;">
-                ${item.electricityPrice > 0 ? `<input type="number" class="bulk-input" data-field="electricityNew" data-index="${index}" value="${item.electricityNew || ""}" placeholder="Nhập chỉ số..." style="width:100%; padding: 6px; border: 1px solid var(--border); border-radius: 4px;">` : `<span style="color:var(--text-light)">Khoán</span>`}
+                ${item.electricityPrice > 0 ? `<input type="number" class="bulk-input" data-field="electricityNew" data-index="${index}" value="${item.electricityNew || ""}" placeholder="Nhập..." style="width:80px; padding: 6px; border: 1px solid var(--border); border-radius: 4px;">` : `<span style="color:var(--text-light)">Khoán</span>`}
               </td>
               <td style="padding: 10px;">${item.waterOld}</td>
               <td style="padding: 10px;">
-                ${item.waterPrice > 0 ? `<input type="number" class="bulk-input" data-field="waterNew" data-index="${index}" value="${item.waterNew || ""}" placeholder="Nhập chỉ số..." style="width:100%; padding: 6px; border: 1px solid var(--border); border-radius: 4px;">` : `<span style="color:var(--text-light)">Khoán</span>`}
+                ${item.waterPrice > 0 ? `<input type="number" class="bulk-input" data-field="waterNew" data-index="${index}" value="${item.waterNew || ""}" placeholder="Nhập..." style="width:80px; padding: 6px; border: 1px solid var(--border); border-radius: 4px;">` : `<span style="color:var(--text-light)">Khoán</span>`}
               </td>
               <td style="padding: 10px; font-weight: bold; color: var(--primary);" id="bulk-total-${index}">
                 ${money(total)}
@@ -1611,6 +1644,9 @@ const updateInvoiceCalcOutputs = () => {
     waterUsage: `${calc.waterUsage} m3`,
     waterAmount: money(calc.waterAmount),
     roomAmount: money(numberValue(state.calcRoomAmount)),
+    parkingAmount: money(numberValue(state.calcParking)),
+    internetAmount: money(numberValue(state.calcInternet)),
+    garbageAmount: money(numberValue(state.calcGarbage)),
     serviceAmount: money(numberValue(state.calcServiceAmount)),
     discount: money(numberValue(state.calcDiscount)),
     subtotal: money(calc.subtotal),
@@ -1709,6 +1745,9 @@ const saveInvoice = async (status) => {
     waterOld: numberValue(state.calcWaterOld),
     waterNew: numberValue(state.calcWaterNew),
     waterPrice: numberValue(state.calcWaterPrice),
+    parking: numberValue(state.calcParking),
+    internet: numberValue(state.calcInternet),
+    garbage: numberValue(state.calcGarbage),
     services: numberValue(state.calcServiceAmount),
     discount: numberValue(state.calcDiscount),
     penaltyDays: calc.lateDays,
@@ -2094,7 +2133,7 @@ app.addEventListener("input", (event) => {
       const item = state.bulkPreviewData[idx];
       const electricityAmount = Math.max(0, (item.electricityNew || 0) - item.electricityOld) * item.electricityPrice;
       const waterAmount = Math.max(0, (item.waterNew || 0) - item.waterOld) * item.waterPrice;
-      const total = item.roomAmount + item.services + electricityAmount + waterAmount;
+      const total = item.roomAmount + (item.services || 0) + (item.parking || 0) + (item.internet || 0) + (item.garbage || 0) + electricityAmount + waterAmount;
       const totalEl = document.getElementById(`bulk-total-${idx}`);
       if (totalEl) totalEl.innerText = money(total);
     }

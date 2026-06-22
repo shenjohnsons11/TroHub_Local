@@ -74,14 +74,28 @@ export default function InvoiceDetailModal({
               </View>
 
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Phí xe</Text>
+                <Text style={styles.detailLabel}>Gửi xe</Text>
                 <Text style={styles.detailValue}>{invoice.details.parking}</Text>
               </View>
-
+              <View style={styles.divider} />
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Internet</Text>
                 <Text style={styles.detailValue}>{invoice.details.internet}</Text>
               </View>
+              <View style={styles.divider} />
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Rác / Vệ sinh</Text>
+                <Text style={styles.detailValue}>{invoice.details.garbage}</Text>
+              </View>
+              {invoice.details.otherServices !== "0đ" && invoice.details.otherServices !== "0" && (
+                <>
+                  <View style={styles.divider} />
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Khác</Text>
+                    <Text style={styles.detailValue}>{invoice.details.otherServices}</Text>
+                  </View>
+                </>
+              )}
 
               <View style={styles.totalRow}>
                 <Text style={styles.totalLabel}>Tổng cộng</Text>
