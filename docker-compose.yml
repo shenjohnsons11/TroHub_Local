@@ -40,29 +40,25 @@ services:
       dockerfile: Dockerfile
     container_name: trohub_backend
     ports:
-      - "3000:8080" # Map host 3000 to container 8080
+      - "3000:3000" # Mở port 3000 cho Backend
     environment:
-      - DATABASE_URL=postgresql://postgres:password@db:5432/trohub_db
-      - PORT=8080
+      - MONGODB_URI=mongodb://db:27017/trohub
+      - MONGODB_DB=trohub
+      - JWT_SECRET=trohub_secret_key_2026
+      - PORT=3000
     networks:
       - trohub_network
     depends_on:
       - db
 
-  # Database PostgreSQL
+  # Database MongoDB
   db:
-    image: postgres:15
+    image: mongo:6.0
     container_name: trohub_database
     ports:
-      - "5432:5432"
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=trohub_db
+      - "27017:27017"
     volumes:
-      - db_data:/var/lib/postgresql/data
-      - ./backend/database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
-      - ./backend/database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
+      - db_data:/data/db
     networks:
       - trohub_network
 

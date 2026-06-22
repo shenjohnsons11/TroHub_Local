@@ -1,28 +1,42 @@
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 const invoiceSchema = new mongoose.Schema({
-  id: { type: String, required: true, unique: true },
-  code: { type: String, required: true },
-  roomId: { type: String, required: true },
-  landlordUserId: { type: String, default: "U001" },
-  tenantUserId: { type: String, required: true },
-  contractId: { type: String, default: null },
-  fromDate: { type: String, required: true },
-  toDate: { type: String, required: true },
-  dueDate: { type: String, required: true },
-  roomAmount: { type: Number, default: 0 },
-  electricityAmount: { type: Number, default: 0 },
-  waterAmount: { type: Number, default: 0 },
-  serviceAmount: { type: Number, default: 0 },
-  discountAmount: { type: Number, default: 0 },
-  penaltyDays: { type: Number, default: 0 },
-  penaltyRate: { type: Number, default: 0 },
-  penaltyAmount: { type: Number, default: 0 },
-  totalAmount: { type: Number, default: 0 },
-  paymentMethod: { type: String, default: null },
-  transactionCode: { type: String, default: "" },
-  paidAt: { type: String, default: null },
-  status: { type: String, enum: ["UNPAID", "PAID", "CANCELLED"], default: "UNPAID" }
+    contractId: { type: mongoose.Schema.Types.ObjectId, ref: 'Contract', required: false },
+    period: { type: String, required: true }, // ky_hoa_don (VD: '05/2026')
+    dueDate: { type: Date },                  // han_thanh_toan
+    totalAmount: { type: Number },            // tong_tien
+    status: { type: Number, default: 0 },     // 0: Nháp, 1: Chưa TT, 2: Đã TT, 3: Quá hạn
+    remindCount: { type: Number, default: 0 },
+
+    // Các trường phẳng lưu dữ liệu đồng bộ trực tiếp từ Frontend
+    room: { type: String, default: "" },
+    tenant: { type: String, default: "" },
+    fromDate: { type: String, default: "" },
+    toDate: { type: String, default: "" },
+    roomAmount: { type: Number, default: 0 },
+    electricityOld: { type: Number, default: 0 },
+    electricityNew: { type: Number, default: 0 },
+    electricity: { type: Number, default: 0 },
+    waterOld: { type: Number, default: 0 },
+    waterNew: { type: Number, default: 0 },
+    water: { type: Number, default: 0 },
+    services: { type: Number, default: 0 },
+    discount: { type: Number, default: 0 },
+    penaltyDays: { type: Number, default: 0 },
+    penaltyRate: { type: Number, default: 0.1 },
+    penalty: { type: Number, default: 0 },
+    paymentMethod: { type: String, default: "" },
+    transactionCode: { type: String, default: "" },
+    
+    // Gộp bảng CHI_TIET_HOA_DON vào mảng này:
+    details: [{
+        serviceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Service' },
+        oldIndex: { type: Number, default: null }, // chi_so_cu
+        newIndex: { type: Number, default: null }, // chi_so_moi
+        quantity: { type: Number },                // so_luong
+        appliedPrice: { type: Number },            // don_gia_ap_dung
+        amount: { type: Number }                   // thanh_tien
+    }]
 }, { timestamps: true });
 
-export const Invoice = mongoose.model('Invoice', invoiceSchema);
+module.exports = mongoose.model('Invoice', invoiceSchema);

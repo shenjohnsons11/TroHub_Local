@@ -1,18 +1,12 @@
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 const roomSchema = new mongoose.Schema({
-  id: { type: String, required: true, unique: true },
-  houseId: { type: String, default: "H001" },
-  ownerUserId: { type: String, default: "U001" },
-  code: { type: String, required: true },
-  name: { type: String, required: true },
-  areaM2: { type: Number, default: 0 },
-  rentPrice: { type: Number, default: 0 },
-  depositAmount: { type: Number, default: 0 },
-  maxOccupants: { type: Number, default: 1 },
-  currentOccupants: { type: Number, default: 0 },
-  status: { type: String, enum: ["AVAILABLE", "OCCUPIED", "MAINTENANCE"], default: "AVAILABLE" },
-  note: { type: String, default: "" }
+    roomCode: { type: String, required: true, unique: true }, // so_phong (Mã phòng)
+    area: { type: String },                                   // dien_tich
+    defaultRentPrice: { type: Number, required: true },       // gia_thue_mac_dinh
+    defaultDeposit: { type: Number, required: true },         // gia_coc_mac_dinh
+    status: { type: Number, enum: [0, 1, 2], default: 0 },    // 0: Trống, 1: Đang thuê, 2: Đang sửa
+    landlordId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account', required: true } // ma_chu_tro
 }, { timestamps: true });
 
-export const Room = mongoose.model('Room', roomSchema);
+module.exports = mongoose.model('Room', roomSchema);
