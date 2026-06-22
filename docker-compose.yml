@@ -1,15 +1,14 @@
 version: '3.8'
 
 services:
-  # Cấu hình cho Frontend (TroHub React Native Web)
-  frontend:
+  # App Mobile (Dành cho Khách Thuê)
+  tenant-app:
     build: 
       context: .
       dockerfile: Dockerfile.expo
-    container_name: trohub_frontend
+    container_name: trohub_tenant_app
     ports:
       - "8081:8081"
-      - "8082:8082"
     environment:
       - NODE_ENV=development
     volumes:
@@ -18,37 +17,54 @@ services:
     networks:
       - trohub_network
 
-  # [CHÚ Ý] Cấu hình cho Backend & Database (Cần có mã nguồn Backend)
-  # Nếu bạn có source code Backend, hãy uncomment và sửa đường dẫn
-  # backend:
-  #   build:
-  #     context: ../TroHub-Backend # Đường dẫn tới source backend
-  #     dockerfile: Dockerfile
-  #   container_name: trohub_backend
-  #   ports:
-  #     - "3000:3000"
-  #   environment:
-  #     - DB_HOST=db
-  #     - DB_USER=root
-  #     - DB_PASSWORD=password
-  #   networks:
-  #     - trohub_network
-  #   depends_on:
-  #     - db
+  # Web Admin (Dành cho Chủ Trọ)
+  webadmin:
+    build: 
+      context: ./webadmin
+      dockerfile: Dockerfile.expo
+    container_name: trohub_webadmin
+    ports:
+      - "8084:8084" # Export port 8084 cho web admin
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./webadmin:/app
+      - /app/node_modules
+    networks:
+      - trohub_network
 
-  # db:
-  #   image: mysql:8.0 # Hoặc postgres / mongo tùy dự án
-  #   container_name: trohub_database
-  #   ports:
-  #     - "3306:3306"
-  #   environment:
-  #     - MYSQL_ROOT_PASSWORD=password
-  #     - MYSQL_DATABASE=trohub
-  #   volumes:
-  #     - db_data:/var/lib/mysql
-  #     - ./init.sql:/docker-entrypoint-initdb.d/init.sql # File tự động tạo data mẫu (data local)
-  #   networks:
-  #     - trohub_network
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: trohub_backend
+    ports:
+      - "3000:8080" # Map host 3000 to container 8080
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/trohub_db
+      - PORT=8080
+    networks:
+      - trohub_network
+    depends_on:
+      - db
+
+  # Database PostgreSQL
+  db:
+    image: postgres:15
+    container_name: trohub_database
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=trohub_db
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./backend/database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./backend/database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
+    networks:
+      - trohub_network
 
 networks:
   trohub_network:

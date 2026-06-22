@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Giới thiệu Logic Hệ Thống TroHub</title>
+  <style>
+    :root {
+      --primary: #4F46E5;
+      --primary-light: #E0E7FF;
+      --text: #1F2937;
+      --bg: #F9FAFB;
+      --card-bg: #FFFFFF;
+      --border: #E5E7EB;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background-color: var(--primary);
+      color: white;
+      padding: 2rem;
+      text-align: center;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    .card {
+      background: var(--card-bg);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      border: 1px solid var(--border);
+    }
+    h2 {
+      color: var(--primary);
+      border-bottom: 2px solid var(--primary-light);
+      padding-bottom: 0.5rem;
+      margin-top: 0;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+    .flow-step {
+      display: flex;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .step-number {
+      background-color: var(--primary);
+      color: white;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      margin-right: 1rem;
+      flex-shrink: 0;
+    }
+    .tag {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      background: var(--primary-light);
+      color: var(--primary);
+      margin-right: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Hệ Sinh Thái TroHub</h1>
+    <p>Nền tảng quản lý phòng trọ toàn diện</p>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      <h2>1. Tổng quan Kiến trúc (Monolithic)</h2>
+      <p>Hệ thống hiện tại hoạt động theo mô hình Client-Server tập trung:</p>
+      <ul>
+        <li><span class="tag">Database</span> <b>PostgreSQL:</b> Lưu trữ bền vững dữ liệu (Phòng, Hợp đồng, Hóa đơn).</li>
+        <li><span class="tag">Backend</span> <b>Node.js (API Server):</b> Đóng vai trò cầu nối, chạy ở cổng 8080. Nhận yêu cầu từ người dùng, đọc/ghi dữ liệu vào PostgreSQL.</li>
+        <li><span class="tag">Frontend</span> <b>HTML/CSS/JS (SPA):</b> Giao diện hiển thị trên trình duyệt. Tự động gọi API (fetch) để cập nhật dữ liệu mà không cần tải lại trang.</li>
+      </ul>
+    </div>
+
+    <h2>2. Phân quyền Người dùng (Roles)</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>👑 Chủ trọ (Admin)</h3>
+        <p>Quản lý toàn bộ vòng đời của khu trọ:</p>
+        <ul>
+          <li>Tạo phòng, cập nhật trạng thái phòng.</li>
+          <li>Soạn thảo hợp đồng, gửi cho khách thuê.</li>
+          <li>Chốt số điện nước định kỳ và xuất hóa đơn.</li>
+          <li>Tiếp nhận, phân loại ưu tiên cho các yêu cầu sửa chữa.</li>
+          <li>Xem thống kê doanh thu.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>🧑 Khách thuê (Tenant)</h3>
+        <p>Tương tác qua giao diện Mobile App thu nhỏ:</p>
+        <ul>
+          <li>Xem thông tin phòng và hợp đồng đang thuê.</li>
+          <li>Nhận hóa đơn hàng tháng, xem chi tiết điện nước.</li>
+          <li>Báo cáo sự cố (gửi ảnh, mô tả) trực tiếp cho chủ trọ.</li>
+          <li>Thanh toán trực tuyến (Mô phỏng QR/Ví điện tử).</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>3. Luồng Nghiệp vụ cốt lõi (Business Logic)</h2>
+      
+      <h3>A. Luồng Thuê Phòng & Hợp Đồng</h3>
+      <div class="flow-step">
+        <div class="step-number">1</div>
+        <div>Admin tạo <b>Phòng</b> trống trên hệ thống.</div>
+      </div>
+      <div class="flow-step">
+        <div class="step-number">2</div>
+        <div>Admin thêm thông tin Khách thuê và tạo <b>Hợp đồng nháp</b>, nhập các chỉ số điện/nước ban đầu.</div>
+      </div>
+      <div class="flow-step">
+        <div class="step-number">3</div>
+        <div>Khách thuê xem hợp đồng trên App và bấm <b>Đồng ý</b>.</div>
+      </div>
+      <div class="flow-step">
+        <div class="step-number">4</div>
+        <div>Admin bấm <b>Xác nhận</b>. Trạng thái phòng chuyển sang <i>Đang thuê</i>.</div>
+      </div>
+
+      <h3 style="margin-top: 2rem;">B. Luồng Điện Nước & Hóa Đơn</h3>
+      <div class="flow-step">
+        <div class="step-number">1</div>
+        <div>Cuối tháng, Admin vào màn hình phòng, nhập <b>Chỉ số điện/nước mới</b>.</div>
+      </div>
+      <div class="flow-step">
+        <div class="step-number">2</div>
+        <div>Hệ thống tự động trừ đi chỉ số cũ, nhân với đơn giá trong hợp đồng để ra số tiền + tiền phòng.</div>
+      </div>
+      <div class="flow-step">
+        <div class="step-number">3</div>
+        <div>Admin bấm <b>Xuất hóa đơn</b>. API lưu hóa đơn vào Database với trạng thái <i>Chưa thanh toán</i>.</div>
+      </div>
+      <div class="flow-step">
+        <div class="step-number">4</div>
+        <div>Khách thuê thấy hóa đơn trên App, tiến hành <b>Thanh toán</b>. Trạng thái chuyển thành <i>Đã thanh toán</i>. Nếu quá hạn 7 ngày, hệ thống tự động cộng thêm phí phạt.</div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
