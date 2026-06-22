@@ -88,8 +88,19 @@ const sumDetailByKeyword = (details: ApiInvoiceDetail[], keywords: string[]) => 
 const mapApiInvoiceToInvoice = (apiInvoice: ApiInvoice): Invoice => {
   const details = apiInvoice.details || [];
 
-  const electricAmount = sumDetailByKeyword(details, ["điện", "dien"]);
-  const waterAmount = sumDetailByKeyword(details, ["nước", "nuoc"]);
+  const getDetailInfo = (keywords: string[]) => {
+    const detail = details.find(d => keywords.some(k => getServiceName(d).includes(k)));
+    if (!detail) return { amount: 0, oldIndex: null, newIndex: null };
+    return {
+      amount: detail.amount || 0,
+      oldIndex: detail.oldIndex ?? null,
+      newIndex: detail.newIndex ?? null,
+    };
+  };
+
+  const electricInfo = getDetailInfo(["điện", "dien"]);
+  const waterInfo = getDetailInfo(["nước", "nuoc"]);
+
   const parkingAmount = sumDetailByKeyword(details, ["xe", "parking"]);
   const internetAmount = sumDetailByKeyword(details, [
     "internet",
@@ -99,7 +110,7 @@ const mapApiInvoiceToInvoice = (apiInvoice: ApiInvoice): Invoice => {
   ]);
 
   const serviceTotal =
-    electricAmount + waterAmount + parkingAmount + internetAmount;
+    electricInfo.amount + waterInfo.amount + parkingAmount + internetAmount;
 
   const totalAmount = apiInvoice.totalAmount || 0;
   const roomFee = Math.max(totalAmount - serviceTotal, 0);
@@ -120,8 +131,16 @@ const mapApiInvoiceToInvoice = (apiInvoice: ApiInvoice): Invoice => {
     dueDate: formatDate(apiInvoice.dueDate),
     details: {
       roomFee: formatMoney(roomFee),
-      electric: formatMoney(electricAmount),
-      water: formatMoney(waterAmount),
+      electric: {
+        amount: formatMoney(electricInfo.amount),
+        oldIndex: electricInfo.oldIndex,
+        newIndex: electricInfo.newIndex,
+      },
+      water: {
+        amount: formatMoney(waterInfo.amount),
+        oldIndex: waterInfo.oldIndex,
+        newIndex: waterInfo.newIndex,
+      },
       parking: formatMoney(parkingAmount),
       internet: formatMoney(internetAmount),
     },
