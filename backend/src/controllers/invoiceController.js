@@ -210,6 +210,7 @@ exports.getAllInvoices = async (req, res) => {
                     { path: 'tenantId', select: 'fullName' }
                 ]
             })
+            .populate('details.serviceId', 'name type')
             .sort({ createdAt: -1 });
 
         res.status(200).json({ success: true, data: invoices });

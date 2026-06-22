@@ -37,6 +37,16 @@ type ApiInvoice = {
   totalAmount?: number;
   status: number;
   details?: ApiInvoiceDetail[];
+  
+  room?: string;
+  roomAmount?: number;
+  electricityOld?: number;
+  electricityNew?: number;
+  electricityPrice?: number;
+  waterOld?: number;
+  waterNew?: number;
+  waterPrice?: number;
+  services?: number;
 };
 
 type InvoiceListResponse = {
@@ -86,11 +96,11 @@ const sumDetailByKeyword = (details: ApiInvoiceDetail[], keywords: string[]) => 
 };
 
 const mapApiInvoiceToInvoice = (apiInvoice: ApiInvoice): Invoice => {
-  const details = apiInvoice.details || [];
-
+  const detailsArr = apiInvoice.details || [];
+  
   const getDetailInfo = (keywords: string[]) => {
-    const detail = details.find(d => keywords.some(k => getServiceName(d).includes(k)));
-    if (!detail) return { amount: 0, oldIndex: null, newIndex: null };
+    const detail = detailsArr.find(d => keywords.some(k => getServiceName(d).includes(k)));
+    if (!detail) return null;
     return {
       amount: detail.amount || 0,
       oldIndex: detail.oldIndex ?? null,
@@ -98,22 +108,28 @@ const mapApiInvoiceToInvoice = (apiInvoice: ApiInvoice): Invoice => {
     };
   };
 
-  const electricInfo = getDetailInfo(["điện", "dien"]);
-  const waterInfo = getDetailInfo(["nước", "nuoc"]);
-
-  const parkingAmount = sumDetailByKeyword(details, ["xe", "parking"]);
-  const internetAmount = sumDetailByKeyword(details, [
-    "internet",
-    "wifi",
-    "mạng",
-    "mang",
-  ]);
-
-  const serviceTotal =
-    electricInfo.amount + waterInfo.amount + parkingAmount + internetAmount;
+  const oldElec = getDetailInfo(["điện", "dien"]);
+  const oldWater = getDetailInfo(["nước", "nuoc"]);
+  const oldParking = sumDetailByKeyword(detailsArr, ["xe", "parking"]);
+  const oldInternet = sumDetailByKeyword(detailsArr, ["internet", "wifi", "mạng", "mang"]);
+  const oldServicesTotal = (oldElec?.amount || 0) + (oldWater?.amount || 0) + oldParking + oldInternet;
 
   const totalAmount = apiInvoice.totalAmount || 0;
-  const roomFee = Math.max(totalAmount - serviceTotal, 0);
+
+  // Nếu có details thì lấy từ details, nếu không thì lấy trường phẳng
+  const elecAmount = oldElec ? oldElec.amount : (apiInvoice.electricity || 0);
+  const elecOldIndex = oldElec ? oldElec.oldIndex : (apiInvoice.electricityOld ?? null);
+  const elecNewIndex = oldElec ? oldElec.newIndex : (apiInvoice.electricityNew ?? null);
+
+  const waterAmount = oldWater ? oldWater.amount : (apiInvoice.water || 0);
+  const waterOldIndex = oldWater ? oldWater.oldIndex : (apiInvoice.waterOld ?? null);
+  const waterNewIndex = oldWater ? oldWater.newIndex : (apiInvoice.waterNew ?? null);
+
+  const servicesAmount = detailsArr.length > 0 ? (oldParking + oldInternet) : (apiInvoice.services || 0);
+  
+  const roomFee = detailsArr.length > 0 
+    ? Math.max(totalAmount - oldServicesTotal, 0)
+    : (apiInvoice.roomAmount || Math.max(totalAmount - elecAmount - waterAmount - servicesAmount, 0));
 
   const isPaid = apiInvoice.status === 2;
   let statusText = "Chưa thanh toán";
@@ -124,7 +140,7 @@ const mapApiInvoiceToInvoice = (apiInvoice: ApiInvoice): Invoice => {
   return {
     id: apiInvoice._id,
     month: apiInvoice.period,
-    room: apiInvoice.contractId?.roomId?.roomCode || "A101",
+    room: apiInvoice.room || apiInvoice.contractId?.roomId?.roomCode || "A101",
     amount: formatMoney(totalAmount),
     status: isPaid ? "paid" : "unpaid",
     statusText,
@@ -132,17 +148,17 @@ const mapApiInvoiceToInvoice = (apiInvoice: ApiInvoice): Invoice => {
     details: {
       roomFee: formatMoney(roomFee),
       electric: {
-        amount: formatMoney(electricInfo.amount),
-        oldIndex: electricInfo.oldIndex,
-        newIndex: electricInfo.newIndex,
+        amount: formatMoney(elecAmount),
+        oldIndex: elecOldIndex,
+        newIndex: elecNewIndex,
       },
       water: {
-        amount: formatMoney(waterInfo.amount),
-        oldIndex: waterInfo.oldIndex,
-        newIndex: waterInfo.newIndex,
+        amount: formatMoney(waterAmount),
+        oldIndex: waterOldIndex,
+        newIndex: waterNewIndex,
       },
-      parking: formatMoney(parkingAmount),
-      internet: formatMoney(internetAmount),
+      parking: formatMoney(detailsArr.length > 0 ? oldParking : 0),
+      internet: formatMoney(servicesAmount),
     },
   };
 };
