@@ -46,13 +46,27 @@ export default function InvoiceDetailModal({
               </View>
 
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Tiền điện</Text>
-                <Text style={styles.detailValue}>{invoice.details.electric}</Text>
+                <View>
+                  <Text style={styles.detailLabel}>Tiền điện</Text>
+                  {invoice.details.electric.newIndex !== null && invoice.details.electric.oldIndex !== null && (
+                    <Text style={styles.detailSubLabel}>
+                      (Số mới: {invoice.details.electric.newIndex} - Số cũ: {invoice.details.electric.oldIndex})
+                    </Text>
+                  )}
+                </View>
+                <Text style={styles.detailValue}>{invoice.details.electric.amount}</Text>
               </View>
 
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Tiền nước</Text>
-                <Text style={styles.detailValue}>{invoice.details.water}</Text>
+                <View>
+                  <Text style={styles.detailLabel}>Tiền nước</Text>
+                  {invoice.details.water.newIndex !== null && invoice.details.water.oldIndex !== null && (
+                    <Text style={styles.detailSubLabel}>
+                      (Số mới: {invoice.details.water.newIndex} - Số cũ: {invoice.details.water.oldIndex})
+                    </Text>
+                  )}
+                </View>
+                <Text style={styles.detailValue}>{invoice.details.water.amount}</Text>
               </View>
 
               <View style={styles.detailRow}>
@@ -147,6 +161,12 @@ const styles = StyleSheet.create({
   detailLabel: {
     color: COLORS.muted,
     fontSize: 14,
+  },
+  detailSubLabel: {
+    color: COLORS.muted,
+    fontSize: 11,
+    marginTop: 2,
+    fontStyle: 'italic',
   },
   detailValue: {
     color: COLORS.text,

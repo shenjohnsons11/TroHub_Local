@@ -10,8 +10,16 @@ export type Invoice = {
   dueDate: string;
   details: {
     roomFee: string;
-    electric: string;
-    water: string;
+    electric: {
+      amount: string;
+      oldIndex: number | null;
+      newIndex: number | null;
+    };
+    water: {
+      amount: string;
+      oldIndex: number | null;
+      newIndex: number | null;
+    };
     parking: string;
     internet: string;
   };
