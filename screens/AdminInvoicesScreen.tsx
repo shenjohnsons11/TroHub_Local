@@ -236,6 +236,69 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
     const statusVal = item.status as any;
     const isPaid = statusVal === 2 || statusVal === "PAID" || statusVal === "Đã thanh toán";
     
+    const detailsArr = item.details || [];
+    
+    let elecOld = item.electricityOld ?? null;
+    let elecNew = item.electricityNew ?? null;
+    let elecAmount = item.electricity || 0;
+    
+    let waterOld = item.waterOld ?? null;
+    let waterNew = item.waterNew ?? null;
+    let waterAmount = item.water || 0;
+    
+    let parkingAmount = item.parking || 0;
+    let internetAmount = item.internet || 0;
+    let garbageAmount = item.garbage || 0;
+    let otherServicesAmount = item.services || 0;
+    
+    let roomFee = item.roomAmount || 0;
+
+    if (detailsArr.length > 0) {
+      const elecDetail = detailsArr.find(d => {
+        const name = (d.serviceId?.name || "").toLowerCase();
+        return name.includes("điện") || name.includes("dien");
+      });
+      if (elecDetail) {
+        elecOld = elecDetail.oldIndex ?? null;
+        elecNew = elecDetail.newIndex ?? null;
+        elecAmount = elecDetail.amount || 0;
+      }
+      
+      const waterDetail = detailsArr.find(d => {
+        const name = (d.serviceId?.name || "").toLowerCase();
+        return name.includes("nước") || name.includes("nuoc");
+      });
+      if (waterDetail) {
+        waterOld = waterDetail.oldIndex ?? null;
+        waterNew = waterDetail.newIndex ?? null;
+        waterAmount = waterDetail.amount || 0;
+      }
+
+      parkingAmount = detailsArr.filter(d => {
+        const name = (d.serviceId?.name || "").toLowerCase();
+        return name.includes("xe") || name.includes("parking");
+      }).reduce((sum, d) => sum + (d.amount || 0), 0);
+
+      internetAmount = detailsArr.filter(d => {
+        const name = (d.serviceId?.name || "").toLowerCase();
+        return name.includes("wifi") || name.includes("internet") || name.includes("mạng") || name.includes("mang");
+      }).reduce((sum, d) => sum + (d.amount || 0), 0);
+      
+      garbageAmount = detailsArr.filter(d => {
+        const name = (d.serviceId?.name || "").toLowerCase();
+        return name.includes("rác") || name.includes("rac") || name.includes("vệ sinh") || name.includes("ve sinh");
+      }).reduce((sum, d) => sum + (d.amount || 0), 0);
+
+      otherServicesAmount = 0;
+      
+      const totalServices = elecAmount + waterAmount + parkingAmount + internetAmount + garbageAmount;
+      roomFee = Math.max((item.totalAmount || 0) - totalServices, 0);
+    } else {
+      if (roomFee === 0) {
+        roomFee = Math.max((item.totalAmount || 0) - elecAmount - waterAmount - parkingAmount - internetAmount - garbageAmount - otherServicesAmount, 0);
+      }
+    }
+
     setSelectedInvoice({
       id: item._id,
       month: item.period || "",
@@ -245,19 +308,21 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
       statusText: getStatusText(item.status),
       dueDate: item.dueDate || "",
       details: {
-        roomFee: `${(item.roomAmount || 0).toLocaleString("vi-VN")}đ`,
+        roomFee: `${roomFee.toLocaleString("vi-VN")}đ`,
         electric: {
-          amount: `${((item.electricityNew || 0) - (item.electricityOld || 0)) * (item.electricityPrice || 4000)}đ`,
-          oldIndex: item.electricityOld || 0,
-          newIndex: item.electricityNew || 0,
+          amount: `${elecAmount.toLocaleString("vi-VN")}đ`,
+          oldIndex: elecOld,
+          newIndex: elecNew,
         },
         water: {
-          amount: `${((item.waterNew || 0) - (item.waterOld || 0)) * (item.waterPrice || 20000)}đ`,
-          oldIndex: item.waterOld || 0,
-          newIndex: item.waterNew || 0,
+          amount: `${waterAmount.toLocaleString("vi-VN")}đ`,
+          oldIndex: waterOld,
+          newIndex: waterNew,
         },
-        parking: "0đ",
-        internet: `${(item.services || 0).toLocaleString("vi-VN")}đ`,
+        parking: `${parkingAmount.toLocaleString("vi-VN")}đ`,
+        internet: `${internetAmount.toLocaleString("vi-VN")}đ`,
+        garbage: `${garbageAmount.toLocaleString("vi-VN")}đ`,
+        otherServices: `${otherServicesAmount.toLocaleString("vi-VN")}đ`
       }
     });
   };

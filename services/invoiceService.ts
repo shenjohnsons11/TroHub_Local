@@ -47,6 +47,9 @@ type ApiInvoice = {
   waterNew?: number;
   waterPrice?: number;
   services?: number;
+  parking?: number;
+  internet?: number;
+  garbage?: number;
 };
 
 type InvoiceListResponse = {
@@ -112,7 +115,8 @@ const mapApiInvoiceToInvoice = (apiInvoice: ApiInvoice): Invoice => {
   const oldWater = getDetailInfo(["nước", "nuoc"]);
   const oldParking = sumDetailByKeyword(detailsArr, ["xe", "parking"]);
   const oldInternet = sumDetailByKeyword(detailsArr, ["internet", "wifi", "mạng", "mang"]);
-  const oldServicesTotal = (oldElec?.amount || 0) + (oldWater?.amount || 0) + oldParking + oldInternet;
+  const oldGarbage = sumDetailByKeyword(detailsArr, ["rác", "rac", "vệ sinh", "ve sinh"]);
+  const oldServicesTotal = (oldElec?.amount || 0) + (oldWater?.amount || 0) + oldParking + oldInternet + oldGarbage;
 
   const totalAmount = apiInvoice.totalAmount || 0;
 
@@ -125,11 +129,14 @@ const mapApiInvoiceToInvoice = (apiInvoice: ApiInvoice): Invoice => {
   const waterOldIndex = oldWater ? oldWater.oldIndex : (apiInvoice.waterOld ?? null);
   const waterNewIndex = oldWater ? oldWater.newIndex : (apiInvoice.waterNew ?? null);
 
-  const servicesAmount = detailsArr.length > 0 ? (oldParking + oldInternet) : (apiInvoice.services || 0);
+  const pAmount = detailsArr.length > 0 ? oldParking : (apiInvoice.parking || 0);
+  const iAmount = detailsArr.length > 0 ? oldInternet : (apiInvoice.internet || 0);
+  const gAmount = detailsArr.length > 0 ? oldGarbage : (apiInvoice.garbage || 0);
+  const servicesAmount = detailsArr.length > 0 ? 0 : (apiInvoice.services || 0);
   
   const roomFee = detailsArr.length > 0 
     ? Math.max(totalAmount - oldServicesTotal, 0)
-    : (apiInvoice.roomAmount || Math.max(totalAmount - elecAmount - waterAmount - servicesAmount, 0));
+    : (apiInvoice.roomAmount || Math.max(totalAmount - elecAmount - waterAmount - pAmount - iAmount - gAmount - servicesAmount, 0));
 
   const isPaid = apiInvoice.status === 2;
   let statusText = "Chưa thanh toán";
@@ -157,8 +164,10 @@ const mapApiInvoiceToInvoice = (apiInvoice: ApiInvoice): Invoice => {
         oldIndex: waterOldIndex,
         newIndex: waterNewIndex,
       },
-      parking: formatMoney(detailsArr.length > 0 ? oldParking : 0),
-      internet: formatMoney(servicesAmount),
+      parking: formatMoney(pAmount),
+      internet: formatMoney(iAmount),
+      garbage: formatMoney(gAmount),
+      otherServices: formatMoney(servicesAmount)
     },
   };
 };

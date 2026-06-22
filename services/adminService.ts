@@ -60,6 +60,9 @@ export type AdminInvoice = {
   waterNew?: number;
   water?: number;
   services?: number;
+  parking?: number;
+  internet?: number;
+  garbage?: number;
   discount?: number;
   penaltyDays?: number;
   penaltyRate?: number;

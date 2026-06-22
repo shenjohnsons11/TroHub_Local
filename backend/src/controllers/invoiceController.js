@@ -41,20 +41,33 @@ exports.getBulkPreview = async (req, res) => {
             let electricityPrice = 0;
             let waterPrice = 0;
             let servicesTotal = 0;
+            let parking = 0;
+            let internet = 0;
+            let garbage = 0;
 
             for (const item of contract.services) {
                 const service = item.serviceId;
                 if (!service) continue;
+                const sName = service.name.toLowerCase();
+                
                 if (service.type === 1) {
-                    if (service.name.toLowerCase().includes('điện')) {
+                    if (sName.includes('điện') || sName.includes('dien')) {
                         electricityPrice = item.fixedPrice || 0;
                         if (previousInvoice) electricityOld = previousInvoice.electricityNew || 0;
-                    } else if (service.name.toLowerCase().includes('nước')) {
+                    } else if (sName.includes('nước') || sName.includes('nuoc')) {
                         waterPrice = item.fixedPrice || 0;
                         if (previousInvoice) waterOld = previousInvoice.waterNew || 0;
                     }
                 } else {
-                    servicesTotal += item.fixedPrice || 0;
+                    if (sName.includes('xe') || sName.includes('parking')) {
+                        parking += item.fixedPrice || 0;
+                    } else if (sName.includes('wifi') || sName.includes('internet') || sName.includes('mạng') || sName.includes('mang')) {
+                        internet += item.fixedPrice || 0;
+                    } else if (sName.includes('rác') || sName.includes('rac') || sName.includes('vệ sinh')) {
+                        garbage += item.fixedPrice || 0;
+                    } else {
+                        servicesTotal += item.fixedPrice || 0;
+                    }
                 }
             }
 
@@ -67,7 +80,10 @@ exports.getBulkPreview = async (req, res) => {
                 electricityPrice: electricityPrice,
                 waterOld: waterOld,
                 waterPrice: waterPrice,
-                services: servicesTotal
+                services: servicesTotal,
+                parking: parking,
+                internet: internet,
+                garbage: garbage
             });
         }
 
@@ -100,8 +116,11 @@ exports.createBulkInvoices = async (req, res) => {
 
             const roomAmount = Number(data.roomAmount) || 0;
             const services = Number(data.services) || 0;
+            const parking = Number(data.parking) || 0;
+            const internet = Number(data.internet) || 0;
+            const garbage = Number(data.garbage) || 0;
             const discount = Number(data.discount) || 0;
-            const totalAmount = roomAmount + electricityAmount + waterAmount + services - discount;
+            const totalAmount = roomAmount + electricityAmount + waterAmount + services + parking + internet + garbage - discount;
 
             let resolvedPeriod = period;
             if (!resolvedPeriod) {
@@ -125,6 +144,9 @@ exports.createBulkInvoices = async (req, res) => {
                 waterNew,
                 water: waterAmount,
                 services,
+                parking,
+                internet,
+                garbage,
                 discount
             });
 
@@ -309,6 +331,9 @@ exports.createInvoice = async (req, res) => {
                 waterNew,
                 water: waterAmount,
                 services: Number(req.body.services) || 0,
+                parking: Number(req.body.parking) || 0,
+                internet: Number(req.body.internet) || 0,
+                garbage: Number(req.body.garbage) || 0,
                 discount: Number(req.body.discount) || 0,
                 penaltyDays: Number(req.body.penaltyDays) || 0,
                 penaltyRate: Number(req.body.penaltyRate) || 0.1,

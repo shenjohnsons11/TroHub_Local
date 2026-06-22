@@ -22,5 +22,7 @@ export type Invoice = {
     };
     parking: string;
     internet: string;
+    garbage: string;
+    otherServices?: string;
   };
 };
