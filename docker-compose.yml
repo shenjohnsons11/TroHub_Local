@@ -55,7 +55,7 @@ services:
     image: mongo:6.0
     container_name: trohub_database
     ports:
-      - "27017:27017"
+      - "27018:27017"
     volumes:
       - db_data:/data/db
     networks:
