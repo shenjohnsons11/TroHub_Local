@@ -1,0 +1,26 @@
+{
+  "name": "trohub-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "REST API for TroHub room rental management system.",
+  "type": "module",
+  "scripts": {
+    "dev": "node src/server.js",
+    "start": "node src/server.js",
+    "db:schema": "psql trohub_db < database/schema.sql",
+    "db:seed": "psql trohub_db < database/seed.sql",
+    "db:setup": "createdb trohub_db 2>/dev/null || true && npm run db:schema && npm run db:seed"
+  },
+  "keywords": [
+    "trohub",
+    "room-rental",
+    "rest-api",
+    "cross-platform"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "mongoose": "^9.6.3",
+    "pg": "^8.21.0"
+  }
+}
