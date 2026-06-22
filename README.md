@@ -28,7 +28,7 @@ docker-compose up --build -d
 Sau khi Terminal báo `Started` cho tất cả các container, dự án đã chạy thành công tại các địa chỉ sau:
 
 - 💻 **Web Admin (Dành cho Chủ Trọ):** [http://localhost:8084](http://localhost:8084)
-- 📱 **Tenant App (Dành cho Người Thuê):** [http://localhost:8081](http://localhost:8081)
+- 📱 **Tenant App (Dành cho Người Thuê):** [http://localhost:8085](http://localhost:8085)
 - ⚙️ **Backend API:** `http://localhost:3000`
 - 🗄️ **Database (MongoDB):** `localhost:27017`
 
