@@ -20,7 +20,10 @@ const invoiceSchema = new mongoose.Schema({
     waterOld: { type: Number, default: 0 },
     waterNew: { type: Number, default: 0 },
     water: { type: Number, default: 0 },
-    services: { type: Number, default: 0 },
+    services: { type: Number, default: 0 }, // Tổng hoặc phụ phí khác
+    parking: { type: Number, default: 0 },
+    internet: { type: Number, default: 0 },
+    garbage: { type: Number, default: 0 },
     discount: { type: Number, default: 0 },
     penaltyDays: { type: Number, default: 0 },
     penaltyRate: { type: Number, default: 0.1 },
