@@ -6,15 +6,19 @@ import { Invoice } from "../types/Invoice";
 type Props = {
   visible: boolean;
   invoice: Invoice | null;
+  role?: "admin" | "tenant";
   onClose: () => void;
-  onPay: (invoiceId: string) => void;
+  onPay?: (invoiceId: string) => void;
+  onConfirmPaid?: (invoiceId: string) => void;
 };
 
 export default function InvoiceDetailModal({
   visible,
   invoice,
+  role = "tenant",
   onClose,
   onPay,
+  onConfirmPaid,
 }: Props) {
   return (
     <Modal
@@ -85,12 +89,21 @@ export default function InvoiceDetailModal({
               </View>
 
               {invoice.status === "unpaid" ? (
-                <Pressable
-                  style={styles.payButton}
-                  onPress={() => onPay(invoice.id)}
-                >
-                  <Text style={styles.payText}>Thanh toán ngay</Text>
-                </Pressable>
+                role === "tenant" ? (
+                  <Pressable
+                    style={styles.payButton}
+                    onPress={() => onPay && onPay(invoice.id)}
+                  >
+                    <Text style={styles.payText}>Thanh toán ngay</Text>
+                  </Pressable>
+                ) : (
+                  <Pressable
+                    style={[styles.payButton, { backgroundColor: COLORS.green }]}
+                    onPress={() => onConfirmPaid && onConfirmPaid(invoice.id)}
+                  >
+                    <Text style={styles.payText}>Xác nhận đã thu</Text>
+                  </Pressable>
+                )
               ) : (
                 <View style={styles.paidBox}>
                   <Text style={styles.paidBoxText}>Hóa đơn đã thanh toán</Text>
