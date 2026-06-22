@@ -21,7 +21,7 @@ services:
   webadmin:
     build: 
       context: ./webadmin
-      dockerfile: Dockerfile.expo
+      dockerfile: Dockerfile
     container_name: trohub_webadmin
     ports:
       - "8084:8084" # Export port 8084 cho web admin
@@ -29,7 +29,6 @@ services:
       - NODE_ENV=development
     volumes:
       - ./webadmin:/app
-      - /app/node_modules
     networks:
       - trohub_network
 
