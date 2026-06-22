@@ -25,13 +25,17 @@
     </div>
 
     <div class="card">
-        <h2>Phương Án 1: Chia Sẻ Nhanh Không Cần Docker (Qua Mạng LAN)</h2>
-        <p>Nếu bạn và đồng nghiệp ngồi chung một WiFi, bạn không cần phải gửi file gì cho họ cả. Làm như sau:</p>
+        <h2>Cấu trúc Dự Án Mới (Monorepo)</h2>
+        <ul>
+            <li><strong>Thư mục gốc:</strong> Chứa mã nguồn App Mobile dành cho Khách thuê.</li>
+            <li><strong>Thư mục <code>webadmin/</code>:</strong> Chứa mã nguồn App Expo phiên bản Web dành cho Quản trị viên.</li>
+        </ul>
+        <p>Nếu bạn và đồng nghiệp ngồi chung một WiFi, bạn không cần cài Docker. Làm như sau:</p>
         <ol>
             <li>Bật Backend và Database trên máy tính của bạn.</li>
-            <li>Bật Frontend này (<code>npm run web</code>).</li>
-            <li>Đổi địa chỉ API trong file <code>constants/api.ts</code> từ <code>localhost</code> thành địa chỉ IP máy bạn (ví dụ: <code>192.168.1.12</code>).</li>
-            <li>Gửi đường link <code>http://192.168.1.12:8081</code> cho đồng nghiệp. Họ mở trình duyệt lên là dùng luôn data trên máy bạn!</li>
+            <li>Mở file <code>constants/api.ts</code> ở <strong>CẢ 2 NƠI</strong> (thư mục gốc và thư mục webadmin), đổi từ <code>localhost</code> thành địa chỉ IP máy bạn (ví dụ: <code>192.168.1.12</code>).</li>
+            <li>Tại thư mục <code>webadmin</code>, chạy <code>npm run web</code>. Sau đó gửi đường link cho đồng nghiệp vào web admin.</li>
+            <li>Tại thư mục gốc, chạy lệnh start Expo để họ quét mã QR test App Mobile.</li>
         </ol>
     </div>
 
