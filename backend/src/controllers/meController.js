@@ -39,28 +39,29 @@ exports.getTenantPortal = async (req, res) => {
             .populate('roomId', 'roomCode area defaultRentPrice defaultDeposit')
             .sort({ createdAt: -1 });
 
-        // Lấy hợp đồng đang hiệu lực (status = 0 chờ ký HOẶC status = 1 đang thuê)
-        const activeContract = contracts.find(c => c.status === 1) || contracts.find(c => c.status === 0) || null;
+        // Lấy CÁC hợp đồng đang hiệu lực
+        const activeContracts = contracts.filter(c => [0, 1, 4, 5].includes(c.status));
 
         // Thông tin phòng
         let roomInfo = null;
-        if (activeContract && activeContract.roomId) {
-            const r = activeContract.roomId;
+        if (activeContracts.length > 0) {
+            const roomNames = activeContracts.map(c => c.roomId?.roomCode).filter(Boolean);
+            const firstRoom = activeContracts[0].roomId || {};
             roomInfo = {
-                id: r.roomCode || '',
-                name: 'Phòng ' + (r.roomCode || ''),
-                rent: r.defaultRentPrice || activeContract.fixedRentPrice || 0,
-                deposit: r.defaultDeposit || activeContract.fixedDeposit || 0,
-                area: r.area || 0,
+                id: roomNames.join(', '),
+                name: roomNames.map(name => 'Phòng ' + name).join(', '),
+                rent: firstRoom.defaultRentPrice || activeContracts[0].fixedRentPrice || 0,
+                deposit: firstRoom.defaultDeposit || activeContracts[0].fixedDeposit || 0,
+                area: firstRoom.area || 0,
                 status: 'Đang thuê'
             };
         }
 
         const allContractIds = contracts.map(c => c._id);
 
-        // Lấy tất cả hóa đơn theo hợp đồng HIỆN TẠI (activeContract), bỏ qua hóa đơn nháp status: 0
+        // Lấy tất cả hóa đơn theo CÁC hợp đồng HIỆN TẠI, bỏ qua hóa đơn nháp status: 0
         let invoices = [];
-        const currentContractIds = activeContract ? [activeContract._id] : [];
+        const currentContractIds = activeContracts.map(c => c._id);
 
         if (currentContractIds.length > 0) {
             const rawInvoices = await Invoice.find({ contractId: { $in: currentContractIds }, status: { $ne: 0 } }).sort({ createdAt: -1 });

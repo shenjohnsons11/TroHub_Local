@@ -234,12 +234,11 @@ exports.getAllInvoices = async (req, res) => {
 
         if (userRole === 2 && userId) {
             const tenantContracts = await Contract.find({ tenantId: userId }).sort({ createdAt: -1 });
-            // Chỉ lấy hóa đơn của hợp đồng hiện tại (đang thuê hoặc chờ ký), ẩn lịch sử hợp đồng cũ
-            const activeContract = tenantContracts.find(c => c.status === 1 || c.status === 0 || c.status === 4);
-            const currentContractIds = activeContract ? [activeContract._id] : [];
+            // Lấy tất cả CÁC hợp đồng hiện tại (đang thuê, chờ ký, chờ duyệt, yêu cầu trả phòng)
+            const activeContracts = tenantContracts.filter(c => [0, 1, 4, 5].includes(c.status));
+            const currentContractIds = activeContracts.map(c => c._id);
             
-            // XÓA BỎ logic lấy hóa đơn theo tên phòng (roomCode) vì sẽ lấy nhầm hóa đơn của khách cũ!
-            // Chỉ lấy hóa đơn gắn chính xác với contractId HIỆN TẠI của người thuê này.
+            // Lấy hóa đơn gắn chính xác với các contractId HIỆN TẠI của người thuê này.
             query = { contractId: { $in: currentContractIds }, status: { $ne: 0 } };
         } else if (userRole === 1 && userId) {
             const Room = require('../models/Room');
