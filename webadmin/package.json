@@ -5,11 +5,11 @@
   "type": "module",
   "description": "TroHub web admin with a local API and optional MongoDB storage.",
   "scripts": {
-    "dev": "npx http-server . -p 5173 -a 127.0.0.1 -c-1",
-    "dev:api": "cd API_DuAnTotNghiep && npm run dev",
-    "dev:app": "cd TroHub_repo && npx expo start --web",
-    "start": "npx concurrently \"npm run dev:api\" \"npm run dev\" \"npm run dev:app\""
-  },
+  "dev": "npx http-server . -p 5173 -a 127.0.0.1 -c-1",
+  "dev:api": "cd ../backend && npm run dev",
+  "dev:app": "cd .. && npx expo start --web",
+  "start": "npx concurrently \"npm run dev:api\" \"npm run dev\" \"npm run dev:app\""
+},
   "keywords": [
     "trohub",
     "web-admin",
