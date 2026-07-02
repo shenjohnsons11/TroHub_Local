@@ -22,15 +22,28 @@ export default function PaymentModal({
 
   if (!invoice) return null;
 
-  const handleConfirm = () => {
-    onConfirm(invoice.id);
-    onClose();
+  const handleConfirm = async () => {
+    try {
+      await onConfirm(invoice.id);
+      onClose();
+    } catch (error) {
+      console.log(error);
+    }
   };
 
-  const numericAmount = parseInt(invoice.amount.replace(/[^0-9]/g, ""), 10) || 0;
-  const qrUrl = `https://img.vietqr.io/image/MB-0123456789-compact2.jpg?amount=${numericAmount}&addInfo=${encodeURIComponent(
-    invoice.room + " thang " + invoice.month.replace("/", "-")
-  )}&accountName=TROHUB`;
+  const getVietQRUrl = () => {
+    if (!invoice.bankId || !invoice.bankAccountNo) {
+      return "https://img.vietqr.io/image/970422-0123456789-compact2.png"; // Placeholder if not configured
+    }
+    const bankId = invoice.bankId;
+    const accountNo = invoice.bankAccountNo;
+    const amount = invoice.numericAmount || parseInt(invoice.amount.replace(/\D/g, "")) || 0;
+    const addInfo = encodeURIComponent(`Thanh toan HD ${invoice.room} ${invoice.month}`.substring(0, 50));
+    const accountName = encodeURIComponent(invoice.bankAccountName || "");
+    return `https://img.vietqr.io/image/${bankId}-${accountNo}-compact2.png?amount=${amount}&addInfo=${addInfo}&accountName=${accountName}`;
+  };
+
+  const qrUrl = getVietQRUrl();
 
   return (
     <Modal visible={visible} transparent animationType="slide">
@@ -109,11 +122,11 @@ export default function PaymentModal({
                 resizeMode="contain"
               />
 
-              <Text style={styles.bankInfo}>Ngân hàng: MB Bank</Text>
-              <Text style={styles.bankInfo}>STK: 0123456789</Text>
-              <Text style={styles.bankInfo}>Chủ TK: TROHUB</Text>
+              <Text style={styles.bankInfo}>Ngân hàng: {invoice.bankId || "Chưa thiết lập"}</Text>
+              <Text style={styles.bankInfo}>STK: {invoice.bankAccountNo || "Chưa thiết lập"}</Text>
+              <Text style={styles.bankInfo}>Chủ TK: {invoice.bankAccountName || "Chưa thiết lập"}</Text>
               <Text style={styles.note}>
-                Nội dung CK: {invoice.room} {invoice.month}
+                Nội dung CK: Thanh toan HD {invoice.room} {invoice.month}
               </Text>
             </View>
           )}

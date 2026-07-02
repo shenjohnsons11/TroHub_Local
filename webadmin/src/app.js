@@ -320,8 +320,8 @@ const renderLogin = () => shell(`
       ${!state.showRegister ? `
         <h2>Đăng nhập hệ thống</h2>
         <p class="muted">Đăng nhập bằng tài khoản chủ trọ hoặc người thuê.</p>
-        <label class="field"><span>Tên đăng nhập</span><input id="login-email" value="admin@trohub.vn" /></label>
-        <label class="field"><span>Mật khẩu</span><input id="login-password" type="password" value="123456" /></label>
+        <label class="field"><span>Tên đăng nhập</span><input id="login-email" placeholder="Nhập số điện thoại hoặc email" /></label>
+        <label class="field"><span>Mật khẩu</span><input id="login-password" type="password" placeholder="Nhập mật khẩu" /></label>
         <div class="login-meta">
           <label><input type="checkbox" checked /> Ghi nhớ đăng nhập</label>
         </div>
@@ -339,12 +339,8 @@ const renderLogin = () => shell(`
         <label class="field"><span>Email (Đồng thời là tên đăng nhập) *</span><input id="reg-email" type="email" placeholder="email@example.com" /></label>
         <label class="field"><span>CCCD</span><input id="reg-idCard" placeholder="079012345678" /></label>
         <label class="field"><span>Mật khẩu *</span><input id="reg-password" type="password" placeholder="Ít nhất 6 ký tự" /></label>
-        <label class="field">
-          <span>Loại tài khoản</span>
-          <select id="reg-role">
-            <option value="1">Chủ trọ</option>
-            <option value="2" selected>Người thuê</option>
-          </select>
+        <label class="field" style="display:none;">
+          <input id="reg-role" type="hidden" value="1" />
         </label>
         <button class="btn primary full" data-register>Đăng ký</button>
       `}
@@ -675,7 +671,7 @@ const renderContract = () => {
         <h2>Thông tin hợp đồng</h2>
         <div class="form-grid one" data-form="contract">
           ${field("Mã hợp đồng", c.id, "text", "id")}
-          ${selectField("Chọn phòng", c.room, arrays.rooms().filter(r => r.status === "Còn trống" || r.id === c.room).map(r => r.id), "room")}
+          ${selectField("Chọn phòng", c.room, arrays.rooms().filter(r => r.status === "Còn trống" || r.status === "Đang thuê" || r.id === c.room).map(r => r.id), "room")}
           ${selectField("Chọn khách thuê", c.tenant, arrays.tenants().map(t => t.name), "tenant")}
           ${dateField("Ngày bắt đầu", state.contractStartDate, "contractStartDate")}
           ${dateField("Ngày kết thúc", state.contractEndDate, "contractEndDate")}
@@ -1106,7 +1102,9 @@ const renderSettings = () => renderAdminShell("Cài đặt tài khoản", `
     ${field("Tên nhà trọ", state.landlord.propertyName, "text", "propertyName")}
     ${selectField("Trạng thái nhà trọ", state.landlord.propertyStatus, ["Đang hoạt động", "Tạm dừng", "Đã bán"], "propertyStatus")}
     ${field("Địa chỉ", state.landlord.address, "text", "address")}
-    ${field("Ngân hàng", state.landlord.bank, "text", "bank")}
+    ${field("Tên rút gọn ngân hàng (VD: MB, VCB, TCB)", state.landlord.bankId, "text", "bankId")}
+    ${field("Số tài khoản", state.landlord.bankAccountNo, "text", "bankAccountNo")}
+    ${field("Tên chủ tài khoản", state.landlord.bankAccountName, "text", "bankAccountName")}
     ${field("Mật khẩu mới", "", "password", "password")}
     <div class="form-actions">${button("Lưu thay đổi", "save-settings")}</div>
   </article>
@@ -1633,7 +1631,30 @@ const renderAdmin = () => {
 };
 
 const render = () => {
+  // Capture current form inputs before rendering
+  const formInputs = document.querySelectorAll('input[data-field], textarea[data-field], select[data-field], input[id], textarea[id], select[id]');
+  const capturedValues = {};
+  formInputs.forEach(el => {
+    const key = el.dataset.field || el.id;
+    if (key && !key.startsWith("login-") && !key.startsWith("reg-")) {
+      capturedValues[key] = el.type === 'checkbox' ? el.checked : el.value;
+    }
+  });
+
   app.innerHTML = state.role === "admin" ? renderAdmin() : state.role === "tenant" ? renderTenant() : renderLogin();
+
+  // Restore form inputs after rendering
+  const newInputs = document.querySelectorAll('input[data-field], textarea[data-field], select[data-field], input[id], textarea[id], select[id]');
+  newInputs.forEach(el => {
+    const key = el.dataset.field || el.id;
+    if (key && capturedValues[key] !== undefined && !key.startsWith("login-") && !key.startsWith("reg-")) {
+      if (el.type === 'checkbox') {
+        el.checked = capturedValues[key];
+      } else {
+        el.value = capturedValues[key];
+      }
+    }
+  });
 };
 
 const updateInvoiceCalcOutputs = () => {
@@ -1785,8 +1806,8 @@ const handleAction = async (action) => {
       } else {
         await api.rooms.update(state.selectedRoom, payload);
       }
-      await loadAllData();
-      setState({ selectedRoom: payload.id || state.selectedRoom, adminPage: "rooms" });
+      const newRooms = await api.rooms.getAll();
+      setState({ roomsData: newRooms, selectedRoom: payload.id || state.selectedRoom, adminPage: "rooms" });
       return showToast("Đã lưu phòng thành công!");
     }
     if (action === "delete-room") {
@@ -1882,6 +1903,11 @@ const handleAction = async (action) => {
     if (action === "cancel-tenant") return setState({ adminPage: "tenants" });
     if (action === "edit-tenant-from-detail") return setState({ adminPage: "tenant-form" });
     if (action === "save-tenant") {
+      const form = document.querySelector('[data-form="tenant"]');
+      if (form && form.querySelector('.inline-error')) {
+        return showToast("Vui lòng sửa các thông tin bị lỗi hoặc trùng lặp trước khi lưu!");
+      }
+
       const payload = collectForm("tenant");
       payload.startDate = state.tenantStartDate;
       
@@ -1909,11 +1935,44 @@ const handleAction = async (action) => {
         } else {
           await api.tenants.create(payload);
         }
-        await loadAllData();
-        setState({ adminPage: "tenants" });
+        const newTenants = await api.tenants.getAll();
+        setState({ tenantsData: newTenants, adminPage: "tenants" });
         return showToast("Đã lưu khách thuê thành công!");
       } catch (e) {
-        return showToast(e.message || "Có lỗi xảy ra khi lưu!");
+        const msg = e.message || "Có lỗi xảy ra khi lưu!";
+        const form = document.querySelector('[data-form="tenant"]');
+        if (form) {
+          const showErr = (selector, message) => {
+            const el = form.querySelector(selector);
+            if (el) {
+              el.style.borderColor = "#EF4444";
+              el.style.backgroundColor = "#FEF2F2";
+              let err = el.parentElement.querySelector(".inline-error");
+              if (!err) {
+                err = document.createElement("div");
+                err.className = "inline-error";
+                err.style.color = "#EF4444";
+                err.style.fontSize = "12px";
+                err.style.marginTop = "4px";
+                err.style.fontWeight = "500";
+                el.parentElement.appendChild(err);
+              }
+              err.innerText = message;
+            }
+          };
+          
+          if (msg.toLowerCase().includes("email")) {
+            showErr('[data-field="email"]', msg);
+            return;
+          } else if (msg.toLowerCase().includes("điện thoại") || msg.toLowerCase().includes("sđt")) {
+            showErr('[data-field="phone"]', msg);
+            return;
+          } else if (msg.toLowerCase().includes("cccd")) {
+            showErr('[data-field="citizenId"]', msg);
+            return;
+          }
+        }
+        return showToast(msg);
       }
     }
 
@@ -1929,10 +1988,18 @@ const handleAction = async (action) => {
       const tenantObj = arrays.tenants().find(t => t.name === payload.tenant);
       if (tenantObj && tenantObj.objectId) payload.tenant = tenantObj.objectId;
 
-      const saved = state.selectedContract ? await api.contracts.update(state.selectedContract, payload) : await api.contracts.create(payload);
-      state.selectedContract = saved?.id || "";
-      await loadAllData();
-      return showToast(action === "draft-contract" ? "Đã lưu nháp hợp đồng" : "Đã tạo hợp đồng thành công!");
+      if (isSubmittingContract) return;
+      isSubmittingContract = true;
+      try {
+        const saved = state.selectedContract ? await api.contracts.update(state.selectedContract, payload) : await api.contracts.create(payload);
+        state.selectedContract = saved?.id || "";
+        await loadAllData();
+        return showToast(action === "draft-contract" ? "Đã lưu nháp hợp đồng" : "Đã tạo hợp đồng thành công!");
+      } catch (error) {
+        return showToast(error.message || "Tạo hợp đồng thất bại!");
+      } finally {
+        isSubmittingContract = false;
+      }
     }
     if (action === "admin-approve-contract") {
       const contract = findContract();
@@ -2122,6 +2189,80 @@ const handleAction = async (action) => {
   }
 };
 
+
+app.addEventListener("focusout", async (event) => {
+  const target = event.target;
+  const form = target.closest('[data-form="tenant"]');
+  if (!form || !target.dataset.field) return;
+
+  const field = target.dataset.field;
+  if (field !== "email" && field !== "phone" && field !== "citizenId") return;
+
+  const value = target.value.trim().replace(/\D/g, "");
+  const emailValue = target.value.trim();
+
+  let checkField = "";
+  let checkValue = "";
+
+  const showInlineError = (el, msg) => {
+    el.style.borderColor = "#EF4444";
+    el.style.backgroundColor = "#FEF2F2";
+    let err = el.parentElement.querySelector(".inline-error");
+    if (!err) {
+      err = document.createElement("div");
+      err.className = "inline-error";
+      err.style.color = "#EF4444";
+      err.style.fontSize = "12px";
+      err.style.marginTop = "4px";
+      err.style.fontWeight = "500";
+      el.parentElement.appendChild(err);
+    }
+    err.innerText = msg;
+  };
+
+  const clearInlineError = (el) => {
+    el.style.borderColor = "";
+    el.style.backgroundColor = "";
+    const err = el.parentElement.querySelector(".inline-error");
+    if (err) err.remove();
+  };
+
+  if (field === "email" && emailValue) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue)) {
+      showInlineError(target, "Email không hợp lệ");
+      return;
+    }
+    checkField = "email"; checkValue = emailValue;
+  } else if (field === "phone" && value) {
+    if (value.length !== 10) {
+      showInlineError(target, "Số điện thoại chưa đủ 10 số");
+      return;
+    }
+    checkField = "phone"; checkValue = value;
+  } else if (field === "citizenId" && value) {
+    if (value.length !== 12) {
+      showInlineError(target, "CCCD chưa đủ 12 số");
+      return;
+    }
+    checkField = "idCard"; checkValue = value;
+  }
+
+  if (checkField && checkValue) {
+    try {
+      const result = await api.tenants.checkDuplicate(checkField, checkValue);
+      if (result && result.isDuplicate) {
+        showInlineError(target, result.message);
+      } else {
+        clearInlineError(target);
+      }
+    } catch(e) {
+      console.log("Check duplicate err:", e);
+    }
+  } else {
+    clearInlineError(target);
+  }
+});
+
 app.addEventListener("input", (event) => {
   const target = event.target;
 
@@ -2257,6 +2398,8 @@ app.addEventListener("change", (event) => {
   updateInvoiceCalcOutputs();
 });
 
+let isSubmittingContract = false;
+
 app.addEventListener("click", async (event) => {
   const target = event.target.closest("button, tr, article, [data-action], [data-admin-nav]");
   if (!target) return;
@@ -2346,7 +2489,7 @@ app.addEventListener("click", async (event) => {
     const idCard = document.querySelector("#reg-idCard").value.replace(/\D/g, "");
     const username = email; // Email chính là tên đăng nhập
     const password = document.querySelector("#reg-password").value.trim();
-    const role = Number(document.querySelector("#reg-role").value);
+    const role = 1; // WebAdmin chỉ đăng ký chủ trọ
     if (!fullName || !phone || !email || !password) return showToast("Vui lòng điền đầy đủ thông tin có dấu *");
     
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

@@ -11,7 +11,7 @@ import { contractService } from "../services/contractService";
 type Props = {
   profile: UserProfile;
   onLogout: () => void;
-  onNavigate?: (screen: "invoice" | "contract" | "profile") => void;
+  onNavigate?: (screen: "invoice" | "contract" | "profile", params?: any) => void;
 };
 
 const menuItems = [
@@ -84,7 +84,7 @@ export default function AccountScreen({
     }
 
     if (key === "payment") {
-      onNavigate?.("invoice");
+      onNavigate?.("invoice", { filter: "paid" });
     }
   };
 

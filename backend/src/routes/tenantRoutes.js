@@ -3,6 +3,7 @@ const router = express.Router();
 const tenantController = require('../controllers/tenantController');
 
 // Web
+router.post('/check-duplicate', tenantController.checkDuplicate);
 router.get('/', tenantController.getAllTenants);
 router.post('/', tenantController.createTenant);
 router.get('/:id', tenantController.getTenantById);

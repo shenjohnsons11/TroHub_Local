@@ -10,6 +10,7 @@ type AuthUser = {
   username: string;
   fullName: string;
   role: number;
+  mustChangePassword?: boolean;
 };
 
 type LoginResponse = {
@@ -80,7 +81,7 @@ export const authService = {
       await AsyncStorage.setItem(USER_KEY, JSON.stringify(response.user));
       await AsyncStorage.setItem(LOGIN_KEY, "true");
 
-      return true;
+      return !!response.user.mustChangePassword;
     } catch (error) {
       console.log("Lỗi đăng nhập:", error);
       throw error;
@@ -109,10 +110,14 @@ export const authService = {
         throw new Error("Không tìm thấy token đăng nhập");
       }
 
-      console.log("Đổi mật khẩu giả lập:", {
-        oldPassword,
+      const response = await apiClient.put<{ success: boolean; message: string }>("/auth/change-password", {
+        currentPassword: oldPassword,
         newPassword,
-      });
+      }, token);
+
+      if (!response.success) {
+        throw new Error(response.message || "Đổi mật khẩu thất bại");
+      }
 
       return true;
     } catch (error) {

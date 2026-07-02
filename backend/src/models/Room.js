@@ -6,7 +6,9 @@ const roomSchema = new mongoose.Schema({
     defaultRentPrice: { type: Number, required: true },       // gia_thue_mac_dinh
     defaultDeposit: { type: Number, required: true },         // gia_coc_mac_dinh
     status: { type: Number, enum: [0, 1, 2], default: 0 },    // 0: Trống, 1: Đang thuê, 2: Đang sửa
-    landlordId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account', required: true } // ma_chu_tro
+    landlordId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account', required: true }, // ma_chu_tro
+    draftElectricity: { type: Number }, // Khách tự điền số điện nháp
+    draftWater: { type: Number }        // Khách tự điền số nước nháp
 }, { timestamps: true });
 
 module.exports = mongoose.model('Room', roomSchema);

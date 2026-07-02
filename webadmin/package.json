@@ -24,6 +24,7 @@
     "acorn": "^8.17.0"
   },
   "devDependencies": {
+    "cypress": "^15.18.0",
     "http-server": "^14.1.1"
   }
 }

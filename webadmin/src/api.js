@@ -17,6 +17,7 @@ export const fetchAPI = async (endpoint, options = {}) => {
 
   try {
     const response = await fetch(`${API_CONFIG.BASE_URL}${endpoint}`, {
+      cache: "no-store",
       ...options,
       headers,
     });
@@ -105,6 +106,13 @@ export const api = {
     getAll: async () => {
       const data = await fetchAPI(API_CONFIG.ENDPOINTS.tenants);
       return Array.isArray(data) ? data.map(API_CONFIG.MAP_TENANT) : [];
+    },
+    checkDuplicate: async (field, value) => {
+      const data = await fetchAPI(`${API_CONFIG.ENDPOINTS.tenants}/check-duplicate`, {
+        method: "POST",
+        body: JSON.stringify({ field, value })
+      });
+      return data;
     },
     create: async (payload) => {
       const mapped = API_CONFIG.MAP_TENANT_PAYLOAD(payload);

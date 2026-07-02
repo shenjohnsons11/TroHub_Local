@@ -9,7 +9,11 @@ const accountSchema = new mongoose.Schema({
     idCard: { type: String },                   // cccd
     role: { type: Number, enum: [1, 2], required: true }, // 1: Chủ trọ, 2: Người thuê
     status: { type: Number, enum: [0, 1], default: 1 },    // 0: Inactive, 1: Active
-    linkedLandlords: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Account' }] // Mảng ID các chủ trọ liên kết
+    linkedLandlords: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Account' }], // Mảng ID các chủ trọ liên kết
+    mustChangePassword: { type: Boolean, default: false }, // Yêu cầu đổi mật khẩu trong lần đăng nhập đầu tiên
+    bankId: { type: String, default: "" }, // Tên rút gọn ngân hàng (VD: VCB, MB, TCB)
+    bankAccountNo: { type: String, default: "" }, // Số tài khoản
+    bankAccountName: { type: String, default: "" } // Tên chủ tài khoản
 }, { timestamps: true });
 
 module.exports = mongoose.model('Account', accountSchema);

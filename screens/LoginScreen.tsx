@@ -15,6 +15,7 @@ import {
 import { COLORS } from "../constants/theme";
 import ForgotPasswordModal from "../components/ForgotPasswordModal";
 import { authService } from "../services/authService";
+import Toast from "react-native-toast-message";
 
 type Props = {
   onLogin: (email: string, password: string) => Promise<void>;
@@ -149,10 +150,11 @@ export default function LoginScreen({ onLogin }: Props) {
           phone: regPhone.replace(/\D/g, ''),
           idCard: regCccd.replace(/\D/g, ''),
         });
-        Alert.alert(
-          "Thành công",
-          "Đăng ký tài khoản khách thuê thành công!\nVui lòng đăng nhập bằng email vừa đăng ký."
-        );
+        Toast.show({
+          type: 'success',
+          text1: 'Thành công',
+          text2: 'Đăng ký thành công! Vui lòng chờ Chủ trọ duyệt tài khoản của bạn.'
+        });
         // Tự động điền email vào ô đăng nhập
         setLoginEmail(regEmail.trim());
         setIsRegister(false);
@@ -168,11 +170,23 @@ export default function LoginScreen({ onLogin }: Props) {
         await onLogin(loginEmail.trim(), password.trim());
       }
     } catch (error) {
-      console.log(isRegister ? "Lỗi đăng ký:" : "Lỗi đăng nhập:", error);
-      Alert.alert(
-        "Lỗi",
-        error instanceof Error ? error.message : "Có lỗi xảy ra. Vui lòng thử lại."
-      );
+      console.log("Submit Error:", error);
+      const msg = error instanceof Error ? error.message : "Có lỗi xảy ra, vui lòng thử lại sau.";
+      if (isRegister) {
+        if (msg.toLowerCase().includes("email")) {
+          setRegEmailError(msg);
+        } else if (msg.toLowerCase().includes("điện thoại")) {
+          setRegPhoneError(msg);
+        } else if (msg.toLowerCase().includes("cccd")) {
+          setRegCccdError(msg);
+        } else if (msg.toLowerCase().includes("đăng nhập")) {
+          setRegEmailError(msg);
+        } else {
+          Toast.show({ type: 'error', text1: 'Lỗi', text2: msg });
+        }
+      } else {
+        Toast.show({ type: 'error', text1: 'Lỗi', text2: msg });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -351,7 +365,7 @@ export default function LoginScreen({ onLogin }: Props) {
                 <Text style={[styles.forgot, { marginTop: 0 }]}>
                   {isRegister
                     ? "Đã có tài khoản? Đăng nhập ngay"
-                    : "Chưa có tài khoản? Đăng ký khách thuê"}
+                    : "Chưa có tài khoản? Đăng ký người thuê"}
                 </Text>
               </Pressable>
             </View>

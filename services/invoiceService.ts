@@ -25,6 +25,11 @@ type ApiInvoice = {
     roomId?: {
       _id: string;
       roomCode?: string;
+      landlordId?: {
+        bankId?: string;
+        bankAccountNo?: string;
+        bankAccountName?: string;
+      };
     };
     tenantId?: {
       _id: string;
@@ -138,20 +143,29 @@ const mapApiInvoiceToInvoice = (apiInvoice: ApiInvoice): Invoice => {
     ? Math.max(totalAmount - oldServicesTotal, 0)
     : (apiInvoice.roomAmount || Math.max(totalAmount - elecAmount - waterAmount - pAmount - iAmount - gAmount - servicesAmount, 0));
 
-  const isPaid = apiInvoice.status === 2;
-  let statusText = "Chưa thanh toán";
-  if (apiInvoice.status === 2) statusText = "Đã thanh toán";
-  else if (apiInvoice.status === 3) statusText = "Quá hạn";
-  else if (apiInvoice.status === 0) statusText = "Nháp";
+  let bankId = undefined;
+  let bankAccountNo = undefined;
+  let bankAccountName = undefined;
+  
+  if (apiInvoice.contractId?.roomId?.landlordId) {
+    const landlord = apiInvoice.contractId.roomId.landlordId;
+    bankId = landlord.bankId;
+    bankAccountNo = landlord.bankAccountNo;
+    bankAccountName = landlord.bankAccountName;
+  }
 
   return {
     id: apiInvoice._id,
     month: apiInvoice.period,
-    room: apiInvoice.room || apiInvoice.contractId?.roomId?.roomCode || "A101",
+    room: apiInvoice.contractId?.roomId?.roomCode || apiInvoice.room || "Chưa rõ",
     amount: formatMoney(totalAmount),
-    status: isPaid ? "paid" : "unpaid",
-    statusText,
+    numericAmount: totalAmount,
+    status: apiInvoice.status === 2 ? "paid" : "unpaid",
+    statusText: apiInvoice.status === 2 ? "Đã thanh toán" : "Chưa thanh toán",
     dueDate: formatDate(apiInvoice.dueDate),
+    bankId,
+    bankAccountNo,
+    bankAccountName,
     details: {
       roomFee: formatMoney(roomFee),
       electric: {
@@ -167,7 +181,7 @@ const mapApiInvoiceToInvoice = (apiInvoice: ApiInvoice): Invoice => {
       parking: formatMoney(pAmount),
       internet: formatMoney(iAmount),
       garbage: formatMoney(gAmount),
-      otherServices: formatMoney(servicesAmount)
+      otherServices: formatMoney(servicesAmount),
     },
   };
 };
