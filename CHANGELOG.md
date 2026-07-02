@@ -26,5 +26,15 @@ Tài liệu này ghi lại các thay đổi quan trọng đã được thực hi
 - Cả Web Admin và Mobile App (Dành cho chủ trọ) đều đã được đồng bộ để tính toán và hiển thị doanh thu dựa trên **Thu nhập thực**.
 - **Công thức:** Chỉ lấy tổng tiền từ các Hoá đơn có trạng thái "Đã thanh toán" (hoặc từ các giao dịch thành công) của **tháng hiện tại**.
 
+### Added
+- Thêm cơ chế "Pending Invites" cho người thuê (Mobile App).
+- Người thuê sau khi được mời (hoặc được tạo tài khoản) sẽ nhận thông báo trên Dashboard App.
+- Yêu cầu xác nhận (Chấp nhận/Từ chối) trước khi chính thức đưa vào danh sách của Chủ trọ.
+- Bổ sung logic bắt trùng lặp chặt chẽ (SDT, CCCD, Email) cho cả Đăng ký và Thêm khách.
+
+### Changed
+- Refactor API `createTenant` và `checkDuplicate` để kết hợp tối ưu giữa "Tạo mới" và "Gửi lời mời", chặn chéo các trường hợp mâu thuẫn CCCD.
+- Giao diện HomeScreen trên Mobile App cập nhật để hiển thị Card thông báo mời.
+
 ---
 *Ghi chú: Các tính năng này đã được kiểm tra tính toàn vẹn (data flow) từ Backend (Node.js/Express) tới Frontend (Vanilla JS Web Admin và React Native Expo App).*

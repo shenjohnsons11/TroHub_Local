@@ -23,4 +23,9 @@ router.put('/request-terminate/:contractId', meController.requestTerminateContra
 // Người thuê báo cáo điện nước
 router.post('/report-utility', meController.reportUtility);
 
+// Quản lý lời mời (Invites)
+router.get('/invites', meController.getInvites);
+router.put('/invites/:id/accept', meController.acceptInvite);
+router.put('/invites/:id/reject', meController.rejectInvite);
+
 module.exports = router;

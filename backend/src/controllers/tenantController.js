@@ -24,13 +24,21 @@ exports.getAllTenants = async (req, res) => {
         
         if (!landlordId) return res.status(401).json({ success: false, message: "Không tìm thấy thông tin chủ trọ!" });
 
-        // Lấy tất cả khách thuê mà trong linkedLandlords có chứa landlordId
-        let tenants = await Account.find({ role: 2, linkedLandlords: landlordId }).lean().sort({ createdAt: -1 });
+        // Lấy tất cả khách thuê mà trong linkedLandlords hoặc pendingLandlords có chứa landlordId
+        let tenants = await Account.find({ 
+            role: 2, 
+            $or: [{ linkedLandlords: landlordId }, { pendingLandlords: landlordId }]
+        }).lean().sort({ createdAt: -1 });
         
         // Populate room from active contracts (1: Hiệu lực, 5: Yêu cầu trả phòng) để hiển thị thông tin phòng nếu có
         const activeContracts = await Contract.find({ status: { $in: [1, 5] } }).populate('roomId');
         
         for (let t of tenants) {
+            // Đánh dấu nếu là khách đang chờ xác nhận
+            if (t.pendingLandlords && t.pendingLandlords.some(id => id.toString() === landlordId.toString())) {
+                t.pending = true;
+            }
+
             const contract = activeContracts.find(c => c.tenantId && c.tenantId.toString() === t._id.toString());
             if (contract && contract.roomId) {
                 t.room = contract.roomId.roomCode || contract.roomId.name;
@@ -109,25 +117,36 @@ exports.createTenant = async (req, res) => {
             return res.status(400).json({ success: false, message: "Vui lòng nhập Email hoặc SĐT!" });
         }
 
-        // Tìm xem khách đã có tài khoản chưa
+        // Tìm xem khách đã có tài khoản chưa dựa trên Email hoặc SĐT
         let existingAccount = await Account.findOne({ $or: [{ email }, { phone }], role: 2 });
         
         if (existingAccount) {
-            // Kiểm tra xem khách này đã nằm trong danh sách quản lý của chủ trọ chưa (chú ý so sánh ObjectId)
-            if (existingAccount.linkedLandlords.some(id => id.toString() === landlordId.toString())) {
+            // NẾU LÀ LUỒNG GỬI LỜI MỜI: Phải kiểm tra CCCD (nếu có nhập) xem có bị trùng với MỘT NGƯỜI KHÁC không
+            if (finalIdCard) {
+                const conflictIdCard = await Account.findOne({ idCard: finalIdCard, _id: { $ne: existingAccount._id }, role: 2 });
+                if (conflictIdCard) {
+                    return res.status(400).json({ success: false, message: "Tuyệt đối chặn: Số CCCD này đã thuộc về một người khác trên hệ thống!" });
+                }
+            }
+
+            // Kiểm tra xem khách này đã nằm trong danh sách quản lý hoặc danh sách chờ của chủ trọ chưa
+            const isLinked = existingAccount.linkedLandlords.some(id => id.toString() === landlordId.toString());
+            const isPending = existingAccount.pendingLandlords && existingAccount.pendingLandlords.some(id => id.toString() === landlordId.toString());
+
+            if (isLinked || isPending) {
                 return res.status(400).json({
                     success: false,
-                    message: "Khách thuê với Email hoặc Số điện thoại này đã tồn tại trong danh sách của bạn!"
+                    message: isLinked ? "Khách thuê với Email/SĐT này đã tồn tại trong danh sách của bạn!" : "Đã gửi lời mời đến khách thuê này, đang chờ xác nhận!"
                 });
             }
 
-            // Nếu khách đã tồn tại trên App nhưng chưa thuộc chủ trọ này, thêm vào danh sách
-            existingAccount.linkedLandlords.push(landlordId);
+            // Gửi lời mời (thêm vào pendingLandlords)
+            existingAccount.pendingLandlords.push(landlordId);
             await existingAccount.save();
             
             return res.status(200).json({
                 success: true,
-                message: "Khách này đã dùng App. Đã tự động thêm vào danh sách quản lý của bạn!",
+                message: "Đã gửi lời mời gia nhập nhà trọ đến khách thuê này!",
                 data: existingAccount
             });
         }
@@ -146,10 +165,10 @@ exports.createTenant = async (req, res) => {
             return res.status(400).json({ success: false, message: "Vui lòng nhập Email đúng định dạng (ví dụ: nguyenvanA@gmail.com) để làm tên đăng nhập!" });
         }
 
-        // Kiểm tra trùng lặp CCCD trên toàn hệ thống
+        // NẾU LÀ LUỒNG TẠO MỚI (chưa tồn tại Email/SĐT): Bắt lỗi chặn tuyệt đối nếu vô tình trùng CCCD
         const existingIdCard = await Account.findOne({ idCard: finalIdCard, role: 2 });
         if (existingIdCard) {
-            return res.status(400).json({ success: false, message: "Số CCCD này đã được đăng ký cho một tài khoản khác trên hệ thống!" });
+            return res.status(400).json({ success: false, message: "Tuyệt đối chặn: Số CCCD này đã thuộc về một người khác trên hệ thống!" });
         }
 
         // Sử dụng mật khẩu được truyền lên từ Frontend, nếu không có thì mặc định là "123456"
@@ -160,16 +179,17 @@ exports.createTenant = async (req, res) => {
         const hashedPassword = await bcrypt.hash(defaultPassword, salt);
 
         const newTenant = new Account({
-            username: email || phone,
+            username: email || phone, // Ưu tiên email, nếu ko có thì dùng SĐT
             password: hashedPassword,
-            fullName: finalFullName || "Khách mới",
+            fullName: finalFullName,
             phone,
             email,
             idCard: finalIdCard,
-            role: 2,
+            role: 2, // Khách thuê
             status: 1,
-            linkedLandlords: [landlordId],
-            mustChangePassword: !password || password === "123456" // Cờ đổi mật khẩu nếu admin để trống hoặc tự gõ 123456
+            linkedLandlords: [],
+            pendingLandlords: [landlordId], // Thay vì linked ngay, thêm vào pending để khách bấm chấp nhận
+            mustChangePassword: true
         });
         const savedTenant = await newTenant.save();
 
