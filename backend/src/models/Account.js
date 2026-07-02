@@ -10,6 +10,7 @@ const accountSchema = new mongoose.Schema({
     role: { type: Number, enum: [1, 2], required: true }, // 1: Chủ trọ, 2: Người thuê
     status: { type: Number, enum: [0, 1], default: 1 },    // 0: Inactive, 1: Active
     linkedLandlords: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Account' }], // Mảng ID các chủ trọ liên kết
+    pendingLandlords: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Account' }], // Mảng ID các chủ trọ gửi lời mời chưa được chấp nhận
     mustChangePassword: { type: Boolean, default: false }, // Yêu cầu đổi mật khẩu trong lần đăng nhập đầu tiên
     bankId: { type: String, default: "" }, // Tên rút gọn ngân hàng (VD: VCB, MB, TCB)
     bankAccountNo: { type: String, default: "" }, // Số tài khoản
