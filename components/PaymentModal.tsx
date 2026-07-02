@@ -31,16 +31,47 @@ export default function PaymentModal({
     }
   };
 
+  // Bảng mapping tên ngắn ngân hàng → Mã BIN (VietQR API yêu cầu BIN, không phải tên rút gọn)
+  const BANK_BIN_MAP: Record<string, string> = {
+    "MB": "970422", "MBBANK": "970422",
+    "VCB": "970436", "VIETCOMBANK": "970436",
+    "TCB": "970407", "TECHCOMBANK": "970407",
+    "BIDV": "970418",
+    "AGRIBANK": "970405", "AGR": "970405",
+    "ACB": "970416",
+    "VPB": "970432", "VPBANK": "970432",
+    "TPB": "970423", "TPBANK": "970423",
+    "STB": "970403", "SACOMBANK": "970403",
+    "HDB": "970437", "HDBANK": "970437",
+    "VIB": "970441",
+    "SHB": "970443",
+    "EIB": "970431", "EXIMBANK": "970431",
+    "MSB": "970426",
+    "OCB": "970448",
+    "LPB": "970449", "LIENVIETPOSTBANK": "970449",
+    "SEABANK": "970440",
+    "ABBANK": "970425",
+    "NCB": "970419",
+    "CAKE": "546034",
+    "TIMO": "963388",
+  };
+
+  const getBankBin = (shortName?: string): string | null => {
+    if (!shortName) return null;
+    if (/^\d{6}$/.test(shortName)) return shortName; // Đã là BIN thì dùng luôn
+    return BANK_BIN_MAP[shortName.toUpperCase().trim()] || null;
+  };
+
   const getVietQRUrl = () => {
-    if (!invoice.bankId || !invoice.bankAccountNo) {
-      return "https://img.vietqr.io/image/970422-0123456789-compact2.png"; // Placeholder if not configured
+    const bankBin = getBankBin(invoice.bankId);
+    if (!bankBin || !invoice.bankAccountNo) {
+      return null; // Chưa thiết lập → không hiện QR
     }
-    const bankId = invoice.bankId;
     const accountNo = invoice.bankAccountNo;
     const amount = invoice.numericAmount || parseInt(invoice.amount.replace(/\D/g, "")) || 0;
-    const addInfo = encodeURIComponent(`Thanh toan HD ${invoice.room} ${invoice.month}`.substring(0, 50));
+    const addInfo = encodeURIComponent(`TroHub ${invoice.id} P${invoice.room} T${invoice.month}`.substring(0, 50));
     const accountName = encodeURIComponent(invoice.bankAccountName || "");
-    return `https://img.vietqr.io/image/${bankId}-${accountNo}-compact2.png?amount=${amount}&addInfo=${addInfo}&accountName=${accountName}`;
+    return `https://img.vietqr.io/image/${bankBin}-${accountNo}-compact2.png?amount=${amount}&addInfo=${addInfo}&accountName=${accountName}`;
   };
 
   const qrUrl = getVietQRUrl();
@@ -116,18 +147,28 @@ export default function PaymentModal({
 
           {method === "bank" && (
             <View style={styles.qrBox}>
-              <Image
-                source={{ uri: qrUrl }}
-                style={styles.qrImage}
-                resizeMode="contain"
-              />
-
-              <Text style={styles.bankInfo}>Ngân hàng: {invoice.bankId || "Chưa thiết lập"}</Text>
-              <Text style={styles.bankInfo}>STK: {invoice.bankAccountNo || "Chưa thiết lập"}</Text>
-              <Text style={styles.bankInfo}>Chủ TK: {invoice.bankAccountName || "Chưa thiết lập"}</Text>
-              <Text style={styles.note}>
-                Nội dung CK: Thanh toan HD {invoice.room} {invoice.month}
-              </Text>
+              {qrUrl ? (
+                <>
+                  <Image
+                    source={{ uri: qrUrl }}
+                    style={styles.qrImage}
+                    resizeMode="contain"
+                  />
+                  <Text style={styles.bankInfo}>Ngân hàng: {(invoice.bankId || "").toUpperCase()}</Text>
+                  <Text style={styles.bankInfo}>STK: {invoice.bankAccountNo}</Text>
+                  <Text style={styles.bankInfo}>Chủ TK: {invoice.bankAccountName}</Text>
+                  <Text style={styles.note}>
+                    Nội dung CK: TroHub {invoice.id} P{invoice.room} T{invoice.month}
+                  </Text>
+                </>
+              ) : (
+                <View style={{ backgroundColor: '#FFF9E6', padding: 16, borderRadius: 8, borderWidth: 1, borderColor: '#FFE58F' }}>
+                  <Text style={{ color: '#D48806', fontWeight: 'bold', fontSize: 14, marginBottom: 6 }}>⚠️ Chưa thiết lập ngân hàng</Text>
+                  <Text style={{ color: '#D48806', fontSize: 13, lineHeight: 20 }}>
+                    Chủ trọ chưa cài đặt thông tin ngân hàng. Vui lòng liên hệ chủ trọ để được hỗ trợ thanh toán.
+                  </Text>
+                </View>
+              )}
             </View>
           )}
 
