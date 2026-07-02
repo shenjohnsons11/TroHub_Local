@@ -1156,32 +1156,92 @@ const renderTenantShell = (title, content) => {
   `;
 };
 
+// Bảng mapping tên ngắn ngân hàng → Mã BIN (dùng cho VietQR API)
+const BANK_BIN_MAP = {
+  "MB": "970422", "MBBANK": "970422",
+  "VCB": "970436", "VIETCOMBANK": "970436",
+  "TCB": "970407", "TECHCOMBANK": "970407",
+  "BIDV": "970418",
+  "AGRIBANK": "970405", "AGR": "970405",
+  "ACB": "970416",
+  "VPB": "970432", "VPBANK": "970432",
+  "TPB": "970423", "TPBANK": "970423",
+  "STB": "970403", "SACOMBANK": "970403",
+  "HDB": "970437", "HDBANK": "970437",
+  "VIB": "970441",
+  "SHB": "970443",
+  "EIB": "970431", "EXIMBANK": "970431",
+  "MSB": "970426",
+  "OCB": "970448",
+  "LPB": "970449", "LIENVIETPOSTBANK": "970449",
+  "SEABANK": "970440",
+  "ABBANK": "970425",
+  "BAOVIET": "970438", "BVBANK": "970438",
+  "NCB": "970419",
+  "PGB": "970430", "PGBANK": "970430",
+  "VIETBANK": "970433",
+  "NAMABANK": "970428",
+  "SAIGONBANK": "970400",
+  "DONGABANK": "970406", "DAB": "970406",
+  "GPBANK": "970408",
+  "KIENLONGBANK": "970452", "KLB": "970452",
+  "CAKE": "546034",
+  "UBANK": "546035",
+  "TIMO": "963388",
+  "VNPTMONEY": "971011",
+  "VIETMONEY": "971005"
+};
+
+const getBankBin = (shortName) => {
+  if (!shortName) return null;
+  // Nếu đã là mã số (BIN) thì dùng luôn
+  if (/^\d{6}$/.test(shortName)) return shortName;
+  return BANK_BIN_MAP[shortName.toUpperCase().trim()] || null;
+};
+
 const renderQRModal = () => {
   if (!state.showQRForInvoice) return "";
   const invoice = tenantInvoices().find((i) => i.id === state.showQRForInvoice);
   if (!invoice) return "";
   
-  const bankInfo = (state.landlordData || appData.landlord).bank || "VCB - 0123456789";
-  const parts = bankInfo.split("-").map(s => s.trim());
-  const bankCode = parts[0] || "VCB";
-  const bankAcc = parts[1] || "0123456789";
+  // Lấy thông tin ngân hàng từ state.landlord (đã load từ API settings)
+  const landlord = state.landlord || {};
+  const rawBankId = landlord.bankId || "";
+  const bankAcc = landlord.bankAccountNo || "";
+  const bankAccName = landlord.bankAccountName || "";
+  const bankBin = getBankBin(rawBankId);
+  
   const amount = invoice.total || 0;
-  const qrUrl = `https://img.vietqr.io/image/${bankCode}-${bankAcc}-compact.png?amount=${amount}&addInfo=${invoice.id}`;
+  const addInfo = encodeURIComponent(`TroHub ${invoice.id} P${invoice.room} T${invoice.month}`.substring(0, 50));
+  
+  // Chỉ hiện QR nếu đã thiết lập đầy đủ thông tin ngân hàng
+  const hasBankInfo = bankBin && bankAcc;
+  const qrUrl = hasBankInfo 
+    ? `https://img.vietqr.io/image/${bankBin}-${bankAcc}-compact2.png?amount=${amount}&addInfo=${addInfo}&accountName=${encodeURIComponent(bankAccName)}`
+    : "";
 
   return `
     <div class="modal-overlay" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:9999; display:flex; align-items:center; justify-content:center;">
       <div class="card panel" style="padding:2rem; text-align:center; max-width:400px; width:90%;">
         <h2 style="margin-bottom:0.5rem">Thanh toán Hóa đơn</h2>
-        <p class="muted">Quét mã QR bằng ứng dụng ngân hàng</p>
-        <div style="background:#fff; padding:1rem; border-radius:12px; margin:1.5rem auto; display:inline-block;">
-          <img src="${qrUrl}" alt="QR Code" style="width:100%; max-width:250px; display:block;" />
-        </div>
-        <div style="text-align:left; background:var(--bg, #1a1b1e); padding:1rem; border-radius:8px; margin-bottom:1.5rem; line-height:1.6;">
-          <div><b>Ngân hàng:</b> ${bankCode}</div>
-          <div><b>Tài khoản:</b> ${bankAcc}</div>
-          <div><b>Số tiền:</b> <span style="color:var(--primary); font-weight:bold; font-size:1.1em">${money(amount)}</span></div>
-          <div><b>Nội dung CK:</b> ${invoice.id}</div>
-        </div>
+        <p class="muted">Phòng ${invoice.room} • Kỳ ${invoice.month}</p>
+        ${hasBankInfo ? `
+          <div style="background:#fff; padding:1rem; border-radius:12px; margin:1.5rem auto; display:inline-block;">
+            <img src="${qrUrl}" alt="QR Code" style="width:100%; max-width:250px; display:block;" onerror="this.parentElement.innerHTML='<p style=color:red;padding:1rem>Mã BIN ngân hàng không hợp lệ. Vui lòng kiểm tra lại tên ngân hàng trong Cài đặt.</p>'" />
+          </div>
+          <div style="text-align:left; background:var(--bg, #1a1b1e); padding:1rem; border-radius:8px; margin-bottom:1.5rem; line-height:1.6;">
+            <div><b>Ngân hàng:</b> ${rawBankId.toUpperCase()} (BIN: ${bankBin})</div>
+            <div><b>Tài khoản:</b> ${bankAcc}</div>
+            <div><b>Chủ TK:</b> ${bankAccName}</div>
+            <div><b>Số tiền:</b> <span style="color:var(--primary); font-weight:bold; font-size:1.1em">${money(amount)}</span></div>
+            <div><b>Nội dung CK:</b> TroHub ${invoice.id} P${invoice.room} T${invoice.month}</div>
+          </div>
+        ` : `
+          <div style="background:#fff3cd; border:1px solid #ffc107; padding:1.5rem; border-radius:8px; margin:1.5rem 0; text-align:left; line-height:1.6;">
+            <p style="color:#856404; font-weight:bold; margin:0 0 0.5rem 0;">⚠️ Chưa thiết lập thông tin ngân hàng</p>
+            <p style="color:#856404; margin:0;">Vui lòng vào <b>Cài đặt</b> và nhập:<br>• Tên ngắn ngân hàng (VD: MB, VCB, TCB...)<br>• Số tài khoản<br>• Tên chủ tài khoản</p>
+          </div>
+        `}
         <div style="display: flex; gap: 8px;">
           <button class="btn full" data-confirm-pay="${invoice.objectId || invoice.id}">Xác nhận đã thanh toán</button>
           <button class="btn outline full" data-close-qr>Đóng</button>
