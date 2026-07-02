@@ -1927,7 +1927,17 @@ const handleAction = async (action) => {
     if (action === "mark-paid") {
       const invoice = findInvoice();
       if (!invoice) return;
-      await api.invoices.markPaid(invoice.objectId || invoice.id, { paymentMethod: invoice.paymentMethod || "Tiền mặt" });
+      const paymentMethod = window.prompt("Nhập phương thức thanh toán (VD: Tiền mặt, Chuyển khoản...):", invoice.paymentMethod || "Chuyển khoản");
+      if (paymentMethod === null) return;
+      
+      const transactionCode = window.prompt("Nhập mã giao dịch / Ghi chú (nếu có):", "");
+      if (transactionCode === null) return;
+
+      showToast("Đang xác nhận...");
+      await api.invoices.markPaid(invoice.objectId || invoice.id, { 
+        method: paymentMethod.trim() || "Chuyển khoản",
+        gatewayReference: transactionCode.trim() 
+      });
       await loadAllData();
       render();
       return;
