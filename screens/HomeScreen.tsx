@@ -12,6 +12,7 @@ import Card from "../components/Card";
 import { COLORS } from "../constants/theme";
 import { HomeData } from "../types/HomeData";
 import { homeService } from "../services/homeService";
+import { inviteService, Invite } from "../services/inviteService";
 
 type Props = {
   refreshKey: number;
@@ -21,6 +22,7 @@ type Props = {
 
 export default function HomeScreen({ refreshKey, onNavigate, onLogout }: Props) {
   const [homeData, setHomeData] = useState<HomeData | null>(null);
+  const [invites, setInvites] = useState<Invite[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -30,8 +32,12 @@ export default function HomeScreen({ refreshKey, onNavigate, onLogout }: Props) 
   const loadHomeData = async () => {
     try {
       setIsLoading(true);
-      const data = await homeService.getHomeData();
+      const [data, inviteData] = await Promise.all([
+        homeService.getHomeData(),
+        inviteService.getInvites(),
+      ]);
       setHomeData(data);
+      setInvites(inviteData);
     } catch (error) {
       console.log("Lỗi load trang chủ:", error);
     } finally {
@@ -46,6 +52,16 @@ export default function HomeScreen({ refreshKey, onNavigate, onLogout }: Props) 
       </View>
     );
   }
+
+  const handleAcceptInvite = async (id: string) => {
+    const success = await inviteService.acceptInvite(id);
+    if (success) loadHomeData();
+  };
+
+  const handleRejectInvite = async (id: string) => {
+    const success = await inviteService.rejectInvite(id);
+    if (success) loadHomeData();
+  };
 
   const isUnpaid = homeData.paymentStatus === "unpaid";
 
@@ -67,6 +83,29 @@ export default function HomeScreen({ refreshKey, onNavigate, onLogout }: Props) 
           <Text style={styles.logoutText}>Đăng xuất</Text>
         </Pressable>
       </View>
+
+      {invites.length > 0 && invites.map(invite => (
+        <Card key={invite.id} style={[styles.amountCard, { backgroundColor: '#FFF9E6', borderColor: '#FFE58F' }]}>
+          <Text style={[styles.cardTitle, { color: '#D48806', marginBottom: 4 }]}>🏠 Lời mời vào nhà trọ</Text>
+          <Text style={styles.smallText}>
+            Chủ trọ <Text style={{fontWeight: 'bold'}}>{invite.landlordName}</Text> ({invite.phone}) vừa thêm bạn vào danh sách quản lý.
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+            <Pressable
+              style={[styles.primaryButton, { flex: 1, marginTop: 0 }]}
+              onPress={() => handleAcceptInvite(invite.id)}
+            >
+              <Text style={styles.primaryText}>Chấp nhận</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.primaryButton, { flex: 1, marginTop: 0, backgroundColor: '#FFE58F' }]}
+              onPress={() => handleRejectInvite(invite.id)}
+            >
+              <Text style={[styles.primaryText, { color: '#D48806' }]}>Từ chối</Text>
+            </Pressable>
+          </View>
+        </Card>
+      ))}
 
       <Card style={styles.amountCard}>
         <Text style={styles.smallText}>Tổng tiền</Text>
