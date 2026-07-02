@@ -185,6 +185,6 @@ export const API_CONFIG = {
     date: apiData.createdAt ? new Date(apiData.createdAt).toLocaleDateString("vi-VN") : "-",
     method: apiData.method || "",
     amount: apiData.amount || 0,
-    status: ["Thất bại", "Thành công"][apiData.status] || "Chưa thanh toán"
+    status: ["Thất bại", "Đã thanh toán"][apiData.status] || "Chưa thanh toán"
   })
 };

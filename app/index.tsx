@@ -17,6 +17,7 @@ import AdminInvoicesScreen from "../screens/AdminInvoicesScreen";
 import AdminRepairsScreen from "../screens/AdminRepairsScreen";
 import AdminTenantsScreen from "../screens/AdminTenantsScreen";
 import BulkInvoiceScreen from "../screens/BulkInvoiceScreen";
+import ChangePasswordScreen from "../screens/ChangePasswordScreen";
 
 import { UserProfile } from "../types/UserProfile";
 import { authService } from "../services/authService";
@@ -32,7 +33,8 @@ type Tab =
   | "utility"
   | "profile"
   | "rooms"
-  | "tenants";
+  | "tenants"
+  | "change_password";
 
 export default function App() {
   const [isChecking, setIsChecking] = useState(true);
@@ -65,13 +67,13 @@ export default function App() {
 
   const handleLogin = async (email: string, password: string) => {
     try {
-      await authService.login(email, password);
+      const mustChangePassword = await authService.login(email, password);
 
       const userProfile = await userService.getProfile();
 
       setProfile(userProfile);
       setIsLoggedIn(true);
-      setActiveTab("home");
+      setActiveTab(mustChangePassword ? "change_password" : "home");
       setHomeRefreshKey((prev) => prev + 1);
     } catch (error) {
       console.log("Lỗi xử lý đăng nhập:", error);
@@ -126,7 +128,12 @@ export default function App() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.phone}>
         <View style={styles.content}>
-          {profile.role === 1 ? (
+          {activeTab === "change_password" ? (
+            <ChangePasswordScreen 
+              onSuccess={() => setActiveTab("home")} 
+              onLogout={handleLogout} 
+            />
+          ) : profile.role === 1 ? (
             <>
               {activeTab === "home" && (
                 <AdminDashboardScreen
@@ -158,11 +165,11 @@ export default function App() {
                 />
               )}
 
-              {activeTab === "invoice" && <InvoiceScreen />}
+              {activeTab === "invoice" && <InvoiceScreen params={actionParams} />}
 
               {activeTab === "repair" && <RepairScreen />}
 
-              {activeTab === "contract" && <ContractScreen />}
+              {activeTab === "contract" && <ContractScreen onNavigate={handleChangeTab as any} />}
 
               {activeTab === "utility" && (
                 <UtilityScreen onBack={() => setActiveTab("home")} />
@@ -187,7 +194,9 @@ export default function App() {
           )}
         </View>
 
-        <BottomNav activeTab={activeTab} onChangeTab={handleChangeTab} role={profile.role} />
+        {activeTab !== "change_password" && (
+          <BottomNav activeTab={activeTab} onChangeTab={handleChangeTab} role={profile.role} />
+        )}
       </View>
     </SafeAreaView>
   );

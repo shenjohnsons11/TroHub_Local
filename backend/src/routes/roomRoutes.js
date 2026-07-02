@@ -11,4 +11,10 @@ router.get('/:id', roomController.getRoomById);
 router.put('/:id', roomController.updateRoom);
 router.delete('/:id', roomController.deleteRoom);
 
+// Cập nhật sổ điện nước hàng loạt
+router.post('/bulk-report-utility', roomController.reportBulkUtilities);
+
+// Khách báo cáo điện nước
+router.post('/:id/report-utility', roomController.reportUtility);
+
 module.exports = router;

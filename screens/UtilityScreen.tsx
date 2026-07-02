@@ -6,6 +6,9 @@ import {
   View,
   Pressable,
   ActivityIndicator,
+  Modal,
+  TextInput,
+  Alert,
 } from "react-native";
 import Card from "../components/Card";
 import { COLORS } from "../constants/theme";
@@ -19,6 +22,9 @@ type Props = {
 export default function UtilityScreen({ onBack }: Props) {
   const [utilityHistory, setUtilityHistory] = useState<UtilityRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [draftElec, setDraftElec] = useState("");
+  const [draftWater, setDraftWater] = useState("");
 
   useEffect(() => {
     loadUtilities();
@@ -33,6 +39,22 @@ export default function UtilityScreen({ onBack }: Props) {
       console.log("Lỗi load điện nước:", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleReport = async () => {
+    if (!draftElec || !draftWater) {
+      Alert.alert("Lỗi", "Vui lòng nhập đầy đủ chỉ số điện và nước");
+      return;
+    }
+    const res = await utilityService.reportUtility(Number(draftElec), Number(draftWater));
+    if (res.success) {
+      Alert.alert("Thành công", "Đã gửi số liệu điện nước cho chủ trọ chờ duyệt!");
+      setModalVisible(false);
+      setDraftElec("");
+      setDraftWater("");
+    } else {
+      Alert.alert("Lỗi", res.message || "Có lỗi xảy ra");
     }
   };
 
@@ -119,6 +141,10 @@ export default function UtilityScreen({ onBack }: Props) {
         </Card>
       )}
 
+      <Pressable style={styles.reportButton} onPress={() => setModalVisible(true)}>
+        <Text style={styles.reportButtonText}>+ Chốt số điện nước tháng này</Text>
+      </Pressable>
+
       <Text style={styles.historyTitle}>Lịch sử điện nước</Text>
 
       {utilityHistory.map((item) => (
@@ -136,6 +162,41 @@ export default function UtilityScreen({ onBack }: Props) {
           </View>
         </Card>
       ))}
+
+      <Modal visible={modalVisible} transparent animationType="slide">
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Báo cáo chỉ số điện nước</Text>
+            
+            <Text style={styles.label}>Số điện mới:</Text>
+            <TextInput 
+              style={styles.input} 
+              keyboardType="numeric" 
+              value={draftElec} 
+              onChangeText={setDraftElec} 
+              placeholder="Nhập số điện trên đồng hồ..." 
+            />
+            
+            <Text style={styles.label}>Số nước mới:</Text>
+            <TextInput 
+              style={styles.input} 
+              keyboardType="numeric" 
+              value={draftWater} 
+              onChangeText={setDraftWater} 
+              placeholder="Nhập số nước trên đồng hồ..." 
+            />
+
+            <View style={styles.modalActions}>
+              <Pressable style={[styles.btn, styles.btnCancel]} onPress={() => setModalVisible(false)}>
+                <Text style={styles.btnText}>Hủy</Text>
+              </Pressable>
+              <Pressable style={[styles.btn, styles.btnSubmit]} onPress={handleReport}>
+                <Text style={[styles.btnText, { color: "#fff" }]}>Gửi báo cáo</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -278,6 +339,66 @@ const styles = StyleSheet.create({
   historyText: {
     color: COLORS.muted,
     fontSize: 13,
-    fontWeight: "700",
+  },
+  reportButton: {
+    backgroundColor: COLORS.orange,
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  reportButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 15,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: COLORS.text,
+    marginBottom: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+  },
+  modalActions: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  btn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  btnCancel: {
+    backgroundColor: "#E2E8F0",
+  },
+  btnSubmit: {
+    backgroundColor: COLORS.orange,
+  },
+  btnText: {
+    fontWeight: "bold",
   },
 });

@@ -157,7 +157,7 @@ export default function AdminContractsScreen({ params }: Props) {
     return true;
   });
 
-  const vacantRooms = rooms.filter(room => room.status === 0);
+  const selectableRooms = rooms.filter(room => room.status === 0 || room.status === 1);
 
   if (loading) {
     return (
@@ -256,10 +256,10 @@ export default function AdminContractsScreen({ params }: Props) {
                 <Text style={styles.label}>Chọn phòng trống</Text>
                 <ScrollView style={styles.roomSelectScroll} nestedScrollEnabled={true}>
                   <View style={styles.roomSelectGrid}>
-                    {vacantRooms.length === 0 ? (
-                      <Text style={styles.noVacantText}>Không có phòng trống nào hiện tại!</Text>
+                    {selectableRooms.length === 0 ? (
+                      <Text style={styles.noVacantText}>Không có phòng nào có thể chọn!</Text>
                     ) : (
-                      vacantRooms.map((room) => (
+                      selectableRooms.map((room) => (
                         <Pressable
                           key={room._id}
                           style={[

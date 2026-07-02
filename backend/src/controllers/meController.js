@@ -105,8 +105,7 @@ exports.getTenantPortal = async (req, res) => {
         let repairs = [];
         if (currentContractIds.length > 0) {
             const rawRepairs = await RepairRequest.find({ contractId: { $in: currentContractIds } })
-                .sort({ createdAt: -1 })
-                .allowDiskUse(true);
+                .sort({ updatedAt: -1 });
             repairs = rawRepairs.map(r => ({
                 id: r._id.toString(),
                 category: r.title || '',
@@ -311,5 +310,30 @@ exports.deleteRepair = async (req, res) => {
         res.status(200).json({ success: true, message: "Đã xóa yêu cầu sửa chữa thành công!" });
     } catch (error) {
         res.status(500).json({ success: false, message: "Lỗi xóa yêu cầu sửa chữa: " + error.message });
+    }
+};
+
+// Khách tự báo cáo điện nước
+exports.reportUtility = async (req, res) => {
+    try {
+        const tenantId = getTenantIdFromToken(req);
+        if (!tenantId) return res.status(401).json({ success: false, message: 'Chưa đăng nhập' });
+
+        const activeContract = await Contract.findOne({ tenantId, status: 1 });
+        if (!activeContract || !activeContract.roomId) {
+            return res.status(400).json({ success: false, message: 'Bạn không có hợp đồng đang thuê' });
+        }
+
+        const { draftElectricity, draftWater } = req.body;
+        
+        const updatedRoom = await Room.findByIdAndUpdate(
+            activeContract.roomId,
+            { draftElectricity, draftWater },
+            { new: true }
+        );
+
+        res.status(200).json({ success: true, message: 'Đã báo cáo chỉ số điện nước thành công', data: updatedRoom });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Lỗi Server: ' + error.message });
     }
 };

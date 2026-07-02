@@ -42,7 +42,11 @@ exports.getAllRooms = async (req, res) => {
 // 2. Thêm phòng trọ mới
 exports.createRoom = async (req, res) => {
     try {
-        const { roomCode, area, defaultRentPrice, defaultDeposit, landlordId } = req.body;
+        let { roomCode, area, defaultRentPrice, defaultDeposit, landlordId, rent, deposit } = req.body;
+        
+        // Hỗ trợ map field từ frontend gửi lên (rent, deposit)
+        if (rent !== undefined) defaultRentPrice = rent;
+        if (deposit !== undefined) defaultDeposit = deposit;
 
         // Kiểm tra xem mã phòng đã tồn tại chưa
         const existingRoom = await Room.findOne({ roomCode });
@@ -88,9 +92,13 @@ exports.getRoomById = async (req, res) => {
 // 4. Cập nhật thông tin phòng (Sửa giá, sửa diện tích...)
 exports.updateRoom = async (req, res) => {
     try {
+        let updateData = { ...req.body };
+        if (updateData.rent !== undefined) updateData.defaultRentPrice = updateData.rent;
+        if (updateData.deposit !== undefined) updateData.defaultDeposit = updateData.deposit;
+
         const updatedRoom = await Room.findByIdAndUpdate(
             req.params.id, 
-            req.body, 
+            updateData, 
             { new: true }
         );
         
@@ -132,8 +140,60 @@ exports.deleteRoom = async (req, res) => {
         // ---------------------------------------------
 
         await Room.findByIdAndDelete(roomId);
-        res.status(200).json({ success: true, message: 'Đã xóa phòng thành công!' });
+        res.status(200).json({ success: true, message: "Xóa phòng thành công!" });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Lỗi khi xóa phòng: ' + error.message });
+        res.status(500).json({ success: false, message: "Lỗi Server: " + error.message });
+    }
+};
+
+// 6. Khách thuê báo cáo số điện nước
+exports.reportUtility = async (req, res) => {
+    try {
+        const { draftElectricity, draftWater } = req.body;
+        
+        const updatedRoom = await Room.findByIdAndUpdate(
+            req.params.id,
+            { draftElectricity, draftWater },
+            { new: true }
+        );
+
+        if (!updatedRoom) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy phòng!" });
+        }
+
+        res.status(200).json({ 
+            success: true, 
+            message: "Đã gửi số liệu điện nước cho chủ trọ chờ duyệt!", 
+            data: updatedRoom 
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Lỗi Server: " + error.message });
+    }
+};
+
+exports.reportBulkUtilities = async (req, res) => {
+    try {
+        const { utilities } = req.body;
+        if (!utilities || !Array.isArray(utilities)) {
+            return res.status(400).json({ success: false, message: "Dữ liệu không hợp lệ" });
+        }
+
+        const Room = require('../models/Room');
+        const updatePromises = utilities.map(async (item) => {
+            if (!item.roomId) return;
+            const updateData = {};
+            if (item.draftElectricity !== undefined && item.draftElectricity !== "") updateData.draftElectricity = Number(item.draftElectricity);
+            if (item.draftWater !== undefined && item.draftWater !== "") updateData.draftWater = Number(item.draftWater);
+            
+            if (Object.keys(updateData).length > 0) {
+                await Room.findByIdAndUpdate(item.roomId, updateData);
+            }
+        });
+
+        await Promise.all(updatePromises);
+
+        res.status(200).json({ success: true, message: "Đã lưu sổ điện nước thành công!" });
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Lỗi Server: " + error.message });
     }
 };

@@ -193,7 +193,7 @@ export const contractService = {
   },
 
   // Người thuê ký xác nhận hợp đồng (status 0 → 4)
-  async signContract(contractId: string): Promise<boolean> {
+  async signContract(contractId: string): Promise<{ success: boolean; invoiceId?: string }> {
     try {
       const token = await authService.getToken();
 
@@ -212,7 +212,7 @@ export const contractService = {
         throw new Error(response.message || "Ký hợp đồng thất bại");
       }
 
-      return true;
+      return { success: true, invoiceId: response.invoiceId };
     } catch (error) {
       console.log("Lỗi ký hợp đồng:", error);
       throw error;
