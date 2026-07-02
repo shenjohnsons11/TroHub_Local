@@ -66,9 +66,8 @@ export default function AdminDashboardScreen({ profile, onNavigate, onLogout }: 
           <Text style={styles.title}>Xin chào Chủ trọ {(profile as any)?.fullName || (profile as any)?.name || "Admin"}</Text>
           <Text style={styles.subtitle}>Tổng quan quản lý phòng trọ</Text>
         </View>
-        <Pressable style={styles.logoutButton} onPress={onLogout}>
-          <Ionicons name="log-out-outline" size={22} color={COLORS.red} />
-          <Text style={styles.logoutText}>Đăng xuất</Text>
+        <Pressable style={styles.settingsButton} onPress={() => onNavigate("settings")}>
+          <Ionicons name="settings-outline" size={26} color={COLORS.text} />
         </Pressable>
       </View>
 
@@ -164,19 +163,15 @@ const styles = StyleSheet.create({
   header: {
     flex: 1,
   },
-  logoutButton: {
-    flexDirection: "row",
+  settingsButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
-    backgroundColor: COLORS.orangeSoft,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    gap: 4,
-  },
-  logoutText: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: COLORS.red,
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   title: {
     fontSize: 24,
