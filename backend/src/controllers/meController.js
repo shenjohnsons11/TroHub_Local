@@ -337,3 +337,73 @@ exports.reportUtility = async (req, res) => {
         res.status(500).json({ success: false, message: 'Lỗi Server: ' + error.message });
     }
 };
+
+// =========================================================================
+// QUẢN LÝ LỜI MỜI VÀO DÃY TRỌ (INVITES)
+// =========================================================================
+
+exports.getInvites = async (req, res) => {
+    try {
+        const tenantId = getTenantIdFromToken(req);
+        if (!tenantId) return res.status(401).json({ success: false, message: 'Chưa đăng nhập' });
+
+        const tenant = await Account.findById(tenantId).populate('pendingLandlords', 'fullName phone email');
+        if (!tenant) return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản' });
+
+        const invites = (tenant.pendingLandlords || []).map(l => ({
+            id: l._id.toString(),
+            landlordName: l.fullName || 'Chủ trọ',
+            phone: l.phone || ''
+        }));
+
+        res.status(200).json({ success: true, data: invites });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Lỗi server: ' + error.message });
+    }
+};
+
+exports.acceptInvite = async (req, res) => {
+    try {
+        const tenantId = getTenantIdFromToken(req);
+        if (!tenantId) return res.status(401).json({ success: false, message: 'Chưa đăng nhập' });
+
+        const landlordId = req.params.id;
+        
+        const tenant = await Account.findById(tenantId);
+        if (!tenant) return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản' });
+
+        // Xóa khỏi pending
+        tenant.pendingLandlords = (tenant.pendingLandlords || []).filter(id => id.toString() !== landlordId);
+        
+        // Thêm vào linked
+        if (!tenant.linkedLandlords.some(id => id.toString() === landlordId)) {
+            tenant.linkedLandlords.push(landlordId);
+        }
+
+        await tenant.save();
+
+        res.status(200).json({ success: true, message: 'Đã chấp nhận lời mời' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Lỗi server: ' + error.message });
+    }
+};
+
+exports.rejectInvite = async (req, res) => {
+    try {
+        const tenantId = getTenantIdFromToken(req);
+        if (!tenantId) return res.status(401).json({ success: false, message: 'Chưa đăng nhập' });
+
+        const landlordId = req.params.id;
+        
+        const tenant = await Account.findById(tenantId);
+        if (!tenant) return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản' });
+
+        // Xóa khỏi pending
+        tenant.pendingLandlords = (tenant.pendingLandlords || []).filter(id => id.toString() !== landlordId);
+        await tenant.save();
+
+        res.status(200).json({ success: true, message: 'Đã từ chối lời mời' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Lỗi server: ' + error.message });
+    }
+};

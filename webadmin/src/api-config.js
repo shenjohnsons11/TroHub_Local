@@ -48,7 +48,7 @@ export const API_CONFIG = {
     room: apiData.room || "-", // Backend ko populate room
     citizenId: apiData.idCard || apiData.citizenId || "",
     startDate: apiData.startDate || "-",
-    status: apiData.contractStatus === 5 ? "Yêu cầu trả phòng" : (apiData.status === 1 ? "Đang thuê" : "Ngừng thuê"),
+    status: apiData.pending ? "Chờ xác nhận" : (apiData.contractStatus === 5 ? "Yêu cầu trả phòng" : (apiData.status === 1 ? "Đang thuê" : "Ngừng thuê")),
     accountId: apiData._id || "",
     accountStatus: apiData.status === 1 ? "Đã tạo" : "Chưa tạo"
   }),
