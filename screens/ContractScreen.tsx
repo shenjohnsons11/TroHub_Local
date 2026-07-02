@@ -47,7 +47,11 @@ const getStatusBg = (status: ContractStatus): string => {
   }
 };
 
-export default function ContractScreen() {
+type Props = {
+  onNavigate?: (screen: "invoice", params?: any) => void;
+};
+
+export default function ContractScreen({ onNavigate }: Props) {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -83,7 +87,7 @@ export default function ContractScreen() {
       `Tiền thuê: ${contract.rentFee}\n` +
       `Tiền cọc: ${contract.deposit}\n` +
       `Thời hạn: ${contract.startDate} - ${contract.endDate}\n\n` +
-      "Sau khi ký, hợp đồng sẽ chờ chủ trọ duyệt để có hiệu lực.",
+      "Hệ thống sẽ tạo Hóa đơn tiền cọc. Bạn vui lòng thanh toán để hợp đồng có hiệu lực.",
       [
         { text: "Hủy", style: "cancel" },
         {
@@ -91,14 +95,18 @@ export default function ContractScreen() {
           onPress: async () => {
             try {
               setSigningId(contract.id);
-              await contractService.signContract(contract.id);
+              const result = await contractService.signContract(contract.id);
               Alert.alert(
                 "Thành công",
-                "Ký xác nhận hợp đồng thành công!\nChờ chủ trọ duyệt để hợp đồng có hiệu lực."
+                "Ký xác nhận thành công!\nVui lòng hoàn tất thanh toán tiền cọc."
               );
               // Reload danh sách
               const data = await contractService.getMyContracts();
               setContracts(data);
+              
+              if (result.invoiceId && onNavigate) {
+                onNavigate("invoice", { paymentInvoiceId: result.invoiceId });
+              }
             } catch (error) {
               Alert.alert(
                 "Lỗi",

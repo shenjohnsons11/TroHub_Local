@@ -128,7 +128,7 @@ export const adminService = {
     return response.success ? response.data : [];
   },
 
-  async createTenant(tenantData: { fullName: string; phone: string; email: string; roomCode: string; idCard: string; startDate: string; password?: string }): Promise<AdminTenant> {
+  async createTenant(tenantData: { fullName: string; phone: string; email: string; idCard: string }): Promise<AdminTenant> {
     const token = await authService.getToken();
     const response = await apiClient.post<{ success: boolean; data: AdminTenant }>("/tenants", tenantData, token);
     return response.data;
@@ -138,6 +138,18 @@ export const adminService = {
     const token = await authService.getToken();
     const response = await apiClient.get<{ success: boolean; data: AdminInvoice[] }>("/invoices", token);
     return response.success ? response.data : [];
+  },
+  async checkTenantDuplicate(field: string, value: string): Promise<{ isDuplicate: boolean; message?: string }> {
+    const token = await authService.getToken();
+    const response = await apiClient.post<{ success: boolean; isDuplicate: boolean; message?: string }>(
+      "/tenants/check-duplicate",
+      { field, value },
+      token
+    );
+    return {
+      isDuplicate: response.isDuplicate || false,
+      message: response.message
+    };
   },
 
   async createInvoice(invoiceData: any): Promise<AdminInvoice> {
@@ -231,10 +243,14 @@ export const adminService = {
         this.getInvoices(),
       ]);
 
+      const currentMonth = new Date().getMonth() + 1;
+      const currentYear = new Date().getFullYear();
+      const currentPeriod = `${currentMonth.toString().padStart(2, '0')}/${currentYear}`;
+
       const occupiedRooms = rooms.filter(r => r.status === 1).length;
       const pendingRepairs = repairs.filter(r => r.status === 0 || r.status === 1).length;
       const totalRevenue = invoices
-        .filter(inv => inv.status === 2)
+        .filter(inv => inv.status === 2 && inv.period === currentPeriod)
         .reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
 
       return {

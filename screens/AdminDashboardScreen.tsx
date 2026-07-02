@@ -126,7 +126,7 @@ export default function AdminDashboardScreen({ profile, onNavigate, onLogout }: 
           <Text style={styles.actionText}>Tạo hợp đồng</Text>
         </Pressable>
 
-        <Pressable style={styles.actionButton} onPress={() => onNavigate("invoice", { action: "create" })}>
+        <Pressable style={styles.actionButton} onPress={() => onNavigate("invoice_bulk")}>
           <Ionicons name="receipt-outline" size={26} color={COLORS.orange} />
           <Text style={styles.actionText}>Tạo hóa đơn</Text>
         </Pressable>

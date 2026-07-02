@@ -6,6 +6,9 @@ const contractController = require('../controllers/contractController');
 router.get('/', contractController.getAllContracts);
 router.post('/', contractController.createContract);
 
+// Lịch sử hợp đồng (Phải đặt TRƯỚC /:id)
+router.get('/history', contractController.getContractHistory);
+
 // Xem chi tiết hợp đồng
 router.get('/:id', contractController.getContractById);
 

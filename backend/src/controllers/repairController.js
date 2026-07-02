@@ -33,8 +33,7 @@ exports.getAllRequests = async (req, res) => {
                     { path: 'tenantId', select: 'fullName phone' }
                 ]
             })
-            .sort({ createdAt: -1 })
-            .allowDiskUse(true); // Mới nhất lên đầu
+            .sort({ createdAt: -1 }); // Mới nhất lên đầu
 
         // Map để frontend dễ hiển thị
         const data = requests.map(r => ({

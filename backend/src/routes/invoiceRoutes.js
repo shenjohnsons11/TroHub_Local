@@ -8,6 +8,10 @@ router.get('/', invoiceController.getAllInvoices);
 // Lấy danh sách xem trước lập hóa đơn hàng loạt
 router.get('/bulk-preview', invoiceController.getBulkPreview);
 
+// Lấy danh sách công nợ
+router.get('/debts', invoiceController.getDebts);
+router.post('/debts/:contractId/remind', invoiceController.remindDebt);
+
 // Tạo hóa đơn hàng loạt
 router.post('/bulk', invoiceController.createBulkInvoices);
 

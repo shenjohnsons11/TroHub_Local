@@ -25,7 +25,7 @@ exports.getBulkPreview = async (req, res) => {
         const roomIds = rooms.map(r => r._id);
 
         const contracts = await Contract.find({ roomId: { $in: roomIds }, status: 1 })
-            .populate('roomId', 'roomCode')
+            .populate('roomId', 'roomCode draftElectricity draftWater')
             .populate('tenantId', 'fullName phone')
             .populate('services.serviceId', 'name type');
 
@@ -36,8 +36,8 @@ exports.getBulkPreview = async (req, res) => {
             
             const roomAmount = contract.fixedRentPrice || 0;
             
-            let electricityOld = 0;
-            let waterOld = 0;
+            let electricityOld = contract.roomId.draftElectricity || 0;
+            let waterOld = contract.roomId.draftWater || 0;
             let electricityPrice = 0;
             let waterPrice = 0;
             let servicesTotal = 0;
@@ -53,10 +53,10 @@ exports.getBulkPreview = async (req, res) => {
                 if (service.type === 1) {
                     if (sName.includes('điện') || sName.includes('dien')) {
                         electricityPrice = item.fixedPrice || 0;
-                        if (previousInvoice) electricityOld = previousInvoice.electricityNew || 0;
+                        if (previousInvoice && previousInvoice.electricityNew !== undefined) electricityOld = previousInvoice.electricityNew;
                     } else if (sName.includes('nước') || sName.includes('nuoc')) {
                         waterPrice = item.fixedPrice || 0;
-                        if (previousInvoice) waterOld = previousInvoice.waterNew || 0;
+                        if (previousInvoice && previousInvoice.waterNew !== undefined) waterOld = previousInvoice.waterNew;
                     }
                 } else {
                     if (sName.includes('xe') || sName.includes('parking')) {
@@ -71,15 +71,24 @@ exports.getBulkPreview = async (req, res) => {
                 }
             }
 
+            console.log(`Contract ${contract._id} preview:`, {
+                eOld: electricityOld, ePrice: electricityPrice,
+                wOld: waterOld, wPrice: waterPrice,
+                servicesTotal, parking, internet, garbage
+            });
+
             previewList.push({
                 contractId: contract._id,
+                roomId: contract.roomId._id,
                 room: contract.roomId.roomCode,
                 tenant: contract.tenantId.fullName,
                 roomAmount: roomAmount,
                 electricityOld: electricityOld,
                 electricityPrice: electricityPrice,
+                electricityDraft: contract.roomId.draftElectricity || "",
                 waterOld: waterOld,
                 waterPrice: waterPrice,
+                waterDraft: contract.roomId.draftWater || "",
                 services: servicesTotal,
                 parking: parking,
                 internet: internet,
@@ -128,6 +137,18 @@ exports.createBulkInvoices = async (req, res) => {
                 resolvedPeriod = `${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
             }
 
+            let warningNote = "";
+            if (data.contractId) {
+                const unpaidInvoices = await Invoice.find({
+                    contractId: data.contractId,
+                    status: { $in: [1, 3] }
+                });
+                const totalDebt = unpaidInvoices.reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
+                if (totalDebt > 0) {
+                    warningNote = `LƯU Ý: Phòng đang có khoản nợ ${totalDebt.toLocaleString("vi-VN")}đ từ kỳ trước chưa thanh toán.`;
+                }
+            }
+
             const newInvoice = new Invoice({
                 contractId: data.contractId || null,
                 period: resolvedPeriod,
@@ -147,11 +168,25 @@ exports.createBulkInvoices = async (req, res) => {
                 parking,
                 internet,
                 garbage,
-                discount
+                discount,
+                note: warningNote,
+                details: []
             });
 
             await newInvoice.save();
             createdInvoices.push(newInvoice);
+
+            // Xóa nháp điện nước sau khi đã xuất hóa đơn
+            if (data.contractId) {
+                const Contract = require('../models/Contract');
+                const Room = require('../models/Room');
+                const contract = await Contract.findById(data.contractId);
+                if (contract && contract.roomId) {
+                    await Room.findByIdAndUpdate(contract.roomId, { 
+                        $unset: { draftElectricity: "", draftWater: "" } 
+                    });
+                }
+            }
         }
 
         res.status(201).json({ success: true, message: `Đã tạo thành công ${createdInvoices.length} hóa đơn!`, data: createdInvoices });
@@ -228,7 +263,11 @@ exports.getAllInvoices = async (req, res) => {
             .populate({
                 path: 'contractId',
                 populate: [
-                    { path: 'roomId', select: 'roomCode' },
+                    { 
+                        path: 'roomId', 
+                        select: 'roomCode landlordId',
+                        populate: { path: 'landlordId', select: 'bankId bankAccountNo bankAccountName fullName' }
+                    },
                     { path: 'tenantId', select: 'fullName' }
                 ]
             })
@@ -313,6 +352,19 @@ exports.createInvoice = async (req, res) => {
 
             const total = Number(req.body.total) || Number(req.body.totalAmount) || 0;
 
+            // Kiểm tra nợ cũ để thêm cảnh báo
+            let warningNote = req.body.note || "";
+            if (resolvedContractId) {
+                const unpaidInvoices = await Invoice.find({
+                    contractId: resolvedContractId,
+                    status: { $in: [1, 3] }
+                });
+                const totalDebt = unpaidInvoices.reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
+                if (totalDebt > 0) {
+                    warningNote = `LƯU Ý: Phòng đang có khoản nợ ${totalDebt.toLocaleString("vi-VN")}đ từ kỳ trước chưa thanh toán.\n${warningNote}`.trim();
+                }
+            }
+
             const newInvoice = new Invoice({
                 contractId: resolvedContractId || null,
                 period: resolvedPeriod,
@@ -340,6 +392,7 @@ exports.createInvoice = async (req, res) => {
                 penalty: Number(req.body.penalty) || 0,
                 paymentMethod: req.body.paymentMethod || "",
                 transactionCode: req.body.transactionCode || "",
+                note: warningNote,
                 details: []
             });
 
@@ -525,5 +578,88 @@ exports.updateInvoice = async (req, res) => {
         res.status(200).json({ success: true, message: "Cập nhật hóa đơn thành công!", data: invoice });
     } catch (error) {
         res.status(500).json({ success: false, message: "Lỗi khi cập nhật hóa đơn: " + error.message });
+    }
+};
+// Lấy danh sách công nợ
+exports.getDebts = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        let userId = null;
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            const token = authHeader.split(' ')[1];
+            try {
+                const decoded = jwt.verify(token, JWT_SECRET);
+                userId = decoded.id;
+            } catch (e) {}
+        }
+        if (!userId) return res.status(401).json({ success: false, message: 'Chưa đăng nhập' });
+
+        const Room = require('../models/Room');
+        const rooms = await Room.find({ landlordId: userId });
+        const roomIds = rooms.map(r => r._id);
+
+        const contracts = await Contract.find({ roomId: { $in: roomIds } })
+            .populate('roomId', 'roomCode')
+            .populate('tenantId', 'fullName name');
+        const contractIds = contracts.map(c => c._id);
+
+        // Fetch unpaid or overdue invoices
+        const unpaidInvoices = await Invoice.find({
+            contractId: { $in: contractIds },
+            status: { $in: [1, 3] } // 1: Chưa TT, 3: Quá hạn
+        });
+
+        // Group by contract/room
+        const debtMap = {};
+        for (const inv of unpaidInvoices) {
+            const contractIdStr = inv.contractId.toString();
+            if (!debtMap[contractIdStr]) {
+                const contract = contracts.find(c => c._id.toString() === contractIdStr);
+                debtMap[contractIdStr] = {
+                    contractId: contractIdStr,
+                    room: inv.room || (contract && contract.roomId ? contract.roomId.roomCode : 'Không xác định'),
+                    tenant: inv.tenant || (contract && contract.tenantId ? (contract.tenantId.fullName || contract.tenantId.name) : 'Không xác định'),
+                    totalDebt: 0,
+                    unpaidInvoiceCount: 0,
+                    invoices: []
+                };
+            }
+            debtMap[contractIdStr].totalDebt += inv.totalAmount || 0;
+            debtMap[contractIdStr].unpaidInvoiceCount += 1;
+            debtMap[contractIdStr].invoices.push(inv);
+        }
+
+        const debts = Object.values(debtMap).sort((a, b) => b.totalDebt - a.totalDebt);
+
+        res.status(200).json({ success: true, data: debts });
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Lỗi lấy công nợ: " + error.message });
+    }
+};
+
+// Gửi nhắc nợ hàng loạt cho 1 phòng (contract)
+exports.remindDebt = async (req, res) => {
+    try {
+        const { contractId } = req.params;
+        const unpaidInvoices = await Invoice.find({
+            contractId: contractId,
+            status: { $in: [1, 3] }
+        });
+
+        if (unpaidInvoices.length === 0) {
+            return res.status(400).json({ success: false, message: "Phòng này không có nợ!" });
+        }
+
+        // Increment remindCount
+        for (const inv of unpaidInvoices) {
+            inv.remindCount = (inv.remindCount || 0) + 1;
+            await inv.save();
+        }
+
+        // Trong thực tế, gọi API gửi Push Notification/Email/ZNS ở đây
+
+        res.status(200).json({ success: true, message: `Đã gửi nhắc nợ cho ${unpaidInvoices.length} hóa đơn.` });
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Lỗi nhắc nợ: " + error.message });
     }
 };

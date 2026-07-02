@@ -14,10 +14,10 @@ export default function AdminTenantsScreen() {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [idCard, setIdCard] = useState("");
-  const [selectedRoomCode, setSelectedRoomCode] = useState("");
-  const [startDate, setStartDate] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [phoneError, setPhoneError] = useState("");
+  const [idCardError, setIdCardError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const loadData = async () => {
@@ -35,16 +35,43 @@ export default function AdminTenantsScreen() {
     }
   };
 
+  const handleCheckDuplicate = async (field: string, value: string) => {
+    if (!value.trim()) return;
+    try {
+      let cleanValue = value.trim();
+      if (field === 'phone' || field === 'idCard') {
+        cleanValue = value.replace(/\D/g, "");
+      }
+      
+      // Basic format check before calling API
+      if (field === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanValue)) {
+        setEmailError("Email không hợp lệ");
+        return;
+      }
+      if (field === 'phone' && cleanValue.length !== 10) {
+        setPhoneError("Số điện thoại chưa đủ 10 số");
+        return;
+      }
+      if (field === 'idCard' && cleanValue.length !== 12) {
+        setIdCardError("CCCD chưa đủ 12 số");
+        return;
+      }
+
+      const result = await adminService.checkTenantDuplicate(field, cleanValue);
+      if (field === 'email') setEmailError(result.message || "");
+      if (field === 'phone') setPhoneError(result.message || "");
+      if (field === 'idCard') setIdCardError(result.message || "");
+    } catch (error) {
+      console.log("Error checking duplicate:", error);
+    }
+  };
+
   useEffect(() => {
     loadData();
-    
-    // Set default start date to today's date formatted as YYYY-MM-DD
-    const today = new Date();
-    setStartDate(today.toISOString().split("T")[0]);
   }, []);
 
   const handleAddTenant = async () => {
-    if (!fullName.trim() || !phone.trim() || !email.trim() || !idCard.trim() || !selectedRoomCode.trim() || !startDate.trim()) {
+    if (!fullName.trim() || !phone.trim() || !email.trim() || !idCard.trim()) {
       Alert.alert("Lỗi", "Vui lòng điền đầy đủ thông tin!");
       return;
     }
@@ -73,19 +100,17 @@ export default function AdminTenantsScreen() {
         fullName: fullName.trim(),
         phone: cleanPhone,
         email: email.trim(),
-        roomCode: selectedRoomCode,
         idCard: cleanIdCard,
-        startDate,
-        password: password.trim() || "123456",
       });
-      Alert.alert("Thành công", "Đã thêm khách thuê mới và tạo hợp đồng nháp!");
+      Alert.alert("Thành công", "Đã thêm khách thuê mới!");
       setModalVisible(false);
       setFullName("");
       setPhone("");
       setEmail("");
-      setPassword("");
       setIdCard("");
-      setSelectedRoomCode("");
+      setEmailError("");
+      setPhoneError("");
+      setIdCardError("");
       loadData();
     } catch (error) {
       Alert.alert("Lỗi", error instanceof Error ? error.message : "Thêm khách thuê thất bại!");
@@ -161,17 +186,19 @@ export default function AdminTenantsScreen() {
 
                   <Text style={styles.label}>Email (Tên đăng nhập)</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, emailError ? styles.inputError : null]}
                     value={email}
-                    onChangeText={setEmail}
+                    onChangeText={(text) => { setEmail(text); setEmailError(""); }}
+                    onBlur={() => handleCheckDuplicate('email', email)}
                     placeholder="Nhập email"
                     keyboardType="email-address"
                     autoCapitalize="none"
                   />
+                  {!!emailError && <Text style={styles.errorText}>{emailError}</Text>}
 
                   <Text style={styles.label}>Số điện thoại (Bắt buộc 10 số)</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, phoneError ? styles.inputError : null]}
                     value={phone}
                     onChangeText={(text) => {
                       let val = text.replace(/\D/g, "");
@@ -179,24 +206,18 @@ export default function AdminTenantsScreen() {
                       if (val.length > 7) val = val.replace(/(\d{4})(\d{3})(\d+)/, "$1.$2.$3");
                       else if (val.length > 4) val = val.replace(/(\d{4})(\d+)/, "$1.$2");
                       setPhone(val);
+                      setPhoneError("");
                     }}
+                    onBlur={() => handleCheckDuplicate('phone', phone)}
                     placeholder="Nhập 10 số điện thoại"
                     keyboardType="phone-pad"
                     maxLength={12}
                   />
-
-                  <Text style={styles.label}>Mật khẩu</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={password}
-                    onChangeText={setPassword}
-                    placeholder="Nhập mật khẩu cho khách"
-                    secureTextEntry
-                  />
+                  {!!phoneError && <Text style={styles.errorText}>{phoneError}</Text>}
 
                   <Text style={styles.label}>Số CCCD (Bắt buộc 12 số)</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, idCardError ? styles.inputError : null]}
                     value={idCard}
                     onChangeText={(text) => {
                       let val = text.replace(/\D/g, "");
@@ -204,48 +225,14 @@ export default function AdminTenantsScreen() {
                       if (val.length > 8) val = val.replace(/(\d{4})(\d{4})(\d+)/, "$1.$2.$3");
                       else if (val.length > 4) val = val.replace(/(\d{4})(\d+)/, "$1.$2");
                       setIdCard(val);
+                      setIdCardError("");
                     }}
+                    onBlur={() => handleCheckDuplicate('idCard', idCard)}
                     placeholder="Nhập CCCD"
                     keyboardType="numeric"
                     maxLength={14}
                   />
-
-                  <Text style={styles.label}>Chọn phòng trống</Text>
-                  <View style={styles.dropdownContainer}>
-                    {vacantRooms.length === 0 ? (
-                      <Text style={styles.noVacantText}>Không có phòng trống nào hiện tại!</Text>
-                    ) : (
-                      <View style={styles.roomSelectGrid}>
-                        {vacantRooms.map((room) => (
-                          <Pressable
-                            key={room._id}
-                            style={[
-                              styles.roomSelectItem,
-                              selectedRoomCode === room.roomCode && styles.roomSelectActive
-                            ]}
-                            onPress={() => setSelectedRoomCode(room.roomCode)}
-                          >
-                            <Text
-                              style={[
-                                styles.roomSelectText,
-                                selectedRoomCode === room.roomCode && styles.roomSelectTextActive
-                              ]}
-                            >
-                              {room.roomCode}
-                            </Text>
-                          </Pressable>
-                        ))}
-                      </View>
-                    )}
-                  </View>
-
-                  <Text style={styles.label}>Ngày bắt đầu hợp đồng (YYYY-MM-DD)</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={startDate}
-                    onChangeText={setStartDate}
-                    placeholder="YYYY-MM-DD"
-                  />
+                  {!!idCardError && <Text style={styles.errorText}>{idCardError}</Text>}
 
                   <Pressable
                     style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
@@ -255,7 +242,7 @@ export default function AdminTenantsScreen() {
                     {submitting ? (
                       <ActivityIndicator color="#FFFFFF" />
                     ) : (
-                      <Text style={styles.submitButtonText}>Thêm khách & Tạo hợp đồng</Text>
+                      <Text style={styles.submitButtonText}>Thêm khách thuê</Text>
                     )}
                   </Pressable>
                 </View>
@@ -396,6 +383,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     fontSize: 14,
     color: COLORS.text,
+  },
+  inputError: {
+    borderWidth: 1,
+    borderColor: COLORS.red,
+    backgroundColor: "#FFF5F5",
+  },
+  errorText: {
+    color: COLORS.red,
+    fontSize: 11,
+    fontWeight: "500",
+    marginTop: 4,
+    marginLeft: 4,
   },
   dropdownContainer: {
     width: "100%",
