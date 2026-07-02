@@ -864,6 +864,8 @@ const renderInvoiceCreate = () => {
       <article class="card panel invoice-calc-summary">
         <h2>Bảng tự tính hóa đơn</h2>
         <div class="amount-list">
+          <div><span>Phòng</span>${calcOutput("roomName", roomName || "-")}</div>
+          <div><span>Khách thuê</span>${calcOutput("tenantName", tenantName || "Chưa có khách")}</div>
           <div><span>Điện tiêu thụ</span>${calcOutput("electricityUsage", `${calc.electricityUsage} kWh`)}</div>
           <div><span>Tiền điện</span>${calcOutput("electricityAmount", money(calc.electricityAmount))}</div>
           <div><span>Nước tiêu thụ</span>${calcOutput("waterUsage", `${calc.waterUsage} m3`)}</div>
