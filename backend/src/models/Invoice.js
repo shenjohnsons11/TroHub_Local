@@ -30,6 +30,7 @@ const invoiceSchema = new mongoose.Schema({
     penalty: { type: Number, default: 0 },
     paymentMethod: { type: String, default: "" },
     transactionCode: { type: String, default: "" },
+    note: { type: String, default: "" },
     
     // Gộp bảng CHI_TIET_HOA_DON vào mảng này:
     details: [{

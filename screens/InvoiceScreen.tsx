@@ -16,8 +16,12 @@ import { invoiceService } from "../services/invoiceService";
 
 type FilterType = "all" | "unpaid" | "paid";
 
-export default function InvoiceScreen() {
-  const [filter, setFilter] = useState<FilterType>("all");
+type Props = {
+  params?: any;
+};
+
+export default function InvoiceScreen({ params }: Props) {
+  const [filter, setFilter] = useState<FilterType>(params?.filter || "all");
   const [invoiceList, setInvoiceList] = useState<Invoice[]>([]);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [paymentInvoice, setPaymentInvoice] = useState<Invoice | null>(null);
@@ -32,6 +36,10 @@ export default function InvoiceScreen() {
       setIsLoading(true);
       const data = await invoiceService.getInvoices();
       setInvoiceList(data);
+      if (params?.paymentInvoiceId) {
+        const inv = data.find(i => i.id === params.paymentInvoiceId);
+        if (inv) setPaymentInvoice(inv);
+      }
     } catch (error) {
       console.log("Lỗi load hóa đơn:", error);
     } finally {

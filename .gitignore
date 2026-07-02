@@ -42,7 +42,14 @@ app-example
 /ios
 /android
 
-# Agent and documentation
+# Agent and Environment
 GEMINI.md
-README.md
-*.md
+.agents/
+.gemini/
+docker-compose.yml
+Dockerfile
+.dockerignore
+
+# Keep documentation tracked
+!README.md
+!CHANGELOG.md

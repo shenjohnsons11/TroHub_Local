@@ -29,7 +29,12 @@ export default function BulkInvoiceScreen({ onNavigate }: { onNavigate: (tab: an
     try {
       setLoading(true);
       const res = await invoiceService.getBulkPreview();
-      setData((res || []).map(item => ({ ...item, selected: true })));
+      setData((res || []).map(item => ({ 
+        ...item, 
+        selected: true,
+        electricityNew: item.electricityDraft !== undefined ? String(item.electricityDraft) : '',
+        waterNew: item.waterDraft !== undefined ? String(item.waterDraft) : ''
+      })));
     } catch (e: any) {
       Alert.alert('Lỗi', e.message);
     } finally {

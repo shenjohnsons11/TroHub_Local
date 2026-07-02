@@ -16,6 +16,26 @@ exports.register = async (req, res) => {
             return res.status(400).json({ success: false, message: "Tên đăng nhập này đã tồn tại trên hệ thống!" });
         }
 
+        // Kiểm tra trùng lặp email, phone, CCCD
+        if (email) {
+            const existingEmail = await Account.findOne({ email });
+            if (existingEmail) {
+                return res.status(400).json({ success: false, message: "Email này đã được đăng ký!" });
+            }
+        }
+        if (phone) {
+            const existingPhone = await Account.findOne({ phone });
+            if (existingPhone) {
+                return res.status(400).json({ success: false, message: "Số điện thoại này đã được đăng ký!" });
+            }
+        }
+        if (idCard) {
+            const existingIdCard = await Account.findOne({ idCard });
+            if (existingIdCard) {
+                return res.status(400).json({ success: false, message: "Số CCCD này đã được đăng ký trên hệ thống!" });
+            }
+        }
+
         // Tiến hành mã hóa mật khẩu bảo mật theo tiêu chuẩn quy định trong ERD
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
@@ -62,6 +82,7 @@ exports.login = async (req, res) => {
         if (!account || account.status === 0) {
             return res.status(400).json({ success: false, message: "Tài khoản không tồn tại hoặc đã bị khóa!" });
         }
+        console.log("LOGIN FETCHED ACCOUNT:", account);
 
         // So khớp mật khẩu đã mã hóa lưu trong cơ sở dữ liệu
         const isMatch = await bcrypt.compare(password, account.password);
@@ -84,7 +105,8 @@ exports.login = async (req, res) => {
                 id: account._id,
                 username: account.username,
                 fullName: account.fullName,
-                role: account.role // 1: Giao diện Web chủ trọ, 2: Giao diện Mobile khách thuê
+                role: account.role, // 1: Giao diện Web chủ trọ, 2: Giao diện Mobile khách thuê
+                mustChangePassword: account.mustChangePassword
             }
         });
     } catch (error) {
@@ -165,5 +187,43 @@ exports.updateMe = async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Lỗi Server khi cập nhật thông tin: ' + error.message });
+    }
+};
+
+// 5. Đổi mật khẩu (PUT /api/auth/change-password)
+exports.changePassword = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ success: false, message: 'Bạn chưa đăng nhập hoặc token không hợp lệ!' });
+        }
+        const token = authHeader.split(' ')[1];
+        const decoded = jwt.verify(token, JWT_SECRET);
+        
+        const { currentPassword, newPassword } = req.body;
+        if (!newPassword || newPassword.length < 6) {
+            return res.status(400).json({ success: false, message: "Mật khẩu mới phải có ít nhất 6 ký tự!" });
+        }
+        
+        const account = await Account.findById(decoded.id);
+        if (!account) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản!' });
+        }
+        
+        // So khớp mật khẩu cũ
+        const isMatch = await bcrypt.compare(currentPassword, account.password);
+        if (!isMatch) {
+            return res.status(400).json({ success: false, message: "Mật khẩu hiện tại không chính xác!" });
+        }
+        
+        // Mã hóa mật khẩu mới
+        const salt = await bcrypt.genSalt(10);
+        account.password = await bcrypt.hash(newPassword, salt);
+        account.mustChangePassword = false; // Đã đổi mật khẩu thành công
+        await account.save();
+        
+        res.status(200).json({ success: true, message: 'Đổi mật khẩu thành công!' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Lỗi Server khi đổi mật khẩu: ' + error.message });
     }
 };

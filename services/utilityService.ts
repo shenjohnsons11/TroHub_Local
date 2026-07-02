@@ -97,12 +97,24 @@ export const utilityService = {
         throw new Error(response.message || "Không lấy được dữ liệu điện nước");
       }
 
-      const invoices = response.data || [];
-
-      return invoices.map(mapInvoiceToUtility);
+      return response.data
+        .filter((inv) => inv.details && inv.details.length > 0)
+        .map(mapInvoiceToUtility)
+        .sort((a, b) => b.month.localeCompare(a.month)); // Sắp xếp mới nhất lên đầu
     } catch (error) {
-      console.log("Lỗi lấy dữ liệu điện nước từ API:", error);
-      throw error;
+      console.log("Lỗi parse dữ liệu điện nước:", error);
+      return [];
     }
   },
+
+  async reportUtility(draftElectricity: number, draftWater: number): Promise<{ success: boolean; message?: string }> {
+    try {
+      const token = await authService.getToken();
+      if (!token) throw new Error("Chưa đăng nhập");
+      const res = await apiClient.post<{ success: boolean; message: string }>("/me/report-utility", { draftElectricity, draftWater }, token);
+      return res;
+    } catch (error: any) {
+      return { success: false, message: error.message };
+    }
+  }
 };

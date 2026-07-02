@@ -1,58 +1,61 @@
-# 🏡 TroHub - Hướng Dẫn Chạy Dự Án Bằng Docker (1-Click)
+# 🏡 TroHub - Hướng Dẫn Cài Đặt & Khởi Chạy Dự Án
 
-Dự án này là hệ thống Quản lý Phòng Trọ (TroHub) bao gồm App dành cho Khách thuê (Tenant) và Web Admin dành cho Chủ trọ. Toàn bộ kiến trúc (Frontend, Backend, Database) đã được gộp chung và đóng gói bằng Docker.
+Dự án này là hệ thống Quản lý Phòng Trọ (TroHub) bao gồm App dành cho Khách thuê (Tenant) và Web Admin dành cho Chủ trọ. 
 
 ## 📌 Yêu Cầu Cần Có
-1. **Git** (Để tải mã nguồn)
-2. **Docker Desktop** (Phải bật phần mềm này lên trước khi chạy lệnh)
+1. **Node.js** (v18 trở lên)
+2. **MongoDB** (Cài đặt MongoDB Community Server hoặc dùng MongoDB Atlas)
+3. **Expo CLI** (Dành cho Mobile App)
 
 ---
 
-## 🚀 Các Bước Chạy Dự Án (Dành Cho Đồng Nghiệp/Tester)
+## 🚀 Các Bước Chạy Dự Án (Dành Cho Đồng Nghiệp)
 
-### Bước 1: Clone (Tải) mã nguồn về máy
-Mở Terminal (hoặc Command Prompt) và chạy lệnh:
+### Bước 1: Khởi chạy Backend (Node.js & MongoDB)
+Mở một cửa sổ Terminal mới:
 ```bash
-git clone https://github.com/shenjohnsons11/TroHub_Local.git
-cd TroHub_Local
+cd backend
+npm install
+# Khởi động Backend server (cổng 3000)
+npm run dev
 ```
+*Lưu ý: Bạn cần có MongoDB đang chạy ở cổng 27017, hoặc cấu hình link MongoDB Atlas trong thư mục backend.*
+*Backend được cấu hình Auto-Seeding: Sẽ tự động nạp dữ liệu mẫu ban đầu vào DB khi chạy lần đầu tiên.*
 
-### Bước 2: Khởi chạy bằng Docker
-Chỉ cần chạy **duy nhất 1 lệnh** sau (nhớ thêm sudo nếu dùng Linux/Mac cần quyền admin):
+### Bước 2: Khởi chạy Web Admin (Dành cho Chủ trọ)
+Mở một cửa sổ Terminal thứ 2:
 ```bash
-docker-compose up --build -d
+# Từ thư mục gốc dự án
+cd webadmin
+# Sử dụng http-server để host file tĩnh (cổng 5174)
+npx http-server . -p 5174 -a 127.0.0.1 -c-1
 ```
-*Lưu ý: Quá trình này có thể mất 2-3 phút trong lần chạy đầu tiên vì Docker cần tải image Nodejs, MongoDB và tự động cài đặt thư viện.*
+Trang Web Admin sẽ chạy tại: [http://127.0.0.1:5174/index.html](http://127.0.0.1:5174/index.html)
 
-### Bước 3: Truy Cập Ứng Dụng
-Sau khi Terminal báo `Started` cho tất cả các container, dự án đã chạy thành công tại các địa chỉ sau:
-
-- 💻 **Web Admin (Dành cho Chủ Trọ):** [http://localhost:8084](http://localhost:8084)
-- 📱 **Tenant App (Dành cho Người Thuê):** [http://localhost:8081](http://localhost:8081)
-- ⚙️ **Backend API:** `http://localhost:3000`
-- 🗄️ **Database (MongoDB):** `localhost:27017`
-
----
-
-## ❓ Câu Hỏi: "Dữ Liệu Lấy Từ Đâu?"
-Bạn không cần import hay setup Database bằng tay!
-Hệ thống được thiết lập cơ chế **Auto-Seeding**. Ngay khi container Backend khởi động, nó sẽ tự động chạy file `backend/seed.js` để kết nối vào MongoDB (nằm trong container) và bơm sẵn toàn bộ dữ liệu mẫu bao gồm:
-- Danh sách phòng trọ
-- Cấu hình phí dịch vụ
-- Dữ liệu hóa đơn, hợp đồng mẫu
-- Các tài khoản đăng nhập (Admin & User)
-
-Do đó, mỗi người clone dự án về đều có một Database cục bộ riêng biệt, đầy đủ data để test mà không sợ ảnh hưởng đến nhau.
+### Bước 3: Khởi chạy Mobile App (Expo - Dành cho Người thuê)
+Mở một cửa sổ Terminal thứ 3:
+```bash
+# Từ thư mục gốc dự án
+npm install
+# Khởi động Expo Server (cổng 8083)
+npx expo start --web --port 8083
+```
+- Web: Bấm phím `w` trong Terminal để xem trên trình duyệt.
+- Mobile: Dùng ứng dụng Expo Go quét mã QR trên màn hình.
 
 ---
 
-## 🔐 Tài Khoản Test Mặc Định
-Sử dụng các tài khoản sau để đăng nhập vào Web Admin hoặc App:
+## 🔐 Tài Khoản Test Mặc Định (Từ file Seed)
 
-- **Tài khoản Admin (Chủ trọ):** 
-  - Email: `admin@trohub.vn`
+- **Tài khoản Admin (Chủ trọ) - Đăng nhập trên Web Admin:** 
+  - Tên đăng nhập: `admin@trohub.vn`
   - Mật khẩu: `123456`
 
-- **Tài khoản Khách Thuê (Tenant):**
-  - Email: `user@trohub.vn`
+- **Tài khoản Khách Thuê (Tenant) - Đăng nhập trên Mobile App:**
+  - Tên đăng nhập: `tenant@trohub.vn` (hoặc email/sđt của khách thuê mà bạn đã tạo)
   - Mật khẩu: `123456`
+
+---
+
+## 📖 Lịch sử cập nhật
+Xem file [CHANGELOG.md](./CHANGELOG.md) để biết thêm chi tiết về các tính năng mới được cập nhật.

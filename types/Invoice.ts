@@ -25,4 +25,8 @@ export type Invoice = {
     garbage: string;
     otherServices?: string;
   };
+  bankId?: string;
+  bankAccountNo?: string;
+  bankAccountName?: string;
+  numericAmount?: number;
 };
