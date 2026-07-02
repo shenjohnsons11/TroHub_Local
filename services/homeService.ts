@@ -21,19 +21,24 @@ export const homeService = {
         contractService.getContract(),
       ]);
 
-      const unpaidInvoice = invoices.find((item) => item.status === "unpaid");
-      const latestRepair = repairs[0];
+      const activeContracts = await contractService.getMyContracts();
+      const currentContracts = activeContracts.filter(c => ["active", "awaiting_approval", "requesting_termination"].includes(c.status));
+      const roomNames = currentContracts.map(c => c.room).filter(Boolean);
+      const isSigned = currentContracts.length > 0;
 
-      const isSigned = contract && ["active", "awaiting_approval", "requesting_termination"].includes(contract.status);
+      const unpaidInvoices = invoices.filter((item) => item.status === "unpaid");
+      const totalAmountNum = unpaidInvoices.reduce((sum, inv) => sum + (inv.numericAmount || 0), 0);
+      
+      const latestRepair = repairs[0];
 
       return {
         tenantName: profile.fullName || "Người thuê",
-        room: isSigned ? contract.room : "Chưa có phòng",
+        room: isSigned ? roomNames.join(", ") : "Chưa có phòng",
 
-        totalAmount: unpaidInvoice?.amount || "0đ",
-        paymentStatus: unpaidInvoice ? "unpaid" : "paid",
-        paymentStatusText: unpaidInvoice ? "Chưa thanh toán" : "Đã thanh toán",
-        dueDate: unpaidInvoice?.dueDate || "Không có",
+        totalAmount: unpaidInvoices.length > 0 ? totalAmountNum.toLocaleString("vi-VN") + "đ" : "0đ",
+        paymentStatus: unpaidInvoices.length > 0 ? "unpaid" : "paid",
+        paymentStatusText: unpaidInvoices.length > 0 ? "Chưa thanh toán" : "Đã thanh toán",
+        dueDate: unpaidInvoices.length > 0 ? unpaidInvoices[0].dueDate : "Không có",
 
         contractEndDate: contract?.endDate || "Không có",
 
