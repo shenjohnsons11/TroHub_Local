@@ -7,4 +7,7 @@ export type UserProfile = {
   room: string;
   startDate: string;
   role: number; // 1: Chủ trọ, 2: Người thuê
+  bankId?: string;
+  bankAccountNo?: string;
+  bankAccountName?: string;
 };

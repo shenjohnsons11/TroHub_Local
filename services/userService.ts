@@ -14,6 +14,9 @@ type ApiUser = {
   idCard?: string;
   role: number;
   status?: number;
+  bankId?: string;
+  bankAccountNo?: string;
+  bankAccountName?: string;
 };
 
 type GetMeResponse = {
@@ -49,6 +52,9 @@ const mapApiUserToProfile = (user: ApiUser): UserProfile => {
     room: "",
     startDate: "",
     role: user.role || 2,
+    bankId: user.bankId || "",
+    bankAccountNo: user.bankAccountNo || "",
+    bankAccountName: user.bankAccountName || "",
   };
 };
 

@@ -18,6 +18,7 @@ import AdminRepairsScreen from "../screens/AdminRepairsScreen";
 import AdminTenantsScreen from "../screens/AdminTenantsScreen";
 import BulkInvoiceScreen from "../screens/BulkInvoiceScreen";
 import ChangePasswordScreen from "../screens/ChangePasswordScreen";
+import AdminSettingsScreen from "../screens/AdminSettingsScreen";
 
 import { UserProfile } from "../types/UserProfile";
 import { authService } from "../services/authService";
@@ -34,7 +35,8 @@ type Tab =
   | "profile"
   | "rooms"
   | "tenants"
-  | "change_password";
+  | "change_password"
+  | "settings";
 
 export default function App() {
   const [isChecking, setIsChecking] = useState(true);
@@ -154,6 +156,15 @@ export default function App() {
               {activeTab === "repair" && <AdminRepairsScreen />}
 
               {activeTab === "tenants" && <AdminTenantsScreen />}
+
+              {activeTab === "settings" && (
+                <AdminSettingsScreen
+                  profile={profile!}
+                  onSave={handleSaveProfile}
+                  onBack={() => setActiveTab("home")}
+                  onLogout={handleLogout}
+                />
+              )}
             </>
           ) : (
             <>
