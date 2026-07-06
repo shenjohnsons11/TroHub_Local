@@ -12,6 +12,16 @@ type Props = {
   onConfirm: (invoiceId: string) => void;
 };
 
+type InvoiceWithBank = Invoice & {
+  bankId?: string;
+  bankAccountNo?: string;
+  bankAccountName?: string;
+  numericAmount?: number;
+  amount?: string;
+  room?: string;
+  month?: string;
+};
+
 export default function PaymentModal({
   visible,
   invoice,
@@ -22,58 +32,126 @@ export default function PaymentModal({
 
   if (!invoice) return null;
 
+  const currentInvoice = invoice as InvoiceWithBank;
+
+  // FIX NHANH: fallback thông tin ngân hàng nếu invoice chưa có bankId/bankAccountNo/bankAccountName
+  const BANK_INFO = {
+    bankId: "MB",
+    bankAccountNo: "0983692870",
+    bankAccountName: "DUONG VY KIET",
+  };
+
+  // Bảng mapping tên ngắn ngân hàng → Mã BIN VietQR
+  const BANK_BIN_MAP: Record<string, string> = {
+    MB: "970422",
+    MBBANK: "970422",
+
+    VCB: "970436",
+    VIETCOMBANK: "970436",
+
+    TCB: "970407",
+    TECHCOMBANK: "970407",
+
+    BIDV: "970418",
+
+    AGRIBANK: "970405",
+    AGR: "970405",
+
+    ACB: "970416",
+
+    VPB: "970432",
+    VPBANK: "970432",
+
+    TPB: "970423",
+    TPBANK: "970423",
+
+    STB: "970403",
+    SACOMBANK: "970403",
+
+    HDB: "970437",
+    HDBANK: "970437",
+
+    VIB: "970441",
+    SHB: "970443",
+
+    EIB: "970431",
+    EXIMBANK: "970431",
+
+    MSB: "970426",
+    OCB: "970448",
+
+    LPB: "970449",
+    LIENVIETPOSTBANK: "970449",
+
+    SEABANK: "970440",
+    ABBANK: "970425",
+    NCB: "970419",
+
+    CAKE: "546034",
+    TIMO: "963388",
+  };
+
+  const getBankBin = (shortName?: string): string | null => {
+    if (!shortName) return null;
+
+    const cleaned = shortName.toUpperCase().trim();
+
+    // Nếu đã nhập thẳng mã BIN 6 số thì dùng luôn
+    if (/^\d{6}$/.test(cleaned)) return cleaned;
+
+    return BANK_BIN_MAP[cleaned] || null;
+  };
+
+  const getInvoiceAmount = () => {
+    if (currentInvoice.numericAmount) {
+      return currentInvoice.numericAmount;
+    }
+
+    const rawAmount = String(currentInvoice.amount || "0");
+    return parseInt(rawAmount.replace(/\D/g, ""), 10) || 0;
+  };
+
+  const getPaymentContent = () => {
+    return `TroHub ${currentInvoice.id} P${currentInvoice.room || ""} T${
+      currentInvoice.month || ""
+    }`.substring(0, 50);
+  };
+
+  const getBankInfo = () => {
+    return {
+      bankId: currentInvoice.bankId || BANK_INFO.bankId,
+      bankAccountNo: currentInvoice.bankAccountNo || BANK_INFO.bankAccountNo,
+      bankAccountName:
+        currentInvoice.bankAccountName || BANK_INFO.bankAccountName,
+    };
+  };
+
+  const getVietQRUrl = () => {
+    const bankInfo = getBankInfo();
+
+    const bankBin = getBankBin(bankInfo.bankId);
+    const accountNo = bankInfo.bankAccountNo;
+    const accountName = encodeURIComponent(bankInfo.bankAccountName);
+    const amount = getInvoiceAmount();
+    const addInfo = encodeURIComponent(getPaymentContent());
+
+    if (!bankBin || !accountNo) {
+      return null;
+    }
+
+    return `https://img.vietqr.io/image/${bankBin}-${accountNo}-compact2.png?amount=${amount}&addInfo=${addInfo}&accountName=${accountName}`;
+  };
+
   const handleConfirm = async () => {
     try {
-      await onConfirm(invoice.id);
+      await onConfirm(currentInvoice.id);
       onClose();
     } catch (error) {
       console.log(error);
     }
   };
 
-  // Bảng mapping tên ngắn ngân hàng → Mã BIN (VietQR API yêu cầu BIN, không phải tên rút gọn)
-  const BANK_BIN_MAP: Record<string, string> = {
-    "MB": "970422", "MBBANK": "970422",
-    "VCB": "970436", "VIETCOMBANK": "970436",
-    "TCB": "970407", "TECHCOMBANK": "970407",
-    "BIDV": "970418",
-    "AGRIBANK": "970405", "AGR": "970405",
-    "ACB": "970416",
-    "VPB": "970432", "VPBANK": "970432",
-    "TPB": "970423", "TPBANK": "970423",
-    "STB": "970403", "SACOMBANK": "970403",
-    "HDB": "970437", "HDBANK": "970437",
-    "VIB": "970441",
-    "SHB": "970443",
-    "EIB": "970431", "EXIMBANK": "970431",
-    "MSB": "970426",
-    "OCB": "970448",
-    "LPB": "970449", "LIENVIETPOSTBANK": "970449",
-    "SEABANK": "970440",
-    "ABBANK": "970425",
-    "NCB": "970419",
-    "CAKE": "546034",
-    "TIMO": "963388",
-  };
-
-  const getBankBin = (shortName?: string): string | null => {
-    if (!shortName) return null;
-    if (/^\d{6}$/.test(shortName)) return shortName; // Đã là BIN thì dùng luôn
-    return BANK_BIN_MAP[shortName.toUpperCase().trim()] || null;
-  };
-
-  const getVietQRUrl = () => {
-    const bankBin = getBankBin(invoice.bankId);
-    if (!bankBin || !invoice.bankAccountNo) {
-      return null; // Chưa thiết lập → không hiện QR
-    }
-    const accountNo = invoice.bankAccountNo;
-    const amount = invoice.numericAmount || parseInt(invoice.amount.replace(/\D/g, "")) || 0;
-    const addInfo = encodeURIComponent(`TroHub ${invoice.id} P${invoice.room} T${invoice.month}`.substring(0, 50));
-    const accountName = encodeURIComponent(invoice.bankAccountName || "");
-    return `https://img.vietqr.io/image/${bankBin}-${accountNo}-compact2.png?amount=${amount}&addInfo=${addInfo}&accountName=${accountName}`;
-  };
-
+  const bankInfo = getBankInfo();
   const qrUrl = getVietQRUrl();
 
   return (
@@ -84,7 +162,8 @@ export default function PaymentModal({
             <View>
               <Text style={styles.title}>Thanh toán</Text>
               <Text style={styles.subtitle}>
-                Hóa đơn tháng {invoice.month} • Phòng {invoice.room}
+                Hóa đơn tháng {currentInvoice.month} • Phòng{" "}
+                {currentInvoice.room}
               </Text>
             </View>
 
@@ -95,12 +174,15 @@ export default function PaymentModal({
 
           <View style={styles.amountBox}>
             <Text style={styles.amountLabel}>Tổng tiền thanh toán</Text>
-            <Text style={styles.amount}>{invoice.amount}</Text>
+            <Text style={styles.amount}>{currentInvoice.amount}</Text>
           </View>
 
           <View style={styles.methodRow}>
             <Pressable
-              style={[styles.methodButton, method === "bank" && styles.methodActive]}
+              style={[
+                styles.methodButton,
+                method === "bank" && styles.methodActive,
+              ]}
               onPress={() => setMethod("bank")}
             >
               <Text
@@ -114,7 +196,10 @@ export default function PaymentModal({
             </Pressable>
 
             <Pressable
-              style={[styles.methodButton, method === "vnpay" && styles.methodActive]}
+              style={[
+                styles.methodButton,
+                method === "vnpay" && styles.methodActive,
+              ]}
               onPress={() => setMethod("vnpay")}
             >
               <Text
@@ -149,23 +234,40 @@ export default function PaymentModal({
             <View style={styles.qrBox}>
               {qrUrl ? (
                 <>
-                  <Image
-                    source={{ uri: qrUrl }}
-                    style={styles.qrImage}
-                    resizeMode="contain"
-                  />
-                  <Text style={styles.bankInfo}>Ngân hàng: {(invoice.bankId || "").toUpperCase()}</Text>
-                  <Text style={styles.bankInfo}>STK: {invoice.bankAccountNo}</Text>
-                  <Text style={styles.bankInfo}>Chủ TK: {invoice.bankAccountName}</Text>
-                  <Text style={styles.note}>
-                    Nội dung CK: TroHub {invoice.id} P{invoice.room} T{invoice.month}
-                  </Text>
+                  <View style={styles.qrImageWrap}>
+                    <Image
+                      source={{ uri: qrUrl }}
+                      style={styles.qrImage}
+                      resizeMode="contain"
+                    />
+                  </View>
+
+                  <View style={styles.bankInfoBox}>
+                    <Text style={styles.bankInfo}>
+                      Ngân hàng: {bankInfo.bankId.toUpperCase()}
+                    </Text>
+
+                    <Text style={styles.bankInfo}>
+                      STK: {bankInfo.bankAccountNo}
+                    </Text>
+
+                    <Text style={styles.bankInfo}>
+                      Chủ TK: {bankInfo.bankAccountName}
+                    </Text>
+
+                    <Text style={styles.note}>
+                      Nội dung CK: {getPaymentContent()}
+                    </Text>
+                  </View>
                 </>
               ) : (
-                <View style={{ backgroundColor: '#FFF9E6', padding: 16, borderRadius: 8, borderWidth: 1, borderColor: '#FFE58F' }}>
-                  <Text style={{ color: '#D48806', fontWeight: 'bold', fontSize: 14, marginBottom: 6 }}>⚠️ Chưa thiết lập ngân hàng</Text>
-                  <Text style={{ color: '#D48806', fontSize: 13, lineHeight: 20 }}>
-                    Chủ trọ chưa cài đặt thông tin ngân hàng. Vui lòng liên hệ chủ trọ để được hỗ trợ thanh toán.
+                <View style={styles.warningBox}>
+                  <Text style={styles.warningTitle}>
+                    ⚠️ Chưa thiết lập ngân hàng
+                  </Text>
+                  <Text style={styles.warningText}>
+                    Chủ trọ chưa cài đặt thông tin ngân hàng. Vui lòng liên hệ
+                    chủ trọ để được hỗ trợ thanh toán.
                   </Text>
                 </View>
               )}
@@ -291,11 +393,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 18,
   },
-  qrImage: {
-    width: 160,
-    height: 160,
-    borderRadius: 14,
+  qrImageWrap: {
+    backgroundColor: "#FFFFFF",
+    padding: 10,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     marginBottom: 14,
+  },
+  qrImage: {
+    width: 180,
+    height: 180,
+    borderRadius: 14,
+  },
+  bankInfoBox: {
+    width: "100%",
+    backgroundColor: "#F8F9FA",
+    borderRadius: 14,
+    padding: 14,
+    alignItems: "center",
   },
   bankInfo: {
     color: COLORS.text,
@@ -308,6 +424,25 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "900",
     marginTop: 8,
+    textAlign: "center",
+  },
+  warningBox: {
+    backgroundColor: "#FFF9E6",
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#FFE58F",
+  },
+  warningTitle: {
+    color: "#D48806",
+    fontWeight: "bold",
+    fontSize: 14,
+    marginBottom: 6,
+  },
+  warningText: {
+    color: "#D48806",
+    fontSize: 13,
+    lineHeight: 20,
   },
   infoBox: {
     backgroundColor: "#F4F5F7",
