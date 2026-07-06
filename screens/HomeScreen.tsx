@@ -1,18 +1,17 @@
 import React, { useEffect, useState } from "react";
 import {
-  ScrollView,
-  Text,
-  StyleSheet,
-  View,
-  Pressable,
   ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import Card from "../components/Card";
 import { COLORS } from "../constants/theme";
-import { HomeData } from "../types/HomeData";
 import { homeService } from "../services/homeService";
-import { inviteService, Invite } from "../services/inviteService";
+import { Invite, inviteService } from "../services/inviteService";
+import { HomeData } from "../types/HomeData";
 
 type Props = {
   refreshKey: number;
@@ -72,17 +71,13 @@ export default function HomeScreen({ refreshKey, onNavigate, onLogout }: Props) 
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.headerRow}>
-        <View style={styles.header}>
-          <Text style={styles.hello}>Xin chào Người thuê {homeData.tenantName}</Text>
-          <Text style={styles.room}>
-            {homeData.room === "Chưa có phòng" ? "Chưa có phòng" : `Phòng ${homeData.room}`}
-          </Text>
-        </View>
-        <Pressable style={styles.logoutButton} onPress={onLogout}>
-          <Ionicons name="log-out-outline" size={20} color={COLORS.red} />
-          <Text style={styles.logoutText}>Đăng xuất</Text>
-        </Pressable>
-      </View>
+  <View style={styles.header}>
+    <Text style={styles.hello}>Xin chào Người thuê {homeData.tenantName}</Text>
+    <Text style={styles.room}>
+      {homeData.room === "Chưa có phòng" ? "Chưa có phòng" : `Phòng ${homeData.room}`}
+    </Text>
+  </View>
+</View>
 
       {invites.length > 0 && invites.map(invite => (
         <Card key={invite.id} style={[styles.amountCard, { backgroundColor: '#FFF9E6', borderColor: '#FFE58F' }]}>
@@ -213,22 +208,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 18,
   },
-  logoutButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFF1F1",
-    borderWidth: 1,
-    borderColor: "#FFD4D4",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    gap: 4,
-  },
-  logoutText: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: COLORS.red,
-  },
+
   hello: {
     fontSize: 21,
     lineHeight: 28,
