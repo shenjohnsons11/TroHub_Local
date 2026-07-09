@@ -1,6 +1,6 @@
 import { Invoice } from "../types/Invoice";
-import { authService } from "./authService";
 import { apiClient } from "./apiClient";
+import { authService } from "./authService";
 
 type ApiService = {
   _id: string;
@@ -67,6 +67,38 @@ type PayInvoiceResponse = {
   success: boolean;
   message: string;
   transaction?: unknown;
+};
+
+type CreateVietQRPaymentResponse = {
+  success: boolean;
+  message: string;
+  data: {
+    transactionId: string;
+    invoiceId: string;
+    amount: number;
+    method: string;
+    status: number;
+    orderCode: string;
+    description: string;
+    qrUrl: string;
+  };
+};
+
+type PaymentStatusResponse = {
+  success: boolean;
+  data: {
+    transactionId: string;
+    invoiceId: string;
+    amount: number;
+    method: string;
+    status: number;
+    statusText: "pending" | "success" | "failed" | "cancelled";
+    orderCode: string;
+    description: string;
+    qrUrl: string;
+    gatewayReference?: string;
+    paidAt?: string | null;
+  };
 };
 
 const formatMoney = (value?: number) => {
@@ -207,6 +239,55 @@ export const invoiceService = {
       return response.data.map(mapApiInvoiceToInvoice);
     } catch (error) {
       console.log("Lỗi lấy danh sách hóa đơn từ API:", error);
+      throw error;
+    }
+  },
+
+  async createVietQRPayment(invoiceId: string) {
+    try {
+      const token = await authService.getToken();
+
+      if (!token) {
+        throw new Error("Không tìm thấy token đăng nhập");
+      }
+
+      const response = await apiClient.post<CreateVietQRPaymentResponse>(
+        "/payments/vietqr/create",
+        { invoiceId },
+        token
+      );
+
+      if (!response.success) {
+        throw new Error(response.message || "Không tạo được mã VietQR");
+      }
+
+      return response.data;
+    } catch (error) {
+      console.log("Lỗi tạo thanh toán VietQR:", error);
+      throw error;
+    }
+  },
+
+  async getPaymentStatus(transactionId: string) {
+    try {
+      const token = await authService.getToken();
+
+      if (!token) {
+        throw new Error("Không tìm thấy token đăng nhập");
+      }
+
+      const response = await apiClient.get<PaymentStatusResponse>(
+        `/payments/${transactionId}/status`,
+        token
+      );
+
+      if (!response.success) {
+        throw new Error("Không kiểm tra được trạng thái thanh toán");
+      }
+
+      return response.data;
+    } catch (error) {
+      console.log("Lỗi kiểm tra trạng thái thanh toán:", error);
       throw error;
     }
   },
