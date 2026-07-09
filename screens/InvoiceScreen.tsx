@@ -52,29 +52,13 @@ export default function InvoiceScreen({ params }: Props) {
     return item.status === filter;
   });
 
-  const handlePayment = async (invoiceId: string) => {
+  const handlePayment = async (_invoiceId: string) => {
     try {
-      const updatedInvoices = await invoiceService.payInvoice(invoiceId);
-
-      setInvoiceList(updatedInvoices);
-
-      const updatedSelectedInvoice = updatedInvoices.find(
-        (item) => item.id === selectedInvoice?.id
-      );
-
-      const updatedPaymentInvoice = updatedInvoices.find(
-        (item) => item.id === paymentInvoice?.id
-      );
-
-      if (updatedSelectedInvoice) {
-        setSelectedInvoice(updatedSelectedInvoice);
-      }
-
-      if (updatedPaymentInvoice) {
-        setPaymentInvoice(updatedPaymentInvoice);
-      }
+      await loadInvoices();
+      setSelectedInvoice(null);
+      setPaymentInvoice(null);
     } catch (error) {
-      console.log("Lỗi xử lý thanh toán:", error);
+      console.log("Lỗi refresh hóa đơn sau thanh toán:", error);
     }
   };
 
@@ -82,7 +66,7 @@ export default function InvoiceScreen({ params }: Props) {
     setPaymentInvoice(invoice);
   };
 
-const openPaymentFromDetail = (invoiceId: string) => {
+  const openPaymentFromDetail = (invoiceId: string) => {
     const invoice = invoiceList.find((item) => item.id === invoiceId);
 
     if (invoice) {

@@ -47,6 +47,7 @@ app.use('/api/settings', settingsRoute);
 app.use('/api/me', meRoute);
 app.use('/api/payments', paymentRoute);
 app.use('/api/services', serviceRoutes);
+app.use("/vqr", require("./src/routes/vietqrDirectRoutes"));
 
 // 5. Khởi động Server
 const PORT = process.env.PORT || 5000;
