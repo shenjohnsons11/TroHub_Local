@@ -1,6 +1,16 @@
-import React, { useState } from "react";
-import { Modal, View, Text, Pressable, StyleSheet, Image } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { COLORS } from "../constants/theme";
+import { invoiceService } from "../services/invoiceService";
 import { Invoice } from "../types/Invoice";
 
 type PaymentMethod = "bank" | "vnpay" | "zalopay";
@@ -22,6 +32,17 @@ type InvoiceWithBank = Invoice & {
   month?: string;
 };
 
+type VietQRPaymentData = {
+  transactionId: string;
+  invoiceId: string;
+  amount: number;
+  method: string;
+  status: number;
+  orderCode: string;
+  description: string;
+  qrUrl: string;
+};
+
 export default function PaymentModal({
   visible,
   invoice,
@@ -29,130 +50,184 @@ export default function PaymentModal({
   onConfirm,
 }: Props) {
   const [method, setMethod] = useState<PaymentMethod>("bank");
+  const [paymentData, setPaymentData] = useState<VietQRPaymentData | null>(
+    null
+  );
+  const [isCreatingQR, setIsCreatingQR] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isSuccess, setIsSuccess] = useState(false);
+  const hasCompletedRef = useRef(false);
+  const currentInvoice = invoice as InvoiceWithBank | null;
 
-  if (!invoice) return null;
-
-  const currentInvoice = invoice as InvoiceWithBank;
-
-  // FIX NHANH: fallback thông tin ngân hàng nếu invoice chưa có bankId/bankAccountNo/bankAccountName
   const BANK_INFO = {
-    bankId: "MB",
-    bankAccountNo: "0983692870",
+    bankId: "Cake",
+    bankAccountNo: "0967145600",
     bankAccountName: "DUONG VY KIET",
-  };
-
-  // Bảng mapping tên ngắn ngân hàng → Mã BIN VietQR
-  const BANK_BIN_MAP: Record<string, string> = {
-    MB: "970422",
-    MBBANK: "970422",
-
-    VCB: "970436",
-    VIETCOMBANK: "970436",
-
-    TCB: "970407",
-    TECHCOMBANK: "970407",
-
-    BIDV: "970418",
-
-    AGRIBANK: "970405",
-    AGR: "970405",
-
-    ACB: "970416",
-
-    VPB: "970432",
-    VPBANK: "970432",
-
-    TPB: "970423",
-    TPBANK: "970423",
-
-    STB: "970403",
-    SACOMBANK: "970403",
-
-    HDB: "970437",
-    HDBANK: "970437",
-
-    VIB: "970441",
-    SHB: "970443",
-
-    EIB: "970431",
-    EXIMBANK: "970431",
-
-    MSB: "970426",
-    OCB: "970448",
-
-    LPB: "970449",
-    LIENVIETPOSTBANK: "970449",
-
-    SEABANK: "970440",
-    ABBANK: "970425",
-    NCB: "970419",
-
-    CAKE: "546034",
-    TIMO: "963388",
-  };
-
-  const getBankBin = (shortName?: string): string | null => {
-    if (!shortName) return null;
-
-    const cleaned = shortName.toUpperCase().trim();
-
-    // Nếu đã nhập thẳng mã BIN 6 số thì dùng luôn
-    if (/^\d{6}$/.test(cleaned)) return cleaned;
-
-    return BANK_BIN_MAP[cleaned] || null;
-  };
-
-  const getInvoiceAmount = () => {
-    if (currentInvoice.numericAmount) {
-      return currentInvoice.numericAmount;
-    }
-
-    const rawAmount = String(currentInvoice.amount || "0");
-    return parseInt(rawAmount.replace(/\D/g, ""), 10) || 0;
-  };
-
-  const getPaymentContent = () => {
-    return `TroHub ${currentInvoice.id} P${currentInvoice.room || ""} T${
-      currentInvoice.month || ""
-    }`.substring(0, 50);
   };
 
   const getBankInfo = () => {
     return {
-      bankId: currentInvoice.bankId || BANK_INFO.bankId,
-      bankAccountNo: currentInvoice.bankAccountNo || BANK_INFO.bankAccountNo,
+      bankId: currentInvoice?.bankId || BANK_INFO.bankId,
+      bankAccountNo: currentInvoice?.bankAccountNo || BANK_INFO.bankAccountNo,
       bankAccountName:
-        currentInvoice.bankAccountName || BANK_INFO.bankAccountName,
+        currentInvoice?.bankAccountName || BANK_INFO.bankAccountName,
     };
   };
 
-  const getVietQRUrl = () => {
-    const bankInfo = getBankInfo();
+  const createVietQRPayment = async () => {
+    if (!currentInvoice?.id) return;
 
-    const bankBin = getBankBin(bankInfo.bankId);
-    const accountNo = bankInfo.bankAccountNo;
-    const accountName = encodeURIComponent(bankInfo.bankAccountName);
-    const amount = getInvoiceAmount();
-    const addInfo = encodeURIComponent(getPaymentContent());
-
-    if (!bankBin || !accountNo) {
-      return null;
-    }
-
-    return `https://img.vietqr.io/image/${bankBin}-${accountNo}-compact2.png?amount=${amount}&addInfo=${addInfo}&accountName=${accountName}`;
-  };
-
-  const handleConfirm = async () => {
     try {
-      await onConfirm(currentInvoice.id);
-      onClose();
-    } catch (error) {
-      console.log(error);
+      setIsCreatingQR(true);
+      setErrorMessage("");
+
+      const data = await invoiceService.createVietQRPayment(currentInvoice.id);
+
+      setPaymentData(data);
+    } catch (error: any) {
+      console.log("Lỗi tạo QR VietQR:", error);
+      setErrorMessage(error?.message || "Không tạo được mã VietQR");
+    } finally {
+      setIsCreatingQR(false);
     }
   };
+
+  useEffect(() => {
+    if (!visible) {
+      setPaymentData(null);
+      setErrorMessage("");
+      setIsCreatingQR(false);
+      setIsChecking(false);
+      setIsSuccess(false);
+      setMethod("bank");
+      hasCompletedRef.current = false;
+      return;
+    }
+
+    if (visible && currentInvoice?.id && method === "bank") {
+      createVietQRPayment();
+    }
+  }, [visible, currentInvoice?.id, method]);
+
+  useEffect(() => {
+    if (
+      !visible ||
+      method !== "bank" ||
+      !paymentData?.transactionId ||
+      !currentInvoice?.id
+    ) {
+      return;
+    }
+
+    const timer = setInterval(async () => {
+      if (hasCompletedRef.current) return;
+
+      try {
+        const statusData = await invoiceService.getPaymentStatus(
+          paymentData.transactionId
+        );
+
+        if (statusData.status === 1 || statusData.statusText === "success") {
+          hasCompletedRef.current = true;
+
+          setIsSuccess(true);
+
+          await onConfirm(currentInvoice.id);
+        }
+      } catch (error) {
+        console.log("Lỗi tự động kiểm tra thanh toán:", error);
+      }
+    }, 3000);
+
+    return () => clearInterval(timer);
+  }, [
+    visible,
+    method,
+    paymentData?.transactionId,
+    currentInvoice?.id,
+  ]);
+
+  const handleCheckPaymentStatus = async () => {
+    if (!paymentData?.transactionId || !currentInvoice?.id) {
+      Alert.alert("Thông báo", "Chưa có giao dịch để kiểm tra.");
+      return;
+    }
+
+    try {
+      setIsChecking(true);
+
+      const statusData = await invoiceService.getPaymentStatus(
+        paymentData.transactionId
+      );
+
+      if (statusData.status === 1 || statusData.statusText === "success") {
+        setIsSuccess(true);
+
+        await onConfirm(currentInvoice.id);
+        return;
+      }
+
+      Alert.alert(
+        "Đang chờ thanh toán",
+        "Hệ thống chưa ghi nhận giao dịch. Vui lòng kiểm tra lại sau."
+      );
+    } catch (error: any) {
+      console.log("Lỗi kiểm tra trạng thái:", error);
+      Alert.alert(
+        "Lỗi",
+        error?.message || "Không kiểm tra được trạng thái thanh toán"
+      );
+    } finally {
+      setIsChecking(false);
+    }
+  };
+
+  if (!currentInvoice) return null;
+
+  if (isSuccess) {
+  return (
+    <Modal visible={visible} transparent animationType="slide">
+      <View style={styles.overlay}>
+        <View style={styles.box}>
+          <View style={styles.successBox}>
+            <View style={styles.successIcon}>
+              <Text style={styles.successIconText}>✓</Text>
+            </View>
+
+            <Text style={styles.successTitle}>Thanh toán thành công</Text>
+
+            <Text style={styles.successAmount}>{currentInvoice.amount}</Text>
+
+            <Text style={styles.successDesc}>
+              Hóa đơn tháng {currentInvoice.month} • Phòng {currentInvoice.room}
+            </Text>
+
+            <Pressable
+              style={styles.confirmButton}
+              onPress={() => {
+                onClose();
+              }}
+            >
+              <Text style={styles.confirmText}>Xem chi tiết</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.backHomeButton}
+              onPress={() => {
+                onClose();
+              }}
+            >
+              <Text style={styles.backHomeText}>Trở về danh sách hóa đơn</Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
 
   const bankInfo = getBankInfo();
-  const qrUrl = getVietQRUrl();
 
   return (
     <Modal visible={visible} transparent animationType="slide">
@@ -232,11 +307,30 @@ export default function PaymentModal({
 
           {method === "bank" && (
             <View style={styles.qrBox}>
-              {qrUrl ? (
+              {isCreatingQR ? (
+                <View style={styles.loadingQRBox}>
+                  <ActivityIndicator size="large" color={COLORS.orange} />
+                  <Text style={styles.loadingText}>Đang tạo mã VietQR...</Text>
+                </View>
+              ) : errorMessage ? (
+                <View style={styles.warningBox}>
+                  <Text style={styles.warningTitle}>
+                    Không tạo được mã thanh toán
+                  </Text>
+                  <Text style={styles.warningText}>{errorMessage}</Text>
+
+                  <Pressable
+                    style={styles.retryButton}
+                    onPress={createVietQRPayment}
+                  >
+                    <Text style={styles.retryText}>Tạo lại mã QR</Text>
+                  </Pressable>
+                </View>
+              ) : paymentData?.qrUrl ? (
                 <>
                   <View style={styles.qrImageWrap}>
                     <Image
-                      source={{ uri: qrUrl }}
+                      source={{ uri: paymentData.qrUrl }}
                       style={styles.qrImage}
                       resizeMode="contain"
                     />
@@ -256,19 +350,33 @@ export default function PaymentModal({
                     </Text>
 
                     <Text style={styles.note}>
-                      Nội dung CK: {getPaymentContent()}
+                      Nội dung CK: {paymentData.description}
+                    </Text>
+
+                    <Text style={styles.transactionText}>
+                      Mã GD: {paymentData.transactionId}
+                    </Text>
+
+                    <Text style={styles.pendingText}>
+                      Trạng thái: Đang chờ thanh toán
                     </Text>
                   </View>
                 </>
               ) : (
                 <View style={styles.warningBox}>
                   <Text style={styles.warningTitle}>
-                    ⚠️ Chưa thiết lập ngân hàng
+                    Chưa có mã thanh toán
                   </Text>
                   <Text style={styles.warningText}>
-                    Chủ trọ chưa cài đặt thông tin ngân hàng. Vui lòng liên hệ
-                    chủ trọ để được hỗ trợ thanh toán.
+                    Vui lòng bấm tạo lại mã QR.
                   </Text>
+
+                  <Pressable
+                    style={styles.retryButton}
+                    onPress={createVietQRPayment}
+                  >
+                    <Text style={styles.retryText}>Tạo mã QR</Text>
+                  </Pressable>
                 </View>
               )}
             </View>
@@ -278,7 +386,7 @@ export default function PaymentModal({
             <View style={styles.infoBox}>
               <Text style={styles.infoTitle}>Thanh toán qua VNPay</Text>
               <Text style={styles.infoDesc}>
-                Hệ thống sẽ chuyển sang cổng VNPay để thanh toán hóa đơn.
+                Chức năng VNPay sẽ được tích hợp sau.
               </Text>
             </View>
           )}
@@ -287,14 +395,31 @@ export default function PaymentModal({
             <View style={styles.infoBox}>
               <Text style={styles.infoTitle}>Thanh toán qua ZaloPay</Text>
               <Text style={styles.infoDesc}>
-                Hệ thống sẽ mở ZaloPay để hoàn tất giao dịch.
+                Chức năng ZaloPay sẽ được tích hợp sau.
               </Text>
             </View>
           )}
 
-          <Pressable style={styles.confirmButton} onPress={handleConfirm}>
-            <Text style={styles.confirmText}>Xác nhận đã thanh toán</Text>
-          </Pressable>
+          {method === "bank" ? (
+            <Pressable
+              style={[
+                styles.confirmButton,
+                (!paymentData || isChecking) && styles.disabledButton,
+              ]}
+              disabled={!paymentData || isChecking}
+              onPress={handleCheckPaymentStatus}
+            >
+              {isChecking ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.confirmText}>Đang chờ xác nhận thanh toán</Text>
+              )}
+            </Pressable>
+          ) : (
+            <Pressable style={styles.confirmButton}>
+              <Text style={styles.confirmText}>Chưa hỗ trợ phương thức này</Text>
+            </Pressable>
+          )}
         </View>
       </View>
     </Modal>
@@ -393,6 +518,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 18,
   },
+  loadingQRBox: {
+    height: 240,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadingText: {
+    color: COLORS.muted,
+    fontSize: 13,
+    fontWeight: "700",
+    marginTop: 12,
+  },
   qrImageWrap: {
     backgroundColor: "#FFFFFF",
     padding: 10,
@@ -426,7 +562,21 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: "center",
   },
+  transactionText: {
+    color: COLORS.muted,
+    fontSize: 11,
+    fontWeight: "700",
+    marginTop: 8,
+    textAlign: "center",
+  },
+  pendingText: {
+    color: "#D48806",
+    fontSize: 12,
+    fontWeight: "900",
+    marginTop: 8,
+  },
   warningBox: {
+    width: "100%",
     backgroundColor: "#FFF9E6",
     padding: 16,
     borderRadius: 8,
@@ -443,6 +593,18 @@ const styles = StyleSheet.create({
     color: "#D48806",
     fontSize: 13,
     lineHeight: 20,
+  },
+  retryButton: {
+    height: 42,
+    backgroundColor: COLORS.orange,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 12,
+  },
+  retryText: {
+    color: "#FFFFFF",
+    fontWeight: "900",
   },
   infoBox: {
     backgroundColor: "#F4F5F7",
@@ -468,9 +630,65 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  disabledButton: {
+    opacity: 0.55,
+  },
   confirmText: {
     color: "#FFFFFF",
     fontSize: 15,
     fontWeight: "900",
   },
+  successBox: {
+  alignItems: "center",
+  paddingVertical: 18,
+},
+
+successIcon: {
+  width: 72,
+  height: 72,
+  borderRadius: 36,
+  backgroundColor: "#EAFBEF",
+  alignItems: "center",
+  justifyContent: "center",
+  marginBottom: 18,
+},
+
+successIconText: {
+  color: COLORS.green,
+  fontSize: 42,
+  fontWeight: "900",
+},
+
+successTitle: {
+  color: COLORS.text,
+  fontSize: 22,
+  fontWeight: "900",
+  marginBottom: 10,
+},
+
+successAmount: {
+  color: COLORS.orange,
+  fontSize: 32,
+  fontWeight: "900",
+  marginBottom: 10,
+},
+
+successDesc: {
+  color: COLORS.muted,
+  fontSize: 14,
+  fontWeight: "700",
+  textAlign: "center",
+  marginBottom: 22,
+},
+
+backHomeButton: {
+  marginTop: 14,
+  paddingVertical: 8,
+},
+
+backHomeText: {
+  color: COLORS.muted,
+  fontSize: 14,
+  fontWeight: "800",
+},
 });
