@@ -27,7 +27,26 @@ function normalizeBillingPolicy(input = {}) {
     return {
         lateFeeGraceDays,
         lateFeeRate: Math.round(lateFeeRate * 100) / 100,
+        automaticRemindersEnabled: input.automaticRemindersEnabled !== false,
+        remindBeforeDueDays: normalizeReminderDays(input.remindBeforeDueDays ?? [3], 'remindBeforeDueDays'),
+        remindOnDueDate: input.remindOnDueDate !== false,
+        remindAfterOverdueDays: normalizeReminderDays(input.remindAfterOverdueDays ?? [1], 'remindAfterOverdueDays'),
     };
 }
 
-module.exports = { BillingPolicyValidationError, normalizeBillingPolicy };
+function normalizeReminderDays(value, field) {
+    if (!Array.isArray(value)) {
+        throw new BillingPolicyValidationError('Danh sách ngày nhắc không hợp lệ.', field);
+    }
+    const days = value.map(Number);
+    if (days.some((day) => !Number.isInteger(day) || day < 1 || day > 90)) {
+        throw new BillingPolicyValidationError('Ngày nhắc phải là số nguyên từ 1 đến 90.', field);
+    }
+    return [...new Set(days)].sort((a, b) => a - b);
+}
+
+module.exports = {
+    BillingPolicyValidationError,
+    normalizeBillingPolicy,
+    normalizeReminderDays,
+};

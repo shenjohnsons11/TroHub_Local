@@ -5,6 +5,27 @@ const {
     buildDepositPayment,
     signContractAndEnsureDeposit,
 } = require('../services/contractSigningService');
+const { sendContractToNguoiThue } = require('../services/contractNotificationService');
+
+exports.sendContract = async (req, res) => {
+    try {
+        const result = await sendContractToNguoiThue({
+            contractId: req.params.id,
+            adminId: req.auth.id,
+        });
+        return res.json({
+            success: true,
+            message: 'Đã gửi hợp đồng cho Người thuê.',
+            data: result,
+        });
+    } catch (error) {
+        return res.status(error.status || 500).json({
+            success: false,
+            code: error.code || 'CONTRACT_SEND_FAILED',
+            message: error.message || 'Không thể gửi hợp đồng.',
+        });
+    }
+};
 
 // 1. Lấy danh sách toàn bộ hợp đồng (Chủ trọ xem trên Web)
 exports.getAllContracts = async (req, res) => {

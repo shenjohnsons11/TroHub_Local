@@ -20,6 +20,7 @@ const billingPolicyRoutes = require('./src/routes/billingPolicyRoutes');
 const notificationRoutes = require('./src/routes/notificationRoutes');
 const paymentController = require('./src/controllers/paymentController');
 const { applyAllOverduePenalties } = require('./src/services/overdueInvoice');
+const { runAutomaticInvoiceReminders } = require('./src/services/invoiceReminderScheduler');
 
 const app = express();
 
@@ -46,6 +47,15 @@ const overdueTimer = setInterval(() => {
     });
 }, 15 * 60 * 1000);
 overdueTimer.unref();
+
+const reminderTimer = setInterval(() => {
+    runAutomaticInvoiceReminders().then((summary) => {
+        console.log('[INVOICE_REMINDER_JOB]', summary);
+    }).catch((error) => {
+        console.error('[INVOICE_REMINDER_JOB] Không thể gửi lịch nhắc:', error.message);
+    });
+}, 15 * 60 * 1000);
+reminderTimer.unref();
 
 // 4. Đăng ký các Routes
 app.use('/api/rooms', roomRoutes);
