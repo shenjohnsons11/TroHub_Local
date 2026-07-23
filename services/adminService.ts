@@ -33,12 +33,33 @@ export type AdminContract = {
   fixedRentPrice: number;
   fixedDeposit: number;
   status: number; // 0: Chờ xác nhận, 1: Hiệu lực, 2: Hết hạn, 3: Hủy
-  services?: { serviceId: string; fixedPrice: number }[];
+  services?: {
+    serviceId: string | {
+      _id: string;
+      name?: string;
+      code?: string;
+      billingMode?: "FIXED" | "QUANTITY" | "METER";
+      unit?: string;
+      defaultPrice?: number;
+    };
+    serviceName?: string;
+    serviceCode?: string;
+    billingMode?: "FIXED" | "QUANTITY" | "METER";
+    unit?: string;
+    fixedPrice: number;
+    defaultQuantity?: number;
+  }[];
   createdAt?: string;
 };
 
 export type AdminInvoice = {
   _id: string;
+  id?: string;
+  invoiceCode?: string;
+  roomCode?: string;
+  nguoiThue?: string;
+  statusCode?: number;
+  statusLabel?: string;
   contractId: {
     _id: string;
     roomId: { _id: string; roomCode: string };
@@ -71,6 +92,10 @@ export type AdminInvoice = {
   transactionCode?: string;
   details?: {
     serviceId: { _id: string; name: string; unit: string };
+    serviceName?: string;
+    serviceCode?: string;
+    billingMode?: "FIXED" | "QUANTITY" | "METER";
+    unit?: string;
     oldIndex?: number;
     newIndex?: number;
     quantity: number;
@@ -200,7 +225,12 @@ export const adminService = {
 
     const contractServices = defaultServices.map(s => ({
       serviceId: s._id,
-      fixedPrice: s.defaultPrice
+      serviceName: s.name,
+      serviceCode: s.code,
+      billingMode: s.billingMode || (s.type === 1 ? "METER" : "FIXED"),
+      unit: s.unit,
+      fixedPrice: s.defaultPrice,
+      defaultQuantity: s.defaultQuantity ?? 1,
     }));
 
     const response = await apiClient.post<{ success: boolean; data: AdminContract }>("/contracts", {

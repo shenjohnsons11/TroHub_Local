@@ -403,14 +403,15 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
         renderItem={({ item }) => (
           <Pressable style={styles.invoiceCard} onPress={() => handleOpenDetail(item)}>
             <View style={styles.invoiceInfo}>
-              <Text style={styles.roomCode}>Phòng {item.room || item.contractId?.roomId?.roomCode || "N/A"}</Text>
+              <Text style={styles.invoiceCode}>{item.invoiceCode || `HD-${item.period || "Chưa xác định"}`}</Text>
+              <Text style={styles.roomCode}>Phòng {item.roomCode || item.room || item.contractId?.roomId?.roomCode || "Chưa xác định"}</Text>
               <Text style={styles.invoicePeriod}>Kỳ hóa đơn: {item.period}</Text>
               <Text style={styles.invoiceAmount}>Tổng tiền: {item.totalAmount?.toLocaleString("vi-VN")}đ</Text>
-              <Text style={styles.invoiceSub}>Người thuê: {item.tenant || item.contractId?.tenantId?.fullName || "N/A"}</Text>
+              <Text style={styles.invoiceSub}>Người thuê: {item.nguoiThue || item.tenant || item.contractId?.tenantId?.fullName || "Chưa xác định"}</Text>
             </View>
             <View style={{ alignItems: "flex-end" }}>
               <View style={[styles.statusBadge, { backgroundColor: getStatusBg(item.status) }]}>
-                <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>{getStatusText(item.status)}</Text>
+                <Text style={[styles.statusText, { color: getStatusColor(item.statusCode ?? item.status) }]}>{item.statusLabel || getStatusText(item.status)}</Text>
               </View>
               {((item.status as any) === 1 || (item.status as any) === "UNPAID" || (item.status as any) === "Chưa thanh toán") && (
                 <Pressable
@@ -655,6 +656,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "900",
     color: COLORS.text,
+  },
+  invoiceCode: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: COLORS.orange,
+    marginBottom: 4,
   },
   invoicePeriod: {
     fontSize: 12,

@@ -1,13 +1,19 @@
 const Contract = require('../models/Contract');
 const Service = require('../models/Service');
+const ServicePriceAudit = require('../models/ServicePriceAudit');
 const {
     ServiceValidationError,
     normalizeServiceInput,
 } = require('../services/serviceManagement');
+const {
+    ServicePricePropagationError,
+    applyServicePrice,
+    previewServicePriceImpact,
+} = require('../services/servicePricePropagation');
 
 function sendControllerError(res, error, fallbackMessage) {
-    if (error instanceof ServiceValidationError) {
-        return res.status(400).json({
+    if (error instanceof ServiceValidationError || error instanceof ServicePricePropagationError) {
+        return res.status(error.status || 400).json({
             success: false,
             code: error.code,
             field: error.field,
@@ -44,6 +50,95 @@ exports.getAllServices = async (req, res) => {
         });
     } catch (error) {
         return sendControllerError(res, error, 'Không thể lấy danh sách dịch vụ');
+    }
+};
+
+function createPriceDependencies() {
+    return {
+        getOwnedService: ({ adminId, serviceId }) => Service.findOne({
+            _id: serviceId,
+            landlordId: adminId,
+        }).lean(),
+        listEligibleContracts: async ({ adminId, serviceId }) => {
+            const contracts = await Contract.find({
+                status: 1,
+                'services.serviceId': serviceId,
+            }).populate({
+                path: 'roomId',
+                match: { landlordId: adminId },
+                select: 'roomCode landlordId',
+            }).lean();
+            return contracts
+                .filter((contract) => contract.roomId)
+                .map((contract) => {
+                    const snapshot = contract.services.find(
+                        (item) => String(item.serviceId) === String(serviceId)
+                    );
+                    return {
+                        contractId: String(contract._id),
+                        roomCode: contract.roomId.roomCode,
+                        currentPrice: snapshot.fixedPrice,
+                    };
+                });
+        },
+        updateCatalogPrice: ({ adminId, serviceId, newPrice }) => Service.updateOne(
+            { _id: serviceId, landlordId: adminId },
+            { $set: { defaultPrice: newPrice } }
+        ),
+        updateContractPrice: async ({ adminId, serviceId, contractId, newPrice }) => {
+            const contract = await Contract.findById(contractId)
+                .populate({ path: 'roomId', match: { landlordId: adminId }, select: '_id' });
+            if (!contract?.roomId) {
+                throw new ServicePricePropagationError(
+                    'INVALID_SERVICE_PRICE_SCOPE',
+                    'Hợp đồng không thuộc phạm vi quản lý.'
+                );
+            }
+            const snapshot = contract.services.find(
+                (item) => String(item.serviceId) === String(serviceId)
+            );
+            snapshot.fixedPrice = newPrice;
+            return contract.save();
+        },
+        createAudit: (entry) => ServicePriceAudit.create(entry),
+    };
+}
+
+exports.previewPriceImpact = async (req, res) => {
+    try {
+        const data = await previewServicePriceImpact({
+            adminId: req.auth.id,
+            serviceId: req.params.id,
+            newPrice: req.body.newPrice,
+        }, createPriceDependencies());
+        return res.status(200).json({
+            success: true,
+            message: 'Đã tính phạm vi ảnh hưởng của đơn giá mới.',
+            data,
+        });
+    } catch (error) {
+        return sendControllerError(res, error, 'Không thể xem trước phạm vi giá');
+    }
+};
+
+exports.applyPrice = async (req, res) => {
+    try {
+        const data = await applyServicePrice({
+            adminId: req.auth.id,
+            serviceId: req.params.id,
+            newPrice: req.body.newPrice,
+            scope: req.body.scope,
+            contractIds: req.body.contractIds,
+        }, createPriceDependencies());
+        return res.status(200).json({
+            success: true,
+            message: data.contractsUpdated > 0
+                ? `Đã cập nhật giá dịch vụ và ${data.contractsUpdated} hợp đồng được chọn.`
+                : 'Đã cập nhật giá dịch vụ cho các hợp đồng tạo mới.',
+            data,
+        });
+    } catch (error) {
+        return sendControllerError(res, error, 'Không thể cập nhật giá dịch vụ');
     }
 };
 

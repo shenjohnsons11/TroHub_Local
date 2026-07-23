@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "scripts": {
     "start": "expo start",
-    "test:ui": "node --test test_contract_date.js test_contract_deposit_ui.js test_ui_contracts.js test_notification_contracts.js test_webadmin_api_proxy.js test_unified_webadmin_contracts.js test_nguoi_thue_notifications_ui.js",
+    "test:ui": "node --test test_contract_date.js test_contract_deposit_ui.js test_ui_contracts.js test_notification_contracts.js test_webadmin_api_proxy.js test_unified_webadmin_contracts.js test_nguoi_thue_notifications_ui.js test_invoice_semantic_ui.js",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo run:android",
     "ios": "expo run:ios",
