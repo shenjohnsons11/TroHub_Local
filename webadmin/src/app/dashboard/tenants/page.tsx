@@ -6,18 +6,25 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Edit, Trash2 } from "lucide-react";
+import { Plus, Search, Edit, Trash2, KeyRound } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { formatPhoneInput, formatIdCardInput, parseFormattedString } from "@/lib/utils";
+import { TemporaryPasswordDialog } from "@/components/temporary-password-dialog";
+import { issueTemporaryPassword } from "@/lib/password-reset";
+import { useNotification } from "@/hooks/use-notification";
+import { getNotificationMessage } from "@/lib/notification-messages";
 
 export default function TenantsPage() {
+  const notification = useNotification();
   const [tenants, setTenants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingTenantId, setEditingTenantId] = useState<string | null>(null);
+  const [temporaryPassword, setTemporaryPassword] = useState("");
+  const [temporaryPasswordName, setTemporaryPasswordName] = useState("");
 
   // Form states
   const [fullName, setFullName] = useState("");
@@ -108,6 +115,21 @@ export default function TenantsPage() {
         alert("Lỗi khi xóa: " + err.message);
       }
     }
+  };
+
+  const handleTemporaryPassword = async (tenant: any) => {
+    try {
+      const result = await issueTemporaryPassword(tenant._id || tenant.id);
+      setTemporaryPasswordName(tenant.fullName || tenant.name || "Người thuê");
+      setTemporaryPassword(result.temporaryPassword);
+    } catch (error) {
+      notification.error(getNotificationMessage(error, "Không thể cấp mật khẩu tạm."));
+    }
+  };
+
+  const closeTemporaryPassword = () => {
+    setTemporaryPassword("");
+    setTemporaryPasswordName("");
   };
 
   const filteredTenants = tenants.filter(t => 
@@ -233,6 +255,9 @@ export default function TenantsPage() {
                       <Button onClick={() => openEditModal(tenant)} variant="ghost" size="icon" className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50">
                         <Edit className="w-4 h-4" />
                       </Button>
+                      <Button aria-label="Cấp mật khẩu tạm" onClick={() => handleTemporaryPassword(tenant)} variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/10">
+                        <KeyRound className="w-4 h-4" />
+                      </Button>
                       <Button onClick={() => handleDelete(tenant._id || tenant.id)} variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50">
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -244,6 +269,12 @@ export default function TenantsPage() {
           </TableBody>
         </Table>
       </div>
+      <TemporaryPasswordDialog
+        open={Boolean(temporaryPassword)}
+        nguoiThueName={temporaryPasswordName}
+        temporaryPassword={temporaryPassword}
+        onOpenChange={(open) => { if (!open) closeTemporaryPassword(); }}
+      />
     </div>
   );
 }

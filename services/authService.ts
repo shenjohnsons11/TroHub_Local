@@ -97,17 +97,25 @@ export const authService = {
     }
   },
 
-  async forgotPassword(phone: string): Promise<boolean> {
-    try {
-      console.log("Quên mật khẩu giả lập:", {
-        phone,
-      });
+  async requestPasswordReset(identifier: string): Promise<{ message: string }> {
+    return apiClient.post("/auth/password-reset/request", { identifier });
+  },
 
-      return true;
-    } catch (error) {
-      console.log("Lỗi quên mật khẩu:", error);
-      throw error;
-    }
+  async verifyPasswordReset(
+    identifier: string,
+    otp: string
+  ): Promise<{ success: boolean; resetToken: string }> {
+    return apiClient.post("/auth/password-reset/verify", { identifier, otp });
+  },
+
+  async completePasswordReset(
+    resetToken: string,
+    newPassword: string
+  ): Promise<{ success: boolean; message: string }> {
+    return apiClient.post("/auth/password-reset/complete", {
+      resetToken,
+      newPassword,
+    });
   },
 
   async getToken(): Promise<string | null> {

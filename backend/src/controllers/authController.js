@@ -186,6 +186,7 @@ exports.changePassword = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         account.password = await bcrypt.hash(newPassword, salt);
         account.mustChangePassword = false; // Đã đổi mật khẩu thành công
+        account.passwordChangedAt = new Date();
         await account.save();
 
         res.status(200).json({ success: true, message: 'Đổi mật khẩu thành công!' });
