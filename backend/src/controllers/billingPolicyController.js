@@ -4,7 +4,14 @@ const {
     normalizeBillingPolicy,
 } = require('../services/billingPolicy');
 
-const DEFAULT_POLICY = { lateFeeGraceDays: 3, lateFeeRate: 5 };
+const DEFAULT_POLICY = {
+    lateFeeGraceDays: 3,
+    lateFeeRate: 5,
+    automaticRemindersEnabled: true,
+    remindBeforeDueDays: [3],
+    remindOnDueDate: true,
+    remindAfterOverdueDays: [1],
+};
 
 exports.getBillingPolicy = async (req, res) => {
     try {

@@ -19,6 +19,7 @@ const {
     applyOverduePenalty,
     buildLateFeeSnapshot,
 } = require('../services/overdueInvoice');
+const { remindInvoicePayment } = require('../services/invoiceNotificationService');
 
 async function buildInvoicePolicySnapshot(req, issuedAt, penaltyBaseAmount) {
     const policy = await BillingPolicy.findOne({ landlordId: req.auth.id });
@@ -243,17 +244,17 @@ exports.createBulkInvoices = async (req, res) => {
 
 exports.remindInvoice = async (req, res) => {
     try {
-        const invoice = await Invoice.findById(req.params.id);
-        if (!invoice) return res.status(404).json({ success: false, message: 'Không tìm thấy hóa đơn' });
-
-        invoice.remindCount = (invoice.remindCount || 0) + 1;
-        if (invoice.remindCount >= 2 && invoice.status === 1) { // 1 = Chưa thanh toán
-            invoice.status = 3; // 3 = Quá hạn
-        }
-        await invoice.save();
-        res.status(200).json({ success: true, message: 'Đã gửi yêu cầu thanh toán', data: invoice });
+        const data = await remindInvoicePayment({
+            invoiceId: req.params.id,
+            adminId: req.auth.id,
+        });
+        res.status(200).json({ success: true, message: 'Đã gửi nhắc thanh toán cho Người thuê.', data });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Lỗi Server: ' + error.message });
+        res.status(error.status || 500).json({
+            success: false,
+            code: error.code || 'INVOICE_REMINDER_FAILED',
+            message: error.message || 'Không thể gửi nhắc thanh toán.',
+        });
     }
 };
 
@@ -739,15 +740,18 @@ exports.remindDebt = async (req, res) => {
             return res.status(400).json({ success: false, message: "Phòng này không có nợ!" });
         }
 
-        // Increment remindCount
+        const deliveries = [];
         for (const inv of unpaidInvoices) {
-            inv.remindCount = (inv.remindCount || 0) + 1;
-            await inv.save();
+            deliveries.push(await remindInvoicePayment({
+                invoiceId: inv._id,
+                adminId: req.auth.id,
+            }));
         }
-
-        // Trong thực tế, gọi API gửi Push Notification/Email/ZNS ở đây
-
-        res.status(200).json({ success: true, message: `Đã gửi nhắc nợ cho ${unpaidInvoices.length} hóa đơn.` });
+        res.status(200).json({
+            success: true,
+            message: `Đã gửi nhắc thanh toán cho ${unpaidInvoices.length} hóa đơn.`,
+            data: deliveries,
+        });
     } catch (error) {
         res.status(500).json({ success: false, message: "Lỗi nhắc nợ: " + error.message });
     }
