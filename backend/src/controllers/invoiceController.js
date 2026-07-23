@@ -20,6 +20,54 @@ const {
     buildLateFeeSnapshot,
 } = require('../services/overdueInvoice');
 const { remindInvoicePayment } = require('../services/invoiceNotificationService');
+const { allocateInvoiceCode } = require('../services/invoiceCode');
+const { presentInvoiceListItem } = require('../services/invoicePresenter');
+const {
+    MeterReadingError,
+    resolveMeterReadings,
+} = require('../services/meterReadingService');
+
+async function createInvoiceCode(period, roomCode) {
+    return allocateInvoiceCode(
+        { period, roomCode },
+        { exists: (invoiceCode) => Invoice.exists({ invoiceCode }) }
+    );
+}
+
+async function resolveInvoiceRoomCode(contractId, fallbackRoomCode = '') {
+    if (fallbackRoomCode) return fallbackRoomCode;
+    if (!contractId) return '';
+
+    const contract = await Contract.findById(contractId).populate('roomId', 'roomCode');
+    return contract?.roomId?.roomCode || '';
+}
+
+async function resolveContractMeterReadings(contractId, cutoffDate) {
+    return resolveMeterReadings({ contractId, cutoffDate }, {
+        getContract: (id) => Contract.findById(id).lean(),
+        findOverlappingContracts: ({ roomId, contractId: excludedId, startDate, endDate }) =>
+            Contract.find({
+                _id: { $ne: excludedId },
+                roomId,
+                status: 1,
+                startDate: { $lt: endDate || new Date('9999-12-31') },
+                endDate: { $gt: startDate },
+            }).select('_id').lean(),
+        findPreviousContractInvoice: ({ contractId: id, cutoffDate: before, statuses }) => {
+            const query = { contractId: id, status: { $in: statuses } };
+            if (before) query.issuedAt = { $lt: before };
+            return Invoice.findOne(query).sort({ issuedAt: -1, createdAt: -1, _id: -1 }).lean();
+        },
+        findPreviousRoomInvoice: async ({ roomId, before, statuses }) => {
+            const contracts = await Contract.find({ roomId }).select('_id').lean();
+            return Invoice.findOne({
+                contractId: { $in: contracts.map((item) => item._id) },
+                status: { $in: statuses },
+                issuedAt: { $lt: before },
+            }).sort({ issuedAt: -1, createdAt: -1, _id: -1 }).lean();
+        },
+    });
+}
 
 async function buildInvoicePolicySnapshot(req, issuedAt, penaltyBaseAmount) {
     const policy = await BillingPolicy.findOne({ landlordId: req.auth.id });
@@ -32,7 +80,11 @@ async function buildInvoicePolicySnapshot(req, issuedAt, penaltyBaseAmount) {
 }
 
 function sendInvoiceError(res, error, fallbackMessage) {
-    if (error instanceof CalculationError || error instanceof OverdueInvoiceValidationError) {
+    if (
+        error instanceof CalculationError
+        || error instanceof OverdueInvoiceValidationError
+        || error instanceof MeterReadingError
+    ) {
         return res.status(400).json({
             success: false,
             code: error.code,
@@ -74,15 +126,12 @@ exports.getBulkPreview = async (req, res) => {
         const previewList = [];
 
         for (const contract of contracts) {
-            const previousInvoice = await Invoice.findOne({
-                contractId: contract._id,
-                status: { $in: [1, 2, 3] }
-            }).sort({ createdAt: -1 });
+            const meterReadings = await resolveContractMeterReadings(contract._id);
 
             const roomAmount = contract.fixedRentPrice || 0;
 
-            let electricityOld = 0;
-            let waterOld = 0;
+            let electricityOld = meterReadings.electricity.value;
+            let waterOld = meterReadings.water.value;
             let electricityPrice = 0;
             let waterPrice = 0;
             let servicesTotal = 0;
@@ -98,10 +147,8 @@ exports.getBulkPreview = async (req, res) => {
                 if (service.type === 1) {
                     if (sName.includes('điện') || sName.includes('dien')) {
                         electricityPrice = item.fixedPrice || 0;
-                        if (previousInvoice && previousInvoice.electricityNew !== undefined) electricityOld = previousInvoice.electricityNew;
                     } else if (sName.includes('nước') || sName.includes('nuoc')) {
                         waterPrice = item.fixedPrice || 0;
-                        if (previousInvoice && previousInvoice.waterNew !== undefined) waterOld = previousInvoice.waterNew;
                     }
                 } else {
                     if (sName.includes('xe') || sName.includes('parking')) {
@@ -134,6 +181,10 @@ exports.getBulkPreview = async (req, res) => {
                 waterOld: waterOld,
                 waterPrice: waterPrice,
                 waterDraft: contract.roomId.draftWater || "",
+                meterWarnings: [
+                    meterReadings.electricity.warning,
+                    meterReadings.water.warning,
+                ].filter(Boolean),
                 services: servicesTotal,
                 parking: parking,
                 internet: internet,
@@ -156,10 +207,21 @@ exports.createBulkInvoices = async (req, res) => {
         }
 
         // Xác thực toàn bộ phép tính trước khi ghi để lỗi chỉ số không tạo ra lô hóa đơn dở dang.
-        const preparedInvoices = invoices.map((data) => ({
-            data,
-            amounts: calculateInvoiceAmounts({ ...data, penalty: 0 }),
-        }));
+        const preparedInvoices = [];
+        for (const data of invoices) {
+            const readings = data.contractId
+                ? await resolveContractMeterReadings(data.contractId, data.issuedAt || issuedAt)
+                : null;
+            preparedInvoices.push({
+                data,
+                amounts: calculateInvoiceAmounts({
+                    ...data,
+                    electricityOld: readings?.electricity.value ?? data.electricityOld,
+                    waterOld: readings?.water.value ?? data.waterOld,
+                    penalty: 0,
+                }),
+            });
+        }
         const createdInvoices = [];
 
         for (const { data, amounts } of preparedInvoices) {
@@ -190,6 +252,10 @@ exports.createBulkInvoices = async (req, res) => {
             }
 
             const newInvoice = new Invoice({
+                invoiceCode: await createInvoiceCode(
+                    resolvedPeriod,
+                    await resolveInvoiceRoomCode(data.contractId, data.room)
+                ),
                 contractId: data.contractId || null,
                 period: resolvedPeriod,
                 issuedAt: policySnapshot.issuedAt,
@@ -274,7 +340,7 @@ exports.getAllInvoices = async (req, res) => {
                 userId = decoded.id;
                 userRole = decoded.role;
             } catch (e) {
-                // Token lỗi hoặc hết hạn, coi như khách vãng lai
+                // Token lỗi hoặc hết hạn, coi như người dùng chưa xác thực
             }
         }
 
@@ -321,7 +387,11 @@ exports.getAllInvoices = async (req, res) => {
             .populate('details.serviceId', 'name type')
             .sort({ createdAt: -1 });
 
-        res.status(200).json({ success: true, data: invoices });
+        const data = invoices.map((invoice) => ({
+            ...invoice.toObject(),
+            ...presentInvoiceListItem(invoice),
+        }));
+        res.status(200).json({ success: true, data });
     } catch (error) {
         res.status(500).json({ success: false, message: "Lỗi Server: " + error.message });
     }
@@ -399,7 +469,15 @@ exports.createInvoice = async (req, res) => {
                 }
             }
 
-            const amounts = calculateInvoiceAmounts({ ...req.body, penalty: 0 });
+            const readings = resolvedContractId
+                ? await resolveContractMeterReadings(resolvedContractId, req.body.issuedAt)
+                : null;
+            const amounts = calculateInvoiceAmounts({
+                ...req.body,
+                electricityOld: readings?.electricity.value ?? req.body.electricityOld,
+                waterOld: readings?.water.value ?? req.body.waterOld,
+                penalty: 0,
+            });
             const policySnapshot = await buildInvoicePolicySnapshot(
                 req,
                 req.body.issuedAt,
@@ -423,6 +501,10 @@ exports.createInvoice = async (req, res) => {
             }
 
             const newInvoice = new Invoice({
+                invoiceCode: await createInvoiceCode(
+                    resolvedPeriod,
+                    await resolveInvoiceRoomCode(resolvedContractId, room)
+                ),
                 contractId: resolvedContractId || null,
                 period: resolvedPeriod,
                 issuedAt: policySnapshot.issuedAt,
@@ -535,6 +617,10 @@ exports.createInvoice = async (req, res) => {
             ? policySnapshot.penalty
             : 0;
         const newInvoice = new Invoice({
+            invoiceCode: await createInvoiceCode(
+                period,
+                await resolveInvoiceRoomCode(contractId)
+            ),
             contractId,
             period,
             issuedAt: policySnapshot.issuedAt,
