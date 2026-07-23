@@ -46,6 +46,7 @@ app-example
 GEMINI.md
 .agents/
 .gemini/
+.worktrees/
 docker-compose.yml
 Dockerfile
 .dockerignore
