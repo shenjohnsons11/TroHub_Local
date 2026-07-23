@@ -1,8 +1,6 @@
-const jwt = require("jsonwebtoken");
+const { verifySession } = require("../services/sessionAuth");
 
-const JWT_SECRET = process.env.JWT_SECRET || "trohub_secret_key_2026";
-
-function requireTenant(req, res, next) {
+async function requireTenant(req, res, next) {
   const authHeader = req.headers?.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({
@@ -13,21 +11,21 @@ function requireTenant(req, res, next) {
   }
 
   try {
-    const decoded = jwt.verify(authHeader.slice(7), JWT_SECRET);
-    if (decoded.role !== 2) {
+    const auth = await verifySession(authHeader.slice(7));
+    if (auth.role !== 2) {
       return res.status(403).json({
         success: false,
         code: "NGUOI_THUE_REQUIRED",
         message: "Chức năng này chỉ dành cho Người thuê.",
       });
     }
-    req.auth = { id: decoded.id, role: decoded.role };
+    req.auth = auth;
     return next();
-  } catch (_error) {
+  } catch (error) {
     return res.status(401).json({
       success: false,
-      code: "INVALID_TOKEN",
-      message: "Phiên đăng nhập không hợp lệ hoặc đã hết hạn.",
+      code: error.code || "INVALID_TOKEN",
+      message: error.message || "Phiên đăng nhập không hợp lệ hoặc đã hết hạn.",
     });
   }
 }

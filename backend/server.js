@@ -17,6 +17,8 @@ const paymentRoute = require('./src/routes/paymentRoute');
 const serviceRoutes = require('./src/routes/serviceRoutes');
 const dashboardRoutes = require('./src/routes/dashboardRoutes');
 const billingPolicyRoutes = require('./src/routes/billingPolicyRoutes');
+const passwordResetRoutes = require('./src/routes/passwordResetRoutes');
+const adminAccountRoutes = require('./src/routes/adminAccountRoutes');
 const paymentController = require('./src/controllers/paymentController');
 const { applyAllOverduePenalties } = require('./src/services/overdueInvoice');
 
@@ -53,6 +55,8 @@ app.use('/api/contracts', contractRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/repairs', repairRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/auth/password-reset', passwordResetRoutes);
+app.use('/api/admin/accounts', adminAccountRoutes);
 app.use('/api/seed', seedRoute);
 app.use('/api/settings', settingsRoute);
 app.use('/api/me', meRoute);
