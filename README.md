@@ -57,5 +57,19 @@ npx expo start --web --port 8083
 
 ---
 
+## ✉️ Cấu hình email OTP
+
+Chức năng quên mật khẩu sử dụng Gmail SMTP qua Nodemailer:
+
+1. Bật xác minh hai bước cho tài khoản Gmail gửi email.
+2. Tạo App Password trong phần bảo mật của Google Account.
+3. Sao chép `backend/.env.example` thành `backend/.env`.
+4. Điền `SMTP_USER` và `SMTP_APP_PASSWORD` vào `backend/.env`.
+5. Khởi động lại Backend.
+
+Không commit `backend/.env`, Gmail App Password, OTP, reset token hoặc mật khẩu tạm lên Git.
+
+---
+
 ## 📖 Lịch sử cập nhật
 Xem file [CHANGELOG.md](./CHANGELOG.md) để biết thêm chi tiết về các tính năng mới được cập nhật.
