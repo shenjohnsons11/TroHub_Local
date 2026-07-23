@@ -36,6 +36,12 @@ type ApiContract = {
   status: number;
   services?: ApiServiceItem[];
   tenantConfirmedAt?: string;
+  depositPayment?: {
+    required: boolean;
+    invoiceId: string | null;
+    amount: number;
+    status: "not_required" | "unpaid" | "paid";
+  };
 };
 
 type ContractListResponse = {
@@ -47,6 +53,10 @@ type ContractListResponse = {
 type ContractActionResponse = {
   success: boolean;
   message?: string;
+  invoiceId?: string;
+  depositRequired?: boolean;
+  depositAmount?: number;
+  idempotent?: boolean;
 };
 
 const formatMoney = (value?: number) => {
@@ -128,6 +138,7 @@ const mapApiContractToContract = (apiContract: ApiContract): Contract => {
     endDate: formatDate(apiContract.endDate),
     rentFee: `${formatMoney(apiContract.fixedRentPrice)} / tháng`,
     deposit: formatMoney(apiContract.fixedDeposit),
+    depositPayment: apiContract.depositPayment,
     status: mapNumericStatus(apiContract.status),
     rawStatus: apiContract.status,
     usedMonths,
@@ -193,7 +204,13 @@ export const contractService = {
   },
 
   // Người thuê ký xác nhận hợp đồng (status 0 → 4)
-  async signContract(contractId: string): Promise<{ success: boolean; invoiceId?: string }> {
+  async signContract(contractId: string): Promise<{
+    success: boolean;
+    invoiceId?: string;
+    depositRequired: boolean;
+    depositAmount: number;
+    idempotent: boolean;
+  }> {
     try {
       const token = await authService.getToken();
 
@@ -212,7 +229,13 @@ export const contractService = {
         throw new Error(response.message || "Ký hợp đồng thất bại");
       }
 
-      return { success: true, invoiceId: response.invoiceId };
+      return {
+        success: true,
+        invoiceId: response.invoiceId,
+        depositRequired: Boolean(response.depositRequired),
+        depositAmount: Number(response.depositAmount) || 0,
+        idempotent: Boolean(response.idempotent),
+      };
     } catch (error) {
       console.log("Lỗi ký hợp đồng:", error);
       throw error;

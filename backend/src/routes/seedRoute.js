@@ -72,7 +72,7 @@ router.get('/', async (req, res) => {
     });
 
     await RepairRequest.create({
-      repairCode: "YC0501", contractId: contract1._id, title: "Hư bóng đèn", content: "Bóng đèn nhà vệ sinh bị cháy từ hôm qua.", priority: 1, status: 0
+      repairCode: "YC0501", tenantId: tenant1._id, contractId: contract1._id, title: "Hư bóng đèn", content: "Bóng đèn nhà vệ sinh bị cháy từ hôm qua.", priority: 1, status: 0
     });
 
     res.send("<h1>🎉 MIGRATION HOÀN TẤT!</h1><p>Dữ liệu đã được nạp thành công vào MongoDB của bạn. Hãy quay lại trang Web và refresh!</p>");
@@ -153,7 +153,7 @@ router.get('/cleanup-linked-landlords', async (req, res) => {
         }
       }
     }
-    res.send(`<h1>🎉 ĐÃ DỌN DẸP ID TRÙNG LẶP CHO ${updatedCount} TÀI KHOẢN KHÁCH THUÊ!</h1>`);
+    res.send(`<h1>🎉 ĐÃ DỌN DẸP ID TRÙNG LẶP CHO ${updatedCount} TÀI KHOẢN NGƯỜI THUÊ!</h1>`);
   } catch (error) {
     res.send(`<h1>❌ LỖI:</h1><p>${error.message}</p>`);
   }

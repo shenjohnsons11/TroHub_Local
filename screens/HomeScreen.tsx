@@ -12,6 +12,8 @@ import { COLORS } from "../constants/theme";
 import { homeService } from "../services/homeService";
 import { Invite, inviteService } from "../services/inviteService";
 import { HomeData } from "../types/HomeData";
+import TroHubLogo from "../components/TroHubLogo";
+import { Ionicons } from "@expo/vector-icons";
 
 type Props = {
   refreshKey: number;
@@ -70,14 +72,20 @@ export default function HomeScreen({ refreshKey, onNavigate, onLogout }: Props) 
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.headerRow}>
-  <View style={styles.header}>
-    <Text style={styles.hello}>Xin chào Người thuê {homeData.tenantName}</Text>
-    <Text style={styles.room}>
-      {homeData.room === "Chưa có phòng" ? "Chưa có phòng" : `Phòng ${homeData.room}`}
-    </Text>
-  </View>
-</View>
+      <View style={styles.brandRow}>
+        <TroHubLogo compact />
+        <Pressable style={styles.logoutButton} onPress={onLogout}>
+          <Ionicons name="log-out-outline" size={20} color={COLORS.red} />
+        </Pressable>
+      </View>
+
+      <View style={styles.homeHero}>
+        <Text style={styles.heroKicker}>KHÔNG GIAN CỦA BẠN</Text>
+        <Text style={styles.heroTitle}>Xin chào, {homeData.tenantName}</Text>
+        <Text style={styles.heroRoom}>
+          {homeData.room === "Chưa có phòng" ? "Chưa có phòng" : `Phòng ${homeData.room}`}
+        </Text>
+      </View>
 
       {invites.length > 0 && invites.map(invite => (
         <Card key={invite.id} style={[styles.amountCard, { backgroundColor: '#FFF9E6', borderColor: '#FFE58F' }]}>
@@ -208,7 +216,54 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 18,
   },
-
+  brandRow: {
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 18,
+  },
+  homeHero: {
+    minHeight: 176,
+    justifyContent: "flex-end",
+    marginBottom: 18,
+    padding: 22,
+    borderRadius: 16,
+    backgroundColor: "#25292D",
+  },
+  heroKicker: {
+    color: "#67D69A",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1.4,
+    marginBottom: 10,
+  },
+  heroTitle: {
+    maxWidth: 270,
+    color: "#F4F5F3",
+    fontSize: 26,
+    lineHeight: 31,
+    fontWeight: "900",
+  },
+  heroRoom: {
+    color: "#FF8D52",
+    fontSize: 14,
+    fontWeight: "800",
+    marginTop: 8,
+  },
+  logoutButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFF1F1",
+    borderWidth: 1,
+    borderColor: "#FFD4D4",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    width: 44,
+    height: 44,
+    justifyContent: "center",
+    borderRadius: 9,
+  },
   hello: {
     fontSize: 21,
     lineHeight: 28,

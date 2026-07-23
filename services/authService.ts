@@ -33,39 +33,10 @@ export const authService = {
     }
   },
 
-  async register(registerData: {
-    email: string;
-    password: string;
-    fullName: string;
-    phone: string;
-    idCard: string;
-  }): Promise<boolean> {
-    try {
-      const response = await apiClient.post<{ success: boolean; message: string }>("/auth/register", {
-        username: registerData.email, // Dùng email làm tên đăng nhập
-        password: registerData.password,
-        fullName: registerData.fullName,
-        phone: registerData.phone,
-        email: registerData.email,
-        idCard: registerData.idCard,
-        role: 2, // Mặc định khách thuê tự đăng ký
-      });
-
-      if (!response.success) {
-        throw new Error(response.message || "Đăng ký thất bại");
-      }
-
-      return true;
-    } catch (error) {
-      console.log("Lỗi đăng ký:", error);
-      throw error;
-    }
-  },
-
-  async login(email: string, password: string): Promise<boolean> {
+  async login(identifier: string, password: string): Promise<boolean> {
     try {
       const response = await apiClient.post<LoginResponse>("/auth/login", {
-        username: email, // Dùng email làm tên đăng nhập
+        username: identifier,
         password,
       });
 

@@ -5,10 +5,12 @@ import { fetchAPI } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Save, FileText } from "lucide-react";
-import { toast } from "sonner";
+import { Search, Save } from "lucide-react";
+import { useNotification } from "@/hooks/use-notification";
+import { getNotificationMessage } from "@/lib/notification-messages";
 
 export default function UtilitiesPage() {
+  const notification = useNotification();
   const [previews, setPreviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -60,7 +62,7 @@ export default function UtilitiesPage() {
       }).filter(item => item.draftElectricity || item.draftWater);
 
       if (utilitiesToUpdate.length === 0) {
-        toast.warning("Vui lòng nhập số liệu mới cho ít nhất 1 phòng.");
+        notification.warning("Vui lòng nhập số liệu mới cho ít nhất 1 phòng.");
         setLoading(false);
         return;
       }
@@ -71,13 +73,13 @@ export default function UtilitiesPage() {
       });
 
       if (res.success) {
-        toast.success(`Đã lưu trữ nháp sổ điện nước thành công! Mời qua trang Hóa Đơn để xuất hóa đơn.`);
+        notification.success("Đã lưu nháp sổ điện nước. Bạn có thể chuyển sang Hóa đơn để phát hành.");
         loadPreviews();
       } else {
-        toast.error("Lỗi: " + res.message);
+        notification.error(getNotificationMessage(res.message, "Không thể lưu chỉ số điện nước."));
       }
-    } catch (err: any) {
-      toast.error("Lỗi khi lưu: " + err.message);
+    } catch (err: unknown) {
+      notification.error(getNotificationMessage(err, "Không thể lưu chỉ số điện nước."));
     } finally {
       setLoading(false);
     }

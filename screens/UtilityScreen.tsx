@@ -8,18 +8,20 @@ import {
   ActivityIndicator,
   Modal,
   TextInput,
-  Alert,
 } from "react-native";
 import Card from "../components/Card";
 import { COLORS } from "../constants/theme";
 import { UtilityRecord } from "../types/UtilityRecord";
 import { utilityService } from "../services/utilityService";
+import { useNotification } from "../hooks/useNotification";
+import { getNotificationMessage } from "../utils/notificationMessages";
 
 type Props = {
   onBack: () => void;
 };
 
 export default function UtilityScreen({ onBack }: Props) {
+  const notification = useNotification();
   const [utilityHistory, setUtilityHistory] = useState<UtilityRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
@@ -44,17 +46,18 @@ export default function UtilityScreen({ onBack }: Props) {
 
   const handleReport = async () => {
     if (!draftElec || !draftWater) {
-      Alert.alert("Lỗi", "Vui lòng nhập đầy đủ chỉ số điện và nước");
+      notification.warning("Vui lòng nhập đầy đủ chỉ số điện và nước.");
       return;
     }
-    const res = await utilityService.reportUtility(Number(draftElec), Number(draftWater));
-    if (res.success) {
-      Alert.alert("Thành công", "Đã gửi số liệu điện nước cho chủ trọ chờ duyệt!");
+    try {
+      const res = await utilityService.reportUtility(Number(draftElec), Number(draftWater));
+      if (!res.success) throw new Error(res.message || "Có lỗi xảy ra");
+      notification.success("Đã gửi số liệu điện nước cho chủ trọ chờ duyệt.");
       setModalVisible(false);
       setDraftElec("");
       setDraftWater("");
-    } else {
-      Alert.alert("Lỗi", res.message || "Có lỗi xảy ra");
+    } catch (error) {
+      notification.error(getNotificationMessage(error, "Không thể gửi chỉ số điện nước."));
     }
   };
 

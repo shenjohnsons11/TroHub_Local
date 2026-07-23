@@ -1,6 +1,6 @@
 # 🏡 TroHub - Hướng Dẫn Cài Đặt & Khởi Chạy Dự Án
 
-Dự án này là hệ thống Quản lý Phòng Trọ (TroHub) bao gồm App dành cho Khách thuê (Tenant) và Web Admin dành cho Chủ trọ. 
+Dự án này là hệ thống Quản lý Phòng Trọ (TroHub) bao gồm App dành cho Người thuê (Tenant) và Web Admin dành cho Chủ trọ.
 
 ## 📌 Yêu Cầu Cần Có
 1. **Node.js** (v18 trở lên)
@@ -16,7 +16,7 @@ Mở một cửa sổ Terminal mới:
 ```bash
 cd backend
 npm install
-# Khởi động Backend server (cổng 3000)
+# Khởi động Backend server (cổng 5000)
 npm run dev
 ```
 *Lưu ý: Bạn cần có MongoDB đang chạy ở cổng 27017, hoặc cấu hình link MongoDB Atlas trong thư mục backend.*
@@ -27,10 +27,10 @@ Mở một cửa sổ Terminal thứ 2:
 ```bash
 # Từ thư mục gốc dự án
 cd webadmin
-# Sử dụng http-server để host file tĩnh (cổng 5174)
-npx http-server . -p 5174 -a 127.0.0.1 -c-1
+npm install
+npm run dev
 ```
-Trang Web Admin sẽ chạy tại: [http://127.0.0.1:5174/index.html](http://127.0.0.1:5174/index.html)
+Trang Web Admin thống nhất sẽ chạy tại: [http://localhost:3000](http://localhost:3000)
 
 ### Bước 3: Khởi chạy Mobile App (Expo - Dành cho Người thuê)
 Mở một cửa sổ Terminal thứ 3:
@@ -47,12 +47,12 @@ npx expo start --web --port 8083
 
 ## 🔐 Tài Khoản Test Mặc Định (Từ file Seed)
 
-- **Tài khoản Admin (Chủ trọ) - Đăng nhập trên Web Admin:** 
+- **Tài khoản Admin (Chủ trọ) - Đăng nhập trên Web Admin:**
   - Tên đăng nhập: `admin@trohub.vn`
   - Mật khẩu: `123456`
 
-- **Tài khoản Khách Thuê (Tenant) - Đăng nhập trên Mobile App:**
-  - Tên đăng nhập: `tenant@trohub.vn` (hoặc email/sđt của khách thuê mà bạn đã tạo)
+- **Tài khoản Người thuê (NGUOI_THUE) - Đăng nhập trên Mobile App:**
+  - Tên đăng nhập: `tenant@trohub.vn` (hoặc email/sđt của người thuê mà bạn đã tạo)
   - Mật khẩu: `123456`
 
 ---

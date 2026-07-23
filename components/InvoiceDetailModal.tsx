@@ -185,6 +185,10 @@ const styles = StyleSheet.create({
     borderBottomColor: "#F0F1F3",
     gap: 12,
   },
+  divider: {
+    height: 1,
+    backgroundColor: "#F0F1F3",
+  },
   detailLabel: {
     color: COLORS.muted,
     fontSize: 14,

@@ -1,16 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search, AlertCircle, RefreshCw, Bell } from "lucide-react";
+import { useNotification } from "@/hooks/use-notification";
+import { fetchAPI } from "@/lib/api";
 
 interface Debt {
   contractId: string;
   room: string;
-  tenant: string;
+  nguoiThue: string;
   totalDebt: number;
   unpaidInvoiceCount: number;
   invoices: any[];
@@ -20,50 +22,45 @@ export default function DebtsPage() {
   const [debts, setDebts] = useState<Debt[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const notification = useNotification();
 
-  const loadDebts = async () => {
+  const loadDebts = useCallback(async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("trohub_token");
-      const res = await fetch("http://localhost:3000/api/invoices/debts", {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
+      const data = await fetchAPI("/invoices/debts");
       if (data.success) {
-        setDebts(data.data);
+        setDebts(data.data.map((item: Debt & { tenant?: string }) => ({
+          ...item,
+          nguoiThue: item.nguoiThue || item.tenant || "Không xác định",
+        })));
       }
-    } catch (error) {
-      console.error("Lỗi lấy danh sách công nợ", error);
+    } catch (error: unknown) {
+      notification.error(error instanceof Error ? error.message : "Không thể tải danh sách công nợ.");
     } finally {
       setLoading(false);
     }
-  };
+  }, [notification]);
 
   useEffect(() => {
     loadDebts();
-  }, []);
+  }, [loadDebts]);
 
   const handleRemind = async (contractId: string) => {
     try {
-      const token = localStorage.getItem("trohub_token");
-      const res = await fetch(`http://localhost:3000/api/invoices/debts/${contractId}/remind`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
+      const data = await fetchAPI(`/invoices/debts/${contractId}/remind`, { method: "POST" });
       if (data.success) {
-        alert("Đã gửi thông báo nhắc nợ thành công!");
+        notification.success("Đã gửi thông báo nhắc nợ thành công.");
       } else {
-        alert("Lỗi: " + data.message);
+        notification.error(data.message || "Không thể gửi thông báo nhắc nợ.");
       }
-    } catch (error) {
-      alert("Lỗi kết nối khi gửi nhắc nợ");
+    } catch (error: unknown) {
+      notification.error(error instanceof Error ? error.message : "Lỗi kết nối khi gửi nhắc nợ.");
     }
   };
 
   const filteredDebts = debts.filter(d => 
     (d.room || "").toLowerCase().includes(search.toLowerCase()) || 
-    (d.tenant || "").toLowerCase().includes(search.toLowerCase())
+    (d.nguoiThue || "").toLowerCase().includes(search.toLowerCase())
   );
 
   const totalSystemDebt = debts.reduce((sum, d) => sum + d.totalDebt, 0);
@@ -73,7 +70,7 @@ export default function DebtsPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Quản lý Công nợ</h1>
-          <p className="text-slate-500 mt-1">Theo dõi tổng tiền khách đang nợ</p>
+          <p className="text-slate-500 mt-1">Theo dõi công nợ của Người thuê</p>
         </div>
         <button onClick={loadDebts} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors">
           <RefreshCw className="w-4 h-4" /> Làm mới
@@ -118,7 +115,7 @@ export default function DebtsPage() {
               <TableHeader className="bg-slate-50/50">
                 <TableRow>
                   <TableHead className="w-[150px] font-semibold text-slate-600">Phòng</TableHead>
-                  <TableHead className="font-semibold text-slate-600">Khách thuê</TableHead>
+                  <TableHead className="font-semibold text-slate-600">Người thuê</TableHead>
                   <TableHead className="text-center font-semibold text-slate-600">Số hóa đơn nợ</TableHead>
                   <TableHead className="text-right font-semibold text-slate-600">Tổng nợ</TableHead>
                   <TableHead className="text-center font-semibold text-slate-600">Thao tác</TableHead>
@@ -146,7 +143,7 @@ export default function DebtsPage() {
                   filteredDebts.map((debt) => (
                     <TableRow key={debt.contractId} className="hover:bg-slate-50/50 transition-colors">
                       <TableCell className="font-medium text-slate-900">{debt.room}</TableCell>
-                      <TableCell className="text-slate-600">{debt.tenant}</TableCell>
+                      <TableCell className="text-slate-600">{debt.nguoiThue}</TableCell>
                       <TableCell className="text-center">
                         <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
                           {debt.unpaidInvoiceCount} hóa đơn

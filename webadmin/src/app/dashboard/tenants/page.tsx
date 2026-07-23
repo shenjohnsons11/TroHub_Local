@@ -100,7 +100,7 @@ export default function TenantsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm("Bạn có chắc chắn muốn xóa khách thuê này?")) {
+    if (confirm("Bạn có chắc chắn muốn xóa người thuê này?")) {
       try {
         await fetchAPI(`/tenants/${id}`, { method: "DELETE" });
         loadData();
@@ -130,11 +130,11 @@ export default function TenantsPage() {
 
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
           <DialogTrigger onClick={openAddModal} className="bg-[#f37021] hover:bg-[#e85f12] text-white flex items-center h-10 px-4 rounded-md font-medium text-sm">
-            <Plus className="w-4 h-4 mr-2" /> Thêm khách thuê
+            <Plus className="w-4 h-4 mr-2" /> Thêm người thuê
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>Thêm khách thuê</DialogTitle>
+              <DialogTitle>Thêm người thuê</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSaveTenant} className="space-y-4 mt-4">
               <div className="space-y-2">
@@ -165,7 +165,7 @@ export default function TenantsPage() {
                   {rooms.map(r => <option key={r._id || r.id} value={r.roomCode}>{r.roomCode}</option>)}
                 </select>
               </div>
-              <Button type="submit" className="w-full bg-[#f37021] hover:bg-[#e85f12] mt-4">Lưu khách thuê</Button>
+              <Button type="submit" className="w-full bg-[#f37021] hover:bg-[#e85f12] mt-4">Lưu người thuê</Button>
             </form>
           </DialogContent>
         </Dialog>
@@ -174,7 +174,7 @@ export default function TenantsPage() {
         <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>Sửa thông tin khách thuê</DialogTitle>
+              <DialogTitle>Sửa thông tin người thuê</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSaveTenant} className="space-y-4 mt-4">
               <div className="space-y-2">
@@ -213,7 +213,7 @@ export default function TenantsPage() {
               </TableRow>
             ) : filteredTenants.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-slate-500">Không tìm thấy khách thuê nào</TableCell>
+                <TableCell colSpan={5} className="text-center py-8 text-slate-500">Không tìm thấy người thuê nào</TableCell>
               </TableRow>
             ) : (
               filteredTenants.map(tenant => (
