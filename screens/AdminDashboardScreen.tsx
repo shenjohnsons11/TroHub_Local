@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, Refre
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../constants/theme";
 import { adminService, AdminDashboardStats } from "../services/adminService";
+import TroHubLogo from "../components/TroHubLogo";
 
 import { UserProfile } from "../types/UserProfile";
 
@@ -61,14 +62,20 @@ export default function AdminDashboardScreen({ profile, onNavigate, onLogout }: 
       contentContainerStyle={styles.scrollContent}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.orange]} />}
     >
-      <View style={styles.headerRow}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Xin chào Chủ trọ {(profile as any)?.fullName || (profile as any)?.name || "Admin"}</Text>
-          <Text style={styles.subtitle}>Tổng quan quản lý phòng trọ</Text>
-        </View>
+      <View style={styles.brandRow}>
+        <TroHubLogo compact />
         <Pressable style={styles.settingsButton} onPress={() => onNavigate("settings")}>
           <Ionicons name="settings-outline" size={26} color={COLORS.text} />
         </Pressable>
+      </View>
+
+      <View style={styles.dashboardHero}>
+        <Text style={styles.heroKicker}>TỔNG QUAN VẬN HÀNH</Text>
+        <Text style={styles.heroTitle}>Xin chào, {(profile as any)?.fullName || (profile as any)?.name || "Chủ trọ"}</Text>
+        <View style={styles.heroStats}>
+          <View><Text style={styles.heroValue}>{occupancyRate}%</Text><Text style={styles.heroLabel}>Lấp đầy</Text></View>
+          <View><Text style={styles.heroValue}>{stats?.pendingRepairs || 0}</Text><Text style={styles.heroLabel}>Sự cố chờ xử lý</Text></View>
+        </View>
       </View>
 
       {/* Grid thống kê */}
@@ -88,7 +95,7 @@ export default function AdminDashboardScreen({ profile, onNavigate, onLogout }: 
           <View style={[styles.iconContainer, { backgroundColor: "#EAF9F1" }]}>
             <Ionicons name="people" size={24} color={COLORS.green} />
           </View>
-          <Text style={styles.cardLabel}>Khách thuê</Text>
+          <Text style={styles.cardLabel}>Người thuê</Text>
           <Text style={styles.cardValue}>{stats?.totalTenants}</Text>
           <Text style={styles.cardSub}>Đang hoạt động</Text>
         </Pressable>
@@ -160,13 +167,33 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     marginTop: 10,
   },
+  brandRow: {
+    minHeight: 48,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 18,
+  },
+  dashboardHero: {
+    minHeight: 206,
+    justifyContent: "flex-end",
+    marginBottom: 18,
+    padding: 22,
+    borderRadius: 16,
+    backgroundColor: "#25292D",
+  },
+  heroKicker: { color: "#67D69A", fontSize: 10, fontWeight: "900", letterSpacing: 1.4, marginBottom: 10 },
+  heroTitle: { maxWidth: 300, color: "#F4F5F3", fontSize: 27, lineHeight: 32, fontWeight: "900" },
+  heroStats: { flexDirection: "row", gap: 28, marginTop: 22 },
+  heroValue: { color: "#FF8D52", fontSize: 20, fontWeight: "900" },
+  heroLabel: { color: "#B6BCC0", fontSize: 11, fontWeight: "700", marginTop: 2 },
   header: {
     flex: 1,
   },
   settingsButton: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: 9,
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
@@ -192,7 +219,7 @@ const styles = StyleSheet.create({
   card: {
     width: "48%",
     backgroundColor: "#FFFFFF",
-    borderRadius: 18,
+    borderRadius: 13,
     padding: 14,
     marginBottom: 16,
     shadowColor: "#000",

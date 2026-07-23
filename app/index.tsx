@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { View, StyleSheet, SafeAreaView, ActivityIndicator } from "react-native";
+import { View, StyleSheet, SafeAreaView, useColorScheme } from "react-native";
+import Toast from "react-native-toast-message";
 
 import BottomNav from "../components/BottomNav";
 import LoginScreen from "../screens/LoginScreen";
@@ -19,6 +20,8 @@ import AdminTenantsScreen from "../screens/AdminTenantsScreen";
 import BulkInvoiceScreen from "../screens/BulkInvoiceScreen";
 import ChangePasswordScreen from "../screens/ChangePasswordScreen";
 import AdminSettingsScreen from "../screens/AdminSettingsScreen";
+import AppLoadingScreen from "../components/AppLoadingScreen";
+import { TROHUB_THEMES } from "../constants/theme";
 
 import { UserProfile } from "../types/UserProfile";
 import { authService } from "../services/authService";
@@ -39,6 +42,7 @@ type Tab =
   | "settings";
 
 export default function App() {
+  const theme = TROHUB_THEMES[useColorScheme() === "dark" ? "dark" : "light"];
   const [isChecking, setIsChecking] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("home");
@@ -67,9 +71,9 @@ export default function App() {
     }
   };
 
-  const handleLogin = async (email: string, password: string) => {
+  const handleLogin = async (identifier: string, password: string) => {
     try {
-      const mustChangePassword = await authService.login(email, password);
+      const mustChangePassword = await authService.login(identifier, password);
 
       const userProfile = await userService.getProfile();
 
@@ -115,11 +119,7 @@ export default function App() {
   };
 
   if (isChecking) {
-    return (
-      <SafeAreaView style={styles.loadingSafe}>
-        <ActivityIndicator size="large" color="#FF6A21" />
-      </SafeAreaView>
-    );
+    return <AppLoadingScreen />;
   }
 
   if (!isLoggedIn || !profile) {
@@ -127,8 +127,8 @@ export default function App() {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.phone}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
+      <View style={[styles.phone, { backgroundColor: theme.background }]}>
         <View style={styles.content}>
           {activeTab === "change_password" ? (
             <ChangePasswordScreen 
@@ -208,18 +208,13 @@ export default function App() {
         {activeTab !== "change_password" && (
           <BottomNav activeTab={activeTab} onChangeTab={handleChangeTab} role={profile.role} />
         )}
+        <Toast />
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  loadingSafe: {
-    flex: 1,
-    backgroundColor: "#F4F5F7",
-    alignItems: "center",
-    justifyContent: "center",
-  },
   safe: {
     flex: 1,
     backgroundColor: "#F4F5F7",

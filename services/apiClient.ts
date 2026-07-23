@@ -28,14 +28,36 @@ export const apiClient = {
         body: body ? JSON.stringify(body) : undefined,
       });
 
+      const contentType = response.headers.get("content-type");
+      let data: any = null;
       const text = await response.text();
-      const data = text ? JSON.parse(text) : null;
 
-     // console.log("API STATUS:", response.status);
+      if (contentType && contentType.includes("application/json")) {
+        try {
+          data = text ? JSON.parse(text) : null;
+        } catch (e) {
+          throw new Error("Dữ liệu phản hồi không hợp lệ. Mong Người thuê thử lại sau.");
+        }
+      } else {
+        if (!response.ok) {
+          throw new Error("Hệ thống đang gặp sự cố, mong Người thuê thử lại sau.");
+        }
+        data = text ? { message: text } : null;
+      }
+
+      // console.log("API STATUS:", response.status);
       //console.log("API RESPONSE:", data);
 
       if (!response.ok) {
-        throw new Error(data?.message || "Có lỗi xảy ra khi gọi API");
+        const apiError = new Error(data?.message || "Có lỗi xảy ra khi gọi API") as Error & {
+          code?: string;
+          field?: string;
+          status?: number;
+        };
+        apiError.code = data?.code;
+        apiError.field = data?.field;
+        apiError.status = response.status;
+        throw apiError;
       }
 
       return data as T;

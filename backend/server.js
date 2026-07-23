@@ -15,6 +15,10 @@ const settingsRoute = require('./src/routes/settingsRoute');
 const meRoute = require('./src/routes/meRoute');
 const paymentRoute = require('./src/routes/paymentRoute');
 const serviceRoutes = require('./src/routes/serviceRoutes');
+const dashboardRoutes = require('./src/routes/dashboardRoutes');
+const billingPolicyRoutes = require('./src/routes/billingPolicyRoutes');
+const paymentController = require('./src/controllers/paymentController');
+const { applyAllOverduePenalties } = require('./src/services/overdueInvoice');
 
 const app = express();
 
@@ -35,6 +39,13 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 // 3. Gọi hàm kết nối Database
 connectDB();
 
+const overdueTimer = setInterval(() => {
+    applyAllOverduePenalties().catch((error) => {
+        console.error('[OVERDUE_INVOICE_JOB] Không thể cập nhật hóa đơn quá hạn:', error.message);
+    });
+}, 15 * 60 * 1000);
+overdueTimer.unref();
+
 // 4. Đăng ký các Routes
 app.use('/api/rooms', roomRoutes);
 app.use('/api/tenants', tenantRoutes);
@@ -46,10 +57,26 @@ app.use('/api/seed', seedRoute);
 app.use('/api/settings', settingsRoute);
 app.use('/api/me', meRoute);
 app.use('/api/payments', paymentRoute);
+app.get('/api/vnpay/ipn', paymentController.vnpayIpn);
 app.use('/api/services', serviceRoutes);
+app.use('/api/settings/billing-policy', billingPolicyRoutes);
 app.use("/vqr", require("./src/routes/vietqrDirectRoutes"));
+app.use('/api/dashboard', dashboardRoutes);
 
-// 5. Khởi động Server
+// 5. Global Error Handling (Trả về JSON thay vì HTML)
+app.use((req, res, next) => {
+    res.status(404).json({ success: false, message: 'Endpoint không tồn tại' });
+});
+
+app.use((err, req, res, next) => {
+    console.error('[Global Error]', err.stack);
+    res.status(err.status || 500).json({
+        success: false,
+        message: err.message || 'Lỗi hệ thống nội bộ'
+    });
+});
+
+// 6. Khởi động Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server đang chạy tại http://0.0.0.0:${PORT}`);

@@ -1,5 +1,26 @@
 const Transaction = require('../models/Transaction');
 const Invoice = require('../models/Invoice');
+const crypto = require('crypto');
+const querystring = require('qs');
+const moment = require('moment');
+const { applyOverduePenalty } = require('../services/overdueInvoice');
+
+function sortObject(obj) {
+    let sorted = {};
+    let str = [];
+    let key;
+    for (key in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+            str.push(encodeURIComponent(key));
+        }
+    }
+    str.sort();
+    for (key = 0; key < str.length; key++) {
+        sorted[str[key]] = encodeURIComponent(obj[str[key]]).replace(/%20/g, "+");
+    }
+    return sorted;
+}
+
 
 // GET /api/payments - Lấy toàn bộ lịch sử giao dịch (Dành cho Chủ trọ - Web)
 exports.getAllPayments = async (req, res) => {
@@ -23,7 +44,7 @@ exports.getAllPayments = async (req, res) => {
             const invoice = t.invoiceId;
             const contract = invoice?.contractId;
             const room = contract?.roomId?.roomCode || invoice?.room || '-';
-            const tenant = contract?.tenantId?.fullName || invoice?.tenant || '-';
+            const nguoiThue = contract?.tenantId?.fullName || invoice?.tenant || '-';
             const period = invoice?.period || '';
 
             return {
@@ -31,7 +52,7 @@ exports.getAllPayments = async (req, res) => {
                 transactionCode: t._id.toString().slice(-8).toUpperCase(),
                 invoiceId: invoice?._id?.toString() || '',
                 room,
-                tenant,
+                nguoiThue,
                 month: period,
                 amount: t.amount || 0,
                 method: t.method || 'Tiền mặt',
@@ -59,6 +80,7 @@ exports.createVietQRPayment = async (req, res) => {
             });
         }
 
+        await applyOverduePenalty(invoiceId);
         const invoice = await Invoice.findById(invoiceId);
 
         if (!invoice) {
@@ -386,5 +408,191 @@ exports.vietQRWebhook = async (req, res) => {
             success: false,
             message: "Lỗi Server: " + error.message
         });
+    }
+};
+
+// VNPay logic
+exports.createVNPayUrl = async (req, res) => {
+    try {
+        const { invoiceId, nguoiThueId } = req.body;
+        if (!invoiceId) {
+            return res.status(400).json({ success: false, message: "Thiếu invoiceId" });
+        }
+
+        await applyOverduePenalty(invoiceId);
+        const invoice = await Invoice.findById(invoiceId);
+        if (!invoice) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy hóa đơn" });
+        }
+        if (invoice.status === 2) {
+            return res.status(400).json({ success: false, message: "Hóa đơn này đã được thanh toán" });
+        }
+
+        const amount = invoice.totalAmount || 0;
+        if (amount <= 0) {
+            return res.status(400).json({ success: false, message: "Số tiền hóa đơn không hợp lệ" });
+        }
+
+        const tmnCode = process.env.VNPAY_TMN_CODE || 'TD3422D1';
+        const secretKey = process.env.VNPAY_SECRET_KEY || 'SMKTJ11T9JQDIZQPCF7E8ZIJ6DXV969Z';
+        const vnpUrl = 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html';
+        const returnUrl = process.env.VNPAY_RETURN_URL || 'https://yourdomain.com/vnpay_return';
+
+        process.env.TZ = 'Asia/Ho_Chi_Minh';
+        let date = new Date();
+        let createDate = moment(date).format('YYYYMMDDHHmmss');
+        let ipAddr = req.headers['x-forwarded-for'] || req.connection.remoteAddress || '127.0.0.1';
+
+        const shortInvoiceId = invoice._id.toString().slice(-6).toUpperCase();
+        const timeCode = Date.now().toString().slice(-6);
+        let orderId = `TROHUB${shortInvoiceId}${timeCode}`;
+
+        let vnp_Params = {};
+        vnp_Params['vnp_Version'] = '2.1.0';
+        vnp_Params['vnp_Command'] = 'pay';
+        vnp_Params['vnp_TmnCode'] = tmnCode;
+        vnp_Params['vnp_Locale'] = 'vn';
+        vnp_Params['vnp_CurrCode'] = 'VND';
+        vnp_Params['vnp_TxnRef'] = orderId;
+        vnp_Params['vnp_OrderInfo'] = 'Thanh toan hoa don: ' + orderId;
+        vnp_Params['vnp_OrderType'] = 'other';
+        vnp_Params['vnp_Amount'] = amount * 100;
+        vnp_Params['vnp_ReturnUrl'] = returnUrl;
+        vnp_Params['vnp_IpAddr'] = ipAddr;
+        vnp_Params['vnp_CreateDate'] = createDate;
+
+        vnp_Params = sortObject(vnp_Params);
+        let signData = querystring.stringify(vnp_Params, { encode: false });
+        let hmac = crypto.createHmac("sha512", secretKey);
+        let signed = hmac.update(Buffer.from(signData, 'utf-8')).digest("hex");
+        vnp_Params['vnp_SecureHash'] = signed;
+
+        let finalRedirectUrl = vnpUrl + '?' + querystring.stringify(vnp_Params, { encode: false });
+
+        const transaction = await Transaction.create({
+            invoiceId: invoice._id,
+            amount,
+            method: "VNPay",
+            status: 2,
+            orderCode: orderId,
+            description: vnp_Params['vnp_OrderInfo']
+        });
+
+        invoice.status = 1;
+        invoice.paymentMethod = "VNPay";
+        invoice.transactionCode = orderId;
+        await invoice.save();
+
+        res.status(200).json({ success: true, paymentUrl: finalRedirectUrl, transactionId: transaction._id });
+    } catch (error) {
+        console.error("Lỗi tạo VNPay:", error);
+        res.status(500).json({ success: false, message: 'Lỗi Server: ' + error.message });
+    }
+};
+
+exports.vnpayIpn = async (req, res) => {
+    try {
+        let vnp_Params = req.query;
+        let secureHash = vnp_Params['vnp_SecureHash'];
+        const receivedAt = new Date().toISOString();
+
+        console.log('[VNPAY_IPN] Received', {
+            receivedAt,
+            txnRef: vnp_Params['vnp_TxnRef'],
+            responseCode: vnp_Params['vnp_ResponseCode'],
+            transactionStatus: vnp_Params['vnp_TransactionStatus'],
+            transactionNo: vnp_Params['vnp_TransactionNo'],
+            bankCode: vnp_Params['vnp_BankCode'],
+            amount: Number(vnp_Params['vnp_Amount'] || 0) / 100,
+        });
+
+        delete vnp_Params['vnp_SecureHash'];
+        delete vnp_Params['vnp_SecureHashType'];
+
+        vnp_Params = sortObject(vnp_Params);
+
+        const secretKey = process.env.VNPAY_SECRET_KEY || 'SMKTJ11T9JQDIZQPCF7E8ZIJ6DXV969Z';
+        let signData = querystring.stringify(vnp_Params, { encode: false });
+        let hmac = crypto.createHmac("sha512", secretKey);
+        let signed = hmac.update(Buffer.from(signData, 'utf-8')).digest("hex");
+
+        if (secureHash === signed) {
+            let orderId = vnp_Params['vnp_TxnRef'];
+            let rspCode = vnp_Params['vnp_ResponseCode'];
+            let amount = parseInt(vnp_Params['vnp_Amount'], 10) / 100;
+
+            let transaction = await Transaction.findOne({ orderCode: orderId, method: "VNPay" });
+            if (!transaction) {
+                console.warn('[VNPAY_IPN] Rejected: transaction not found', { orderId });
+                return res.status(200).json({ RspCode: '01', Message: 'Order not found' });
+            }
+
+            if (transaction.amount !== amount) {
+                console.warn('[VNPAY_IPN] Rejected: invalid amount', {
+                    orderId,
+                    expectedAmount: transaction.amount,
+                    receivedAmount: amount,
+                });
+                return res.status(200).json({ RspCode: '04', Message: 'Invalid amount' });
+            }
+
+            if (transaction.status === 1) {
+                console.info('[VNPAY_IPN] Idempotent response: already confirmed', { orderId });
+                return res.status(200).json({ RspCode: '02', Message: 'Order already confirmed' });
+            }
+
+            if (rspCode === '00' && vnp_Params['vnp_TransactionStatus'] === '00') {
+                const invoice = await Invoice.findById(transaction.invoiceId).populate({
+                    path: 'contractId',
+                    select: 'tenantId',
+                });
+                const nguoiThueId = invoice?.contractId?.tenantId?.toString();
+
+                if (!invoice || !nguoiThueId) {
+                    console.error('[VNPAY_IPN] Rejected: invoice is not linked to NGUOI_THUE', {
+                        orderId,
+                        invoiceId: transaction.invoiceId?.toString(),
+                    });
+                    return res.status(200).json({ RspCode: '01', Message: 'Invoice owner not found' });
+                }
+
+                transaction.status = 1;
+                transaction.gatewayReference = vnp_Params['vnp_TransactionNo'];
+                transaction.paidAt = new Date();
+                await transaction.save();
+
+                invoice.status = 2; // Đã thanh toán
+                await invoice.save();
+
+                console.info('[VNPAY_IPN] Payment confirmed and invoice updated', {
+                    orderId,
+                    invoiceId: invoice._id.toString(),
+                    nguoiThueId,
+                    amount,
+                    gatewayReference: transaction.gatewayReference,
+                });
+            } else {
+                transaction.status = 0; // Failed
+                await transaction.save();
+                console.warn('[VNPAY_IPN] Payment failed or cancelled', {
+                    orderId,
+                    responseCode: rspCode,
+                    transactionStatus: vnp_Params['vnp_TransactionStatus'],
+                });
+            }
+
+            return res.status(200).json({ RspCode: '00', Message: 'Confirm Success' });
+        } else {
+            console.warn('[VNPAY_IPN] Rejected: invalid signature', {
+                txnRef: vnp_Params['vnp_TxnRef'],
+            });
+            return res.status(200).json({ RspCode: '97', Message: 'Invalid signature' });
+        }
+    } catch (error) {
+        console.error("[VNPAY_IPN] Unexpected error", {
+            message: error.message,
+            stack: error.stack,
+        });
+        return res.status(500).json({ RspCode: '99', Message: 'Unknown error' });
     }
 };

@@ -8,6 +8,12 @@ export type Contract = {
   endDate: string;
   rentFee: string;
   deposit: string;
+  depositPayment?: {
+    required: boolean;
+    invoiceId: string | null;
+    amount: number;
+    status: "not_required" | "unpaid" | "paid";
+  };
   status: ContractStatus;
   rawStatus: number; // 0: Chờ ký, 1: Hiệu lực, 2: Hết hạn, 3: Hủy, 4: Chờ chủ duyệt
   usedMonths: number;

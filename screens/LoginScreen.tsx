@@ -1,381 +1,232 @@
 import React, { useState } from "react";
 import {
-  SafeAreaView,
-  Text,
-  TextInput,
-  Pressable,
-  StyleSheet,
-  View,
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
+  SafeAreaView,
   ScrollView,
-  ActivityIndicator,
-  Alert,
+  StyleSheet,
+  Text,
+  TextInput,
+  useColorScheme,
+  View,
 } from "react-native";
-import { COLORS } from "../constants/theme";
 import ForgotPasswordModal from "../components/ForgotPasswordModal";
-import { authService } from "../services/authService";
-import Toast from "react-native-toast-message";
+import TroHubLogo from "../components/TroHubLogo";
+import { FONT_FAMILIES, TROHUB_THEMES } from "../constants/theme";
+import { useNotification } from "../hooks/useNotification";
+import { getNotificationMessage } from "../utils/notificationMessages";
 
 type Props = {
-  onLogin: (email: string, password: string) => Promise<void>;
+  onLogin: (identifier: string, password: string) => Promise<void>;
 };
 
 export default function LoginScreen({ onLogin }: Props) {
-  const [isRegister, setIsRegister] = useState(false);
-
-  // Đăng nhập
-  const [loginEmail, setLoginEmail] = useState("");
+  const notification = useNotification();
+  const dark = useColorScheme() === "dark";
+  const theme = TROHUB_THEMES[dark ? "dark" : "light"];
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
-
-  // Đăng ký (thêm các trường bắt buộc)
-  const [fullName, setFullName] = useState("");
-  const [regEmail, setRegEmail] = useState("");
-  const [regPhone, setRegPhone] = useState("");
-  const [regCccd, setRegCccd] = useState("");
-  const [regPassword, setRegPassword] = useState("");
-
-  // Errors
-  const [loginEmailError, setLoginEmailError] = useState("");
+  const [identifierError, setIdentifierError] = useState("");
   const [passwordError, setPasswordError] = useState("");
-  const [fullNameError, setFullNameError] = useState("");
-  const [regEmailError, setRegEmailError] = useState("");
-  const [regPhoneError, setRegPhoneError] = useState("");
-  const [regCccdError, setRegCccdError] = useState("");
-  const [regPasswordError, setRegPasswordError] = useState("");
-
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [forgotVisible, setForgotVisible] = useState(false);
 
-  const clearErrors = () => {
-    setLoginEmailError("");
-    setPasswordError("");
-    setFullNameError("");
-    setRegEmailError("");
-    setRegPhoneError("");
-    setRegCccdError("");
-    setRegPasswordError("");
-  };
+  const validate = () => {
+    const nextIdentifierError = identifier.trim()
+      ? ""
+      : "Vui lòng nhập số điện thoại hoặc tên đăng nhập";
+    const nextPasswordError = !password
+      ? "Vui lòng nhập mật khẩu"
+      : password.length < 6
+        ? "Mật khẩu phải từ 6 ký tự trở lên"
+        : "";
 
-  const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-
-  const validateLogin = () => {
-    let isValid = true;
-
-    if (!loginEmail.trim()) {
-      setLoginEmailError("Vui lòng nhập thông tin đăng nhập");
-      isValid = false;
-    } else {
-      setLoginEmailError("");
-    }
-
-    if (!password.trim()) {
-      setPasswordError("Vui lòng nhập mật khẩu");
-      isValid = false;
-    } else if (password.length < 6) {
-      setPasswordError("Mật khẩu phải từ 6 ký tự trở lên");
-      isValid = false;
-    } else {
-      setPasswordError("");
-    }
-
-    return isValid;
-  };
-
-  const validateRegister = () => {
-    let isValid = true;
-
-    if (!fullName.trim()) {
-      setFullNameError("Vui lòng nhập họ và tên");
-      isValid = false;
-    } else {
-      setFullNameError("");
-    }
-
-    if (!regEmail.trim()) {
-      setRegEmailError("Vui lòng nhập email");
-      isValid = false;
-    } else if (!isValidEmail(regEmail.trim())) {
-      setRegEmailError("Email không đúng định dạng");
-      isValid = false;
-    } else {
-      setRegEmailError("");
-    }
-
-    const rawPhone = regPhone.replace(/\D/g, '');
-    if (!rawPhone) {
-      setRegPhoneError("Vui lòng nhập số điện thoại");
-      isValid = false;
-    } else if (rawPhone.length !== 10) {
-      setRegPhoneError("Số điện thoại phải gồm đúng 10 chữ số");
-      isValid = false;
-    } else {
-      setRegPhoneError("");
-    }
-
-    const rawCccd = regCccd.replace(/\D/g, '');
-    if (!rawCccd) {
-      setRegCccdError("Vui lòng nhập số CMND/CCCD");
-      isValid = false;
-    } else if (rawCccd.length !== 12) {
-      setRegCccdError("Số CCCD phải gồm đúng 12 chữ số");
-      isValid = false;
-    } else {
-      setRegCccdError("");
-    }
-
-    if (!regPassword.trim()) {
-      setRegPasswordError("Vui lòng nhập mật khẩu");
-      isValid = false;
-    } else if (regPassword.length < 6) {
-      setRegPasswordError("Mật khẩu phải từ 6 ký tự trở lên");
-      isValid = false;
-    } else {
-      setRegPasswordError("");
-    }
-
-    return isValid;
+    setIdentifierError(nextIdentifierError);
+    setPasswordError(nextPasswordError);
+    return !nextIdentifierError && !nextPasswordError;
   };
 
   const handleSubmit = async () => {
+    if (!validate()) return;
+
     try {
       setIsSubmitting(true);
-      if (isRegister) {
-        if (!validateRegister()) return;
-
-        await authService.register({
-          email: regEmail.trim(),
-          password: regPassword,
-          fullName: fullName.trim(),
-          phone: regPhone.replace(/\D/g, ''),
-          idCard: regCccd.replace(/\D/g, ''),
-        });
-        Toast.show({
-          type: 'success',
-          text1: 'Thành công',
-          text2: 'Đăng ký thành công! Vui lòng chờ Chủ trọ duyệt tài khoản của bạn.'
-        });
-        // Tự động điền email vào ô đăng nhập
-        setLoginEmail(regEmail.trim());
-        setIsRegister(false);
-        // Reset form đăng ký
-        setFullName("");
-        setRegEmail("");
-        setRegPhone("");
-        setRegCccd("");
-        setRegPassword("");
-      } else {
-        if (!validateLogin()) return;
-
-        await onLogin(loginEmail.trim(), password.trim());
-      }
+      await onLogin(identifier.trim(), password);
+      notification.success("Đăng nhập thành công.");
     } catch (error) {
-      console.log("Submit Error:", error);
-      const msg = error instanceof Error ? error.message : "Có lỗi xảy ra, vui lòng thử lại sau.";
-      if (isRegister) {
-        if (msg.toLowerCase().includes("email")) {
-          setRegEmailError(msg);
-        } else if (msg.toLowerCase().includes("điện thoại")) {
-          setRegPhoneError(msg);
-        } else if (msg.toLowerCase().includes("cccd")) {
-          setRegCccdError(msg);
-        } else if (msg.toLowerCase().includes("đăng nhập")) {
-          setRegEmailError(msg);
-        } else {
-          Toast.show({ type: 'error', text1: 'Lỗi', text2: msg });
-        }
-      } else {
-        Toast.show({ type: 'error', text1: 'Lỗi', text2: msg });
-      }
+      notification.error(getNotificationMessage(error, "Không thể đăng nhập. Vui lòng thử lại."), {
+        title: "Đăng nhập thất bại",
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
       <KeyboardAvoidingView
-        style={styles.keyboardView}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={styles.keyboardView}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.container}>
-            <View style={styles.logoBox}>
-              <Text style={styles.logoIcon}>TH</Text>
-              <Text style={styles.logoText}>TroHub</Text>
+          <View style={styles.page}>
+            <View
+              style={[
+                styles.brandPanel,
+                { backgroundColor: dark ? theme.surface : "#25292D" },
+              ]}
+            >
+              <TroHubLogo size="large" inverted />
+              <View style={styles.brandCopy}>
+                <Text style={styles.brandTitle}>Mọi việc ở trọ, rõ ràng hơn.</Text>
+                <Text style={styles.brandDescription}>
+                  Theo dõi hợp đồng, hóa đơn và yêu cầu sửa chữa trong một ứng
+                  dụng thống nhất.
+                </Text>
+              </View>
+              <View style={styles.brandRule}>
+                <View style={[styles.rulePrimary, { backgroundColor: theme.primary }]} />
+                <View style={[styles.rulePositive, { backgroundColor: theme.positive }]} />
+              </View>
             </View>
 
-            <Text style={styles.title}>
-              {isRegister ? "Đăng ký tài khoản" : "Đăng nhập hệ thống TroHub"}
-            </Text>
+            <View
+              style={[
+                styles.formPanel,
+                { backgroundColor: theme.surface, borderColor: theme.border },
+              ]}
+            >
+              <Text style={[styles.eyebrow, { color: theme.primary }]}>TRO HUB</Text>
+              <Text style={[styles.title, { color: theme.text }]}>Đăng nhập</Text>
+              <Text style={[styles.subtitle, { color: theme.muted }]}>
+                Sử dụng tài khoản do Chủ trọ hoặc Admin cung cấp.
+              </Text>
 
-            <View style={styles.form}>
-              {isRegister ? (
-                <>
-                  {/* ===== FORM ĐĂNG KÝ ===== */}
-                  <Text style={styles.label}>Họ và tên <Text style={styles.required}>*</Text></Text>
-                  <TextInput
-                    style={[styles.input, fullNameError ? styles.inputError : null]}
-                    value={fullName}
-                    onChangeText={(v) => { setFullName(v); if (fullNameError) setFullNameError(""); }}
-                    placeholder="Nhập họ và tên đầy đủ"
-                    autoCapitalize="words"
-                    autoCorrect={false}
-                    editable={!isSubmitting}
-                  />
-                  {fullNameError ? <Text style={styles.errorText}>{fullNameError}</Text> : null}
+              <View style={styles.field}>
+                <Text style={[styles.label, { color: theme.text }]}>
+                  Số điện thoại hoặc tên đăng nhập
+                </Text>
+                <TextInput
+                  accessibilityLabel="Số điện thoại hoặc tên đăng nhập"
+                  autoCapitalize="none"
+                  autoComplete="username"
+                  autoCorrect={false}
+                  editable={!isSubmitting}
+                  onChangeText={(value) => {
+                    setIdentifier(value);
+                    if (identifierError) setIdentifierError("");
+                  }}
+                  placeholder="Ví dụ: 0901234567 hoặc nguyenvana"
+                  placeholderTextColor={theme.muted}
+                  returnKeyType="next"
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: theme.surfaceElevated,
+                      borderColor: identifierError ? theme.danger : theme.border,
+                      color: theme.text,
+                    },
+                  ]}
+                  value={identifier}
+                />
+                {identifierError ? (
+                  <Text style={[styles.errorText, { color: theme.danger }]}>
+                    {identifierError}
+                  </Text>
+                ) : null}
+              </View>
 
-                  <Text style={styles.label}>Email (tên đăng nhập) <Text style={styles.required}>*</Text></Text>
-                  <TextInput
-                    style={[styles.input, regEmailError ? styles.inputError : null]}
-                    value={regEmail}
-                    onChangeText={(v) => { setRegEmail(v); if (regEmailError) setRegEmailError(""); }}
-                    placeholder="Nhập địa chỉ email"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    keyboardType="email-address"
-                    editable={!isSubmitting}
-                  />
-                  {regEmailError ? <Text style={styles.errorText}>{regEmailError}</Text> : null}
-
-                  <Text style={styles.label}>Số điện thoại <Text style={styles.required}>*</Text></Text>
-                  <TextInput
-                    style={[styles.input, regPhoneError ? styles.inputError : null]}
-                    value={regPhone}
-                    onChangeText={(v) => { 
-                      const digits = v.replace(/\D/g, '');
-                      let formatted = digits;
-                      if (formatted.length > 10) formatted = formatted.slice(0, 10);
-                      if (formatted.length > 7) formatted = formatted.replace(/(\d{4})(\d{3})(\d+)/, "$1.$2.$3");
-                      else if (formatted.length > 4) formatted = formatted.replace(/(\d{4})(\d+)/, "$1.$2");
-                      setRegPhone(formatted); 
-                      if (regPhoneError) setRegPhoneError(""); 
-                    }}
-                    placeholder="Nhập số điện thoại (VD: 090.123.4567)"
-                    keyboardType="phone-pad"
-                    maxLength={12}
-                    editable={!isSubmitting}
-                  />
-                  {regPhoneError ? <Text style={styles.errorText}>{regPhoneError}</Text> : null}
-
-                  <Text style={styles.label}>Số CMND/CCCD <Text style={styles.required}>*</Text></Text>
-                  <TextInput
-                    style={[styles.input, regCccdError ? styles.inputError : null]}
-                    value={regCccd}
-                    onChangeText={(v) => { 
-                      const digits = v.replace(/\D/g, '');
-                      let formatted = digits;
-                      if (formatted.length > 12) formatted = formatted.slice(0, 12);
-                      if (formatted.length > 8) formatted = formatted.replace(/(\d{4})(\d{4})(\d+)/, "$1.$2.$3");
-                      else if (formatted.length > 4) formatted = formatted.replace(/(\d{4})(\d+)/, "$1.$2");
-                      setRegCccd(formatted); 
-                      if (regCccdError) setRegCccdError(""); 
-                    }}
-                    placeholder="Nhập số CMND/CCCD (12 số)"
-                    keyboardType="numeric"
-                    maxLength={14}
-                    editable={!isSubmitting}
-                  />
-                  {regCccdError ? <Text style={styles.errorText}>{regCccdError}</Text> : null}
-
-                  <Text style={styles.label}>Mật khẩu <Text style={styles.required}>*</Text></Text>
-                  <TextInput
-                    style={[styles.input, regPasswordError ? styles.inputError : null]}
-                    value={regPassword}
-                    onChangeText={(v) => { setRegPassword(v); if (regPasswordError) setRegPasswordError(""); }}
-                    placeholder="Nhập mật khẩu (từ 6 ký tự)"
-                    secureTextEntry
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    autoComplete="off"
-                    editable={!isSubmitting}
-                  />
-                  {regPasswordError ? <Text style={styles.errorText}>{regPasswordError}</Text> : null}
-                </>
-              ) : (
-                <>
-                  {/* ===== FORM ĐĂNG NHẬP ===== */}
-                  <Text style={styles.label}>Email / Số điện thoại / Tên đăng nhập</Text>
-                  <TextInput
-                    style={[styles.input, loginEmailError ? styles.inputError : null]}
-                    value={loginEmail}
-                    onChangeText={(v) => { setLoginEmail(v); if (loginEmailError) setLoginEmailError(""); }}
-                    placeholder="Nhập email, số điện thoại hoặc tên đăng nhập"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    autoComplete="off"
-                    editable={!isSubmitting}
-                  />
-                  {loginEmailError ? <Text style={styles.errorText}>{loginEmailError}</Text> : null}
-
-                  <Text style={styles.label}>Mật khẩu</Text>
-                  <TextInput
-                    style={[styles.input, passwordError ? styles.inputError : null]}
-                    value={password}
-                    onChangeText={(v) => { setPassword(v); if (passwordError) setPasswordError(""); }}
-                    placeholder="Nhập mật khẩu (từ 6 ký tự)"
-                    secureTextEntry
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    autoComplete="off"
-                    editable={!isSubmitting}
-                  />
-                  {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
-                </>
-              )}
+              <View style={styles.field}>
+                <Text style={[styles.label, { color: theme.text }]}>Mật khẩu</Text>
+                <TextInput
+                  accessibilityLabel="Mật khẩu"
+                  autoCapitalize="none"
+                  autoComplete="current-password"
+                  autoCorrect={false}
+                  editable={!isSubmitting}
+                  onChangeText={(value) => {
+                    setPassword(value);
+                    if (passwordError) setPasswordError("");
+                  }}
+                  onSubmitEditing={handleSubmit}
+                  placeholder="Nhập mật khẩu"
+                  placeholderTextColor={theme.muted}
+                  returnKeyType="go"
+                  secureTextEntry
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: theme.surfaceElevated,
+                      borderColor: passwordError ? theme.danger : theme.border,
+                      color: theme.text,
+                    },
+                  ]}
+                  value={password}
+                />
+                {passwordError ? (
+                  <Text style={[styles.errorText, { color: theme.danger }]}>
+                    {passwordError}
+                  </Text>
+                ) : null}
+              </View>
 
               <Pressable
-                style={[
-                  styles.primaryButton,
-                  isSubmitting && styles.primaryButtonDisabled,
-                ]}
-                onPress={handleSubmit}
+                accessibilityRole="button"
                 disabled={isSubmitting}
+                onPress={handleSubmit}
+                style={({ pressed }) => [
+                  styles.primaryButton,
+                  { backgroundColor: theme.primary },
+                  pressed && styles.buttonPressed,
+                  isSubmitting && styles.buttonDisabled,
+                ]}
               >
                 {isSubmitting ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.primaryText}>
-                    {isRegister ? "Đăng ký" : "Đăng nhập"}
-                  </Text>
+                  <Text style={styles.primaryButtonText}>Đăng nhập</Text>
                 )}
               </Pressable>
 
-              {!isRegister && (
-                <Pressable
-                  disabled={isSubmitting}
-                  onPress={() => setForgotVisible(true)}
-                >
-                  <Text style={styles.forgot}>Quên mật khẩu?</Text>
-                </Pressable>
-              )}
-
               <Pressable
+                accessibilityRole="button"
                 disabled={isSubmitting}
-                onPress={() => {
-                  setIsRegister(!isRegister);
-                  clearErrors();
-                }}
-                style={{ marginTop: 24 }}
+                onPress={() => setForgotVisible(true)}
+                style={({ pressed }) => [
+                  styles.forgotButton,
+                  pressed && styles.buttonPressed,
+                ]}
               >
-                <Text style={[styles.forgot, { marginTop: 0 }]}>
-                  {isRegister
-                    ? "Đã có tài khoản? Đăng nhập ngay"
-                    : "Chưa có tài khoản? Đăng ký người thuê"}
+                <Text style={[styles.forgotText, { color: theme.primary }]}>
+                  Quên mật khẩu?
                 </Text>
               </Pressable>
+
+              <View
+                style={[
+                  styles.accountNotice,
+                  { backgroundColor: theme.primarySoft },
+                ]}
+              >
+                <Text style={[styles.accountNoticeText, { color: theme.text }]}>
+                  Chưa có tài khoản? Hãy liên hệ Chủ trọ để được cấp quyền truy
+                  cập.
+                </Text>
+              </View>
             </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
       <ForgotPasswordModal
-        visible={forgotVisible}
         onClose={() => setForgotVisible(false)}
+        visible={forgotVisible}
       />
     </SafeAreaView>
   );
@@ -384,7 +235,6 @@ export default function LoginScreen({ onLogin }: Props) {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: "#F4F5F7",
   },
   keyboardView: {
     flex: 1,
@@ -392,94 +242,148 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
   },
-  container: {
+  page: {
     flex: 1,
-    width: "100%",
-    paddingHorizontal: 26,
-    paddingTop: 70,
-    paddingBottom: 40,
-    backgroundColor: "#F4F5F7",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 28,
   },
-  logoBox: {
-    alignItems: "center",
-    marginBottom: 50,
+  brandPanel: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    minHeight: 210,
+    overflow: "hidden",
+    padding: 24,
   },
-  logoIcon: {
-    color: COLORS.orange,
-    fontSize: 16,
+  brandCopy: {
+    marginTop: 28,
+    maxWidth: 420,
+  },
+  brandTitle: {
+    color: "#F4F5F3",
+    fontFamily: FONT_FAMILIES.sans,
+    fontSize: 27,
     fontWeight: "900",
-    letterSpacing: 1,
+    letterSpacing: -0.5,
+    lineHeight: 33,
   },
-  logoText: {
-    color: COLORS.orange,
-    fontSize: 14,
-    fontWeight: "800",
-    marginTop: 2,
+  brandDescription: {
+    color: "#C8CDD0",
+    fontFamily: FONT_FAMILIES.sans,
+    fontSize: 15,
+    lineHeight: 23,
+    marginTop: 10,
+  },
+  brandRule: {
+    bottom: 0,
+    flexDirection: "row",
+    gap: 8,
+    left: 24,
+    position: "absolute",
+    right: 24,
+  },
+  rulePrimary: {
+    borderRadius: 2,
+    flex: 1.6,
+    height: 5,
+  },
+  rulePositive: {
+    borderRadius: 2,
+    flex: 0.6,
+    height: 5,
+  },
+  formPanel: {
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    borderWidth: 1,
+    padding: 24,
+  },
+  eyebrow: {
+    fontFamily: FONT_FAMILIES.sans,
+    fontSize: 12,
+    fontWeight: "900",
+    letterSpacing: 1.2,
   },
   title: {
-    fontSize: 28,
-    lineHeight: 35,
+    fontFamily: FONT_FAMILIES.sans,
+    fontSize: 30,
     fontWeight: "900",
-    color: COLORS.text,
-    textAlign: "center",
-    marginBottom: 32,
+    letterSpacing: -0.6,
+    lineHeight: 38,
+    marginTop: 5,
   },
-  form: {
-    width: "100%",
+  subtitle: {
+    fontFamily: FONT_FAMILIES.sans,
+    fontSize: 15,
+    lineHeight: 22,
+    marginBottom: 22,
+    marginTop: 4,
+  },
+  field: {
+    marginTop: 14,
   },
   label: {
+    fontFamily: FONT_FAMILIES.sans,
     fontSize: 14,
-    color: COLORS.muted,
+    fontWeight: "700",
     marginBottom: 8,
-    marginTop: 12,
-  },
-  required: {
-    color: "#FF3B30",
-    fontWeight: "800",
   },
   input: {
-    width: "100%",
-    height: 48,
-    backgroundColor: "#FFFFFF",
     borderRadius: 10,
-    paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: "#E8E9ED",
-    fontSize: 15,
-    color: COLORS.text,
-  },
-  inputError: {
-    borderColor: "#FF3B30",
-    backgroundColor: "#FFF7F7",
+    fontFamily: FONT_FAMILIES.sans,
+    fontSize: 16,
+    height: 52,
+    paddingHorizontal: 15,
   },
   errorText: {
-    color: "#FF3B30",
+    fontFamily: FONT_FAMILIES.sans,
     fontSize: 12,
     fontWeight: "600",
+    lineHeight: 18,
     marginTop: 6,
-    marginBottom: 2,
   },
   primaryButton: {
-    width: "100%",
-    height: 52,
-    backgroundColor: COLORS.orange,
-    borderRadius: 10,
     alignItems: "center",
+    borderRadius: 10,
+    height: 52,
     justifyContent: "center",
-    marginTop: 26,
+    marginTop: 24,
   },
-  primaryButtonDisabled: {
-    opacity: 0.75,
+  buttonPressed: {
+    transform: [{ scale: 0.98 }],
   },
-  primaryText: {
+  buttonDisabled: {
+    opacity: 0.68,
+  },
+  primaryButtonText: {
     color: "#FFFFFF",
-    fontSize: 15,
+    fontFamily: FONT_FAMILIES.sans,
+    fontSize: 16,
     fontWeight: "800",
   },
-  forgot: {
-    color: COLORS.orange,
+  forgotButton: {
+    alignItems: "center",
+    minHeight: 44,
+    justifyContent: "center",
+    marginTop: 8,
+  },
+  forgotText: {
+    fontFamily: FONT_FAMILIES.sans,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  accountNotice: {
+    borderRadius: 10,
+    marginTop: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  accountNoticeText: {
+    fontFamily: FONT_FAMILIES.sans,
+    fontSize: 13,
+    fontWeight: "600",
+    lineHeight: 20,
     textAlign: "center",
-    fontWeight: "700",
-    marginTop: 22,
   },
 });

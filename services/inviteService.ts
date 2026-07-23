@@ -6,10 +6,21 @@ export type Invite = {
   phone: string;
 };
 
+type InviteListResponse = {
+  success: boolean;
+  data: Invite[];
+  message?: string;
+};
+
+type InviteActionResponse = {
+  success: boolean;
+  message?: string;
+};
+
 export const inviteService = {
   async getInvites(): Promise<Invite[]> {
     try {
-      const data = await apiClient.get("/me/invites");
+      const data = await apiClient.get<InviteListResponse>("/me/invites");
       if (data.success) {
         return data.data;
       }
@@ -22,7 +33,7 @@ export const inviteService = {
 
   async acceptInvite(landlordId: string): Promise<boolean> {
     try {
-      const data = await apiClient.put(`/me/invites/${landlordId}/accept`);
+      const data = await apiClient.put<InviteActionResponse>(`/me/invites/${landlordId}/accept`);
       return data.success;
     } catch (error) {
       console.log("Error accepting invite", error);
@@ -32,7 +43,7 @@ export const inviteService = {
 
   async rejectInvite(landlordId: string): Promise<boolean> {
     try {
-      const data = await apiClient.put(`/me/invites/${landlordId}/reject`);
+      const data = await apiClient.put<InviteActionResponse>(`/me/invites/${landlordId}/reject`);
       return data.success;
     } catch (error) {
       console.log("Error rejecting invite", error);

@@ -7,6 +7,12 @@ const invoiceSchema = new mongoose.Schema({
     totalAmount: { type: Number },            // tong_tien
     status: { type: Number, default: 0 },     // 0: Nháp, 1: Chưa TT, 2: Đã TT, 3: Quá hạn
     remindCount: { type: Number, default: 0 },
+    issuedAt: { type: Date },
+    graceDaysSnapshot: { type: Number, min: 0 },
+    penaltyRateSnapshot: { type: Number, min: 0 },
+    overdueAt: { type: Date },
+    penaltyBaseAmount: { type: Number, min: 0 },
+    penaltyAppliedAt: { type: Date, default: null },
 
     // Các trường phẳng lưu dữ liệu đồng bộ trực tiếp từ Frontend
     room: { type: String, default: "" },
@@ -42,5 +48,16 @@ const invoiceSchema = new mongoose.Schema({
         amount: { type: Number }                   // thanh_tien
     }]
 }, { timestamps: true });
+
+invoiceSchema.index(
+    { contractId: 1, period: 1 },
+    {
+        unique: true,
+        partialFilterExpression: {
+            period: "Tiền cọc",
+            contractId: { $type: "objectId" }
+        }
+    }
+);
 
 module.exports = mongoose.model('Invoice', invoiceSchema);

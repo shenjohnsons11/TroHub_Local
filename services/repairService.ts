@@ -4,30 +4,45 @@ import { authService } from "./authService";
 
 type ApiRepairRequest = {
   _id: string;
+  id?: string;
+  tenantId?: {
+    _id: string;
+    fullName?: string;
+    phone?: string;
+  } | string;
   contractId?: {
     _id: string;
     roomId?: {
       _id: string;
       roomCode?: string;
     };
-    tenantId?: {
-      _id: string;
-      fullName?: string;
-      phone?: string;
-    };
   };
-  title: string;
-  content: string;
-  priority: number;
-  status: number;
+  room?: string;
+  category?: string;
+  title?: string;
+  content?: string;
+  description?: string;
+  priority: number | Priority;
+  status: number | RepairStatus | "Mới" | "Đang xử lý" | "Đã hoàn thành" | "Đã hủy";
   landlordNote?: string;
-  createdAt: string;
-  updatedAt: string;
+  note?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  date?: string;
+  images?: Array<string | { fileUrl?: string; url?: string }>;
 };
 
 type RepairListResponse = {
   success: boolean;
   data: ApiRepairRequest[];
+  message?: string;
+};
+
+type TenantPortalResponse = {
+  success: boolean;
+  data: {
+    repairs: ApiRepairRequest[];
+  };
   message?: string;
 };
 
@@ -37,7 +52,8 @@ type CreateRepairResponse = {
   data: ApiRepairRequest;
 };
 
-const mapPriorityFromApi = (priority: number): Priority => {
+const mapPriorityFromApi = (priority: number | Priority): Priority => {
+  if (typeof priority === "string") return priority;
   if (priority === 3) return "Cao";
   if (priority === 2) return "Trung bình";
   if (priority === 1) return "Thấp";
@@ -51,7 +67,10 @@ const mapPriorityToApi = (priority?: Priority): number => {
   return 0;
 };
 
-const mapStatusFromApi = (status: number): RepairStatus => {
+const mapStatusFromApi = (status: ApiRepairRequest["status"]): RepairStatus => {
+  if (status === "done" || status === "processing" || status === "pending") return status;
+  if (status === "Đã hoàn thành") return "done";
+  if (status === "Đang xử lý") return "processing";
   if (status === 2) return "done";
   if (status === 1) return "processing";
   return "pending";
@@ -69,19 +88,19 @@ const formatDate = (value?: string) => {
   return date.toLocaleDateString("vi-VN");
 };
 
-const mapApiRepairToRepair = (item: any): RepairRequest => {
-  const roomCode = item.room?.code || item.room?.roomCode || item.contractId?.roomId?.roomCode || item.room || "A101";
+const mapApiRepairToRepair = (item: ApiRepairRequest): RepairRequest => {
+  const roomCode = item.contractId?.roomId?.roomCode || item.room || "Không có";
   const images = Array.isArray(item.images)
-    ? item.images.map((img: any) => typeof img === 'string' ? img : (img.fileUrl || img.url || ''))
+    ? item.images.map((img) => typeof img === 'string' ? img : (img.fileUrl || img.url || ''))
     : [];
   return {
-    id: item._id || item.id,
+    id: item._id || item.id || "",
     room: roomCode,
     type: item.title || item.category || "",
     priority: mapPriorityFromApi(item.priority),
     description: item.content || item.description || "",
     status: mapStatusFromApi(item.status),
-    createdAt: formatDate(item.createdAt),
+    createdAt: item.date || formatDate(item.createdAt),
     images,
   };
 };
@@ -100,8 +119,8 @@ export const repairService = {
         throw new Error("Không tìm thấy thông tin user đăng nhập");
       }
 
-      const response = await apiClient.get<RepairListResponse>(
-        "/repairs",
+      const response = await apiClient.get<TenantPortalResponse>(
+        "/me",
         token
       );
 
@@ -109,13 +128,9 @@ export const repairService = {
         throw new Error(response.message || "Không lấy được danh sách sửa chữa");
       }
 
-      const requests = response.data || [];
+      const requests = response.data?.repairs || [];
 
-      const myRequests = requests.filter((item) => {
-        return item.contractId?.tenantId?._id === authUser.id;
-      });
-
-      return myRequests.map(mapApiRepairToRepair);
+      return requests.map(mapApiRepairToRepair);
     } catch (error) {
       console.log("Lỗi lấy danh sách sửa chữa từ API:", error);
       throw error;
@@ -138,9 +153,8 @@ export const repairService = {
       }
 
       const response = await apiClient.post<CreateRepairResponse>(
-        "/repairs",
+        "/me/repairs",
         {
-          tenantId: authUser.id,
           room: request.room,
           title: request.type,
           content: request.description,

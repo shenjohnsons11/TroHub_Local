@@ -1,12 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const meController = require('../controllers/meController');
+const { requireTenant } = require('../middleware/requireTenant');
 
 // Lấy toàn bộ dữ liệu portal người thuê
 router.get('/', meController.getTenantPortal);
 
 // Người thuê ký hợp đồng
-router.put('/sign-contract/:contractId', meController.signContract);
+router.put('/sign-contract/:contractId', requireTenant, meController.signContract);
 
 // Người thuê thanh toán hóa đơn
 router.put('/pay-invoice/:invoiceId', meController.payInvoice);
