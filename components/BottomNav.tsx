@@ -1,7 +1,7 @@
 import React from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet, useColorScheme } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { COLORS } from "../constants/theme";
+import { COLORS, TROHUB_THEMES } from "../constants/theme";
 
 type Tab =
   | "home"
@@ -13,7 +13,8 @@ type Tab =
   | "profile"
   | "rooms"
   | "tenants"
-  | "invoice_bulk";
+  | "invoice_bulk"
+  | "settings";
 
 type Props = {
   activeTab: Tab;
@@ -101,10 +102,11 @@ const landlordTabs: {
 
 export default function BottomNav({ activeTab, onChangeTab, role }: Props) {
   const tabs = role === 1 ? landlordTabs : tenantTabs;
+  const theme = TROHUB_THEMES[useColorScheme() === "dark" ? "dark" : "light"];
 
   return (
-    <View style={styles.wrapper}>
-      <View style={styles.container}>
+    <View style={[styles.wrapper, { backgroundColor: theme.background }]}>
+      <View style={[styles.container, { backgroundColor: theme.surface, borderColor: theme.border }]}>
         {tabs.map((tab) => {
           const active =
             activeTab === tab.key ||
@@ -116,16 +118,18 @@ export default function BottomNav({ activeTab, onChangeTab, role }: Props) {
               key={tab.key}
               style={styles.item}
               onPress={() => onChangeTab(tab.key)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: active }}
             >
               <View style={[styles.iconBox, active && styles.iconBoxActive]}>
                 <Ionicons
                   name={active ? tab.activeIcon : tab.icon}
                   size={21}
-                  color={active ? COLORS.orange : COLORS.muted}
+                  color={active ? theme.primary : theme.muted}
                 />
               </View>
 
-              <Text style={[styles.label, active && styles.activeLabel]}>
+              <Text style={[styles.label, { color: theme.muted }, active && styles.activeLabel, active && { color: theme.primary }]}>
                 {tab.label}
               </Text>
             </Pressable>
@@ -149,8 +153,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-around",
-    borderRadius: 22,
-    shadowColor: "#000",
+    borderRadius: 13,
+    borderWidth: 1,
+    shadowColor: "#25292D",
     shadowOpacity: 0.08,
     shadowOffset: {
       width: 0,
@@ -161,13 +166,14 @@ const styles = StyleSheet.create({
   },
   item: {
     flex: 1,
+    minHeight: 52,
     alignItems: "center",
     justifyContent: "center",
   },
   iconBox: {
     width: 34,
     height: 28,
-    borderRadius: 999,
+    borderRadius: 9,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 3,

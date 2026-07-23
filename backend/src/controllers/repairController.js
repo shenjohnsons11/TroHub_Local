@@ -1,5 +1,6 @@
 const RepairRequest = require('../models/RepairRequest');
 const Contract = require('../models/Contract');
+const Account = require('../models/Account');
 
 // 1. Lấy danh sách yêu cầu sửa chữa (Dành cho Chủ trọ - Web)
 exports.getAllRequests = async (req, res) => {
@@ -13,36 +14,34 @@ exports.getAllRequests = async (req, res) => {
                 if (decoded.role === 1) landlordId = decoded.id;
             } catch(e) {}
         }
-        
-        let query = {};
-        if (landlordId) {
-            const Room = require('../models/Room');
-            const rooms = await Room.find({ landlordId }).select('_id');
-            const roomIds = rooms.map(r => r._id);
-            const contracts = await Contract.find({ roomId: { $in: roomIds } }).select('_id');
-            const contractIds = contracts.map(c => c._id);
-            query.contractId = { $in: contractIds };
-        }
 
-        // Dùng populate để kéo thông tin phòng (roomCode) và người gửi (fullName, phone) qua Hợp đồng
-        const requests = await RepairRequest.find(query)
-            .populate({
-                path: 'contractId',
-                populate: [
-                    { path: 'roomId', select: 'roomCode' },
-                    { path: 'tenantId', select: 'fullName phone' }
-                ]
-            })
-            .sort({ createdAt: -1 }); // Mới nhất lên đầu
+	        let query = {};
+	        if (landlordId) {
+	            const tenants = await Account.find({
+	                role: 2,
+	                linkedLandlords: landlordId
+	            }).select('_id');
+	            query.tenantId = { $in: tenants.map(t => t._id) };
+	        }
+
+	        const requests = await RepairRequest.find(query)
+	            .populate('tenantId', 'fullName phone')
+	            .populate({
+	                path: 'contractId',
+	                populate: { path: 'roomId', select: 'roomCode' }
+	            })
+	            .sort({ createdAt: -1 }); // Mới nhất lên đầu
 
         // Map để frontend dễ hiển thị
         const data = requests.map(r => ({
-            _id: r._id,
-            repairCode: r._id.toString().slice(-6).toUpperCase(),
-            room: r.contractId?.roomId?.roomCode || '-',
-            sender: r.contractId?.tenantId?.fullName || '-',
-            title: r.title,
-            content: r.content,
+	            _id: r._id,
+	            repairCode: r._id.toString().slice(-6).toUpperCase(),
+	            room: r.contractId?.roomId?.roomCode || '-',
+	            sender: r.tenantId?.fullName || '-',
+	            tenantId: r.tenantId,
+	            contractId: r.contractId,
+	            title: r.title,
+	            content: r.content,
             priority: r.priority || 1,
             status: r.status || 0,
             landlordNote: r.landlordNote || '',
@@ -56,17 +55,17 @@ exports.getAllRequests = async (req, res) => {
     }
 };
 
-// 2. Gửi yêu cầu sửa chữa mới (Dành cho Khách thuê - Mobile App)
-exports.createRequest = async (req, res) => {
-    try {
-        const { tenantId, title, content, priority } = req.body;
+	// 2. Gửi yêu cầu sửa chữa mới (Dành cho Người thuê - Mobile App)
+	exports.createRequest = async (req, res) => {
+	    try {
+	        const { tenantId, title, content, priority } = req.body;
 
-        // 1. Tự động dò tìm Hợp đồng đang hiệu lực (status = 1) của khách này
-        const activeContract = await Contract.findOne({ tenantId: tenantId, status: 1 });
-        if (!activeContract) {
-            return res.status(400).json({ 
-                success: false, 
-                message: "Bạn hiện không có hợp đồng thuê phòng nào đang hiệu lực để báo cáo sự cố!" 
+	        // 1. Tự động dò tìm Hợp đồng đang hiệu lực (status = 1) của người này
+	        const activeContract = await Contract.findOne({ tenantId: tenantId, status: 1 });
+	        if (!activeContract) {
+            return res.status(400).json({
+                success: false,
+                message: "Bạn hiện không có hợp đồng thuê phòng nào đang hiệu lực để báo cáo sự cố!"
             });
         }
 
@@ -79,9 +78,10 @@ exports.createRequest = async (req, res) => {
             }).filter(Boolean);
         }
 
-        // 2. Lưu yêu cầu gắn liền với hợp đồng đó
-        const newRequest = new RepairRequest({
-            contractId: activeContract._id,
+	        // 2. RepairRequest được sở hữu trực tiếp bởi Người thuê; contractId chỉ là snapshot tham chiếu.
+	        const newRequest = new RepairRequest({
+	            tenantId,
+	            contractId: activeContract._id,
             title,
             content,
             priority: 0, // Mặc định là 0 (Chưa phân loại) để Admin là người quyết định
@@ -90,10 +90,10 @@ exports.createRequest = async (req, res) => {
         });
 
         await newRequest.save();
-        res.status(201).json({ 
-            success: true, 
-            message: "Gửi báo cáo sự cố thành công!", 
-            data: newRequest 
+        res.status(201).json({
+            success: true,
+            message: "Gửi báo cáo sự cố thành công!",
+            data: newRequest
         });
     } catch (error) {
         res.status(500).json({ success: false, message: "Lỗi khi gửi yêu cầu: " + error.message });
@@ -133,9 +133,9 @@ exports.updateRequestStatus = async (req, res) => {
             return res.status(404).json({ success: false, message: "Không tìm thấy yêu cầu sửa chữa này!" });
         }
 
-        res.status(200).json({ 
-            success: true, 
-            message: "Cập nhật tiến độ xử lý thành công!", 
+        res.status(200).json({
+            success: true,
+            message: "Cập nhật tiến độ xử lý thành công!",
             data: {
                 _id: updatedRequest._id,
                 repairCode: updatedRequest._id.toString().slice(-6).toUpperCase(),

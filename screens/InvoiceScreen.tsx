@@ -13,6 +13,7 @@ import InvoiceDetailModal from "../components/InvoiceDetailModal";
 import PaymentModal from "../components/PaymentModal";
 import { Invoice } from "../types/Invoice";
 import { invoiceService } from "../services/invoiceService";
+import Toast from "react-native-toast-message";
 
 type FilterType = "all" | "unpaid" | "paid";
 
@@ -57,6 +58,14 @@ export default function InvoiceScreen({ params }: Props) {
       await loadInvoices();
       setSelectedInvoice(null);
       setPaymentInvoice(null);
+
+      Toast.show({
+        type: 'success',
+        text1: 'Thanh toán thành công',
+        text2: 'Cảm ơn Người thuê đã thanh toán hóa đơn.',
+        position: 'top',
+        visibilityTime: 4000,
+      });
     } catch (error) {
       console.log("Lỗi refresh hóa đơn sau thanh toán:", error);
     }

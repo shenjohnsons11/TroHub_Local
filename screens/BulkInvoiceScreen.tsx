@@ -1,22 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { invoiceService } from '../services/invoiceService';
+import { useNotification } from '../hooks/useNotification';
+import { getNotificationMessage } from '../utils/notificationMessages';
 
 const COLORS = {
-  primary: '#1A4D2E',
-  secondary: '#4F6F52',
-  orange: '#FF9F29',
-  surface: '#FAF3E0',
+  primary: '#EF6A22',
+  secondary: '#697178',
+  orange: '#EF6A22',
+  surface: '#F1F3F4',
   white: '#FFFFFF',
-  text: '#333333',
-  muted: '#888888',
-  border: '#E0E0E0',
+  text: '#25292D',
+  muted: '#697178',
+  border: '#D9DEE1',
   danger: '#D32F2F',
-  success: '#388E3C'
+  success: '#17834A'
 };
 
 export default function BulkInvoiceScreen({ onNavigate }: { onNavigate: (tab: any) => void }) {
+  const notification = useNotification();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [data, setData] = useState<any[]>([]);
@@ -36,7 +39,7 @@ export default function BulkInvoiceScreen({ onNavigate }: { onNavigate: (tab: an
         waterNew: item.waterDraft !== undefined ? String(item.waterDraft) : ''
       })));
     } catch (e: any) {
-      Alert.alert('Lỗi', e.message);
+      notification.error(getNotificationMessage(e, 'Không thể tải dữ liệu hóa đơn.'));
     } finally {
       setLoading(false);
     }
@@ -74,7 +77,7 @@ export default function BulkInvoiceScreen({ onNavigate }: { onNavigate: (tab: an
   const handleSubmit = async () => {
     const selectedData = data.filter(d => d.selected);
     if (selectedData.length === 0) {
-      Alert.alert('Lỗi', 'Vui lòng chọn ít nhất 1 phòng để tạo hóa đơn.');
+      notification.warning('Vui lòng chọn ít nhất 1 phòng để tạo hóa đơn.');
       return;
     }
 
@@ -96,25 +99,27 @@ export default function BulkInvoiceScreen({ onNavigate }: { onNavigate: (tab: an
     }
 
     if (hasError) {
-      Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ chỉ số MỚI cho tất cả các phòng đã chọn. Chỉ số mới phải lớn hơn hoặc bằng chỉ số cũ.');
+      notification.warning('Vui lòng nhập đầy đủ chỉ số mới. Chỉ số mới phải lớn hơn hoặc bằng chỉ số cũ.');
       return;
     }
 
-    Alert.alert('Xác nhận', `Phát hành ${selectedData.length} hóa đơn cùng lúc?`, [
-      { text: 'Hủy', style: 'cancel' },
-      { text: 'Phát hành', onPress: async () => {
-        try {
-          setSubmitting(true);
-          await invoiceService.bulkCreate({ invoices: selectedData });
-          Alert.alert('Thành công', 'Đã tạo hóa đơn hàng loạt!');
-          onNavigate("invoice");
-        } catch (e: any) {
-          Alert.alert('Lỗi', e.message);
-        } finally {
-          setSubmitting(false);
-        }
-      }}
-    ]);
+    const confirmed = await notification.confirm({
+      title: 'Phát hành hóa đơn',
+      message: `Phát hành ${selectedData.length} hóa đơn cùng lúc?`,
+      confirmText: 'Phát hành',
+    });
+    if (!confirmed) return;
+
+    try {
+      setSubmitting(true);
+      await invoiceService.bulkCreate({ invoices: selectedData });
+      notification.success('Đã tạo hóa đơn hàng loạt.');
+      onNavigate("invoice");
+    } catch (e) {
+      notification.error(getNotificationMessage(e, 'Không thể tạo hóa đơn.'));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const renderItem = ({ item, index }: { item: any, index: number }) => {
