@@ -146,7 +146,7 @@ exports.deleteRoom = async (req, res) => {
     }
 };
 
-// 6. Khách thuê báo cáo số điện nước
+// 6. Người thuê báo cáo số điện nước
 exports.reportUtility = async (req, res) => {
     try {
         const { draftElectricity, draftWater } = req.body;

@@ -12,7 +12,12 @@ import {
 import Card from "../components/Card";
 import { COLORS } from "../constants/theme";
 import { Contract, ContractStatus } from "../types/Contract";
+import SignContractWizard from "../components/SignContractWizard";
+import PaymentModal from "../components/PaymentModal";
 import { contractService } from "../services/contractService";
+import { invoiceService } from "../services/invoiceService";
+import { Invoice } from "../types/Invoice";
+import { useNotification } from "../hooks/useNotification";
 
 const getStatusLabel = (status: ContractStatus): string => {
   switch (status) {
@@ -52,10 +57,19 @@ type Props = {
 };
 
 export default function ContractScreen({ onNavigate }: Props) {
+  const notification = useNotification();
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [signingId, setSigningId] = useState<string | null>(null);
+  const [paymentInvoice, setPaymentInvoice] = useState<Invoice | null>(null);
+  const [loadingDepositInvoiceId, setLoadingDepositInvoiceId] = useState<
+    string | null
+  >(null);
+
+  // Thêm state cho Wizard
+  const [wizardVisible, setWizardVisible] = useState(false);
+  const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
 
   useEffect(() => {
     loadContracts();
@@ -81,44 +95,63 @@ export default function ContractScreen({ onNavigate }: Props) {
   };
 
   const handleSignContract = (contract: Contract) => {
-    Alert.alert(
-      "Xác nhận ký hợp đồng",
-      `Bạn có chắc chắn muốn ký xác nhận hợp đồng phòng ${contract.room}?\n\n` +
-      `Tiền thuê: ${contract.rentFee}\n` +
-      `Tiền cọc: ${contract.deposit}\n` +
-      `Thời hạn: ${contract.startDate} - ${contract.endDate}\n\n` +
-      "Hệ thống sẽ tạo Hóa đơn tiền cọc. Bạn vui lòng thanh toán để hợp đồng có hiệu lực.",
-      [
-        { text: "Hủy", style: "cancel" },
-        {
-          text: "Ký xác nhận",
-          onPress: async () => {
-            try {
-              setSigningId(contract.id);
-              const result = await contractService.signContract(contract.id);
-              Alert.alert(
-                "Thành công",
-                "Ký xác nhận thành công!\nVui lòng hoàn tất thanh toán tiền cọc."
-              );
-              // Reload danh sách
-              const data = await contractService.getMyContracts();
-              setContracts(data);
-              
-              if (result.invoiceId && onNavigate) {
-                onNavigate("invoice", { paymentInvoiceId: result.invoiceId });
-              }
-            } catch (error) {
-              Alert.alert(
-                "Lỗi",
-                error instanceof Error ? error.message : "Ký hợp đồng thất bại. Vui lòng thử lại."
-              );
-            } finally {
-              setSigningId(null);
-            }
-          },
-        },
-      ]
-    );
+    setSelectedContract(contract);
+    setWizardVisible(true);
+  };
+
+  const openDepositPayment = async (invoiceId: string) => {
+    try {
+      setLoadingDepositInvoiceId(invoiceId);
+      const invoice = await invoiceService.getInvoiceById(invoiceId);
+      setPaymentInvoice(invoice);
+    } catch (error) {
+      notification.error(
+        error instanceof Error
+          ? error.message
+          : "Không thể tải hóa đơn tiền cọc.",
+      );
+      if (onNavigate) {
+        onNavigate("invoice", { paymentInvoiceId: invoiceId });
+      }
+    } finally {
+      setLoadingDepositInvoiceId(null);
+    }
+  };
+
+  const handleConfirmSign = async (contract: Contract) => {
+    try {
+      setSigningId(contract.id);
+      const result = await contractService.signContract(contract.id);
+      notification.success(
+        "Ký xác nhận thành công. Vui lòng hoàn tất thanh toán tiền cọc.",
+      );
+      setWizardVisible(false);
+      // Reload danh sách
+      const data = await contractService.getMyContracts();
+      setContracts(data);
+
+      if (result.invoiceId) {
+        await openDepositPayment(result.invoiceId);
+      } else if (result.depositRequired) {
+        notification.warning(
+          "Hóa đơn tiền cọc chưa sẵn sàng. Vui lòng tải lại hợp đồng.",
+        );
+      }
+    } catch (error) {
+      notification.error(
+        error instanceof Error
+          ? error.message
+          : "Ký hợp đồng thất bại. Vui lòng thử lại.",
+      );
+    } finally {
+      setSigningId(null);
+    }
+  };
+
+  const handleDepositPaymentConfirmed = async (_invoiceId: string) => {
+    setPaymentInvoice(null);
+    await loadContracts();
+    notification.success("Thanh toán tiền cọc đã được ghi nhận.");
   };
 
   const handleRequestTerminate = (contract: Contract) => {
@@ -294,11 +327,58 @@ export default function ContractScreen({ onNavigate }: Props) {
 
             {/* Thông báo chờ duyệt */}
             {contract.status === "awaiting_approval" && (
-              <View style={styles.awaitingBox}>
-                <Text style={styles.awaitingText}>
-                  ⏳ Bạn đã ký xác nhận. Đang chờ chủ trọ duyệt để hợp đồng có hiệu lực.
-                </Text>
-              </View>
+              <>
+                <View style={styles.awaitingBox}>
+                  <Text style={styles.awaitingText}>
+                    ⏳ Bạn đã ký xác nhận. Đang chờ chủ trọ duyệt để hợp đồng có hiệu lực.
+                  </Text>
+                </View>
+                {contract.depositPayment?.required &&
+                  contract.depositPayment.status === "unpaid" && (
+                    <View style={styles.depositPaymentCard}>
+                      <View style={styles.depositPaymentCopy}>
+                        <Text style={styles.depositPaymentTitle}>
+                          Tiền cọc chưa thanh toán
+                        </Text>
+                        <Text style={styles.depositPaymentAmount}>
+                          {contract.deposit}
+                        </Text>
+                        <Text style={styles.depositPaymentHint}>
+                          Hoàn tất tiền cọc để Admin có thể duyệt hợp đồng.
+                        </Text>
+                      </View>
+                      <Pressable
+                        style={[
+                          styles.depositPaymentButton,
+                          loadingDepositInvoiceId ===
+                            contract.depositPayment.invoiceId &&
+                            styles.signButtonDisabled,
+                        ]}
+                        disabled={
+                          !contract.depositPayment.invoiceId ||
+                          loadingDepositInvoiceId ===
+                            contract.depositPayment.invoiceId
+                        }
+                        onPress={() => {
+                          if (contract.depositPayment?.invoiceId) {
+                            void openDepositPayment(
+                              contract.depositPayment.invoiceId,
+                            );
+                          }
+                        }}
+                      >
+                        {loadingDepositInvoiceId ===
+                        contract.depositPayment.invoiceId ? (
+                          <ActivityIndicator color="#FFFFFF" size="small" />
+                        ) : (
+                          <Text style={styles.depositPaymentButtonText}>
+                            Thanh toán ngay
+                          </Text>
+                        )}
+                      </Pressable>
+                    </View>
+                  )}
+              </>
             )}
 
             {/* Nút Yêu cầu trả phòng - chỉ hiện khi status = active (Đang hiệu lực) */}
@@ -329,6 +409,19 @@ export default function ContractScreen({ onNavigate }: Props) {
           </Card>
         );
       })}
+
+      <SignContractWizard
+        visible={wizardVisible}
+        contract={selectedContract}
+        onClose={() => setWizardVisible(false)}
+        onSign={handleConfirmSign}
+      />
+      <PaymentModal
+        visible={Boolean(paymentInvoice)}
+        invoice={paymentInvoice}
+        onClose={() => setPaymentInvoice(null)}
+        onConfirm={handleDepositPaymentConfirmed}
+      />
     </ScrollView>
   );
 }
@@ -546,5 +639,45 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 12,
     overflow: "hidden",
+  },
+  depositPaymentCard: {
+    marginTop: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#F2C078",
+    borderRadius: 12,
+    backgroundColor: "#FFF8ED",
+    gap: 12,
+  },
+  depositPaymentCopy: {
+    gap: 4,
+  },
+  depositPaymentTitle: {
+    color: "#9A4C00",
+    fontSize: 14,
+    fontWeight: "900",
+  },
+  depositPaymentAmount: {
+    color: COLORS.text,
+    fontSize: 20,
+    fontWeight: "900",
+  },
+  depositPaymentHint: {
+    color: COLORS.muted,
+    fontSize: 12,
+    fontWeight: "600",
+    lineHeight: 18,
+  },
+  depositPaymentButton: {
+    minHeight: 46,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 10,
+    backgroundColor: COLORS.orange,
+  },
+  depositPaymentButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "900",
   },
 });

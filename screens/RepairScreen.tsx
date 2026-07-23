@@ -6,7 +6,6 @@ import {
   TextInput,
   Pressable,
   View,
-  Alert,
   ActivityIndicator,
   Image,
 } from "react-native";
@@ -21,8 +20,11 @@ import {
 } from "../types/RepairRequest";
 import { repairService } from "../services/repairService";
 import { contractService } from "../services/contractService";
+import { useNotification } from "../hooks/useNotification";
+import { getNotificationMessage } from "../utils/notificationMessages";
 
 export default function RepairScreen() {
+  const notification = useNotification();
   const [rooms, setRooms] = useState<string[]>([]);
   const [selectedRoom, setSelectedRoom] = useState("");
   const [type, setType] = useState("");
@@ -119,14 +121,14 @@ export default function RepairScreen() {
 
       setRequests(updatedRequests);
 
-      Alert.alert("Thành công", "Yêu cầu sửa chữa đã được gửi");
+      notification.success("Yêu cầu sửa chữa của Người thuê đã được gửi.");
 
       setType("");
       setDescription("");
       setImages([]);
     } catch (error) {
       console.log("Lỗi gửi yêu cầu:", error);
-      Alert.alert("Lỗi", "Không thể gửi yêu cầu sửa chữa");
+      notification.error(getNotificationMessage(error, "Không thể gửi yêu cầu sửa chữa của Người thuê."));
     }
   };
 
@@ -134,7 +136,9 @@ export default function RepairScreen() {
     try {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permissionResult.granted) {
-        Alert.alert("Quyền truy cập", "Bạn cần cấp quyền truy cập thư viện ảnh để tải ảnh lên.");
+        notification.info("Bạn cần cấp quyền truy cập thư viện ảnh để tải ảnh lên.", {
+          title: "Quyền truy cập",
+        });
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -152,33 +156,28 @@ export default function RepairScreen() {
       }
     } catch (error) {
       console.log("Lỗi chọn ảnh:", error);
-      Alert.alert("Lỗi", "Không thể chọn ảnh");
+      notification.error(getNotificationMessage(error, "Không thể chọn ảnh."));
     }
   };
 
   const handleDelete = async (id: string) => {
-    Alert.alert(
-      "Xác nhận xóa",
-      "Bạn có chắc chắn muốn xóa yêu cầu này không?",
-      [
-        { text: "Hủy", style: "cancel" },
-        {
-          text: "Xóa",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              setIsLoading(true);
-              await repairService.deleteRequest(id);
-              loadRequests();
-            } catch (error) {
-              console.log("Lỗi xóa yêu cầu:", error);
-              Alert.alert("Lỗi", "Không thể xóa yêu cầu sửa chữa");
-              setIsLoading(false);
-            }
-          }
-        }
-      ]
-    );
+    const confirmed = await notification.confirm({
+      title: "Xóa yêu cầu sửa chữa",
+      message: "Bạn có chắc chắn muốn xóa yêu cầu này không?",
+      confirmText: "Xóa",
+      destructive: true,
+    });
+    if (!confirmed) return;
+    try {
+      setIsLoading(true);
+      await repairService.deleteRequest(id);
+      await loadRequests();
+      notification.success("Yêu cầu sửa chữa của Người thuê đã được xóa.");
+    } catch (error) {
+      console.log("Lỗi xóa yêu cầu:", error);
+      notification.error(getNotificationMessage(error, "Không thể xóa yêu cầu sửa chữa."));
+      setIsLoading(false);
+    }
   };
 
   const toggleSelection = (id: string) => {
@@ -195,32 +194,26 @@ export default function RepairScreen() {
     }
   };
 
-  const handleBulkDelete = () => {
+  const handleBulkDelete = async () => {
     if (selectedIds.length === 0) return;
-    Alert.alert(
-      "Xác nhận xóa",
-      `Bạn có chắc chắn muốn xóa ${selectedIds.length} yêu cầu đã chọn không?`,
-      [
-        { text: "Hủy", style: "cancel" },
-        { 
-          text: "Xóa", 
-          style: "destructive",
-          onPress: async () => {
-            try {
-              setIsLoading(true);
-              const promises = selectedIds.map(id => repairService.deleteRequest(id));
-              await Promise.all(promises);
-              Alert.alert("Thành công", `Đã xóa ${selectedIds.length} yêu cầu!`);
-              setSelectedIds([]);
-              loadRequests();
-            } catch (error) {
-              Alert.alert("Lỗi", "Không thể xóa một số yêu cầu.");
-              setIsLoading(false);
-            }
-          }
-        }
-      ]
-    );
+    const count = selectedIds.length;
+    const confirmed = await notification.confirm({
+      title: "Xóa các yêu cầu sửa chữa",
+      message: `Bạn có chắc chắn muốn xóa ${count} yêu cầu đã chọn không?`,
+      confirmText: "Xóa",
+      destructive: true,
+    });
+    if (!confirmed) return;
+    try {
+      setIsLoading(true);
+      await Promise.all(selectedIds.map(id => repairService.deleteRequest(id)));
+      setSelectedIds([]);
+      await loadRequests();
+      notification.success(`Đã xóa ${count} yêu cầu sửa chữa của Người thuê.`);
+    } catch (error) {
+      notification.error(getNotificationMessage(error, "Không thể xóa một số yêu cầu."));
+      setIsLoading(false);
+    }
   };
 
   const getPriorityStyle = (value?: Priority) => {

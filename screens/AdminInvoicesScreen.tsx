@@ -406,7 +406,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
               <Text style={styles.roomCode}>Phòng {item.room || item.contractId?.roomId?.roomCode || "N/A"}</Text>
               <Text style={styles.invoicePeriod}>Kỳ hóa đơn: {item.period}</Text>
               <Text style={styles.invoiceAmount}>Tổng tiền: {item.totalAmount?.toLocaleString("vi-VN")}đ</Text>
-              <Text style={styles.invoiceSub}>Khách thuê: {item.tenant || item.contractId?.tenantId?.fullName || "N/A"}</Text>
+              <Text style={styles.invoiceSub}>Người thuê: {item.tenant || item.contractId?.tenantId?.fullName || "N/A"}</Text>
             </View>
             <View style={{ alignItems: "flex-end" }}>
               <View style={[styles.statusBadge, { backgroundColor: getStatusBg(item.status) }]}>

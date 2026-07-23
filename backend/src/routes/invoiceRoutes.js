@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const invoiceController = require('../controllers/invoiceController');
+const { requireAdmin } = require('../middleware/requireAdmin');
 
 // Lấy danh sách hóa đơn (Web)
 router.get('/', invoiceController.getAllInvoices);
@@ -13,10 +14,10 @@ router.get('/debts', invoiceController.getDebts);
 router.post('/debts/:contractId/remind', invoiceController.remindDebt);
 
 // Tạo hóa đơn hàng loạt
-router.post('/bulk', invoiceController.createBulkInvoices);
+router.post('/bulk', requireAdmin, invoiceController.createBulkInvoices);
 
 // Chủ trọ xuất hóa đơn mới
-router.post('/', invoiceController.createInvoice);
+router.post('/', requireAdmin, invoiceController.createInvoice);
 
 // Xem chi tiết một hóa đơn (Web & Mobile)
 router.get('/:id', invoiceController.getInvoiceById);

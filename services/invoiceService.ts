@@ -47,9 +47,11 @@ type ApiInvoice = {
   roomAmount?: number;
   electricityOld?: number;
   electricityNew?: number;
+  electricity?: number;
   electricityPrice?: number;
   waterOld?: number;
   waterNew?: number;
+  water?: number;
   waterPrice?: number;
   services?: number;
   parking?: number;
@@ -82,6 +84,13 @@ type CreateVietQRPaymentResponse = {
     description: string;
     qrUrl: string;
   };
+};
+
+type CreateVNPayResponse = {
+  success: boolean;
+  paymentUrl: string;
+  transactionId: string;
+  message?: string;
 };
 
 type PaymentStatusResponse = {
@@ -219,6 +228,22 @@ const mapApiInvoiceToInvoice = (apiInvoice: ApiInvoice): Invoice => {
 };
 
 export const invoiceService = {
+  async getInvoiceById(invoiceId: string): Promise<Invoice> {
+    const token = await authService.getToken();
+    if (!token) {
+      throw new Error("Không tìm thấy token đăng nhập");
+    }
+    const response = await apiClient.get<{
+      success: boolean;
+      data: ApiInvoice;
+      message?: string;
+    }>(`/invoices/${invoiceId}`, token);
+    if (!response.success || !response.data) {
+      throw new Error(response.message || "Không tìm thấy hóa đơn tiền cọc");
+    }
+    return mapApiInvoiceToInvoice(response.data);
+  },
+
   async getInvoices(): Promise<Invoice[]> {
     try {
       const token = await authService.getToken();
@@ -264,6 +289,43 @@ export const invoiceService = {
       return response.data;
     } catch (error) {
       console.log("Lỗi tạo thanh toán VietQR:", error);
+      throw error;
+    }
+  },
+
+  async createVNPayPayment(invoiceId: string) {
+    try {
+      const token = await authService.getToken();
+
+      if (!token) {
+        throw new Error("Không tìm thấy token đăng nhập");
+      }
+
+      const response = await apiClient.post<CreateVNPayResponse>(
+        "/payments/vnpay/create",
+        { invoiceId },
+        token
+      );
+
+      if (!response.success) {
+        throw new Error(response.message || "Không tạo được URL VNPay");
+      }
+
+      return { paymentUrl: response.paymentUrl, transactionId: response.transactionId };
+    } catch (error) {
+      console.log("Lỗi tạo thanh toán VNPay:", error);
+      throw error;
+    }
+  },
+
+  async verifyVNPayReturn(queryString: string) {
+    try {
+      const response = await apiClient.get<any>(
+        `/payments/vnpay/ipn?${queryString}`
+      );
+      return response;
+    } catch (error) {
+      console.log("Lỗi đồng bộ kết quả VNPay (IPN Local Proxy):", error);
       throw error;
     }
   },
