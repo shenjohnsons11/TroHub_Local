@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -140,19 +141,24 @@ export default function LoginPage() {
                 />
               </div>
 
-              <div className="flex items-center gap-2 py-1">
-                <input
-                  type="checkbox"
-                  id="remember"
-                  className="h-4 w-4 accent-[#ef6a22]"
-                  defaultChecked
-                />
-                <label
-                  htmlFor="remember"
-                  className="cursor-pointer text-sm font-medium text-muted-foreground"
-                >
-                  Ghi nhớ đăng nhập
-                </label>
+              <div className="flex items-center justify-between gap-4 py-1">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="remember"
+                    className="h-4 w-4 accent-[#ef6a22]"
+                    defaultChecked
+                  />
+                  <label
+                    htmlFor="remember"
+                    className="cursor-pointer text-sm font-medium text-muted-foreground"
+                  >
+                    Ghi nhớ đăng nhập
+                  </label>
+                </div>
+                <Link href="/forgot-password" className="text-sm font-bold text-primary hover:underline">
+                  Quên mật khẩu?
+                </Link>
               </div>
 
               {error ? (
