@@ -121,7 +121,7 @@ exports.getBulkPreview = async (req, res) => {
         const contracts = await Contract.find({ roomId: { $in: roomIds }, status: 1 })
             .populate('roomId', 'roomCode draftElectricity draftWater')
             .populate('tenantId', 'fullName phone')
-            .populate('services.serviceId', 'name type');
+            .populate('services.serviceId', 'name code type billingMode unit defaultQuantity');
 
         const previewList = [];
 
@@ -142,23 +142,27 @@ exports.getBulkPreview = async (req, res) => {
             for (const item of contract.services) {
                 const service = item.serviceId;
                 if (!service) continue;
-                const sName = service.name.toLowerCase();
+                const sCode = String(item.serviceCode || service.code || '').toUpperCase();
+                const billingMode = item.billingMode || service.billingMode || (service.type === 1 ? 'METER' : 'FIXED');
 
-                if (service.type === 1) {
-                    if (sName.includes('điện') || sName.includes('dien')) {
+                if (billingMode === 'METER') {
+                    if (sCode.includes('ELECTRIC') || sCode.includes('DIEN')) {
                         electricityPrice = item.fixedPrice || 0;
-                    } else if (sName.includes('nước') || sName.includes('nuoc')) {
+                    } else if (sCode.includes('WATER') || sCode.includes('NUOC')) {
                         waterPrice = item.fixedPrice || 0;
                     }
                 } else {
-                    if (sName.includes('xe') || sName.includes('parking')) {
-                        parking += item.fixedPrice || 0;
-                    } else if (sName.includes('wifi') || sName.includes('internet') || sName.includes('mạng') || sName.includes('mang')) {
-                        internet += item.fixedPrice || 0;
-                    } else if (sName.includes('rác') || sName.includes('rac') || sName.includes('vệ sinh')) {
-                        garbage += item.fixedPrice || 0;
+                    const amount = (item.fixedPrice || 0) * (
+                        billingMode === 'QUANTITY' ? (item.defaultQuantity ?? 1) : 1
+                    );
+                    if (sCode.includes('PARKING') || sCode.includes('XE')) {
+                        parking += amount;
+                    } else if (sCode.includes('WIFI') || sCode.includes('INTERNET') || sCode.includes('MANG')) {
+                        internet += amount;
+                    } else if (sCode.includes('GARBAGE') || sCode.includes('RAC') || sCode.includes('VE-SINH')) {
+                        garbage += amount;
                     } else {
-                        servicesTotal += item.fixedPrice || 0;
+                        servicesTotal += amount;
                     }
                 }
             }

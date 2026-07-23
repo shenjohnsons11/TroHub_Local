@@ -9,6 +9,7 @@ class InvoiceCodeValidationError extends Error {
 
 function normalizeInvoicePeriod(period) {
     const value = String(period || '').trim();
+    if (/^tiền\s*cọc$/i.test(value.normalize('NFC'))) return 'COC';
     const monthYear = value.match(/^(?:tháng\s*)?(\d{1,2})[/-](\d{4})$/i);
     const yearMonth = value.match(/^(\d{4})[/-](\d{1,2})$/);
     const match = monthYear || (yearMonth && [yearMonth[0], yearMonth[2], yearMonth[1]]);
