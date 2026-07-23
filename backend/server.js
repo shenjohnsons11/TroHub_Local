@@ -17,6 +17,7 @@ const paymentRoute = require('./src/routes/paymentRoute');
 const serviceRoutes = require('./src/routes/serviceRoutes');
 const dashboardRoutes = require('./src/routes/dashboardRoutes');
 const billingPolicyRoutes = require('./src/routes/billingPolicyRoutes');
+const notificationRoutes = require('./src/routes/notificationRoutes');
 const paymentController = require('./src/controllers/paymentController');
 const { applyAllOverduePenalties } = require('./src/services/overdueInvoice');
 
@@ -60,6 +61,7 @@ app.use('/api/payments', paymentRoute);
 app.get('/api/vnpay/ipn', paymentController.vnpayIpn);
 app.use('/api/services', serviceRoutes);
 app.use('/api/settings/billing-policy', billingPolicyRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use("/vqr", require("./src/routes/vietqrDirectRoutes"));
 app.use('/api/dashboard', dashboardRoutes);
 
