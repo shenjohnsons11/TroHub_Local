@@ -7,6 +7,8 @@ const contractSchema = new mongoose.Schema({
     endDate: { type: Date, required: true },
     fixedRentPrice: { type: Number, required: true }, // gia_thue_chot
     fixedDeposit: { type: Number, required: true },   // tien_coc_chot
+    initialElectricity: { type: Number, min: 0 },
+    initialWater: { type: Number, min: 0 },
     tenantConfirmedAt: { type: Date },                // thoi_gian_nguoi_thue_xac_nhan
     lastSentAt: { type: Date, default: null },
     status: { type: Number, enum: [0, 1, 2, 3, 4, 5], default: 0 }, // 0: Chờ ký, 1: Hiệu lực, 2: Hết hạn, 3: Hủy, 4: Chờ chủ duyệt, 5: Chờ duyệt trả phòng
@@ -14,7 +16,12 @@ const contractSchema = new mongoose.Schema({
     // Tuyệt chiêu Nhúng dữ liệu: Gộp bảng HOP_DONG_DICH_VU vào đây
     services: [{
         serviceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Service' },
-        fixedPrice: { type: Number } // don_gia_chot lúc ký
+        serviceName: { type: String },
+        serviceCode: { type: String },
+        billingMode: { type: String, enum: ['FIXED', 'QUANTITY', 'METER'] },
+        unit: { type: String },
+        fixedPrice: { type: Number }, // don_gia_chot lúc ký
+        defaultQuantity: { type: Number, min: 0, default: 1 }
     }]
 }, { timestamps: true });
 
