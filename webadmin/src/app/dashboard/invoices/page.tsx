@@ -12,10 +12,13 @@ import { Label } from "@/components/ui/label";
 import { parseFormattedNumber } from "@/lib/utils";
 import { useNotification } from "@/hooks/use-notification";
 import { getNotificationMessage } from "@/lib/notification-messages";
+import { InvoiceDetailDrawer } from "@/components/invoice-detail-drawer";
+import { invoiceCurrency, SemanticInvoice } from "@/lib/invoice";
 
 export default function InvoicesPage() {
   const notification = useNotification();
-  const [invoices, setInvoices] = useState<any[]>([]);
+  const [invoices, setInvoices] = useState<SemanticInvoice[]>([]);
+  const [selectedInvoice, setSelectedInvoice] = useState<SemanticInvoice | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -156,9 +159,11 @@ export default function InvoicesPage() {
     }
   };
 
-  const filteredInvoices = invoices.filter(i => {
-    const roomStr = i.contractId?.roomId?.roomCode || i.room || i.roomCode || "";
-    return roomStr.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredInvoices = invoices.filter((invoice) => {
+    const query = searchTerm.toLocaleLowerCase("vi");
+    return `${invoice.invoiceCode} ${invoice.roomCode} ${invoice.nguoiThue}`
+      .toLocaleLowerCase("vi")
+      .includes(query);
   });
 
   return (
@@ -167,7 +172,7 @@ export default function InvoicesPage() {
         <div className="relative w-72">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <Input 
-            placeholder="Tìm theo mã phòng..." 
+            placeholder="Mã hóa đơn, phòng, Người thuê"
             className="pl-9 h-10 bg-white"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
@@ -269,7 +274,7 @@ export default function InvoicesPage() {
         </Dialog>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="overflow-hidden rounded-[14px] border border-border bg-card">
         <Table>
           <TableHeader className="bg-slate-50">
             <TableRow>
@@ -292,15 +297,26 @@ export default function InvoicesPage() {
               </TableRow>
             ) : (
               filteredInvoices.map(invoice => (
-                <TableRow key={invoice._id || invoice.id}>
-                  <TableCell className="font-medium text-slate-900">{invoice.id?.substring(0, 8) || "HD"}</TableCell>
-                  <TableCell>{invoice.title}</TableCell>
-                  <TableCell>{invoice.roomCode}</TableCell>
-                  <TableCell>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(invoice.totalAmount || 0)}</TableCell>
-                  <TableCell>{getStatusBadge(invoice.status)}</TableCell>
+                <TableRow
+                  key={invoice.id}
+                  tabIndex={0}
+                  className="cursor-pointer focus-visible:bg-muted"
+                  onClick={() => setSelectedInvoice(invoice)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") setSelectedInvoice(invoice);
+                  }}
+                >
+                  <TableCell className="font-bold text-foreground">{invoice.invoiceCode}</TableCell>
+                  <TableCell>{invoice.period}</TableCell>
+                  <TableCell>
+                    <p className="font-semibold">{invoice.roomCode}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{invoice.nguoiThue}</p>
+                  </TableCell>
+                  <TableCell className="font-bold">{invoiceCurrency.format(invoice.totalAmount || 0)}</TableCell>
+                  <TableCell>{getStatusBadge(invoice.statusLabel)}</TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      {invoice.status !== "Đã thanh toán" && (
+                    <div className="flex justify-end gap-2" onClick={(event) => event.stopPropagation()}>
+                      {invoice.statusCode !== 2 && (
                         <>
                           <Button onClick={() => handleRemind(invoice._id || invoice.id)} variant="outline" size="sm" className="h-8">
                             <BellRing className="mr-1.5 h-3.5 w-3.5" /> Gửi nhắc thanh toán
@@ -321,6 +337,7 @@ export default function InvoicesPage() {
           </TableBody>
         </Table>
       </div>
+      <InvoiceDetailDrawer invoice={selectedInvoice} onClose={() => setSelectedInvoice(null)} />
     </div>
   );
 }

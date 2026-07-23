@@ -1,6 +1,7 @@
 const Contract = require("../models/Contract");
 const Invoice = require("../models/Invoice");
 const Room = require("../models/Room");
+const { allocateInvoiceCode } = require("./invoiceCode");
 
 function createContractSigningError(code, message, status) {
   const error = new Error(message);
@@ -75,8 +76,17 @@ async function signContractAndEnsureDeposit({
   let createdInvoice = null;
   if (depositAmount > 0 && !depositInvoice) {
     const room = await RoomModel.findById(contract.roomId);
+    const invoiceCode = await allocateInvoiceCode(
+      { period: "Tiền cọc", roomCode: room?.roomCode },
+      {
+        exists: typeof InvoiceModel.exists === "function"
+          ? (code) => InvoiceModel.exists({ invoiceCode: code })
+          : async () => false,
+      },
+    );
     try {
       createdInvoice = await InvoiceModel.create({
+        invoiceCode,
         contractId: contract._id,
         period: "Tiền cọc",
         dueDate: new Date(),

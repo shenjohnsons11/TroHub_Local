@@ -55,6 +55,8 @@ async function applyInvoiceCodeBackfill(plan, dependencies) {
 async function runCli() {
     const mongoose = require('mongoose');
     const Invoice = require('../src/models/Invoice');
+    require('../src/models/Contract');
+    require('../src/models/Room');
     const dryRun = !process.argv.includes('--apply');
 
     if (!process.env.MONGODB_URI) {
