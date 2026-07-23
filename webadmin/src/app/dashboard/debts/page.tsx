@@ -15,7 +15,7 @@ interface Debt {
   nguoiThue: string;
   totalDebt: number;
   unpaidInvoiceCount: number;
-  invoices: any[];
+  invoices: Array<{ _id: string; status: number }>;
 }
 
 export default function DebtsPage() {
@@ -102,7 +102,7 @@ export default function DebtsPage() {
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input 
-              placeholder="Tìm theo phòng hoặc khách..." 
+              placeholder="Tìm theo phòng hoặc Người thuê"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9 bg-slate-50 border-slate-200"
@@ -146,7 +146,10 @@ export default function DebtsPage() {
                       <TableCell className="text-slate-600">{debt.nguoiThue}</TableCell>
                       <TableCell className="text-center">
                         <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-                          {debt.unpaidInvoiceCount} hóa đơn
+                          {debt.invoices.filter((invoice) => invoice.status === 1).length} chưa thanh toán
+                        </Badge>
+                        <Badge variant="outline" className="ml-2 bg-red-50 text-red-700 border-red-200">
+                          {debt.invoices.filter((invoice) => invoice.status === 3).length} quá hạn
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right font-bold text-red-600">
