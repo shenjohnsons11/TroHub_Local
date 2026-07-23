@@ -19,9 +19,11 @@ type Props = {
   refreshKey: number;
   onNavigate: (screen: "invoice" | "repair" | "contract" | "utility") => void;
   onLogout: () => void;
+  onOpenNotifications: () => void;
+  notificationUnreadCount: number;
 };
 
-export default function HomeScreen({ refreshKey, onNavigate, onLogout }: Props) {
+export default function HomeScreen({ refreshKey, onNavigate, onLogout, onOpenNotifications, notificationUnreadCount }: Props) {
   const [homeData, setHomeData] = useState<HomeData | null>(null);
   const [invites, setInvites] = useState<Invite[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -74,9 +76,19 @@ export default function HomeScreen({ refreshKey, onNavigate, onLogout }: Props) 
     >
       <View style={styles.brandRow}>
         <TroHubLogo compact />
-        <Pressable style={styles.logoutButton} onPress={onLogout}>
-          <Ionicons name="log-out-outline" size={20} color={COLORS.red} />
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable accessibilityLabel="Mở thông báo" style={styles.notificationButton} onPress={onOpenNotifications}>
+            <Ionicons name="notifications-outline" size={20} color={COLORS.text} />
+            {notificationUnreadCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>{notificationUnreadCount > 99 ? "99+" : notificationUnreadCount}</Text>
+              </View>
+            )}
+          </Pressable>
+          <Pressable accessibilityLabel="Đăng xuất" style={styles.logoutButton} onPress={onLogout}>
+            <Ionicons name="log-out-outline" size={20} color={COLORS.red} />
+          </Pressable>
+        </View>
       </View>
 
       <View style={styles.homeHero}>
@@ -223,6 +235,16 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 18,
   },
+  headerActions: { flexDirection: "row", gap: 8 },
+  notificationButton: {
+    width: 44, height: 44, borderRadius: 9, alignItems: "center", justifyContent: "center",
+    backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#D9DEE1",
+  },
+  notificationBadge: {
+    position: "absolute", right: -3, top: -4, minWidth: 19, height: 19, borderRadius: 10,
+    paddingHorizontal: 4, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.orange,
+  },
+  notificationBadgeText: { color: "#FFFFFF", fontSize: 9, fontWeight: "900" },
   homeHero: {
     minHeight: 176,
     justifyContent: "flex-end",
