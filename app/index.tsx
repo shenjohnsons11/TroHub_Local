@@ -26,6 +26,11 @@ import { TROHUB_THEMES } from "../constants/theme";
 import { UserProfile } from "../types/UserProfile";
 import { authService } from "../services/authService";
 import { userService } from "../services/userService";
+import NotificationsScreen from "../screens/NotificationsScreen";
+import { useInboxNotifications } from "../hooks/useInboxNotifications";
+import { useNotification } from "../hooks/useNotification";
+import { listenForNotificationResponses, registerDeviceForPush } from "../services/push-notifications";
+import { InboxNotification } from "../services/notification-api";
 
 type Tab =
   | "home"
@@ -39,9 +44,16 @@ type Tab =
   | "rooms"
   | "tenants"
   | "change_password"
-  | "settings";
+  | "settings"
+  | "notifications";
 
 export default function App() {
+  const notification = useNotification();
+  const {
+    refresh: refreshInbox,
+    reset: resetInbox,
+    unreadCount: notificationUnreadCount,
+  } = useInboxNotifications();
   const theme = TROHUB_THEMES[useColorScheme() === "dark" ? "dark" : "light"];
   const [isChecking, setIsChecking] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -53,6 +65,35 @@ export default function App() {
   useEffect(() => {
     loadAppData();
   }, []);
+
+  useEffect(() => listenForNotificationResponses((data) => {
+    if (data.entityType === "CONTRACT" && data.entityId) {
+      handleChangeTab("contract", { contractId: String(data.entityId) });
+    }
+    if (data.entityType === "INVOICE" && data.entityId) {
+      handleChangeTab("invoice", { paymentInvoiceId: String(data.entityId) });
+    }
+  }), []);
+
+  useEffect(() => {
+    if (isLoggedIn && profile?.role === 2) {
+      void refreshInbox();
+      void notification.confirm({
+        title: "Nhận thông báo quan trọng",
+        message: "Cho phép TroHub thông báo khi có hợp đồng mới hoặc hóa đơn sắp đến hạn?",
+        confirmText: "Cho phép",
+        cancelText: "Để sau",
+      }).then((accepted) => {
+        if (accepted) {
+          void registerDeviceForPush().then((result) => {
+            if (result.status === "missing-project-id") {
+              notification.warning("Push notification cần EAS Project ID; hộp thư trong ứng dụng vẫn hoạt động.");
+            }
+          });
+        }
+      });
+    }
+  }, [isLoggedIn, notification, profile?.role, refreshInbox]);
 
   const loadAppData = async () => {
     try {
@@ -93,6 +134,7 @@ export default function App() {
 
       setIsLoggedIn(false);
       setProfile(null);
+      resetInbox();
       setActiveTab("home");
       setHomeRefreshKey(0);
     } catch (error) {
@@ -173,6 +215,21 @@ export default function App() {
                   refreshKey={homeRefreshKey}
                   onNavigate={(screen) => setActiveTab(screen)}
                   onLogout={handleLogout}
+                  onOpenNotifications={() => setActiveTab("notifications")}
+                  notificationUnreadCount={notificationUnreadCount}
+                />
+              )}
+
+              {activeTab === "notifications" && (
+                <NotificationsScreen
+                  onBack={() => setActiveTab("home")}
+                  onOpen={(item: InboxNotification) => {
+                    if (item.entityType === "CONTRACT") {
+                      handleChangeTab("contract", { contractId: item.entityId });
+                    } else {
+                      handleChangeTab("invoice", { paymentInvoiceId: item.entityId });
+                    }
+                  }}
                 />
               )}
 
@@ -180,7 +237,7 @@ export default function App() {
 
               {activeTab === "repair" && <RepairScreen />}
 
-              {activeTab === "contract" && <ContractScreen onNavigate={handleChangeTab as any} />}
+              {activeTab === "contract" && <ContractScreen params={actionParams} onNavigate={handleChangeTab as any} />}
 
               {activeTab === "utility" && (
                 <UtilityScreen onBack={() => setActiveTab("home")} />
@@ -205,7 +262,7 @@ export default function App() {
           )}
         </View>
 
-        {activeTab !== "change_password" && (
+        {activeTab !== "change_password" && activeTab !== "notifications" && (
           <BottomNav activeTab={activeTab} onChangeTab={handleChangeTab} role={profile.role} />
         )}
         <Toast />

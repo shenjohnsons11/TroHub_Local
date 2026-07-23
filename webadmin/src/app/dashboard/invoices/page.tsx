@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Trash2, CheckCircle } from "lucide-react";
+import { Plus, Search, Trash2, CheckCircle, BellRing } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { parseFormattedNumber } from "@/lib/utils";
@@ -133,6 +133,17 @@ export default function InvoicesPage() {
       loadInvoices();
     } catch (err: unknown) {
       notification.error(getNotificationMessage(err, "Không thể xóa hóa đơn."));
+    }
+  };
+
+  const handleRemind = async (id: string) => {
+    try {
+      const response = await fetchAPI(`/invoices/${id}/remind`, { method: "PUT" });
+      const sent = response.data?.delivery?.sent || 0;
+      notification.success(`Đã lưu thông báo và gửi push tới ${sent} thiết bị.`);
+      await loadInvoices();
+    } catch (error) {
+      notification.error(getNotificationMessage(error, "Không thể gửi nhắc thanh toán."));
     }
   };
 
@@ -290,9 +301,14 @@ export default function InvoicesPage() {
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       {invoice.status !== "Đã thanh toán" && (
-                        <Button onClick={() => handleMarkPaid(invoice._id || invoice.id)} variant="ghost" size="icon" title="Đánh dấu đã thu" className="h-8 w-8 text-green-500 hover:text-green-700 hover:bg-green-50">
-                          <CheckCircle className="w-4 h-4" />
-                        </Button>
+                        <>
+                          <Button onClick={() => handleRemind(invoice._id || invoice.id)} variant="outline" size="sm" className="h-8">
+                            <BellRing className="mr-1.5 h-3.5 w-3.5" /> Gửi nhắc thanh toán
+                          </Button>
+                          <Button onClick={() => handleMarkPaid(invoice._id || invoice.id)} variant="ghost" size="icon" title="Đánh dấu đã thu" className="h-8 w-8 text-green-500 hover:text-green-700 hover:bg-green-50">
+                            <CheckCircle className="w-4 h-4" />
+                          </Button>
+                        </>
                       )}
                       <Button onClick={() => handleDelete(invoice._id || invoice.id)} variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50">
                         <Trash2 className="w-4 h-4" />

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Trash2 } from "lucide-react";
+import { Plus, Search, Send, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { formatCurrencyInput, parseFormattedNumber } from "@/lib/utils";
@@ -155,6 +155,26 @@ export default function ContractsPage() {
       await loadData();
     } catch (err: unknown) {
       notification.error(getNotificationMessage(err, "Không thể xóa hợp đồng."));
+    }
+  };
+
+  const handleSendContract = async (contract: any) => {
+    const id = contract._id || contract.id;
+    if (contract.lastSentAt) {
+      const confirmed = await notification.confirm({
+        title: "Gửi lại hợp đồng",
+        message: "Gửi lại thông báo hợp đồng này cho Người thuê?",
+        confirmText: "Gửi lại",
+      });
+      if (!confirmed) return;
+    }
+    try {
+      const response = await fetchAPI(`/contracts/${id}/send`, { method: "POST" });
+      const sent = response.data?.delivery?.sent || 0;
+      notification.success(`Đã lưu thông báo và gửi push tới ${sent} thiết bị.`);
+      await loadData();
+    } catch (error) {
+      notification.error(getNotificationMessage(error, "Không thể gửi hợp đồng."));
     }
   };
 
@@ -455,6 +475,10 @@ export default function ContractsPage() {
                     })()}
                   </TableCell>
                   <TableCell className="text-right">
+                    <Button onClick={() => handleSendContract(contract)} variant="outline" size="sm" className="mr-2 h-8">
+                      <Send className="mr-1.5 h-3.5 w-3.5" />
+                      {contract.lastSentAt ? "Gửi lại" : "Gửi cho Người thuê"}
+                    </Button>
                     {contract.status === 4 && (
                       <Button onClick={() => handleConfirmContract(contract._id || contract.id)} variant="outline" size="sm" className="mr-2 h-8 text-green-600 border-green-200 hover:bg-green-50">
                         Duyệt
