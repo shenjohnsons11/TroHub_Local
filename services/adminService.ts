@@ -236,32 +236,10 @@ export const adminService = {
 
   async getDashboardStats(): Promise<AdminDashboardStats> {
     try {
-      const [rooms, tenants, repairs, invoices] = await Promise.all([
-        this.getRooms(),
-        this.getTenants(),
-        this.getRepairs(),
-        this.getInvoices(),
-      ]);
-
-      const currentMonth = new Date().getMonth() + 1;
-      const currentYear = new Date().getFullYear();
-      const currentPeriod = `${currentMonth.toString().padStart(2, '0')}/${currentYear}`;
-
-      const occupiedRooms = rooms.filter(r => r.status === 1).length;
-      const pendingRepairs = repairs.filter(r => r.status === 0 || r.status === 1).length;
-      const totalRevenue = invoices
-        .filter(inv => inv.status === 2 && inv.period === currentPeriod)
-        .reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
-
-      return {
-        totalRooms: rooms.length,
-        occupiedRooms,
-        totalTenants: tenants.length,
-        pendingRepairs,
-        totalRevenue,
-      };
+      const data = await apiClient.get<AdminDashboardStats>("/dashboard/stats");
+      return data;
     } catch (error) {
-      console.log("Lỗi tính toán thống kê admin:", error);
+      console.log("Lỗi tải thống kê admin:", error);
       return {
         totalRooms: 0,
         occupiedRooms: 0,
