@@ -55,7 +55,7 @@ async function runTests() {
   }
 
   // 2. Kiểm thử Role Tenant
-  console.log("\n--- TEST ROLE: KHÁCH THUÊ (TENANT) ---");
+  console.log("\n--- TEST ROLE: NGƯỜI THUÊ (TENANT) ---");
   const tenantLogin = await request('/auth/login', 'POST', { username: 'kiet@trohub.vn', password: '123456' });
   let tenantToken = tenantLogin.token;
   if (!tenantLogin.success) {
@@ -63,10 +63,10 @@ async function runTests() {
       await request('/auth/register', 'POST', { username: 'tenant@test.com', email: 'tenant@test.com', password: 'password123', fullName: 'Test Tenant', phone: '0901234567', role: 2 });
       const tenantLogin2 = await request('/auth/login', 'POST', { username: 'tenant@test.com', password: 'password123' });
       tenantToken = tenantLogin2.token;
-      if (tenantLogin2.success) console.log("✅ Đăng nhập Khách thuê thành công.");
-      else console.log("❌ Lỗi đăng nhập Khách thuê:", tenantLogin2);
+      if (tenantLogin2.success) console.log("✅ Đăng nhập Người thuê thành công.");
+      else console.log("❌ Lỗi đăng nhập Người thuê:", tenantLogin2);
   } else {
-      console.log("✅ Đăng nhập Khách thuê thành công.");
+      console.log("✅ Đăng nhập Người thuê thành công.");
   }
 
   if (tenantToken) {

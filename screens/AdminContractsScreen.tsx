@@ -1,13 +1,25 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, FlatList, Pressable, TextInput, Modal, ActivityIndicator, Alert, ScrollView } from "react-native";
+import { View, Text, StyleSheet, FlatList, Pressable, TextInput, Modal, ActivityIndicator, Alert, ScrollView, Switch } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
 import { COLORS } from "../constants/theme";
 import { adminService, AdminContract, AdminRoom, AdminTenant } from "../services/adminService";
+import {
+  defaultContractDates,
+  displayDateToLocalDate,
+  formatDisplayDateInput,
+  parseDisplayToIso,
+  resolveEndDateAfterStartChange,
+  validateContractDateRange,
+} from "../utils/contractDate";
 type Props = {
   params?: any;
 };
 
 export default function AdminContractsScreen({ params }: Props) {
+  const initialDates = defaultContractDates();
   const [contracts, setContracts] = useState<AdminContract[]>([]);
   const [rooms, setRooms] = useState<AdminRoom[]>([]);
   const [tenants, setTenants] = useState<AdminTenant[]>([]);
@@ -20,9 +32,24 @@ export default function AdminContractsScreen({ params }: Props) {
   const [selectedTenantId, setSelectedTenantId] = useState("");
   const [fixedRent, setFixedRent] = useState("");
   const [fixedDeposit, setFixedDeposit] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [startDate, setStartDate] = useState(initialDates.startDate);
+  const [endDate, setEndDate] = useState(initialDates.endDate);
+  const [endDateWasEdited, setEndDateWasEdited] = useState(false);
+  const [datePickerField, setDatePickerField] = useState<
+    "startDate" | "endDate" | null
+  >(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Wizard states
+  const [currentStep, setCurrentStep] = useState(1);
+  const [confirmed, setConfirmed] = useState(false);
+  const [services, setServices] = useState({
+    electricity: { enabled: true, price: '3500' },
+    water: { enabled: true, price: '25000' },
+    trash: { enabled: true, price: '20000' },
+    internet: { enabled: true, price: '100000' },
+    management: { enabled: false, price: '50000' },
+  });
 
   const loadData = async () => {
     try {
@@ -43,14 +70,6 @@ export default function AdminContractsScreen({ params }: Props) {
 
   useEffect(() => {
     loadData();
-
-    // Default dates
-    const today = new Date();
-    setStartDate(today.toISOString().split("T")[0]);
-
-    const nextYear = new Date();
-    nextYear.setFullYear(nextYear.getFullYear() + 1);
-    setEndDate(nextYear.toISOString().split("T")[0]);
   }, []);
 
   const handleSelectRoom = (roomId: string) => {
@@ -68,13 +87,27 @@ export default function AdminContractsScreen({ params }: Props) {
       return;
     }
 
+    const dateErrors = validateContractDateRange(startDate, endDate);
+    const startDateIso = parseDisplayToIso(startDate);
+    const endDateIso = parseDisplayToIso(endDate);
+    if (Object.keys(dateErrors).length || !startDateIso || !endDateIso) {
+      Alert.alert(
+        "Ngày hợp đồng không hợp lệ",
+        dateErrors.startDate ||
+          dateErrors.endDate ||
+          "Ngày phải đúng định dạng dd/mm/yyyy.",
+      );
+      setCurrentStep(2);
+      return;
+    }
+
     try {
       setSubmitting(true);
       await adminService.createContract({
         roomId: selectedRoomId,
         tenantId: selectedTenantId,
-        startDate: startDate.trim(),
-        endDate: endDate.trim(),
+        startDate: startDateIso,
+        endDate: endDateIso,
         fixedRentPrice: Number(fixedRent),
         fixedDeposit: Number(fixedDeposit),
       });
@@ -82,12 +115,41 @@ export default function AdminContractsScreen({ params }: Props) {
       setModalVisible(false);
       setSelectedRoomId("");
       setSelectedTenantId("");
+      setCurrentStep(1);
+      setConfirmed(false);
+      const nextDefaults = defaultContractDates();
+      setStartDate(nextDefaults.startDate);
+      setEndDate(nextDefaults.endDate);
+      setEndDateWasEdited(false);
       loadData();
     } catch (error) {
       Alert.alert("Lỗi", error instanceof Error ? error.message : "Tạo hợp đồng thất bại!");
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleDatePickerChange = (
+    event: DateTimePickerEvent,
+    selectedDate?: Date,
+  ) => {
+    const field = datePickerField;
+    setDatePickerField(null);
+    if (event.type === "dismissed" || !field || !selectedDate) return;
+    const selectedDisplayDate = defaultContractDates(selectedDate).startDate;
+    if (field === "startDate") {
+      setStartDate(selectedDisplayDate);
+      setEndDate((currentEndDate) =>
+        resolveEndDateAfterStartChange(
+          selectedDisplayDate,
+          endDateWasEdited,
+          currentEndDate,
+        ),
+      );
+      return;
+    }
+    setEndDate(selectedDisplayDate);
+    setEndDateWasEdited(true);
   };
 
   const handleApproveContract = async (contractId: string) => {
@@ -208,12 +270,12 @@ export default function AdminContractsScreen({ params }: Props) {
           const roomCode = (item.roomId && typeof item.roomId === "object") ? item.roomId.roomCode : "N/A";
           const tenantName = (item.tenantId && typeof item.tenantId === "object") ? item.tenantId.fullName : "N/A";
           const tenantPhone = (item.tenantId && typeof item.tenantId === "object") ? item.tenantId.phone : "N/A";
-          
+
           return (
             <View style={styles.contractCard}>
               <View style={styles.contractInfo}>
                 <Text style={styles.roomCode}>Phòng {roomCode}</Text>
-                <Text style={styles.tenantName}>Khách thuê: {tenantName} ({tenantPhone !== "N/A" ? String(tenantPhone).replace(/\D/g, "").replace(/(\d{4})(\d{3})(\d+)/, "$1.$2.$3").replace(/(\d{4})(\d+)/, "$1.$2") : "N/A"})</Text>
+                <Text style={styles.tenantName}>Người thuê: {tenantName} ({tenantPhone !== "N/A" ? String(tenantPhone).replace(/\D/g, "").replace(/(\d{4})(\d{3})(\d+)/, "$1.$2.$3").replace(/(\d{4})(\d+)/, "$1.$2") : "N/A"})</Text>
                 <Text style={styles.contractDates}>
                   Thời hạn: {item.startDate ? new Date(item.startDate).toLocaleDateString("vi-VN") : ""} - {item.endDate ? new Date(item.endDate).toLocaleDateString("vi-VN") : ""}
                 </Text>
@@ -221,7 +283,7 @@ export default function AdminContractsScreen({ params }: Props) {
                   Tiền thuê: {item.fixedRentPrice?.toLocaleString("vi-VN")}đ • Cọc: {item.fixedDeposit?.toLocaleString("vi-VN")}đ
                 </Text>
               </View>
-              
+
               <View style={styles.rightAction}>
                 <View style={[styles.statusBadge, { backgroundColor: getStatusBg(item.status) }]}>
                   <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
@@ -239,126 +301,341 @@ export default function AdminContractsScreen({ params }: Props) {
         }}
       />
 
-      {/* Modal Tạo hợp đồng mới */}
+      {/* Modal Tạo hợp đồng mới (Wizard 4 Bước) */}
       <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Tạo hợp đồng mới</Text>
-              <Pressable onPress={() => setModalVisible(false)}>
-                <Ionicons name="close" size={24} color={COLORS.text} />
+          <View style={styles.wizardContent}>
+            {/* Header */}
+            <View style={styles.wizardHeader}>
+              <View>
+                <Text style={styles.wizardTitle}>Tạo hợp đồng mới</Text>
+                <Text style={styles.wizardSubtitle}>Hoàn tất 4 bước để lập hợp đồng thuê phòng.</Text>
+              </View>
+              <Pressable onPress={() => setModalVisible(false)} style={styles.closeButton}>
+                <Ionicons name="close" size={24} color={COLORS.muted} />
               </Pressable>
             </View>
 
-            <ScrollView style={styles.modalScrollView} contentContainerStyle={styles.modalScrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-              <View style={styles.form}>
-                {/* Chọn phòng trống */}
-                <Text style={styles.label}>Chọn phòng trống</Text>
-                <ScrollView style={styles.roomSelectScroll} nestedScrollEnabled={true}>
-                  <View style={styles.roomSelectGrid}>
+            {/* Stepper */}
+            <View style={styles.stepperContainer}>
+              {[
+                { num: 1, label: 'Người thuê', icon: 'person' },
+                { num: 2, label: 'Chi tiết', icon: 'home' },
+                { num: 3, label: 'Dịch vụ', icon: 'flash' },
+                { num: 4, label: 'Xác nhận', icon: 'checkmark-circle' },
+              ].map((step, index) => {
+                const isActive = currentStep === step.num;
+                const isCompleted = currentStep > step.num;
+                return (
+                  <View key={step.num} style={styles.stepItemWrapper}>
+                    <View style={styles.stepItem}>
+                      <View style={[
+                        styles.stepCircle,
+                        isCompleted ? styles.stepCircleCompleted : isActive ? styles.stepCircleActive : styles.stepCircleInactive
+                      ]}>
+                        <Ionicons name={step.icon as any} size={14} color={isCompleted || isActive ? "#FFF" : COLORS.muted} />
+                      </View>
+                      <View style={styles.stepTextContainer}>
+                        <Text style={styles.stepLabelMini}>BƯỚC {step.num}</Text>
+                        <Text style={[styles.stepLabel, isActive && styles.stepLabelActive]}>{step.label}</Text>
+                      </View>
+                    </View>
+                    {index < 3 && (
+                      <View style={[styles.stepLine, isCompleted && styles.stepLineCompleted]} />
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+
+            {/* Content */}
+            <ScrollView style={styles.wizardBody} showsVerticalScrollIndicator={false}>
+
+              {/* BƯỚC 1: NGƯỜI THUÊ */}
+              {currentStep === 1 && (
+                <View style={styles.stepContent}>
+                  <View style={styles.card}>
+                    <Text style={styles.cardTitle}>Người thuê</Text>
+                    <Text style={styles.cardSubtitle}>Chọn người thuê đã có trên hệ thống để lập hợp đồng.</Text>
+
+                    {tenants.length === 0 ? (
+                      <Text style={styles.noVacantText}>Không có người thuê nào trên hệ thống!</Text>
+                    ) : (
+                      <View style={styles.tenantSelectGrid}>
+                        {tenants.map((t) => (
+                          <Pressable
+                            key={t._id}
+                            style={[
+                              styles.tenantSelectItem,
+                              selectedTenantId === t._id && styles.tenantSelectActive
+                            ]}
+                            onPress={() => setSelectedTenantId(t._id)}
+                          >
+                            <Text style={[
+                              styles.tenantSelectText,
+                              selectedTenantId === t._id && styles.tenantSelectTextActive
+                            ]}>
+                              {t.fullName}
+                            </Text>
+                            <Text style={styles.tenantPhoneText}>{t.phone}</Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                </View>
+              )}
+
+              {/* BƯỚC 2: CHI TIẾT THUÊ */}
+              {currentStep === 2 && (
+                <View style={styles.stepContent}>
+                  <View style={styles.card}>
+                    <Text style={styles.cardTitle}>Phòng thuê</Text>
+                    <Text style={styles.cardSubtitle}>Chọn phòng còn trống để lập hợp đồng.</Text>
+
                     {selectableRooms.length === 0 ? (
                       <Text style={styles.noVacantText}>Không có phòng nào có thể chọn!</Text>
                     ) : (
-                      selectableRooms.map((room) => (
-                        <Pressable
-                          key={room._id}
-                          style={[
-                            styles.roomSelectItem,
-                            selectedRoomId === room._id && styles.roomSelectActive
-                          ]}
-                          onPress={() => handleSelectRoom(room._id)}
-                        >
-                          <Text
+                      <View style={styles.roomSelectGrid}>
+                        {selectableRooms.map((room) => (
+                          <Pressable
+                            key={room._id}
                             style={[
+                              styles.roomSelectItem,
+                              selectedRoomId === room._id && styles.roomSelectActive
+                            ]}
+                            onPress={() => handleSelectRoom(room._id)}
+                          >
+                            <Text style={[
                               styles.roomSelectText,
                               selectedRoomId === room._id && styles.roomSelectTextActive
-                            ]}
-                          >
-                            {room.roomCode}
-                          </Text>
-                        </Pressable>
-                      ))
+                            ]}>
+                              {room.roomCode}
+                            </Text>
+                          </Pressable>
+                        ))}
+                      </View>
                     )}
                   </View>
-                </ScrollView>
 
-                {/* Chọn khách thuê */}
-                <Text style={styles.label}>Chọn khách thuê</Text>
-                <ScrollView style={styles.tenantSelectScroll} nestedScrollEnabled={true}>
-                  <View style={styles.tenantSelectGrid}>
-                    {tenants.length === 0 ? (
-                      <Text style={styles.noVacantText}>Không có khách thuê nào trên hệ thống!</Text>
-                    ) : (
-                      tenants.map((t) => (
-                        <Pressable
-                          key={t._id}
-                          style={[
-                            styles.tenantSelectItem,
-                            selectedTenantId === t._id && styles.tenantSelectActive
-                          ]}
-                          onPress={() => setSelectedTenantId(t._id)}
-                        >
-                          <Text
-                            style={[
-                              styles.tenantSelectText,
-                              selectedTenantId === t._id && styles.tenantSelectTextActive
-                            ]}
+                  <View style={styles.card}>
+                    <Text style={styles.cardTitle}>Điều khoản thuê</Text>
+
+                    <View style={styles.inputGroupRow}>
+                      <View style={styles.inputWrapper}>
+                        <Text style={styles.label}>Giá thuê (VNĐ/tháng) <Text style={styles.required}>*</Text></Text>
+                        <TextInput style={styles.input} value={fixedRent} onChangeText={setFixedRent} keyboardType="numeric" placeholder="VD: 3500000" />
+                      </View>
+                      <View style={styles.inputWrapper}>
+                        <Text style={styles.label}>Tiền cọc (VNĐ) <Text style={styles.required}>*</Text></Text>
+                        <TextInput style={styles.input} value={fixedDeposit} onChangeText={setFixedDeposit} keyboardType="numeric" placeholder="VD: 3500000" />
+                      </View>
+                    </View>
+
+                    <View style={styles.inputGroupRow}>
+                      <View style={styles.inputWrapper}>
+                        <Text style={styles.label}>Ngày bắt đầu <Text style={styles.required}>*</Text></Text>
+                        <View style={styles.dateInputContainer}>
+                          <TextInput
+                            style={styles.dateInput}
+                            value={startDate}
+                            onChangeText={(value) => {
+                              const nextStartDate = formatDisplayDateInput(value);
+                              setStartDate(nextStartDate);
+                              setEndDate((currentEndDate) =>
+                                resolveEndDateAfterStartChange(
+                                  nextStartDate,
+                                  endDateWasEdited,
+                                  currentEndDate,
+                                ),
+                              );
+                            }}
+                            keyboardType="number-pad"
+                            maxLength={10}
+                            placeholder="dd/mm/yyyy"
+                          />
+                          <Pressable
+                            accessibilityLabel="Mở lịch chọn ngày bắt đầu"
+                            hitSlop={8}
+                            onPress={() => setDatePickerField("startDate")}
+                            style={styles.datePickerButton}
                           >
-                            {t.fullName}
-                          </Text>
-                        </Pressable>
-                      ))
-                    )}
+                            <Ionicons name="calendar-outline" size={19} color={COLORS.orange} />
+                          </Pressable>
+                        </View>
+                      </View>
+                      <View style={styles.inputWrapper}>
+                        <Text style={styles.label}>Ngày kết thúc <Text style={styles.required}>*</Text></Text>
+                        <View style={styles.dateInputContainer}>
+                          <TextInput
+                            style={styles.dateInput}
+                            value={endDate}
+                            onChangeText={(value) => {
+                              setEndDateWasEdited(true);
+                              setEndDate(formatDisplayDateInput(value));
+                            }}
+                            keyboardType="number-pad"
+                            maxLength={10}
+                            placeholder="dd/mm/yyyy"
+                          />
+                          <Pressable
+                            accessibilityLabel="Mở lịch chọn ngày kết thúc"
+                            hitSlop={8}
+                            onPress={() => setDatePickerField("endDate")}
+                            style={styles.datePickerButton}
+                          >
+                            <Ionicons name="calendar-outline" size={19} color={COLORS.orange} />
+                          </Pressable>
+                        </View>
+                      </View>
+                    </View>
+                    {datePickerField ? (
+                      <DateTimePicker
+                        value={
+                          displayDateToLocalDate(
+                            datePickerField === "startDate"
+                              ? startDate
+                              : endDate,
+                          ) || new Date()
+                        }
+                        mode="date"
+                        display="default"
+                        onChange={handleDatePickerChange}
+                      />
+                    ) : null}
                   </View>
-                </ScrollView>
+                </View>
+              )}
 
-                <Text style={styles.label}>Tiền thuê chốt hàng tháng (đ)</Text>
-                <TextInput
-                  style={styles.input}
-                  value={fixedRent}
-                  onChangeText={setFixedRent}
-                  placeholder="Ví dụ: 3000000"
-                  keyboardType="numeric"
-                />
+              {/* BƯỚC 3: DỊCH VỤ */}
+              {currentStep === 3 && (
+                <View style={styles.stepContent}>
+                  <View style={styles.card}>
+                    <Text style={styles.cardTitle}>Dịch vụ & tiện ích</Text>
+                    <Text style={styles.cardSubtitle}>Bật các dịch vụ áp dụng cho hợp đồng này và điều chỉnh đơn giá.</Text>
 
-                <Text style={styles.label}>Tiền đặt cọc chốt (đ)</Text>
-                <TextInput
-                  style={styles.input}
-                  value={fixedDeposit}
-                  onChangeText={setFixedDeposit}
-                  placeholder="Ví dụ: 3000000"
-                  keyboardType="numeric"
-                />
+                    {[
+                      { key: 'electricity', label: 'Điện', desc: 'Tính theo số điện', unit: 'VNĐ/kWh' },
+                      { key: 'water', label: 'Nước', desc: 'Tính theo người/khối', unit: 'VNĐ' },
+                      { key: 'trash', label: 'Rác', desc: 'Phí thu gom', unit: 'VNĐ/tháng' },
+                      { key: 'internet', label: 'Internet', desc: 'Wi-Fi', unit: 'VNĐ/tháng' },
+                      { key: 'management', label: 'Phí quản lý', desc: 'Vệ sinh chung', unit: 'VNĐ/tháng' },
+                    ].map(svc => {
+                      const service = services[svc.key as keyof typeof services];
+                      return (
+                        <View key={svc.key} style={[styles.serviceItem, service.enabled && styles.serviceItemActive]}>
+                          <View style={styles.serviceHeader}>
+                            <View>
+                              <Text style={styles.serviceLabel}>{svc.label}</Text>
+                              <Text style={styles.serviceDesc}>{svc.desc}</Text>
+                            </View>
+                            <Switch
+                              value={service.enabled}
+                              onValueChange={(val) => setServices({...services, [svc.key]: {...service, enabled: val}})}
+                              trackColor={{ false: "#E8E9ED", true: COLORS.orange }}
+                            />
+                          </View>
+                          <View style={styles.serviceInputRow}>
+                            <TextInput
+                              style={[styles.input, !service.enabled && styles.inputDisabled, { flex: 1, height: 36 }]}
+                              value={service.price}
+                              onChangeText={(text) => setServices({...services, [svc.key]: {...service, price: text}})}
+                              editable={service.enabled}
+                              keyboardType="numeric"
+                            />
+                            <Text style={styles.serviceUnit}>{svc.unit}</Text>
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </View>
+                </View>
+              )}
 
-                <Text style={styles.label}>Ngày bắt đầu (YYYY-MM-DD)</Text>
-                <TextInput
-                  style={styles.input}
-                  value={startDate}
-                  onChangeText={setStartDate}
-                  placeholder="YYYY-MM-DD"
-                />
+              {/* BƯỚC 4: XÁC NHẬN */}
+              {currentStep === 4 && (
+                <View style={styles.stepContent}>
+                  <View style={styles.previewCard}>
+                    <Text style={styles.previewTag}>BẢN XEM TRƯỚC HỢP ĐỒNG</Text>
 
-                <Text style={styles.label}>Ngày kết thúc (YYYY-MM-DD)</Text>
-                <TextInput
-                  style={styles.input}
-                  value={endDate}
-                  onChangeText={setEndDate}
-                  placeholder="YYYY-MM-DD"
-                />
+                    <View style={styles.previewSection}>
+                      <Text style={styles.previewSectionTitle}>NGƯỜI THUÊ</Text>
+                      <View style={styles.previewRow}>
+                        <Text style={styles.previewLabel}>Họ tên</Text>
+                        <Text style={styles.previewValue}>{tenants.find(t => t._id === selectedTenantId)?.fullName || "Chưa chọn"}</Text>
+                      </View>
+                      <View style={styles.previewRow}>
+                        <Text style={styles.previewLabel}>Điện thoại</Text>
+                        <Text style={styles.previewValue}>{tenants.find(t => t._id === selectedTenantId)?.phone || "Chưa chọn"}</Text>
+                      </View>
+                    </View>
 
+                    <View style={styles.previewSection}>
+                      <Text style={styles.previewSectionTitle}>CHI TIẾT THUÊ</Text>
+                      <View style={styles.previewRow}>
+                        <Text style={styles.previewLabel}>Phòng</Text>
+                        <Text style={styles.previewValue}>{rooms.find(r => r._id === selectedRoomId)?.roomCode || "Chưa chọn"}</Text>
+                      </View>
+                      <View style={styles.previewRow}>
+                        <Text style={styles.previewLabel}>Giá thuê</Text>
+                        <Text style={styles.previewValue}>{Number(fixedRent || 0).toLocaleString('vi-VN')}đ/tháng</Text>
+                      </View>
+                      <View style={styles.previewRow}>
+                        <Text style={styles.previewLabel}>Tiền cọc</Text>
+                        <Text style={styles.previewValue}>{Number(fixedDeposit || 0).toLocaleString('vi-VN')}đ</Text>
+                      </View>
+                      <View style={styles.previewRow}>
+                        <Text style={styles.previewLabel}>Thời hạn</Text>
+                        <Text style={styles.previewValue}>{startDate} → {endDate}</Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  <Pressable style={styles.confirmCheckbox} onPress={() => setConfirmed(!confirmed)}>
+                    <View style={[styles.checkbox, confirmed && styles.checkboxChecked]}>
+                      {confirmed && <Ionicons name="checkmark" size={14} color="#FFF" />}
+                    </View>
+                    <View>
+                      <Text style={styles.confirmTitle}>Tôi xác nhận thông tin chính xác</Text>
+                      <Text style={styles.confirmDesc}>Hợp đồng nháp sẽ được tạo và chờ người thuê duyệt.</Text>
+                    </View>
+                  </Pressable>
+                </View>
+              )}
+            </ScrollView>
+
+            {/* Footer */}
+            <View style={styles.wizardFooter}>
+              <Pressable onPress={() => setModalVisible(false)}>
+                <Text style={styles.cancelText}>Hủy</Text>
+              </Pressable>
+              <View style={styles.footerActions}>
+                {currentStep > 1 && (
+                  <Pressable style={styles.backBtn} onPress={() => setCurrentStep(prev => prev - 1)}>
+                    <Ionicons name="chevron-back" size={16} color={COLORS.text} />
+                    <Text style={styles.backBtnText}>Quay lại</Text>
+                  </Pressable>
+                )}
                 <Pressable
-                  style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
-                  onPress={handleCreateContract}
-                  disabled={submitting}
+                  style={[
+                    styles.nextBtn,
+                    (currentStep === 4 && !confirmed) && styles.nextBtnDisabled,
+                    submitting && styles.nextBtnDisabled
+                  ]}
+                  onPress={() => {
+                    if (currentStep < 4) setCurrentStep(prev => prev + 1);
+                    else handleCreateContract();
+                  }}
+                  disabled={(currentStep === 4 && !confirmed) || submitting}
                 >
                   {submitting ? (
-                    <ActivityIndicator color="#FFFFFF" />
+                    <ActivityIndicator color="#FFFFFF" size="small" />
                   ) : (
-                    <Text style={styles.submitButtonText}>Tạo hợp đồng</Text>
+                    <Text style={styles.nextBtnText}>{currentStep < 4 ? 'Tiếp tục' : 'Tạo hợp đồng'}</Text>
                   )}
                 </Pressable>
               </View>
-            </ScrollView>
+            </View>
           </View>
         </View>
       </Modal>
@@ -499,8 +776,9 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
-    justifyContent: "flex-end",
+    backgroundColor: "#F4F5F7",
+    justifyContent: "flex-start",
+    paddingTop: 45, // Safe area for iOS
   },
   modalContent: {
     backgroundColor: "#FFFFFF",
@@ -549,6 +827,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     fontSize: 14,
     color: COLORS.text,
+  },
+  dateInputContainer: {
+    width: "100%",
+    height: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F4F5F7",
+    borderRadius: 8,
+  },
+  dateInput: {
+    flex: 1,
+    height: 44,
+    paddingLeft: 12,
+    paddingRight: 4,
+    fontSize: 14,
+    color: COLORS.text,
+    fontVariant: ["tabular-nums"],
+  },
+  datePickerButton: {
+    width: 42,
+    height: 42,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 8,
   },
   noVacantText: {
     fontSize: 13,
@@ -635,5 +937,311 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 14,
     fontWeight: "800",
+  },
+
+  wizardContent: {
+    backgroundColor: "#F4F5F7",
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+  },
+  wizardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    padding: 20,
+    backgroundColor: "#FFFFFF",
+  },
+  wizardTitle: {
+    fontSize: 20,
+    fontWeight: "900",
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  wizardSubtitle: {
+    fontSize: 13,
+    color: COLORS.muted,
+  },
+  closeButton: {
+    padding: 4,
+    backgroundColor: "#F4F5F7",
+    borderRadius: 8,
+  },
+  stepperContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 24,
+    paddingVertical: 30,
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E8E9ED",
+    justifyContent: "space-between",
+  },
+  stepItemWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  stepItem: {
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 2,
+    flex: 1,
+  },
+  stepCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    backgroundColor: "#FFFFFF",
+  },
+  stepCircleInactive: {
+    borderColor: "#E8E9ED",
+  },
+  stepCircleActive: {
+    borderColor: COLORS.orange,
+    backgroundColor: COLORS.orange,
+  },
+  stepCircleCompleted: {
+    borderColor: COLORS.orange,
+    backgroundColor: COLORS.orange,
+  },
+  stepTextContainer: {
+    alignItems: "center",
+    marginTop: 8,
+    position: "absolute",
+    top: 36,
+    width: 80,
+  },
+  stepLabelMini: {
+    color: COLORS.muted,
+    fontWeight: "700",
+  },
+  stepLabel: {
+    fontSize: 11,
+    color: COLORS.text,
+    fontWeight: "600",
+  },
+  stepLabelActive: {
+    color: COLORS.orange,
+    fontWeight: "800",
+  },
+  stepLine: {
+    position: "absolute",
+    top: 15,
+    left: "50%",
+    width: "100%",
+    height: 3,
+    backgroundColor: "#E8E9ED",
+    zIndex: 1,
+  },
+  stepLineCompleted: {
+    backgroundColor: COLORS.orange,
+  },
+  wizardBody: {
+    flex: 1,
+    padding: 20,
+  },
+  stepContent: {
+    paddingBottom: 40,
+  },
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#E8E9ED",
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  cardSubtitle: {
+    fontSize: 13,
+    color: COLORS.muted,
+    marginBottom: 16,
+  },
+  inputGroupRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 12,
+  },
+  inputWrapper: {
+    flex: 1,
+  },
+  required: {
+    color: COLORS.red,
+  },
+  serviceItem: {
+    borderWidth: 1,
+    borderColor: "#E8E9ED",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+  },
+  serviceItemActive: {
+    borderColor: COLORS.orangeSoft,
+    backgroundColor: COLORS.orangeSoft,
+  },
+  serviceHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  serviceLabel: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: COLORS.text,
+  },
+  serviceDesc: {
+    fontSize: 12,
+    color: COLORS.muted,
+    marginTop: 2,
+  },
+  serviceInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  inputDisabled: {
+    backgroundColor: "#F4F5F7",
+    color: COLORS.muted,
+  },
+  serviceUnit: {
+    fontSize: 12,
+    color: COLORS.muted,
+    width: 80,
+  },
+  previewCard: {
+    backgroundColor: COLORS.orangeSoft,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 106, 33, 0.2)',
+    marginBottom: 20,
+  },
+  previewTag: {
+    fontSize: 11,
+    color: COLORS.orange,
+    fontWeight: "800",
+    marginBottom: 12,
+  },
+  previewSection: {
+    marginBottom: 16,
+  },
+  previewSectionTitle: {
+    fontSize: 11,
+    color: COLORS.muted,
+    fontWeight: "800",
+    marginBottom: 8,
+  },
+  previewRow: {
+    flexDirection: "row",
+    marginBottom: 6,
+  },
+  previewLabel: {
+    width: 90,
+    fontSize: 13,
+    color: COLORS.muted,
+  },
+  previewValue: {
+    flex: 1,
+    fontSize: 13,
+    color: COLORS.text,
+    fontWeight: "600",
+  },
+  confirmCheckbox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: "#FFFFFF",
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#E8E9ED",
+    gap: 12,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: COLORS.muted,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 2,
+  },
+  checkboxChecked: {
+    backgroundColor: COLORS.orange,
+    borderColor: COLORS.orange,
+  },
+  confirmTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: COLORS.text,
+    marginBottom: 2,
+  },
+  confirmDesc: {
+    fontSize: 12,
+    color: COLORS.muted,
+  },
+  wizardFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 20,
+    backgroundColor: "#FFFFFF",
+    borderTopWidth: 1,
+    borderTopColor: "#E8E9ED",
+  },
+  cancelText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: COLORS.muted,
+  },
+  footerActions: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  backBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#E8E9ED",
+  },
+  backBtnText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: COLORS.text,
+    marginLeft: 4,
+  },
+  nextBtn: {
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    backgroundColor: COLORS.orange,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  nextBtnDisabled: {
+    opacity: 0.5,
+  },
+  nextBtnText: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#FFFFFF",
+  },
+  tenantPhoneText: {
+    fontSize: 11,
+    color: COLORS.muted,
+    marginTop: 2,
   },
 });

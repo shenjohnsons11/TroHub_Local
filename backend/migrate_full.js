@@ -44,7 +44,7 @@ async function migrate() {
       phone: "0987654321",
       email: "tenant@trohub.vn",
       idCard: "079012345678",
-      role: 2, // Khách thuê
+      role: 2, // Người thuê
       status: 1
     });
 
@@ -95,6 +95,7 @@ async function migrate() {
     console.log("🔧 Đang tạo Yêu cầu sửa chữa (Repairs)...");
     await RepairRequest.create({
       repairCode: "YC0501",
+      tenantId: tenantAccount._id,
       contractId: contract._id,
       title: "Hư bóng đèn",
       content: "Bóng đèn nhà vệ sinh bị cháy từ hôm qua.",

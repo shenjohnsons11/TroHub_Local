@@ -29,7 +29,7 @@ export default function AdminTenantsScreen() {
       setTenants(tenantsData);
       setRooms(roomsData);
     } catch (error) {
-      console.log("Lỗi tải dữ liệu khách thuê:", error);
+      console.log("Lỗi tải dữ liệu người thuê:", error);
     } finally {
       setLoading(false);
     }
@@ -102,7 +102,7 @@ export default function AdminTenantsScreen() {
         email: email.trim(),
         idCard: cleanIdCard,
       });
-      Alert.alert("Thành công", "Đã thêm khách thuê mới!");
+      Alert.alert("Thành công", "Đã thêm người thuê mới!");
       setModalVisible(false);
       setFullName("");
       setPhone("");
@@ -113,7 +113,7 @@ export default function AdminTenantsScreen() {
       setIdCardError("");
       loadData();
     } catch (error) {
-      Alert.alert("Lỗi", error instanceof Error ? error.message : "Thêm khách thuê thất bại!");
+      Alert.alert("Lỗi", error instanceof Error ? error.message : "Thêm người thuê thất bại!");
     } finally {
       setSubmitting(false);
     }
@@ -132,7 +132,7 @@ export default function AdminTenantsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Danh sách khách thuê</Text>
+        <Text style={styles.title}>Danh sách người thuê</Text>
         <Pressable style={styles.addButton} onPress={() => setModalVisible(true)}>
           <Ionicons name="person-add" size={18} color="#FFFFFF" />
           <Text style={styles.addButtonText}>Thêm khách</Text>
@@ -159,12 +159,12 @@ export default function AdminTenantsScreen() {
         )}
       />
 
-      {/* Modal thêm khách thuê */}
+      {/* Modal thêm người thuê */}
       <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Thêm khách thuê mới</Text>
+              <Text style={styles.modalTitle}>Thêm người thuê mới</Text>
               <Pressable onPress={() => setModalVisible(false)}>
                 <Ionicons name="close" size={24} color={COLORS.text} />
               </Pressable>
@@ -242,7 +242,7 @@ export default function AdminTenantsScreen() {
                     {submitting ? (
                       <ActivityIndicator color="#FFFFFF" />
                     ) : (
-                      <Text style={styles.submitButtonText}>Thêm khách thuê</Text>
+                      <Text style={styles.submitButtonText}>Thêm người thuê</Text>
                     )}
                   </Pressable>
                 </View>

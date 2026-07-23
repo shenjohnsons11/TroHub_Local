@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 // 1. Lấy thông tin chủ trọ (cài đặt)
 exports.getSettings = async (req, res) => {
     try {
-        const landlord = await Account.findOne({ role: 1 });
+        const landlord = await Account.findOne({ _id: req.auth.id, role: 1 });
         if (!landlord) {
             return res.status(200).json({ success: true, data: { name: 'Chủ trọ', phone: '', email: '' } });
         }
@@ -29,7 +29,7 @@ exports.getSettings = async (req, res) => {
 exports.updateSettings = async (req, res) => {
     try {
         const { name, phone, email, password, bankId, bankAccountNo, bankAccountName } = req.body;
-        const landlord = await Account.findOne({ role: 1 });
+        const landlord = await Account.findOne({ _id: req.auth.id, role: 1 });
         if (!landlord) {
             return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản chủ trọ!' });
         }

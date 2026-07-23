@@ -7,18 +7,21 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Trash2, CheckCircle } from "lucide-react";
-import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { formatCurrencyInput, parseFormattedNumber } from "@/lib/utils";
+import { parseFormattedNumber } from "@/lib/utils";
+import { useNotification } from "@/hooks/use-notification";
+import { getNotificationMessage } from "@/lib/notification-messages";
 
 export default function InvoicesPage() {
+  const notification = useNotification();
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [title, setTitle] = useState("");
+  const [issuedAt, setIssuedAt] = useState(() => new Date().toLocaleDateString("en-CA"));
   const [bulkData, setBulkData] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -86,17 +89,18 @@ export default function InvoicesPage() {
           garbage: item.garbage,
           discount: parseFormattedNumber(item.discountInput)
         })),
-        period: title
+        period: title,
+        issuedAt,
       };
       await fetchAPI("/invoices/bulk", {
         method: "POST",
         body: JSON.stringify(payload),
       });
-      toast.success("Tạo hóa đơn thành công!");
+      notification.success("Tạo hóa đơn thành công.");
       setIsAddOpen(false);
       loadInvoices();
-    } catch (err: any) {
-      toast.error("Lỗi: " + err.message);
+    } catch (err: unknown) {
+      notification.error(getNotificationMessage(err, "Không thể tạo hóa đơn."));
     } finally {
       setIsSubmitting(false);
     }
@@ -108,22 +112,27 @@ export default function InvoicesPage() {
         method: "PUT",
         body: JSON.stringify({ status: "Đã thanh toán" }),
       });
-      toast.success("Đã xác nhận thu tiền!");
+      notification.success("Đã xác nhận thu tiền.");
       loadInvoices();
-    } catch (err: any) {
-      toast.error("Lỗi khi cập nhật: " + err.message);
+    } catch (err: unknown) {
+      notification.error(getNotificationMessage(err, "Không thể cập nhật hóa đơn."));
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm("Xóa hóa đơn này?")) {
-      try {
-        await fetchAPI(`/invoices/${id}`, { method: "DELETE" });
-        toast.success("Đã xóa hóa đơn!");
-        loadInvoices();
-      } catch (err: any) {
-        toast.error("Lỗi khi xóa: " + err.message);
-      }
+    const confirmed = await notification.confirm({
+      title: "Xóa hóa đơn",
+      message: "Bạn có chắc chắn muốn xóa hóa đơn này không?",
+      confirmText: "Xóa",
+      destructive: true,
+    });
+    if (!confirmed) return;
+    try {
+      await fetchAPI(`/invoices/${id}`, { method: "DELETE" });
+      notification.success("Đã xóa hóa đơn.");
+      loadInvoices();
+    } catch (err: unknown) {
+      notification.error(getNotificationMessage(err, "Không thể xóa hóa đơn."));
     }
   };
 
@@ -163,9 +172,16 @@ export default function InvoicesPage() {
               <DialogTitle>Tạo hóa đơn hàng loạt</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Kỳ thanh toán *</Label>
-                <Input id="title" value={title} onChange={e => setTitle(e.target.value)} required placeholder="VD: Tháng 6/2026" className="w-64" />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="title">Kỳ thanh toán *</Label>
+                  <Input id="title" value={title} onChange={e => setTitle(e.target.value)} required placeholder="VD: Tháng 6/2026" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="issuedAt">Ngày phát hành *</Label>
+                  <Input id="issuedAt" type="date" max={new Date().toLocaleDateString("en-CA")} value={issuedAt} onChange={e => setIssuedAt(e.target.value)} required />
+                  <p className="text-xs text-muted-foreground">Có thể chọn ngày quá khứ để demo trạng thái quá hạn.</p>
+                </div>
               </div>
               
               <div className="border rounded-md overflow-x-auto bg-white">

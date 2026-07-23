@@ -196,9 +196,9 @@ export default function RoomsPage() {
                   <span className="font-bold text-[#f37021] text-lg">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(room.defaultRentPrice)}</span>
                 </div>
                 <div>
-                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Khách đang thuê</span>
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Người thuê hiện tại</span>
                   <span className={`font-medium ${room.tenant ? 'text-slate-700' : 'text-slate-400 italic'}`}>
-                    {room.tenant || "Chưa có khách"}
+                    {room.tenant || "Chưa có Người thuê"}
                   </span>
                 </div>
               </div>

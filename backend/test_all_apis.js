@@ -3,10 +3,12 @@
  * TroHub - AUTO TEST TOÀN BỘ API
  * ====================================================
  * Chạy: node test_all_apis.js
- * Yêu cầu: Server đang chạy trên localhost:3000
+ * Yêu cầu: Server đang chạy theo PORT trong .env hoặc API_BASE_URL được cấu hình sẵn
  */
 
-const BASE = 'http://localhost:3000/api';
+require('dotenv').config();
+
+const BASE = process.env.API_BASE_URL || `http://localhost:${process.env.PORT || 5000}/api`;
 let adminToken = '';
 let tenantToken = '';
 let testTenantId = '';

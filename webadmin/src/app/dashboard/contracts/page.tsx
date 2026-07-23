@@ -1,17 +1,21 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { fetchAPI } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Trash2 } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { formatCurrencyInput, parseFormattedNumber, parseFormattedString } from "@/lib/utils";
+import { formatCurrencyInput, parseFormattedNumber } from "@/lib/utils";
+import { useNotification } from "@/hooks/use-notification";
+import { getNotificationMessage } from "@/lib/notification-messages";
 
 export default function ContractsPage() {
+  const notification = useNotification();
   const [contracts, setContracts] = useState<any[]>([]);
   const [rooms, setRooms] = useState<any[]>([]);
   const [tenants, setTenants] = useState<any[]>([]);
@@ -63,29 +67,6 @@ export default function ContractsPage() {
     loadData();
   }, []);
 
-  const openAddModal = () => {
-    setRoomId("");
-    setTenantId("");
-    
-    const today = new Date();
-    const nextYear = new Date();
-    nextYear.setFullYear(today.getFullYear() + 1);
-    
-    setStartDate(today.toISOString().split("T")[0]);
-    setEndDate(nextYear.toISOString().split("T")[0]);
-    
-    setRent("");
-    setDeposit("");
-    setInitialElectricity("");
-    setInitialWater("");
-    setSelectedServices(availableServices.map(s => ({
-      serviceId: s._id || s.id,
-      fixedPrice: formatCurrencyInput(s.defaultPrice?.toString() || "0")
-    })));
-    setEditContractId("");
-    setIsAddOpen(true);
-  };
-
   const openEditModal = (contract: any) => {
     setEditContractId(contract._id || contract.id);
     setRoomId(contract.roomId?._id || contract.roomId?.id || contract.roomId);
@@ -114,7 +95,7 @@ export default function ContractsPage() {
       const selectedTenant = tenants.find(t => (t._id || t.id) === tenantId);
       
       if (!selectedRoom) throw new Error("Vui lòng chọn phòng");
-      if (!selectedTenant) throw new Error("Vui lòng chọn khách thuê");
+      if (!selectedTenant) throw new Error("Vui lòng chọn người thuê");
 
       const payload = { 
         roomId: selectedRoom._id || selectedRoom.id, 
@@ -140,47 +121,40 @@ export default function ContractsPage() {
         body: JSON.stringify(payload),
       });
       setIsAddOpen(false);
-      loadData();
-    } catch (err: any) {
-      alert(err.message || "Lỗi lưu hợp đồng");
+      notification.success("Đã cập nhật hợp đồng.");
+      await loadData();
+    } catch (err: unknown) {
+      notification.error(getNotificationMessage(err, "Không thể lưu hợp đồng."));
     }
   };
 
   const handleConfirmContract = async (id: string) => {
-    if (!confirm("Xác nhận duyệt hợp đồng này để nó có hiệu lực?")) return;
+    const confirmed = await notification.confirm({ title: "Duyệt hợp đồng", message: "Xác nhận duyệt hợp đồng này để nó có hiệu lực?", confirmText: "Duyệt" });
+    if (!confirmed) return;
     try {
       const res = await fetchAPI(`/contracts/${id}/confirm`, {
         method: "PUT"
       });
       if (res.success) {
-        alert("Đã duyệt hợp đồng thành công!");
-        loadData();
+        notification.success("Đã duyệt hợp đồng thành công.");
+        await loadData();
       } else {
-        alert("Lỗi: " + res.message);
+        notification.error(res.message || "Không thể duyệt hợp đồng.");
       }
-    } catch (err) {
-      alert("Lỗi kết nối khi duyệt hợp đồng");
+    } catch (err: unknown) {
+      notification.error(getNotificationMessage(err, "Không thể duyệt hợp đồng."));
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm("Bạn có chắc chắn muốn xóa hợp đồng này?")) {
-      try {
-        await fetchAPI(`/contracts/${id}`, { method: "DELETE" });
-        loadData();
-      } catch (err: any) {
-        alert("Lỗi khi xóa: " + err.message);
-      }
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "Đang hiệu lực": return <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none">Đang hiệu lực</Badge>;
-      case "Nháp": return <Badge className="bg-slate-100 text-slate-700 hover:bg-slate-100 border-none">Bản nháp</Badge>;
-      case "Yêu cầu trả phòng": return <Badge className="bg-red-100 text-red-700 hover:bg-red-100 border-none">Yêu cầu trả phòng</Badge>;
-      case "Hết hạn": return <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100 border-none">Hết hạn</Badge>;
-      default: return <Badge variant="outline">{status}</Badge>;
+    const confirmed = await notification.confirm({ title: "Xóa hợp đồng", message: "Bạn có chắc chắn muốn xóa hợp đồng này?", confirmText: "Xóa", destructive: true });
+    if (!confirmed) return;
+    try {
+      await fetchAPI(`/contracts/${id}`, { method: "DELETE" });
+      notification.success("Đã xóa hợp đồng.");
+      await loadData();
+    } catch (err: unknown) {
+      notification.error(getNotificationMessage(err, "Không thể xóa hợp đồng."));
     }
   };
 
@@ -197,17 +171,18 @@ export default function ContractsPage() {
         <div className="relative w-72">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <Input 
-            placeholder="Tìm theo mã phòng, tên khách..." 
+            placeholder="Tìm theo mã phòng, tên Người thuê..."
             className="pl-9 h-10 bg-white"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
           />
         </div>
 
-        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-          <DialogTrigger onClick={openAddModal} className="bg-[#f37021] hover:bg-[#e85f12] text-white flex items-center h-10 px-4 rounded-md font-medium text-sm">
+        <div className="flex gap-2">
+          <Link href="/dashboard/contracts/new" className="bg-[#f37021] hover:bg-[#e85f12] text-white flex items-center h-10 px-4 rounded-md font-medium text-sm">
             <Plus className="w-4 h-4 mr-2" /> Tạo hợp đồng mới
-          </DialogTrigger>
+          </Link>
+        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
           <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editContractId ? "Sửa hợp đồng thuê phòng" : "Tạo hợp đồng thuê phòng"}</DialogTitle>
@@ -237,7 +212,7 @@ export default function ContractsPage() {
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="tenantSelect">Khách thuê *</Label>
+                  <Label htmlFor="tenantSelect">Người thuê *</Label>
                   <select 
                     id="tenantSelect" 
                     value={tenantId} 
@@ -245,7 +220,7 @@ export default function ContractsPage() {
                     required
                     className="flex h-10 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f37021]"
                   >
-                    <option value="" disabled>-- Chọn khách --</option>
+                    <option value="" disabled>-- Chọn Người thuê --</option>
                     {tenants.map(t => <option key={t._id || t.id} value={t._id || t.id}>{t.fullName || t.name} ({t.phone})</option>)}
                   </select>
                 </div>
@@ -431,6 +406,7 @@ export default function ContractsPage() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -438,7 +414,7 @@ export default function ContractsPage() {
           <TableHeader className="bg-slate-50">
             <TableRow>
               <TableHead className="font-semibold text-slate-800">Phòng</TableHead>
-              <TableHead className="font-semibold text-slate-800">Khách thuê</TableHead>
+              <TableHead className="font-semibold text-slate-800">Người thuê</TableHead>
               <TableHead className="font-semibold text-slate-800">Ngày bắt đầu</TableHead>
               <TableHead className="font-semibold text-slate-800">Tiền cọc</TableHead>
               <TableHead className="font-semibold text-slate-800">Trạng thái</TableHead>
