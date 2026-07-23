@@ -1,7 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const settingsController = require('../controllers/settingsController');
+const { requireAdmin } = require('../middleware/requireAdmin');
 
+router.use(requireAdmin);
 router.get('/', settingsController.getSettings);
 router.put('/', settingsController.updateSettings);
 

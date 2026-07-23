@@ -29,14 +29,14 @@ async function seed() {
       status: 1
     });
 
-    // Chèn tài khoản Khách thuê (role 2)
+    // Chèn tài khoản Người thuê (role 2)
     await accounts.insertOne({
       username: "tenant@trohub.vn",
       password: hashedPassword,
       fullName: "Khách Thuê Demo",
       phone: "0987654321",
       email: "tenant@trohub.vn",
-      role: 2, // 2 là Khách thuê
+      role: 2, // 2 là Người thuê
       status: 1
     });
 

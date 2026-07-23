@@ -7,7 +7,7 @@ Tài liệu này ghi lại các thay đổi quan trọng đã được thực hi
 ### 1. Phân quyền và Tạo tài khoản (Web Admin & Mobile App)
 - **Web Admin:**
   - Trang đăng ký được cấu hình chỉ dùng để đăng ký **Chủ trọ** (`role: 1`). Đã loại bỏ tùy chọn loại tài khoản.
-  - Chủ trọ có thể "Thêm khách thuê" trực tiếp bên trong Dashboard. Hệ thống sẽ tự tạo tài khoản **Người thuê** (`role: 2`) với mật khẩu mặc định là `123456`.
+  - Chủ trọ có thể "Thêm người thuê" trực tiếp bên trong Dashboard. Hệ thống sẽ tự tạo tài khoản **Người thuê** (`role: 2`) với mật khẩu mặc định là `123456`.
 - **Mobile App:**
   - Luồng đăng ký được chuyên biệt hoá chỉ dành cho **Người thuê** (`role: 2`). Người thuê có thể tự tải App và đăng ký tài khoản.
 

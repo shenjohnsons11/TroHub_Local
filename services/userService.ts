@@ -106,6 +106,9 @@ export const userService = {
           phone: profile.phone,
           email: profile.email,
           idCard: profile.cccd,
+          bankId: profile.bankId,
+          bankAccountNo: profile.bankAccountNo,
+          bankAccountName: profile.bankAccountName,
         },
         token
       );

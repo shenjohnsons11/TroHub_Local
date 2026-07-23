@@ -46,29 +46,29 @@ async function seedData() {
             }
         }
 
-        // 3. Tạo 3 tài khoản khách thuê
-        const tenants = [
-            { email: "khach1@trohub.vn", name: "Khách Thuê Một", phone: "0911111111" },
-            { email: "khach2@trohub.vn", name: "Khách Thuê Hai", phone: "0922222222" },
-            { email: "khach3@trohub.vn", name: "Khách Thuê Ba", phone: "0933333333" }
+        // 3. Tạo 3 tài khoản người thuê
+        const nguoiThueList = [
+            { email: "nguoithue1@trohub.vn", name: "Người thuê Một", phone: "0911111111" },
+            { email: "nguoithue2@trohub.vn", name: "Người thuê Hai", phone: "0922222222" },
+            { email: "nguoithue3@trohub.vn", name: "Người thuê Ba", phone: "0933333333" }
         ];
 
-        for (const tenantData of tenants) {
-            const existingTenant = await Account.findOne({ username: tenantData.email });
-            if (!existingTenant) {
+        for (const nguoiThueData of nguoiThueList) {
+            const existingNguoiThue = await Account.findOne({ username: nguoiThueData.email });
+            if (!existingNguoiThue) {
                 await Account.create({
-                    username: tenantData.email,
-                    email: tenantData.email,
+                    username: nguoiThueData.email,
+                    email: nguoiThueData.email,
                     password: passwordHash,
-                    fullName: tenantData.name,
-                    phone: tenantData.phone,
-                    idCard: "079000" + tenantData.phone,
+                    fullName: nguoiThueData.name,
+                    phone: nguoiThueData.phone,
+                    idCard: "079000" + nguoiThueData.phone,
                     role: 2, // Người thuê
                     status: 1
                 });
-                console.log(`Đã tạo tài khoản khách thuê: ${tenantData.email}`);
+                console.log(`Đã tạo tài khoản Người thuê: ${nguoiThueData.email}`);
             } else {
-                console.log(`Khách thuê ${tenantData.email} đã tồn tại.`);
+                console.log(`Người thuê ${nguoiThueData.email} đã tồn tại.`);
             }
         }
 

@@ -1,14 +1,16 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Image,
+  Linking,
   Modal,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { WebView } from "react-native-webview";
 import { COLORS } from "../constants/theme";
 import { invoiceService } from "../services/invoiceService";
 import { Invoice } from "../types/Invoice";
@@ -49,16 +51,21 @@ export default function PaymentModal({
   onClose,
   onConfirm,
 }: Props) {
-  const [method, setMethod] = useState<PaymentMethod>("bank");
+  const [method, setMethod] = useState<PaymentMethod>("vnpay");
   const [paymentData, setPaymentData] = useState<VietQRPaymentData | null>(
     null
   );
   const [isCreatingQR, setIsCreatingQR] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [isSuccess, setIsSuccess] = useState(false);
   const hasCompletedRef = useRef(false);
   const currentInvoice = invoice as InvoiceWithBank | null;
+  const currentInvoiceId = currentInvoice?.id;
+
+  // VNPay states
+  const [vnpayUrl, setVnpayUrl] = useState<string | null>(null);
+  const [isCreatingVNPay, setIsCreatingVNPay] = useState(false);
+  const [vnpayError, setVnpayError] = useState("");
 
   const BANK_INFO = {
     bankId: "Cake",
@@ -75,14 +82,14 @@ export default function PaymentModal({
     };
   };
 
-  const createVietQRPayment = async () => {
-    if (!currentInvoice?.id) return;
+  const createVietQRPayment = useCallback(async () => {
+    if (!currentInvoiceId) return;
 
     try {
       setIsCreatingQR(true);
       setErrorMessage("");
 
-      const data = await invoiceService.createVietQRPayment(currentInvoice.id);
+      const data = await invoiceService.createVietQRPayment(currentInvoiceId);
 
       setPaymentData(data);
     } catch (error: any) {
@@ -91,6 +98,68 @@ export default function PaymentModal({
     } finally {
       setIsCreatingQR(false);
     }
+  }, [currentInvoiceId]);
+
+  // VNPay: Tạo URL thanh toán khi Người thuê chọn tab VNPay
+  const createVNPayPayment = useCallback(async () => {
+    if (!currentInvoiceId) return;
+    try {
+      setIsCreatingVNPay(true);
+      setVnpayError("");
+      const data = await invoiceService.createVNPayPayment(currentInvoiceId);
+      setVnpayUrl(data.paymentUrl);
+    } catch (error: any) {
+      console.log("Lỗi tạo VNPay:", error);
+      setVnpayError(error?.message || "Không tạo được URL thanh toán VNPay");
+    } finally {
+      setIsCreatingVNPay(false);
+    }
+  }, [currentInvoiceId]);
+
+  // VNPay: Bắt Return URL sau khi Người thuê thanh toán xong
+  const onVNPayNavigationStateChange = async (navState: any) => {
+    const { url } = navState;
+    if (url.includes('yourdomain.com/vnpay_return')) {
+      setVnpayUrl(null);
+      if (url.includes('vnp_ResponseCode=00')) {
+        try {
+          const queryString = url.split('?')[1];
+          if (queryString) {
+            await invoiceService.verifyVNPayReturn(queryString);
+          }
+          if (currentInvoice?.id) {
+            await onConfirm(currentInvoice.id);
+          }
+        } catch (error) {
+          console.log("Lỗi đồng bộ VNPay Local:", error);
+          Alert.alert('Cảnh báo', 'Giao dịch thành công nhưng lỗi đồng bộ trạng thái. Mong Người thuê kiểm tra lại sau.');
+          // Vẫn gọi onConfirm để đóng Modal
+          if (currentInvoice?.id) {
+            await onConfirm(currentInvoice.id);
+          }
+        }
+      } else {
+        Alert.alert('Thất bại', 'Giao dịch chưa hoàn tất hoặc bị hủy bởi Người thuê.');
+      }
+    }
+  };
+
+  // VNPay: Deep-link mở App Ngân hàng trên cùng thiết bị Người thuê
+  const onShouldStartLoadWithRequest = (request: any) => {
+    const { url } = request;
+    if (url.startsWith('http://') || url.startsWith('https://') || url === 'about:blank') {
+      return true;
+    }
+    Linking.canOpenURL(url)
+      .then((supported) => {
+        if (supported) {
+          Linking.openURL(url);
+        } else {
+          Alert.alert('Lỗi', 'Thiết bị của Người thuê chưa cài đặt ứng dụng ngân hàng này.');
+        }
+      })
+      .catch((err) => console.error('Deep-link error:', err));
+    return false;
   };
 
   useEffect(() => {
@@ -99,16 +168,27 @@ export default function PaymentModal({
       setErrorMessage("");
       setIsCreatingQR(false);
       setIsChecking(false);
-      setIsSuccess(false);
-      setMethod("bank");
+      setMethod("vnpay");
       hasCompletedRef.current = false;
+      setVnpayUrl(null);
+      setIsCreatingVNPay(false);
+      setVnpayError("");
       return;
     }
 
     if (visible && currentInvoice?.id && method === "bank") {
       createVietQRPayment();
     }
-  }, [visible, currentInvoice?.id, method]);
+    if (visible && currentInvoice?.id && method === "vnpay") {
+      createVNPayPayment();
+    }
+  }, [
+    visible,
+    currentInvoice?.id,
+    method,
+    createVietQRPayment,
+    createVNPayPayment,
+  ]);
 
   useEffect(() => {
     if (
@@ -131,8 +211,6 @@ export default function PaymentModal({
         if (statusData.status === 1 || statusData.statusText === "success") {
           hasCompletedRef.current = true;
 
-          setIsSuccess(true);
-
           await onConfirm(currentInvoice.id);
         }
       } catch (error) {
@@ -146,6 +224,7 @@ export default function PaymentModal({
     method,
     paymentData?.transactionId,
     currentInvoice?.id,
+    onConfirm,
   ]);
 
   const handleCheckPaymentStatus = async () => {
@@ -162,8 +241,6 @@ export default function PaymentModal({
       );
 
       if (statusData.status === 1 || statusData.statusText === "success") {
-        setIsSuccess(true);
-
         await onConfirm(currentInvoice.id);
         return;
       }
@@ -185,47 +262,7 @@ export default function PaymentModal({
 
   if (!currentInvoice) return null;
 
-  if (isSuccess) {
-  return (
-    <Modal visible={visible} transparent animationType="slide">
-      <View style={styles.overlay}>
-        <View style={styles.box}>
-          <View style={styles.successBox}>
-            <View style={styles.successIcon}>
-              <Text style={styles.successIconText}>✓</Text>
-            </View>
 
-            <Text style={styles.successTitle}>Thanh toán thành công</Text>
-
-            <Text style={styles.successAmount}>{currentInvoice.amount}</Text>
-
-            <Text style={styles.successDesc}>
-              Hóa đơn tháng {currentInvoice.month} • Phòng {currentInvoice.room}
-            </Text>
-
-            <Pressable
-              style={styles.confirmButton}
-              onPress={() => {
-                onClose();
-              }}
-            >
-              <Text style={styles.confirmText}>Xem chi tiết</Text>
-            </Pressable>
-
-            <Pressable
-              style={styles.backHomeButton}
-              onPress={() => {
-                onClose();
-              }}
-            >
-              <Text style={styles.backHomeText}>Trở về danh sách hóa đơn</Text>
-            </Pressable>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
-}
 
   const bankInfo = getBankInfo();
 
@@ -256,23 +293,6 @@ export default function PaymentModal({
             <Pressable
               style={[
                 styles.methodButton,
-                method === "bank" && styles.methodActive,
-              ]}
-              onPress={() => setMethod("bank")}
-            >
-              <Text
-                style={[
-                  styles.methodText,
-                  method === "bank" && styles.methodTextActive,
-                ]}
-              >
-                QR ngân hàng
-              </Text>
-            </Pressable>
-
-            <Pressable
-              style={[
-                styles.methodButton,
                 method === "vnpay" && styles.methodActive,
               ]}
               onPress={() => setMethod("vnpay")}
@@ -284,6 +304,23 @@ export default function PaymentModal({
                 ]}
               >
                 VNPay
+              </Text>
+            </Pressable>
+
+            <Pressable
+              style={[
+                styles.methodButton,
+                method === "bank" && styles.methodActive,
+              ]}
+              onPress={() => setMethod("bank")}
+            >
+              <Text
+                style={[
+                  styles.methodText,
+                  method === "bank" && styles.methodTextActive,
+                ]}
+              >
+                QR ngân hàng
               </Text>
             </Pressable>
 
@@ -383,11 +420,39 @@ export default function PaymentModal({
           )}
 
           {method === "vnpay" && (
-            <View style={styles.infoBox}>
-              <Text style={styles.infoTitle}>Thanh toán qua VNPay</Text>
-              <Text style={styles.infoDesc}>
-                Chức năng VNPay sẽ được tích hợp sau.
-              </Text>
+            <View style={styles.qrBox}>
+              {isCreatingVNPay ? (
+                <View style={styles.loadingQRBox}>
+                  <ActivityIndicator size="large" color={COLORS.orange} />
+                  <Text style={styles.loadingText}>Đang tạo liên kết VNPay...</Text>
+                </View>
+              ) : vnpayError ? (
+                <View style={styles.warningBox}>
+                  <Text style={styles.warningTitle}>Không tạo được liên kết VNPay</Text>
+                  <Text style={styles.warningText}>{vnpayError}</Text>
+                  <Pressable style={styles.retryButton} onPress={createVNPayPayment}>
+                    <Text style={styles.retryText}>Thử lại</Text>
+                  </Pressable>
+                </View>
+              ) : vnpayUrl ? (
+                <View style={{ width: '100%', height: 420, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.border }}>
+                  <WebView
+                    source={{ uri: vnpayUrl }}
+                    onNavigationStateChange={onVNPayNavigationStateChange}
+                    onShouldStartLoadWithRequest={onShouldStartLoadWithRequest}
+                    originWhitelist={['*']}
+                    javaScriptEnabled={true}
+                    domStorageEnabled={true}
+                  />
+                </View>
+              ) : (
+                <View style={styles.warningBox}>
+                  <Text style={styles.warningTitle}>Chưa có liên kết thanh toán</Text>
+                  <Pressable style={styles.retryButton} onPress={createVNPayPayment}>
+                    <Text style={styles.retryText}>Tạo liên kết VNPay</Text>
+                  </Pressable>
+                </View>
+              )}
             </View>
           )}
 
@@ -415,8 +480,19 @@ export default function PaymentModal({
                 <Text style={styles.confirmText}>Đang chờ xác nhận thanh toán</Text>
               )}
             </Pressable>
+          ) : method === "vnpay" ? (
+            <Pressable
+              style={[
+                styles.confirmButton,
+                !vnpayUrl && styles.disabledButton,
+              ]}
+              disabled={!vnpayUrl}
+              onPress={() => setVnpayUrl(null)}
+            >
+              <Text style={styles.confirmText}>Hủy thanh toán VNPay</Text>
+            </Pressable>
           ) : (
-            <Pressable style={styles.confirmButton}>
+            <Pressable style={[styles.confirmButton, styles.disabledButton]}>
               <Text style={styles.confirmText}>Chưa hỗ trợ phương thức này</Text>
             </Pressable>
           )}

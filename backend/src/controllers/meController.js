@@ -5,6 +5,9 @@ const Transaction = require('../models/Transaction');
 const RepairRequest = require('../models/RepairRequest');
 const Room = require('../models/Room');
 const jwt = require('jsonwebtoken');
+const {
+    signContractAndEnsureDeposit,
+} = require('../services/contractSigningService');
 
 const JWT_SECRET = process.env.JWT_SECRET || '***REMOVED***';
 
@@ -82,7 +85,7 @@ exports.getTenantPortal = async (req, res) => {
             }));
         }
 
-        // Đã xóa block lấy hóa đơn theo roomInfo.id vì nó sẽ lấy nhầm hóa đơn của khách thuê cũ gán cho khách mới
+        // Đã xóa block lấy hóa đơn theo roomInfo.id vì nó sẽ lấy nhầm hóa đơn của người thuê cũ gán cho khách mới
         // Khách mới chỉ thấy hóa đơn nếu hợp đồng của họ (contractId) thực sự phát sinh hóa đơn!
 
         // Lấy lịch sử giao dịch của hóa đơn thuộc hợp đồng hiện tại
@@ -103,21 +106,18 @@ exports.getTenantPortal = async (req, res) => {
             }));
         }
 
-        let repairs = [];
-        if (currentContractIds.length > 0) {
-            const rawRepairs = await RepairRequest.find({ contractId: { $in: currentContractIds } })
-                .sort({ updatedAt: -1 });
-            repairs = rawRepairs.map(r => ({
-                id: r._id.toString(),
-                category: r.title || '',
-                description: r.content || '',
-                date: r.createdAt ? new Date(r.createdAt).toLocaleDateString('vi-VN') : '',
-                status: ['Mới', 'Đang xử lý', 'Đã hoàn thành', 'Đã hủy'][r.status] || 'Mới',
-                priority: ['Chưa phân loại', 'Thấp', 'Trung bình', 'Cao'][r.priority] || 'Chưa phân loại',
-                note: r.landlordNote || '',
-                images: r.images || []
-            }));
-        }
+        const rawRepairs = await RepairRequest.find({ tenantId })
+            .sort({ updatedAt: -1 });
+        const repairs = rawRepairs.map(r => ({
+            id: r._id.toString(),
+            category: r.title || '',
+            description: r.content || '',
+            date: r.createdAt ? new Date(r.createdAt).toLocaleDateString('vi-VN') : '',
+            status: ['Mới', 'Đang xử lý', 'Đã hoàn thành', 'Đã hủy'][r.status] || 'Mới',
+            priority: ['Chưa phân loại', 'Thấp', 'Trung bình', 'Cao'][r.priority] || 'Chưa phân loại',
+            note: r.landlordNote || '',
+            images: r.images || []
+        }));
 
         // Tính toán thống kê
         const paidInvoices = invoices.filter(i => i.status === 'Đã thanh toán');
@@ -171,25 +171,25 @@ exports.getTenantPortal = async (req, res) => {
 // PUT /api/me/sign-contract/:contractId - Người thuê ký hợp đồng
 exports.signContract = async (req, res) => {
     try {
-        const tenantId = getTenantIdFromToken(req);
-        if (!tenantId) return res.status(401).json({ success: false, message: 'Chưa đăng nhập' });
-
-        const contract = await Contract.findById(req.params.contractId);
-        if (!contract) return res.status(404).json({ success: false, message: 'Không tìm thấy hợp đồng!' });
-        if (contract.tenantId.toString() !== tenantId.toString()) {
-            return res.status(403).json({ success: false, message: 'Bạn không có quyền ký hợp đồng này!' });
-        }
-        if (contract.status !== 0) {
-            return res.status(400).json({ success: false, message: 'Hợp đồng không ở trạng thái chờ ký!' });
-        }
-
-        contract.status = 4;
-        contract.tenantConfirmedAt = new Date();
-        await contract.save();
-
-        res.status(200).json({ success: true, message: 'Đã ký hợp đồng thành công! Đang chờ chủ trọ duyệt và xác nhận để hợp đồng có hiệu lực.' });
+        const result = await signContractAndEnsureDeposit({
+            contractId: req.params.contractId,
+            nguoiThueId: req.auth.id,
+        });
+        res.status(200).json({
+            success: true,
+            message: 'Đã ký hợp đồng thành công. Vui lòng hoàn tất thanh toán tiền cọc.',
+            data: result.contract,
+            invoiceId: result.invoiceId,
+            depositRequired: result.depositRequired,
+            depositAmount: result.depositAmount,
+            idempotent: result.idempotent,
+        });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Lỗi Server: ' + error.message });
+        res.status(error.status || 500).json({
+            success: false,
+            code: error.code || 'CONTRACT_SIGNING_FAILED',
+            message: error.message || 'Không thể ký hợp đồng.',
+        });
     }
 };
 
@@ -253,6 +253,7 @@ exports.createRepair = async (req, res) => {
         }
 
         const newRepair = new RepairRequest({
+            tenantId,
             contractId: contractToUse._id,
             title: req.body.category || req.body.title || 'Yêu cầu sửa chữa',
             content: req.body.description || req.body.content || '',

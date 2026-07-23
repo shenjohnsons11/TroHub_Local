@@ -1,6 +1,6 @@
 import React from "react";
-import { View, StyleSheet, ViewStyle, StyleProp } from "react-native";
-import { COLORS, SIZES } from "../constants/theme";
+import { View, StyleSheet, ViewStyle, StyleProp, useColorScheme } from "react-native";
+import { SIZES, TROHUB_THEMES } from "../constants/theme";
 
 type Props = {
   children: React.ReactNode;
@@ -8,15 +8,16 @@ type Props = {
 };
 
 export default function Card({ children, style }: Props) {
-  return <View style={[styles.card, style]}>{children}</View>;
+  const theme = TROHUB_THEMES[useColorScheme() === "dark" ? "dark" : "light"];
+  return <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }, style]}>{children}</View>;
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: COLORS.card,
     borderRadius: SIZES.radius,
     padding: 16,
-    shadowColor: "#000",
+    borderWidth: 1,
+    shadowColor: "#25292D",
     shadowOpacity: 0.06,
     shadowOffset: { width: 0, height: 8 },
     shadowRadius: 16,
