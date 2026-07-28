@@ -20,6 +20,7 @@ export type NotificationApi = {
   error: (message: string, options?: NotificationOptions) => void;
   warning: (message: string, options?: NotificationOptions) => void;
   info: (message: string, options?: NotificationOptions) => void;
+  loading: (message: string, options?: NotificationOptions) => () => void;
   confirm: (options: ConfirmOptions) => Promise<boolean>;
 };
 
