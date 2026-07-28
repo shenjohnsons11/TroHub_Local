@@ -32,6 +32,10 @@ export type AdminContract = {
   endDate: string;
   fixedRentPrice: number;
   fixedDeposit: number;
+  electricityPrice?: number;
+  waterPrice?: number;
+  initialElectricity?: number;
+  initialWater?: number;
   status: number; // 0: Chờ xác nhận, 1: Hiệu lực, 2: Hết hạn, 3: Hủy
   services?: { serviceId: string; fixedPrice: number }[];
   createdAt?: string;
@@ -184,6 +188,10 @@ export const adminService = {
     endDate: string;
     fixedRentPrice: number;
     fixedDeposit: number;
+    electricityPrice: number;
+    waterPrice: number;
+    initialElectricity: number;
+    initialWater: number;
   }): Promise<AdminContract> {
     const token = await authService.getToken();
 

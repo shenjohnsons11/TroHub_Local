@@ -1,10 +1,9 @@
 import { Platform } from "react-native";
 
-const LOCAL_IP = "192.168.1.99"; // Chỉ dùng khi test bằng điện thoại thật
+const LOCAL_API_URL =
+  Platform.OS === "android"
+    ? "http://10.0.2.2:5000/api"
+    : "http://localhost:5000/api";
 
 export const API_BASE_URL =
-  Platform.OS === "web"
-    ? "http://localhost:3000/api"
-    : Platform.OS === "android"
-    ? "http://10.0.2.2:3000/api"
-    : `http://${LOCAL_IP}:3000/api`;
+  process.env.EXPO_PUBLIC_API_BASE_URL || LOCAL_API_URL;

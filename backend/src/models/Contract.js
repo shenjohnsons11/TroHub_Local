@@ -7,6 +7,10 @@ const contractSchema = new mongoose.Schema({
     endDate: { type: Date, required: true },
     fixedRentPrice: { type: Number, required: true }, // gia_thue_chot
     fixedDeposit: { type: Number, required: true },   // tien_coc_chot
+    electricityPrice: { type: Number, min: 0 },
+    waterPrice: { type: Number, min: 0 },
+    initialElectricity: { type: Number, min: 0 },
+    initialWater: { type: Number, min: 0 },
     tenantConfirmedAt: { type: Date },                // thoi_gian_nguoi_thue_xac_nhan
     status: { type: Number, enum: [0, 1, 2, 3, 4, 5], default: 0 }, // 0: Chờ ký, 1: Hiệu lực, 2: Hết hạn, 3: Hủy, 4: Chờ chủ duyệt, 5: Chờ duyệt trả phòng
     
