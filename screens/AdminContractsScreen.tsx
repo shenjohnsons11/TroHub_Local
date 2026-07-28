@@ -1,10 +1,22 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, FlatList, Pressable, TextInput, Modal, ActivityIndicator, Alert, ScrollView, Switch } from "react-native";
+import {
+  ActivityIndicator,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
-import { COLORS } from "../constants/theme";
 import { adminService, AdminContract, AdminRoom, AdminTenant } from "../services/adminService";
 import {
   defaultContractDates,
@@ -14,41 +26,53 @@ import {
   resolveEndDateAfterStartChange,
   validateContractDateRange,
 } from "../utils/contractDate";
-type Props = {
-  params?: any;
-};
+import { useAppTheme } from "../contexts/ThemeContext";
+import { useNotification } from "../hooks/useNotification";
+import AnimatedEntry from "../components/ui/AnimatedEntry";
+import AppButton from "../components/ui/AppButton";
+import GradientHero from "../components/ui/GradientHero";
+import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
+import ProgressStepper from "../components/ui/ProgressStepper";
+
+type Props = { params?: any };
+type IconName = React.ComponentProps<typeof Ionicons>["name"];
+
+const contractSteps: { label: string; icon: IconName }[] = [
+  { label: "Chọn phòng", icon: "home-outline" },
+  { label: "Thông tin khách", icon: "person-outline" },
+  { label: "Điện & nước", icon: "flash-outline" },
+  { label: "Ký & xác nhận", icon: "create-outline" },
+];
 
 export default function AdminContractsScreen({ params }: Props) {
+  const { theme } = useAppTheme();
+  const notification = useNotification();
   const initialDates = defaultContractDates();
   const [contracts, setContracts] = useState<AdminContract[]>([]);
   const [rooms, setRooms] = useState<AdminRoom[]>([]);
   const [tenants, setTenants] = useState<AdminTenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "pending" | "active">("all");
-
-  // Modal states for creating contract
   const [modalVisible, setModalVisible] = useState(params?.action === "create");
   const [selectedRoomId, setSelectedRoomId] = useState("");
   const [selectedTenantId, setSelectedTenantId] = useState("");
   const [fixedRent, setFixedRent] = useState("");
   const [fixedDeposit, setFixedDeposit] = useState("");
+  const [initialElectricity, setInitialElectricity] = useState("");
+  const [initialWater, setInitialWater] = useState("");
   const [startDate, setStartDate] = useState(initialDates.startDate);
   const [endDate, setEndDate] = useState(initialDates.endDate);
   const [endDateWasEdited, setEndDateWasEdited] = useState(false);
-  const [datePickerField, setDatePickerField] = useState<
-    "startDate" | "endDate" | null
-  >(null);
+  const [datePickerField, setDatePickerField] = useState<"startDate" | "endDate" | null>(null);
   const [submitting, setSubmitting] = useState(false);
-
-  // Wizard states
   const [currentStep, setCurrentStep] = useState(1);
   const [confirmed, setConfirmed] = useState(false);
   const [services, setServices] = useState({
-    electricity: { enabled: true, price: '3500' },
-    water: { enabled: true, price: '25000' },
-    trash: { enabled: true, price: '20000' },
-    internet: { enabled: true, price: '100000' },
-    management: { enabled: false, price: '50000' },
+    electricity: { enabled: true, price: "3500" },
+    water: { enabled: true, price: "25000" },
+    trash: { enabled: true, price: "20000" },
+    internet: { enabled: true, price: "100000" },
+    management: { enabled: false, price: "50000" },
   });
 
   const loadData = async () => {
@@ -63,18 +87,26 @@ export default function AdminContractsScreen({ params }: Props) {
       setTenants(tenantsData);
     } catch (error) {
       console.log("Lỗi tải dữ liệu hợp đồng:", error);
+      notification.error("Không thể tải dữ liệu hợp đồng.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadData();
+    void loadData();
+    // Keep the original mount-only fetch contract.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const closeWizard = () => {
+    if (submitting) return;
+    setModalVisible(false);
+  };
 
   const handleSelectRoom = (roomId: string) => {
     setSelectedRoomId(roomId);
-    const room = rooms.find(r => r._id === roomId);
+    const room = rooms.find((item) => item._id === roomId);
     if (room) {
       setFixedRent(String(room.defaultRentPrice || 0));
       setFixedDeposit(String(room.defaultDeposit || 0));
@@ -83,7 +115,7 @@ export default function AdminContractsScreen({ params }: Props) {
 
   const handleCreateContract = async () => {
     if (!selectedRoomId || !selectedTenantId || !fixedRent.trim() || !fixedDeposit.trim() || !startDate.trim() || !endDate.trim()) {
-      Alert.alert("Lỗi", "Vui lòng điền đầy đủ thông tin!");
+      notification.error("Vui lòng điền đầy đủ thông tin!", { title: "Lỗi" });
       return;
     }
 
@@ -91,18 +123,32 @@ export default function AdminContractsScreen({ params }: Props) {
     const startDateIso = parseDisplayToIso(startDate);
     const endDateIso = parseDisplayToIso(endDate);
     if (Object.keys(dateErrors).length || !startDateIso || !endDateIso) {
-      Alert.alert(
-        "Ngày hợp đồng không hợp lệ",
-        dateErrors.startDate ||
-          dateErrors.endDate ||
-          "Ngày phải đúng định dạng dd/mm/yyyy.",
+      notification.error(
+        dateErrors.startDate || dateErrors.endDate || "Ngày phải đúng định dạng dd/mm/yyyy.",
+        { title: "Ngày hợp đồng không hợp lệ" },
       );
       setCurrentStep(2);
       return;
     }
+    const meterTerms = {
+      electricityPrice: Number(services.electricity.price),
+      waterPrice: Number(services.water.price),
+      initialElectricity: Number(initialElectricity),
+      initialWater: Number(initialWater),
+    };
+    if (
+      !initialElectricity.trim()
+      || !initialWater.trim()
+      || Object.values(meterTerms).some((value) => !Number.isFinite(value) || value < 0)
+    ) {
+      notification.error("Giá và chỉ số đầu điện nước phải là số không âm.", { title: "Lỗi" });
+      setCurrentStep(3);
+      return;
+    }
 
+    setSubmitting(true);
+    const closeLoading = notification.loading("Đang tạo hợp đồng...");
     try {
-      setSubmitting(true);
       await adminService.createContract({
         roomId: selectedRoomId,
         tenantId: selectedTenantId,
@@ -110,29 +156,30 @@ export default function AdminContractsScreen({ params }: Props) {
         endDate: endDateIso,
         fixedRentPrice: Number(fixedRent),
         fixedDeposit: Number(fixedDeposit),
+        ...meterTerms,
       });
-      Alert.alert("Thành công", "Tạo hợp đồng nháp thành công! Chờ người thuê ký xác nhận.");
+      notification.success("Tạo hợp đồng nháp thành công! Chờ người thuê ký xác nhận.");
       setModalVisible(false);
       setSelectedRoomId("");
       setSelectedTenantId("");
+      setInitialElectricity("");
+      setInitialWater("");
       setCurrentStep(1);
       setConfirmed(false);
       const nextDefaults = defaultContractDates();
       setStartDate(nextDefaults.startDate);
       setEndDate(nextDefaults.endDate);
       setEndDateWasEdited(false);
-      loadData();
+      void loadData();
     } catch (error) {
-      Alert.alert("Lỗi", error instanceof Error ? error.message : "Tạo hợp đồng thất bại!");
+      notification.error(error instanceof Error ? error.message : "Tạo hợp đồng thất bại!");
     } finally {
+      closeLoading();
       setSubmitting(false);
     }
   };
 
-  const handleDatePickerChange = (
-    event: DateTimePickerEvent,
-    selectedDate?: Date,
-  ) => {
+  const handleDatePickerChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     const field = datePickerField;
     setDatePickerField(null);
     if (event.type === "dismissed" || !field || !selectedDate) return;
@@ -140,11 +187,7 @@ export default function AdminContractsScreen({ params }: Props) {
     if (field === "startDate") {
       setStartDate(selectedDisplayDate);
       setEndDate((currentEndDate) =>
-        resolveEndDateAfterStartChange(
-          selectedDisplayDate,
-          endDateWasEdited,
-          currentEndDate,
-        ),
+        resolveEndDateAfterStartChange(selectedDisplayDate, endDateWasEdited, currentEndDate),
       );
       return;
     }
@@ -153,31 +196,27 @@ export default function AdminContractsScreen({ params }: Props) {
   };
 
   const handleApproveContract = async (contractId: string) => {
-    Alert.alert(
-      "Xác nhận",
-      "Bạn có chắc chắn muốn duyệt và kích hoạt hợp đồng này không?",
-      [
-        { text: "Hủy", style: "cancel" },
-        {
-          text: "Duyệt",
-          onPress: async () => {
-            try {
-              setLoading(true);
-              const success = await adminService.confirmContract(contractId);
-              if (success) {
-                Alert.alert("Thành công", "Đã duyệt và kích hoạt hợp đồng thành công!");
-                loadData();
-              } else {
-                throw new Error("Không thể xác nhận hợp đồng");
-              }
-            } catch (error) {
-              Alert.alert("Lỗi", error instanceof Error ? error.message : "Duyệt hợp đồng thất bại!");
-              setLoading(false);
-            }
-          }
-        }
-      ]
-    );
+    const approved = await notification.confirm({
+      title: "Xác nhận",
+      message: "Bạn có chắc chắn muốn duyệt và kích hoạt hợp đồng này không?",
+      confirmText: "Duyệt",
+      cancelText: "Hủy",
+    });
+    if (!approved) return;
+
+    setLoading(true);
+    const closeLoading = notification.loading("Đang duyệt hợp đồng...");
+    try {
+      const success = await adminService.confirmContract(contractId);
+      if (!success) throw new Error("Không thể xác nhận hợp đồng");
+      notification.success("Đã duyệt và kích hoạt hợp đồng thành công!");
+      void loadData();
+    } catch (error) {
+      notification.error(error instanceof Error ? error.message : "Duyệt hợp đồng thất bại!");
+      setLoading(false);
+    } finally {
+      closeLoading();
+    }
   };
 
   const getStatusText = (status: number) => {
@@ -190,1058 +229,544 @@ export default function AdminContractsScreen({ params }: Props) {
       default: return "Nháp";
     }
   };
-
   const getStatusColor = (status: number) => {
-    switch (status) {
-      case 0: return COLORS.orange;
-      case 1: return COLORS.green;
-      case 2: return COLORS.muted;
-      case 3: return COLORS.red;
-      case 4: return "#007AFF";
-      default: return COLORS.muted;
-    }
+    if (status === 1) return theme.positive;
+    if (status === 3) return theme.danger;
+    if (status === 0 || status === 4) return theme.warningForeground;
+    return theme.muted;
   };
-
   const getStatusBg = (status: number) => {
-    switch (status) {
-      case 0: return COLORS.orangeSoft;
-      case 1: return "#EAF9F1";
-      case 2: return "#E8E9ED";
-      case 3: return "#FFF1F1";
-      case 4: return "#E8F4FD";
-      default: return "#E8E9ED";
-    }
+    if (status === 1) return theme.positiveSoft;
+    if (status === 0 || status === 3 || status === 4) return theme.warningSoft;
+    return theme.surfaceElevated;
   };
 
-  const filteredContracts = contracts.filter(c => {
-    if (filter === "pending") return c.status === 0 || c.status === 4;
-    if (filter === "active") return c.status === 1;
+  const filteredContracts = contracts.filter((contract) => {
+    if (filter === "pending") return contract.status === 0 || contract.status === 4;
+    if (filter === "active") return contract.status === 1;
     return true;
   });
-
-  const selectableRooms = rooms.filter(room => room.status === 0 || room.status === 1);
+  const selectableRooms = rooms.filter((room) => room.status === 0 || room.status === 1);
+  const styles = createStyles(theme);
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.orange} />
+        <ActivityIndicator size="large" color={theme.primary} />
+        <Text style={styles.loadingText}>Đang chuẩn bị hợp đồng...</Text>
       </View>
     );
   }
 
+  const filterButton = (value: typeof filter, label: string) => (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected: filter === value }}
+      onPress={() => setFilter(value)}
+      style={[styles.filterButton, filter === value && styles.filterActive]}
+    >
+      <Text style={[styles.filterText, filter === value && styles.filterTextActive]}>{label}</Text>
+    </Pressable>
+  );
+
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Quản lý hợp đồng</Text>
-        <Pressable style={styles.addButton} onPress={() => setModalVisible(true)}>
-          <Ionicons name="document-text" size={18} color="#FFFFFF" />
-          <Text style={styles.addButtonText}>Tạo hợp đồng</Text>
-        </Pressable>
-      </View>
-
-      {/* Bộ lọc */}
-      <View style={styles.filterContainer}>
-        <Pressable
-          style={[styles.filterButton, filter === "all" && styles.filterActive]}
-          onPress={() => setFilter("all")}
-        >
-          <Text style={[styles.filterText, filter === "all" && styles.filterTextActive]}>Tất cả</Text>
-        </Pressable>
-        <Pressable
-          style={[styles.filterButton, filter === "pending" && styles.filterActive]}
-          onPress={() => setFilter("pending")}
-        >
-          <Text style={[styles.filterText, filter === "pending" && styles.filterTextActive]}>Chờ duyệt/ký</Text>
-        </Pressable>
-        <Pressable
-          style={[styles.filterButton, filter === "active" && styles.filterActive]}
-          onPress={() => setFilter("active")}
-        >
-          <Text style={[styles.filterText, filter === "active" && styles.filterTextActive]}>Đang hiệu lực</Text>
-        </Pressable>
-      </View>
-
       <FlatList
         data={filteredContracts}
         keyExtractor={(item) => item._id}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => {
-          const roomCode = (item.roomId && typeof item.roomId === "object") ? item.roomId.roomCode : "N/A";
-          const tenantName = (item.tenantId && typeof item.tenantId === "object") ? item.tenantId.fullName : "N/A";
-          const tenantPhone = (item.tenantId && typeof item.tenantId === "object") ? item.tenantId.phone : "N/A";
+        ListHeaderComponent={
+          <View>
+            <AnimatedEntry>
+              <GradientHero
+                icon="documents-outline"
+                label="HỢP ĐỒNG VẬN HÀNH"
+                value={`${contracts.length} hợp đồng`}
+                detail={`${contracts.filter((item) => item.status === 1).length} đang có hiệu lực`}
+              />
+            </AnimatedEntry>
+            <View style={styles.headingRow}>
+              <View>
+                <Text style={styles.title}>Quản lý hợp đồng</Text>
+                <Text style={styles.subtitle}>Theo dõi, tạo mới và phê duyệt.</Text>
+              </View>
+              <AppButton icon="add-circle-outline" onPress={() => setModalVisible(true)} style={styles.addButton}>
+                Tạo mới
+              </AppButton>
+            </View>
+            <View style={styles.filterContainer}>
+              {filterButton("all", "Tất cả")}
+              {filterButton("pending", "Chờ duyệt/ký")}
+              {filterButton("active", "Hiệu lực")}
+            </View>
+          </View>
+        }
+        ListEmptyComponent={
+          contracts.length === 0 ? (
+            <IllustratedEmptyState
+              kind="contract"
+              title="Chưa có hợp đồng"
+              description="Tạo hợp đồng đầu tiên để bắt đầu quản lý phòng và người thuê."
+              actionLabel="Tạo hợp đồng"
+              actionIcon="add-circle-outline"
+              onAction={() => setModalVisible(true)}
+            />
+          ) : (
+            <Text style={styles.filteredEmpty}>Không có hợp đồng phù hợp bộ lọc.</Text>
+          )
+        }
+        renderItem={({ item, index }) => {
+          const roomCode = item.roomId && typeof item.roomId === "object" ? item.roomId.roomCode : "N/A";
+          const tenantName = item.tenantId && typeof item.tenantId === "object" ? item.tenantId.fullName : "N/A";
+          const tenantPhone = item.tenantId && typeof item.tenantId === "object" ? item.tenantId.phone : "N/A";
+          const formattedPhone = tenantPhone !== "N/A"
+            ? String(tenantPhone).replace(/\D/g, "").replace(/(\d{4})(\d{3})(\d+)/, "$1.$2.$3").replace(/(\d{4})(\d+)/, "$1.$2")
+            : "N/A";
 
           return (
-            <View style={styles.contractCard}>
-              <View style={styles.contractInfo}>
-                <Text style={styles.roomCode}>Phòng {roomCode}</Text>
-                <Text style={styles.tenantName}>Người thuê: {tenantName} ({tenantPhone !== "N/A" ? String(tenantPhone).replace(/\D/g, "").replace(/(\d{4})(\d{3})(\d+)/, "$1.$2.$3").replace(/(\d{4})(\d+)/, "$1.$2") : "N/A"})</Text>
-                <Text style={styles.contractDates}>
-                  Thời hạn: {item.startDate ? new Date(item.startDate).toLocaleDateString("vi-VN") : ""} - {item.endDate ? new Date(item.endDate).toLocaleDateString("vi-VN") : ""}
-                </Text>
-                <Text style={styles.contractPrices}>
-                  Tiền thuê: {item.fixedRentPrice?.toLocaleString("vi-VN")}đ • Cọc: {item.fixedDeposit?.toLocaleString("vi-VN")}đ
-                </Text>
-              </View>
-
-              <View style={styles.rightAction}>
-                <View style={[styles.statusBadge, { backgroundColor: getStatusBg(item.status) }]}>
-                  <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-                    {getStatusText(item.status)}
+            <AnimatedEntry delay={Math.min(index, 5) * 45}>
+              <View style={styles.contractCard}>
+                <View style={styles.cardTop}>
+                  <View style={styles.roomIdentity}>
+                    <View style={styles.iconTile}>
+                      <Ionicons name="home-outline" size={20} color={theme.primary} />
+                    </View>
+                    <View>
+                      <Text style={styles.roomCode}>Phòng {roomCode}</Text>
+                      <Text style={styles.tenantName}>{tenantName} · {formattedPhone}</Text>
+                    </View>
+                  </View>
+                  <View style={[styles.statusBadge, { backgroundColor: getStatusBg(item.status) }]}>
+                    <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
+                      {getStatusText(item.status)}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.money}>{item.fixedRentPrice?.toLocaleString("vi-VN")}đ</Text>
+                <Text style={styles.moneyCaption}>Tiền thuê mỗi tháng · Cọc {item.fixedDeposit?.toLocaleString("vi-VN")}đ</Text>
+                <View style={styles.metaRow}>
+                  <Ionicons name="calendar-outline" size={16} color={theme.muted} />
+                  <Text style={styles.contractDates}>
+                    {item.startDate ? new Date(item.startDate).toLocaleDateString("vi-VN") : ""} – {item.endDate ? new Date(item.endDate).toLocaleDateString("vi-VN") : ""}
                   </Text>
                 </View>
-                {item.status === 4 && (
-                  <Pressable style={styles.approveButton} onPress={() => handleApproveContract(item._id)}>
-                    <Text style={styles.approveButtonText}>Duyệt</Text>
-                  </Pressable>
-                )}
+                {item.status === 4 ? (
+                  <AppButton
+                    icon="shield-checkmark-outline"
+                    onPress={() => void handleApproveContract(item._id)}
+                    style={styles.approveButton}
+                  >
+                    Duyệt hợp đồng
+                  </AppButton>
+                ) : null}
               </View>
-            </View>
+            </AnimatedEntry>
           );
         }}
       />
 
-      {/* Modal Tạo hợp đồng mới (Wizard 4 Bước) */}
-      <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => setModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.wizardContent}>
-            {/* Header */}
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={submitting ? () => undefined : closeWizard}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.modalOverlay}
+        >
+          <View accessibilityViewIsModal style={styles.wizardContent}>
             <View style={styles.wizardHeader}>
-              <View>
-                <Text style={styles.wizardTitle}>Tạo hợp đồng mới</Text>
+              <View style={styles.wizardHeading}>
+                <Text accessibilityRole="header" style={styles.wizardTitle}>Tạo hợp đồng mới</Text>
                 <Text style={styles.wizardSubtitle}>Hoàn tất 4 bước để lập hợp đồng thuê phòng.</Text>
               </View>
-              <Pressable onPress={() => setModalVisible(false)} style={styles.closeButton}>
-                <Ionicons name="close" size={24} color={COLORS.muted} />
+              <Pressable
+                accessibilityLabel="Đóng trình tạo hợp đồng"
+                accessibilityRole="button"
+                disabled={submitting}
+                onPress={closeWizard}
+                style={styles.closeButton}
+              >
+                <Ionicons name="close" size={24} color={theme.muted} />
               </Pressable>
             </View>
-
-            {/* Stepper */}
             <View style={styles.stepperContainer}>
-              {[
-                { num: 1, label: 'Người thuê', icon: 'person' },
-                { num: 2, label: 'Chi tiết', icon: 'home' },
-                { num: 3, label: 'Dịch vụ', icon: 'flash' },
-                { num: 4, label: 'Xác nhận', icon: 'checkmark-circle' },
-              ].map((step, index) => {
-                const isActive = currentStep === step.num;
-                const isCompleted = currentStep > step.num;
-                return (
-                  <View key={step.num} style={styles.stepItemWrapper}>
-                    <View style={styles.stepItem}>
-                      <View style={[
-                        styles.stepCircle,
-                        isCompleted ? styles.stepCircleCompleted : isActive ? styles.stepCircleActive : styles.stepCircleInactive
-                      ]}>
-                        <Ionicons name={step.icon as any} size={14} color={isCompleted || isActive ? "#FFF" : COLORS.muted} />
-                      </View>
-                      <View style={styles.stepTextContainer}>
-                        <Text style={styles.stepLabelMini}>BƯỚC {step.num}</Text>
-                        <Text style={[styles.stepLabel, isActive && styles.stepLabelActive]}>{step.label}</Text>
-                      </View>
-                    </View>
-                    {index < 3 && (
-                      <View style={[styles.stepLine, isCompleted && styles.stepLineCompleted]} />
-                    )}
-                  </View>
-                );
-              })}
+              <ProgressStepper steps={contractSteps} currentStep={currentStep - 1} />
             </View>
 
-            {/* Content */}
-            <ScrollView style={styles.wizardBody} showsVerticalScrollIndicator={false}>
-
-              {/* BƯỚC 1: NGƯỜI THUÊ */}
-              {currentStep === 1 && (
-                <View style={styles.stepContent}>
-                  <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Người thuê</Text>
-                    <Text style={styles.cardSubtitle}>Chọn người thuê đã có trên hệ thống để lập hợp đồng.</Text>
-
-                    {tenants.length === 0 ? (
-                      <Text style={styles.noVacantText}>Không có người thuê nào trên hệ thống!</Text>
-                    ) : (
-                      <View style={styles.tenantSelectGrid}>
-                        {tenants.map((t) => (
-                          <Pressable
-                            key={t._id}
-                            style={[
-                              styles.tenantSelectItem,
-                              selectedTenantId === t._id && styles.tenantSelectActive
-                            ]}
-                            onPress={() => setSelectedTenantId(t._id)}
-                          >
-                            <Text style={[
-                              styles.tenantSelectText,
-                              selectedTenantId === t._id && styles.tenantSelectTextActive
-                            ]}>
-                              {t.fullName}
-                            </Text>
-                            <Text style={styles.tenantPhoneText}>{t.phone}</Text>
-                          </Pressable>
-                        ))}
-                      </View>
-                    )}
-                  </View>
-                </View>
-              )}
-
-              {/* BƯỚC 2: CHI TIẾT THUÊ */}
-              {currentStep === 2 && (
-                <View style={styles.stepContent}>
-                  <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Phòng thuê</Text>
-                    <Text style={styles.cardSubtitle}>Chọn phòng còn trống để lập hợp đồng.</Text>
-
-                    {selectableRooms.length === 0 ? (
-                      <Text style={styles.noVacantText}>Không có phòng nào có thể chọn!</Text>
-                    ) : (
-                      <View style={styles.roomSelectGrid}>
-                        {selectableRooms.map((room) => (
+            <ScrollView
+              style={styles.wizardBody}
+              contentContainerStyle={styles.wizardBodyContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              {currentStep === 1 ? (
+                <View style={styles.card}>
+                  <SectionTitle icon="home-outline" title="Chọn phòng" subtitle="Chọn phòng còn trống để bắt đầu." theme={theme} />
+                  {selectableRooms.length === 0 ? (
+                    <Text style={styles.noVacantText}>Không có phòng nào có thể chọn.</Text>
+                  ) : (
+                    <View style={styles.selectionGrid}>
+                      {selectableRooms.map((room) => {
+                        const selected = selectedRoomId === room._id;
+                        return (
                           <Pressable
                             key={room._id}
-                            style={[
-                              styles.roomSelectItem,
-                              selectedRoomId === room._id && styles.roomSelectActive
-                            ]}
+                            accessibilityRole="radio"
+                            accessibilityState={{ checked: selected }}
                             onPress={() => handleSelectRoom(room._id)}
+                            style={[styles.selectionItem, selected && styles.selectionActive]}
                           >
-                            <Text style={[
-                              styles.roomSelectText,
-                              selectedRoomId === room._id && styles.roomSelectTextActive
-                            ]}>
-                              {room.roomCode}
-                            </Text>
+                            <Ionicons name={selected ? "checkmark-circle" : "home-outline"} size={19} color={selected ? theme.primary : theme.muted} />
+                            <Text style={[styles.selectionText, selected && styles.selectionTextActive]}>{room.roomCode}</Text>
                           </Pressable>
-                        ))}
+                        );
+                      })}
+                    </View>
+                  )}
+                </View>
+              ) : null}
+
+              {currentStep === 2 ? (
+                <>
+                  <View style={styles.card}>
+                    <SectionTitle icon="person-outline" title="Thông tin khách" subtitle="Chọn người thuê đã có trên hệ thống." theme={theme} />
+                    {tenants.length === 0 ? (
+                      <Text style={styles.noVacantText}>Không có người thuê nào trên hệ thống.</Text>
+                    ) : (
+                      <View style={styles.selectionGrid}>
+                        {tenants.map((tenant) => {
+                          const selected = selectedTenantId === tenant._id;
+                          return (
+                            <Pressable
+                              key={tenant._id}
+                              accessibilityRole="radio"
+                              accessibilityState={{ checked: selected }}
+                              onPress={() => setSelectedTenantId(tenant._id)}
+                              style={[styles.tenantItem, selected && styles.selectionActive]}
+                            >
+                              <Ionicons name={selected ? "checkmark-circle" : "person-circle-outline"} size={20} color={selected ? theme.primary : theme.muted} />
+                              <View>
+                                <Text style={[styles.selectionText, selected && styles.selectionTextActive]}>{tenant.fullName}</Text>
+                                <Text style={styles.tenantPhone}>{tenant.phone}</Text>
+                              </View>
+                            </Pressable>
+                          );
+                        })}
                       </View>
                     )}
                   </View>
-
                   <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Điều khoản thuê</Text>
-
-                    <View style={styles.inputGroupRow}>
-                      <View style={styles.inputWrapper}>
-                        <Text style={styles.label}>Giá thuê (VNĐ/tháng) <Text style={styles.required}>*</Text></Text>
-                        <TextInput style={styles.input} value={fixedRent} onChangeText={setFixedRent} keyboardType="numeric" placeholder="VD: 3500000" />
+                    <SectionTitle icon="document-text-outline" title="Điều khoản thuê" theme={theme} />
+                    <Field label="Giá thuê (VNĐ/tháng)" required styles={styles}>
+                      <TextInput style={styles.input} value={fixedRent} onChangeText={setFixedRent} keyboardType="numeric" placeholder="VD: 3500000" placeholderTextColor={theme.muted} />
+                    </Field>
+                    <Field label="Tiền cọc (VNĐ)" required styles={styles}>
+                      <TextInput style={styles.input} value={fixedDeposit} onChangeText={setFixedDeposit} keyboardType="numeric" placeholder="VD: 3500000" placeholderTextColor={theme.muted} />
+                    </Field>
+                    <View style={styles.inputRow}>
+                      <View style={styles.inputColumn}>
+                        <Field label="Ngày bắt đầu" required styles={styles}>
+                          <View style={styles.dateInputContainer}>
+                            <TextInput
+                              style={styles.dateInput}
+                              value={startDate}
+                              onChangeText={(value) => {
+                                const nextStartDate = formatDisplayDateInput(value);
+                                setStartDate(nextStartDate);
+                                setEndDate((currentEndDate) => resolveEndDateAfterStartChange(nextStartDate, endDateWasEdited, currentEndDate));
+                              }}
+                              keyboardType="number-pad"
+                              maxLength={10}
+                              placeholder="dd/mm/yyyy"
+                              placeholderTextColor={theme.muted}
+                            />
+                            <Pressable accessibilityLabel="Mở lịch chọn ngày bắt đầu" hitSlop={8} onPress={() => setDatePickerField("startDate")} style={styles.datePickerButton}>
+                              <Ionicons name="calendar-outline" size={19} color={theme.primary} />
+                            </Pressable>
+                          </View>
+                        </Field>
                       </View>
-                      <View style={styles.inputWrapper}>
-                        <Text style={styles.label}>Tiền cọc (VNĐ) <Text style={styles.required}>*</Text></Text>
-                        <TextInput style={styles.input} value={fixedDeposit} onChangeText={setFixedDeposit} keyboardType="numeric" placeholder="VD: 3500000" />
-                      </View>
-                    </View>
-
-                    <View style={styles.inputGroupRow}>
-                      <View style={styles.inputWrapper}>
-                        <Text style={styles.label}>Ngày bắt đầu <Text style={styles.required}>*</Text></Text>
-                        <View style={styles.dateInputContainer}>
-                          <TextInput
-                            style={styles.dateInput}
-                            value={startDate}
-                            onChangeText={(value) => {
-                              const nextStartDate = formatDisplayDateInput(value);
-                              setStartDate(nextStartDate);
-                              setEndDate((currentEndDate) =>
-                                resolveEndDateAfterStartChange(
-                                  nextStartDate,
-                                  endDateWasEdited,
-                                  currentEndDate,
-                                ),
-                              );
-                            }}
-                            keyboardType="number-pad"
-                            maxLength={10}
-                            placeholder="dd/mm/yyyy"
-                          />
-                          <Pressable
-                            accessibilityLabel="Mở lịch chọn ngày bắt đầu"
-                            hitSlop={8}
-                            onPress={() => setDatePickerField("startDate")}
-                            style={styles.datePickerButton}
-                          >
-                            <Ionicons name="calendar-outline" size={19} color={COLORS.orange} />
-                          </Pressable>
-                        </View>
-                      </View>
-                      <View style={styles.inputWrapper}>
-                        <Text style={styles.label}>Ngày kết thúc <Text style={styles.required}>*</Text></Text>
-                        <View style={styles.dateInputContainer}>
-                          <TextInput
-                            style={styles.dateInput}
-                            value={endDate}
-                            onChangeText={(value) => {
-                              setEndDateWasEdited(true);
-                              setEndDate(formatDisplayDateInput(value));
-                            }}
-                            keyboardType="number-pad"
-                            maxLength={10}
-                            placeholder="dd/mm/yyyy"
-                          />
-                          <Pressable
-                            accessibilityLabel="Mở lịch chọn ngày kết thúc"
-                            hitSlop={8}
-                            onPress={() => setDatePickerField("endDate")}
-                            style={styles.datePickerButton}
-                          >
-                            <Ionicons name="calendar-outline" size={19} color={COLORS.orange} />
-                          </Pressable>
-                        </View>
+                      <View style={styles.inputColumn}>
+                        <Field label="Ngày kết thúc" required styles={styles}>
+                          <View style={styles.dateInputContainer}>
+                            <TextInput
+                              style={styles.dateInput}
+                              value={endDate}
+                              onChangeText={(value) => {
+                                setEndDateWasEdited(true);
+                                setEndDate(formatDisplayDateInput(value));
+                              }}
+                              keyboardType="number-pad"
+                              maxLength={10}
+                              placeholder="dd/mm/yyyy"
+                              placeholderTextColor={theme.muted}
+                            />
+                            <Pressable accessibilityLabel="Mở lịch chọn ngày kết thúc" hitSlop={8} onPress={() => setDatePickerField("endDate")} style={styles.datePickerButton}>
+                              <Ionicons name="calendar-outline" size={19} color={theme.primary} />
+                            </Pressable>
+                          </View>
+                        </Field>
                       </View>
                     </View>
                     {datePickerField ? (
                       <DateTimePicker
-                        value={
-                          displayDateToLocalDate(
-                            datePickerField === "startDate"
-                              ? startDate
-                              : endDate,
-                          ) || new Date()
-                        }
+                        value={displayDateToLocalDate(datePickerField === "startDate" ? startDate : endDate) || new Date()}
                         mode="date"
                         display="default"
                         onChange={handleDatePickerChange}
                       />
                     ) : null}
                   </View>
-                </View>
-              )}
+                </>
+              ) : null}
 
-              {/* BƯỚC 3: DỊCH VỤ */}
-              {currentStep === 3 && (
-                <View style={styles.stepContent}>
-                  <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Dịch vụ & tiện ích</Text>
-                    <Text style={styles.cardSubtitle}>Bật các dịch vụ áp dụng cho hợp đồng này và điều chỉnh đơn giá.</Text>
-
-                    {[
-                      { key: 'electricity', label: 'Điện', desc: 'Tính theo số điện', unit: 'VNĐ/kWh' },
-                      { key: 'water', label: 'Nước', desc: 'Tính theo người/khối', unit: 'VNĐ' },
-                      { key: 'trash', label: 'Rác', desc: 'Phí thu gom', unit: 'VNĐ/tháng' },
-                      { key: 'internet', label: 'Internet', desc: 'Wi-Fi', unit: 'VNĐ/tháng' },
-                      { key: 'management', label: 'Phí quản lý', desc: 'Vệ sinh chung', unit: 'VNĐ/tháng' },
-                    ].map(svc => {
-                      const service = services[svc.key as keyof typeof services];
-                      return (
-                        <View key={svc.key} style={[styles.serviceItem, service.enabled && styles.serviceItemActive]}>
-                          <View style={styles.serviceHeader}>
+              {currentStep === 3 ? (
+                <View style={styles.card}>
+                  <SectionTitle icon="flash-outline" title="Điện & nước" subtitle="Thiết lập đơn giá, chỉ số đầu và dịch vụ đi kèm." theme={theme} />
+                  {[
+                    { key: "electricity", label: "Điện", desc: "Tính theo số điện", unit: "VNĐ/kWh", icon: "flash-outline" },
+                    { key: "water", label: "Nước", desc: "Tính theo người/khối", unit: "VNĐ", icon: "water-outline" },
+                    { key: "trash", label: "Rác", desc: "Phí thu gom", unit: "VNĐ/tháng", icon: "trash-outline" },
+                    { key: "internet", label: "Internet", desc: "Wi-Fi", unit: "VNĐ/tháng", icon: "wifi-outline" },
+                    { key: "management", label: "Phí quản lý", desc: "Vệ sinh chung", unit: "VNĐ/tháng", icon: "business-outline" },
+                  ].map((definition) => {
+                    const service = services[definition.key as keyof typeof services];
+                    return (
+                      <View key={definition.key} style={[styles.serviceItem, service.enabled && styles.serviceItemActive]}>
+                        <View style={styles.serviceHeader}>
+                          <View style={styles.serviceIdentity}>
+                            <Ionicons name={definition.icon as IconName} size={20} color={service.enabled ? theme.primary : theme.muted} />
                             <View>
-                              <Text style={styles.serviceLabel}>{svc.label}</Text>
-                              <Text style={styles.serviceDesc}>{svc.desc}</Text>
+                              <Text style={styles.serviceLabel}>{definition.label}</Text>
+                              <Text style={styles.serviceDesc}>{definition.desc}</Text>
                             </View>
-                            <Switch
-                              value={service.enabled}
-                              onValueChange={(val) => setServices({...services, [svc.key]: {...service, enabled: val}})}
-                              trackColor={{ false: "#E8E9ED", true: COLORS.orange }}
-                            />
                           </View>
-                          <View style={styles.serviceInputRow}>
-                            <TextInput
-                              style={[styles.input, !service.enabled && styles.inputDisabled, { flex: 1, height: 36 }]}
-                              value={service.price}
-                              onChangeText={(text) => setServices({...services, [svc.key]: {...service, price: text}})}
-                              editable={service.enabled}
-                              keyboardType="numeric"
-                            />
-                            <Text style={styles.serviceUnit}>{svc.unit}</Text>
-                          </View>
+                          <Switch
+                            value={service.enabled}
+                            onValueChange={(enabled) => setServices({ ...services, [definition.key]: { ...service, enabled } })}
+                            trackColor={{ false: theme.border, true: theme.primary }}
+                            thumbColor={theme.surfaceElevated}
+                          />
                         </View>
-                      );
-                    })}
-                  </View>
+                        <View style={styles.serviceInputRow}>
+                          <TextInput
+                            style={[styles.input, !service.enabled && styles.inputDisabled, styles.serviceInput]}
+                            value={service.price}
+                            onChangeText={(price) => setServices({ ...services, [definition.key]: { ...service, price } })}
+                            editable={service.enabled}
+                            keyboardType="numeric"
+                          />
+                          <Text style={styles.serviceUnit}>{definition.unit}</Text>
+                        </View>
+                        {definition.key === "electricity" ? (
+                          <View style={styles.serviceInputRow}>
+                            <TextInput style={[styles.input, styles.serviceInput]} value={initialElectricity} onChangeText={setInitialElectricity} keyboardType="numeric" placeholder="Chỉ số điện đầu" placeholderTextColor={theme.muted} />
+                            <Text style={styles.serviceUnit}>kWh đầu</Text>
+                          </View>
+                        ) : null}
+                        {definition.key === "water" ? (
+                          <View style={styles.serviceInputRow}>
+                            <TextInput style={[styles.input, styles.serviceInput]} value={initialWater} onChangeText={setInitialWater} keyboardType="numeric" placeholder="Chỉ số nước đầu" placeholderTextColor={theme.muted} />
+                            <Text style={styles.serviceUnit}>m³ đầu</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                    );
+                  })}
                 </View>
-              )}
+              ) : null}
 
-              {/* BƯỚC 4: XÁC NHẬN */}
-              {currentStep === 4 && (
-                <View style={styles.stepContent}>
+              {currentStep === 4 ? (
+                <>
                   <View style={styles.previewCard}>
-                    <Text style={styles.previewTag}>BẢN XEM TRƯỚC HỢP ĐỒNG</Text>
-
-                    <View style={styles.previewSection}>
-                      <Text style={styles.previewSectionTitle}>NGƯỜI THUÊ</Text>
-                      <View style={styles.previewRow}>
-                        <Text style={styles.previewLabel}>Họ tên</Text>
-                        <Text style={styles.previewValue}>{tenants.find(t => t._id === selectedTenantId)?.fullName || "Chưa chọn"}</Text>
-                      </View>
-                      <View style={styles.previewRow}>
-                        <Text style={styles.previewLabel}>Điện thoại</Text>
-                        <Text style={styles.previewValue}>{tenants.find(t => t._id === selectedTenantId)?.phone || "Chưa chọn"}</Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.previewSection}>
-                      <Text style={styles.previewSectionTitle}>CHI TIẾT THUÊ</Text>
-                      <View style={styles.previewRow}>
-                        <Text style={styles.previewLabel}>Phòng</Text>
-                        <Text style={styles.previewValue}>{rooms.find(r => r._id === selectedRoomId)?.roomCode || "Chưa chọn"}</Text>
-                      </View>
-                      <View style={styles.previewRow}>
-                        <Text style={styles.previewLabel}>Giá thuê</Text>
-                        <Text style={styles.previewValue}>{Number(fixedRent || 0).toLocaleString('vi-VN')}đ/tháng</Text>
-                      </View>
-                      <View style={styles.previewRow}>
-                        <Text style={styles.previewLabel}>Tiền cọc</Text>
-                        <Text style={styles.previewValue}>{Number(fixedDeposit || 0).toLocaleString('vi-VN')}đ</Text>
-                      </View>
-                      <View style={styles.previewRow}>
-                        <Text style={styles.previewLabel}>Thời hạn</Text>
-                        <Text style={styles.previewValue}>{startDate} → {endDate}</Text>
-                      </View>
-                    </View>
+                    <SectionTitle icon="create-outline" title="Ký & xác nhận" subtitle="Kiểm tra thông tin trước khi tạo bản nháp." theme={theme} />
+                    <PreviewRow label="Người thuê" value={tenants.find((item) => item._id === selectedTenantId)?.fullName || "Chưa chọn"} styles={styles} />
+                    <PreviewRow label="Phòng" value={rooms.find((item) => item._id === selectedRoomId)?.roomCode || "Chưa chọn"} styles={styles} />
+                    <PreviewRow label="Giá thuê" value={`${Number(fixedRent || 0).toLocaleString("vi-VN")}đ/tháng`} styles={styles} />
+                    <PreviewRow label="Tiền cọc" value={`${Number(fixedDeposit || 0).toLocaleString("vi-VN")}đ`} styles={styles} />
+                    <PreviewRow label="Thời hạn" value={`${startDate} → ${endDate}`} styles={styles} />
                   </View>
-
-                  <Pressable style={styles.confirmCheckbox} onPress={() => setConfirmed(!confirmed)}>
+                  <Pressable
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: confirmed }}
+                    accessibilityLabel="Xác nhận thông tin hợp đồng chính xác"
+                    onPress={() => setConfirmed(!confirmed)}
+                    style={styles.confirmCheckbox}
+                  >
                     <View style={[styles.checkbox, confirmed && styles.checkboxChecked]}>
-                      {confirmed && <Ionicons name="checkmark" size={14} color="#FFF" />}
+                      {confirmed ? <Ionicons name="checkmark" size={15} color={theme.background} /> : null}
                     </View>
-                    <View>
+                    <View style={styles.confirmCopy}>
                       <Text style={styles.confirmTitle}>Tôi xác nhận thông tin chính xác</Text>
                       <Text style={styles.confirmDesc}>Hợp đồng nháp sẽ được tạo và chờ người thuê duyệt.</Text>
                     </View>
                   </Pressable>
-                </View>
-              )}
+                </>
+              ) : null}
             </ScrollView>
 
-            {/* Footer */}
             <View style={styles.wizardFooter}>
-              <Pressable onPress={() => setModalVisible(false)}>
-                <Text style={styles.cancelText}>Hủy</Text>
-              </Pressable>
-              <View style={styles.footerActions}>
-                {currentStep > 1 && (
-                  <Pressable style={styles.backBtn} onPress={() => setCurrentStep(prev => prev - 1)}>
-                    <Ionicons name="chevron-back" size={16} color={COLORS.text} />
-                    <Text style={styles.backBtnText}>Quay lại</Text>
-                  </Pressable>
-                )}
-                <Pressable
-                  style={[
-                    styles.nextBtn,
-                    (currentStep === 4 && !confirmed) && styles.nextBtnDisabled,
-                    submitting && styles.nextBtnDisabled
-                  ]}
-                  onPress={() => {
-                    if (currentStep < 4) setCurrentStep(prev => prev + 1);
-                    else handleCreateContract();
-                  }}
-                  disabled={(currentStep === 4 && !confirmed) || submitting}
-                >
-                  {submitting ? (
-                    <ActivityIndicator color="#FFFFFF" size="small" />
-                  ) : (
-                    <Text style={styles.nextBtnText}>{currentStep < 4 ? 'Tiếp tục' : 'Tạo hợp đồng'}</Text>
-                  )}
-                </Pressable>
-              </View>
+              <AppButton variant="ghost" icon="close-outline" disabled={submitting} onPress={closeWizard} style={styles.footerButton}>
+                Hủy
+              </AppButton>
+              {currentStep > 1 ? (
+                <AppButton variant="secondary" icon="chevron-back" disabled={submitting} onPress={() => setCurrentStep((step) => step - 1)} style={styles.footerButton}>
+                  Quay lại
+                </AppButton>
+              ) : null}
+              <AppButton
+                icon={currentStep < 4 ? "arrow-forward-outline" : "document-text-outline"}
+                iconPosition="right"
+                loading={submitting}
+                disabled={submitting || (currentStep === 4 && !confirmed)}
+                onPress={() => {
+                  if (currentStep < 4) setCurrentStep((step) => step + 1);
+                  else void handleCreateContract();
+                }}
+                style={styles.primaryFooterButton}
+              >
+                {currentStep < 4 ? "Tiếp tục" : "Tạo hợp đồng"}
+              </AppButton>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F4F5F7",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#F4F5F7",
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 18,
-    paddingTop: 18,
-    paddingBottom: 14,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "900",
-    color: COLORS.text,
-  },
-  addButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: COLORS.orange,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-  },
-  addButtonText: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "800",
-    marginLeft: 4,
-  },
-  filterContainer: {
-    flexDirection: "row",
-    paddingHorizontal: 18,
-    marginBottom: 10,
-    gap: 8,
-  },
-  filterButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: "#E8E9ED",
-  },
-  filterActive: {
-    backgroundColor: COLORS.orangeSoft,
-  },
-  filterText: {
-    fontSize: 12,
-    color: COLORS.muted,
-    fontWeight: "700",
-  },
-  filterTextActive: {
-    color: COLORS.orange,
-    fontWeight: "900",
-  },
-  listContent: {
-    paddingHorizontal: 18,
-    paddingBottom: 20,
-  },
-  contractCard: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.02,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  contractInfo: {
-    flex: 1,
-    paddingRight: 10,
-  },
-  roomCode: {
-    fontSize: 15,
-    fontWeight: "900",
-    color: COLORS.text,
-  },
-  tenantName: {
-    fontSize: 12,
-    color: COLORS.text,
-    fontWeight: "700",
-    marginTop: 4,
-  },
-  contractDates: {
-    fontSize: 11,
-    color: COLORS.muted,
-    fontWeight: "600",
-    marginTop: 4,
-  },
-  contractPrices: {
-    fontSize: 12,
-    color: COLORS.orange,
-    fontWeight: "800",
-    marginTop: 4,
-  },
-  rightAction: {
-    alignItems: "flex-end",
-    gap: 8,
-  },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  statusText: {
-    fontSize: 11,
-    fontWeight: "800",
-  },
-  approveButton: {
-    backgroundColor: COLORS.green,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  approveButtonText: {
-    color: "#FFFFFF",
-    fontSize: 11,
-    fontWeight: "800",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "#F4F5F7",
-    justifyContent: "flex-start",
-    paddingTop: 45, // Safe area for iOS
-  },
-  modalContent: {
-    backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    height: "85%",
-  },
-  modalScrollView: {
-    flex: 1,
-  },
-  modalScrollContent: {
-    flexGrow: 1,
-    paddingBottom: 40,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderBottomWidth: 1,
-    borderColor: "#F0F0F0",
-    paddingBottom: 14,
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "900",
-    color: COLORS.text,
-  },
-  form: {
-    width: "100%",
-    paddingBottom: 20,
-  },
-  label: {
-    fontSize: 12,
-    color: COLORS.muted,
-    fontWeight: "700",
-    marginBottom: 6,
-    marginTop: 12,
-  },
-  input: {
-    width: "100%",
-    height: 44,
-    backgroundColor: "#F4F5F7",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    fontSize: 14,
-    color: COLORS.text,
-  },
-  dateInputContainer: {
-    width: "100%",
-    height: 44,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F4F5F7",
-    borderRadius: 8,
-  },
-  dateInput: {
-    flex: 1,
-    height: 44,
-    paddingLeft: 12,
-    paddingRight: 4,
-    fontSize: 14,
-    color: COLORS.text,
-    fontVariant: ["tabular-nums"],
-  },
-  datePickerButton: {
-    width: 42,
-    height: 42,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 8,
-  },
-  noVacantText: {
-    fontSize: 13,
-    color: COLORS.red,
-    fontWeight: "700",
-  },
-  roomSelectGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  roomSelectItem: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#E8E9ED",
-    backgroundColor: "#FFFFFF",
-  },
-  roomSelectActive: {
-    backgroundColor: COLORS.orangeSoft,
-    borderColor: COLORS.orange,
-  },
-  roomSelectText: {
-    fontSize: 13,
-    color: COLORS.text,
-    fontWeight: "700",
-  },
-  roomSelectTextActive: {
-    color: COLORS.orange,
-    fontWeight: "900",
-  },
-  roomSelectScroll: {
-    maxHeight: 80,
-    backgroundColor: "#F4F5F7",
-    borderRadius: 8,
-    padding: 8,
-    marginBottom: 8,
-  },
-  tenantSelectScroll: {
-    maxHeight: 50,
-    backgroundColor: "#F4F5F7",
-    borderRadius: 8,
-    padding: 8,
-  },
-  tenantSelectGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  tenantSelectItem: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#E8E9ED",
-    backgroundColor: "#FFFFFF",
-  },
-  tenantSelectActive: {
-    backgroundColor: COLORS.orangeSoft,
-    borderColor: COLORS.orange,
-  },
-  tenantSelectText: {
-    fontSize: 13,
-    color: COLORS.text,
-    fontWeight: "700",
-  },
-  tenantSelectTextActive: {
-    color: COLORS.orange,
-    fontWeight: "900",
-  },
-  submitButton: {
-    height: 48,
-    backgroundColor: COLORS.orange,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 24,
-  },
-  submitButtonDisabled: {
-    opacity: 0.75,
-  },
-  submitButtonText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "800",
-  },
+function SectionTitle({ icon, title, subtitle, theme }: { icon: IconName; title: string; subtitle?: string; theme: any }) {
+  return (
+    <View style={base.sectionTitleRow}>
+      <View style={[base.sectionIcon, { backgroundColor: theme.primarySoft }]}>
+        <Ionicons name={icon} size={20} color={theme.primary} />
+      </View>
+      <View style={base.sectionCopy}>
+        <Text style={[base.sectionTitle, { color: theme.text }]}>{title}</Text>
+        {subtitle ? <Text style={[base.sectionSubtitle, { color: theme.muted }]}>{subtitle}</Text> : null}
+      </View>
+    </View>
+  );
+}
 
-  wizardContent: {
-    backgroundColor: "#F4F5F7",
-    flex: 1,
-    display: "flex",
-    flexDirection: "column",
-  },
-  wizardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    padding: 20,
-    backgroundColor: "#FFFFFF",
-  },
-  wizardTitle: {
-    fontSize: 20,
-    fontWeight: "900",
-    color: COLORS.text,
-    marginBottom: 4,
-  },
-  wizardSubtitle: {
-    fontSize: 13,
-    color: COLORS.muted,
-  },
-  closeButton: {
-    padding: 4,
-    backgroundColor: "#F4F5F7",
-    borderRadius: 8,
-  },
-  stepperContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 24,
-    paddingVertical: 30,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E8E9ED",
-    justifyContent: "space-between",
-  },
-  stepItemWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  stepItem: {
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 2,
-    flex: 1,
-  },
-  stepCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    backgroundColor: "#FFFFFF",
-  },
-  stepCircleInactive: {
-    borderColor: "#E8E9ED",
-  },
-  stepCircleActive: {
-    borderColor: COLORS.orange,
-    backgroundColor: COLORS.orange,
-  },
-  stepCircleCompleted: {
-    borderColor: COLORS.orange,
-    backgroundColor: COLORS.orange,
-  },
-  stepTextContainer: {
-    alignItems: "center",
-    marginTop: 8,
-    position: "absolute",
-    top: 36,
-    width: 80,
-  },
-  stepLabelMini: {
-    color: COLORS.muted,
-    fontWeight: "700",
-  },
-  stepLabel: {
-    fontSize: 11,
-    color: COLORS.text,
-    fontWeight: "600",
-  },
-  stepLabelActive: {
-    color: COLORS.orange,
-    fontWeight: "800",
-  },
-  stepLine: {
-    position: "absolute",
-    top: 15,
-    left: "50%",
-    width: "100%",
-    height: 3,
-    backgroundColor: "#E8E9ED",
-    zIndex: 1,
-  },
-  stepLineCompleted: {
-    backgroundColor: COLORS.orange,
-  },
-  wizardBody: {
-    flex: 1,
-    padding: 20,
-  },
-  stepContent: {
-    paddingBottom: 40,
-  },
-  card: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#E8E9ED",
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: COLORS.text,
-    marginBottom: 4,
-  },
-  cardSubtitle: {
-    fontSize: 13,
-    color: COLORS.muted,
-    marginBottom: 16,
-  },
-  inputGroupRow: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 12,
-  },
-  inputWrapper: {
-    flex: 1,
-  },
-  required: {
-    color: COLORS.red,
-  },
-  serviceItem: {
-    borderWidth: 1,
-    borderColor: "#E8E9ED",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
-  },
-  serviceItemActive: {
-    borderColor: COLORS.orangeSoft,
-    backgroundColor: COLORS.orangeSoft,
-  },
-  serviceHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  serviceLabel: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: COLORS.text,
-  },
-  serviceDesc: {
-    fontSize: 12,
-    color: COLORS.muted,
-    marginTop: 2,
-  },
-  serviceInputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  inputDisabled: {
-    backgroundColor: "#F4F5F7",
-    color: COLORS.muted,
-  },
-  serviceUnit: {
-    fontSize: 12,
-    color: COLORS.muted,
-    width: 80,
-  },
-  previewCard: {
-    backgroundColor: COLORS.orangeSoft,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 2,
-    borderColor: 'rgba(255, 106, 33, 0.2)',
-    marginBottom: 20,
-  },
-  previewTag: {
-    fontSize: 11,
-    color: COLORS.orange,
-    fontWeight: "800",
-    marginBottom: 12,
-  },
-  previewSection: {
-    marginBottom: 16,
-  },
-  previewSectionTitle: {
-    fontSize: 11,
-    color: COLORS.muted,
-    fontWeight: "800",
-    marginBottom: 8,
-  },
-  previewRow: {
-    flexDirection: "row",
-    marginBottom: 6,
-  },
-  previewLabel: {
-    width: 90,
-    fontSize: 13,
-    color: COLORS.muted,
-  },
-  previewValue: {
-    flex: 1,
-    fontSize: 13,
-    color: COLORS.text,
-    fontWeight: "600",
-  },
-  confirmCheckbox: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    backgroundColor: "#FFFFFF",
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#E8E9ED",
-    gap: 12,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: COLORS.muted,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 2,
-  },
-  checkboxChecked: {
-    backgroundColor: COLORS.orange,
-    borderColor: COLORS.orange,
-  },
-  confirmTitle: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: COLORS.text,
-    marginBottom: 2,
-  },
-  confirmDesc: {
-    fontSize: 12,
-    color: COLORS.muted,
-  },
-  wizardFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 20,
-    backgroundColor: "#FFFFFF",
-    borderTopWidth: 1,
-    borderTopColor: "#E8E9ED",
-  },
-  cancelText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: COLORS.muted,
-  },
-  footerActions: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  backBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#E8E9ED",
-  },
-  backBtnText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: COLORS.text,
-    marginLeft: 4,
-  },
-  nextBtn: {
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    backgroundColor: COLORS.orange,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  nextBtnDisabled: {
-    opacity: 0.5,
-  },
-  nextBtnText: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: "#FFFFFF",
-  },
-  tenantPhoneText: {
-    fontSize: 11,
-    color: COLORS.muted,
-    marginTop: 2,
-  },
+function Field({ label, required, children, styles }: any) {
+  return (
+    <View style={styles.field}>
+      <Text style={styles.label}>{label}{required ? <Text style={styles.required}> *</Text> : null}</Text>
+      {children}
+    </View>
+  );
+}
+
+function PreviewRow({ label, value, styles }: { label: string; value: string; styles: any }) {
+  return (
+    <View style={styles.previewRow}>
+      <Text style={styles.previewLabel}>{label}</Text>
+      <Text style={styles.previewValue}>{value}</Text>
+    </View>
+  );
+}
+
+const base = StyleSheet.create({
+  sectionTitleRow: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 18 },
+  sectionIcon: { width: 42, height: 42, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  sectionCopy: { flex: 1 },
+  sectionTitle: { fontSize: 17, fontWeight: "900" },
+  sectionSubtitle: { fontSize: 12, lineHeight: 17, marginTop: 2 },
 });
+
+function createStyles(theme: any) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.background },
+    loadingContainer: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, backgroundColor: theme.background },
+    loadingText: { color: theme.muted, fontSize: 13, fontWeight: "700" },
+    listContent: { padding: 18, paddingBottom: 36, gap: 12 },
+    headingRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 22 },
+    title: { color: theme.text, fontSize: 23, fontWeight: "900", letterSpacing: -0.5 },
+    subtitle: { color: theme.muted, fontSize: 12, marginTop: 3 },
+    addButton: { minHeight: 46, paddingHorizontal: 14 },
+    filterContainer: { flexDirection: "row", gap: 8, marginVertical: 16 },
+    filterButton: { minHeight: 38, paddingHorizontal: 13, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: theme.surface },
+    filterActive: { backgroundColor: theme.primarySoft },
+    filterText: { color: theme.muted, fontSize: 12, fontWeight: "800" },
+    filterTextActive: { color: theme.primary },
+    filteredEmpty: { color: theme.muted, textAlign: "center", paddingVertical: 42 },
+    contractCard: {
+      backgroundColor: theme.surface,
+      borderRadius: 22,
+      padding: 18,
+      marginBottom: 12,
+      shadowColor: theme.text,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.1,
+      shadowRadius: 18,
+      elevation: 4,
+    },
+    cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 10 },
+    roomIdentity: { flex: 1, flexDirection: "row", alignItems: "center", gap: 10 },
+    iconTile: { width: 42, height: 42, borderRadius: 14, backgroundColor: theme.primarySoft, alignItems: "center", justifyContent: "center" },
+    roomCode: { color: theme.text, fontSize: 16, fontWeight: "900" },
+    tenantName: { color: theme.muted, fontSize: 12, marginTop: 3 },
+    statusBadge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
+    statusText: { fontSize: 10, fontWeight: "900" },
+    money: { color: theme.text, fontSize: 28, fontWeight: "900", letterSpacing: -0.8, marginTop: 18 },
+    moneyCaption: { color: theme.muted, fontSize: 11, marginTop: 3 },
+    metaRow: { flexDirection: "row", alignItems: "center", gap: 7, marginTop: 14 },
+    contractDates: { color: theme.muted, fontSize: 12, fontWeight: "700" },
+    approveButton: { marginTop: 16 },
+    modalOverlay: { flex: 1, paddingTop: Platform.OS === "ios" ? 45 : 18, backgroundColor: theme.overlay },
+    wizardContent: { flex: 1, backgroundColor: theme.background, borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: "hidden" },
+    wizardHeader: { flexDirection: "row", alignItems: "flex-start", padding: 20, backgroundColor: theme.surface },
+    wizardHeading: { flex: 1, paddingRight: 12 },
+    wizardTitle: { color: theme.text, fontSize: 21, fontWeight: "900" },
+    wizardSubtitle: { color: theme.muted, fontSize: 12, lineHeight: 17, marginTop: 4 },
+    closeButton: { width: 44, height: 44, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: theme.primarySoft },
+    stepperContainer: { paddingHorizontal: 12, paddingVertical: 18, backgroundColor: theme.surface },
+    wizardBody: { flex: 1 },
+    wizardBodyContent: { padding: 18, paddingBottom: 32 },
+    card: { backgroundColor: theme.surface, borderRadius: 22, padding: 18, marginBottom: 14, shadowColor: theme.text, shadowOpacity: 0.08, shadowOffset: { width: 0, height: 7 }, shadowRadius: 16, elevation: 3 },
+    selectionGrid: { flexDirection: "row", flexWrap: "wrap", gap: 9 },
+    selectionItem: { minWidth: 104, minHeight: 48, borderRadius: 16, paddingHorizontal: 13, flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: theme.surfaceElevated },
+    tenantItem: { minWidth: "47%", flexGrow: 1, minHeight: 58, borderRadius: 16, padding: 12, flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: theme.surfaceElevated },
+    selectionActive: { backgroundColor: theme.primarySoft },
+    selectionText: { color: theme.text, fontSize: 13, fontWeight: "800" },
+    selectionTextActive: { color: theme.primary },
+    tenantPhone: { color: theme.muted, fontSize: 11, marginTop: 2 },
+    noVacantText: { color: theme.danger, fontSize: 13, fontWeight: "700" },
+    field: { marginTop: 12 },
+    label: { color: theme.muted, fontSize: 12, fontWeight: "800", marginBottom: 7 },
+    required: { color: theme.danger },
+    input: { minHeight: 48, borderRadius: 16, paddingHorizontal: 14, backgroundColor: theme.surfaceElevated, color: theme.text, fontSize: 14 },
+    inputRow: { flexDirection: "row", gap: 10 },
+    inputColumn: { flex: 1 },
+    dateInputContainer: { minHeight: 48, flexDirection: "row", alignItems: "center", borderRadius: 16, backgroundColor: theme.surfaceElevated },
+    dateInput: { flex: 1, minHeight: 48, paddingLeft: 13, color: theme.text, fontSize: 13, fontVariant: ["tabular-nums"] },
+    datePickerButton: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+    serviceItem: { borderRadius: 18, padding: 14, marginBottom: 10, backgroundColor: theme.surfaceElevated },
+    serviceItemActive: { backgroundColor: theme.primarySoft },
+    serviceHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
+    serviceIdentity: { flex: 1, flexDirection: "row", alignItems: "center", gap: 10 },
+    serviceLabel: { color: theme.text, fontSize: 14, fontWeight: "900" },
+    serviceDesc: { color: theme.muted, fontSize: 11, marginTop: 2 },
+    serviceInputRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
+    serviceInput: { flex: 1, minHeight: 42 },
+    inputDisabled: { opacity: 0.5 },
+    serviceUnit: { width: 78, color: theme.muted, fontSize: 11 },
+    previewCard: { backgroundColor: theme.primarySoft, borderRadius: 22, padding: 18, marginBottom: 14 },
+    previewRow: { flexDirection: "row", justifyContent: "space-between", gap: 12, paddingVertical: 9 },
+    previewLabel: { color: theme.muted, fontSize: 12 },
+    previewValue: { flex: 1, color: theme.text, fontSize: 13, fontWeight: "800", textAlign: "right" },
+    confirmCheckbox: { flexDirection: "row", alignItems: "flex-start", gap: 12, padding: 16, borderRadius: 20, backgroundColor: theme.surface },
+    checkbox: { width: 22, height: 22, borderRadius: 7, alignItems: "center", justifyContent: "center", backgroundColor: theme.surfaceElevated },
+    checkboxChecked: { backgroundColor: theme.primary },
+    confirmCopy: { flex: 1 },
+    confirmTitle: { color: theme.text, fontSize: 14, fontWeight: "900" },
+    confirmDesc: { color: theme.muted, fontSize: 12, lineHeight: 17, marginTop: 3 },
+    wizardFooter: { flexDirection: "row", alignItems: "center", gap: 8, padding: 12, paddingBottom: Platform.OS === "ios" ? 24 : 12, backgroundColor: theme.surface, shadowColor: theme.text, shadowOpacity: 0.08, shadowOffset: { width: 0, height: -4 }, shadowRadius: 12, elevation: 8 },
+    footerButton: { minHeight: 46, paddingHorizontal: 10 },
+    primaryFooterButton: { flex: 1, minHeight: 46, paddingHorizontal: 10 },
+  });
+}

@@ -1,20 +1,20 @@
 import React, { useState } from "react";
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
+  ImageBackground,
   Platform,
-  Pressable,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  useColorScheme,
   View,
 } from "react-native";
 import ForgotPasswordModal from "../components/ForgotPasswordModal";
 import TroHubLogo from "../components/TroHubLogo";
-import { FONT_FAMILIES, TROHUB_THEMES } from "../constants/theme";
+import AppButton from "../components/ui/AppButton";
+import { FONT_FAMILIES } from "../constants/theme";
+import { useAppTheme } from "../contexts/ThemeContext";
 import { useNotification } from "../hooks/useNotification";
 import { getNotificationMessage } from "../utils/notificationMessages";
 
@@ -24,8 +24,7 @@ type Props = {
 
 export default function LoginScreen({ onLogin }: Props) {
   const notification = useNotification();
-  const dark = useColorScheme() === "dark";
-  const theme = TROHUB_THEMES[dark ? "dark" : "light"];
+  const { theme, themeMode } = useAppTheme();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [identifierError, setIdentifierError] = useState("");
@@ -76,12 +75,15 @@ export default function LoginScreen({ onLogin }: Props) {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.page}>
-            <View
+            <ImageBackground
+              imageStyle={styles.brandArtwork}
+              source={require("../assets/images/trohub-property-loading.png")}
               style={[
                 styles.brandPanel,
-                { backgroundColor: dark ? theme.surface : "#25292D" },
+                { backgroundColor: themeMode === "dark" ? theme.surfaceElevated : "#20302A" },
               ]}
             >
+              <View style={styles.brandOverlay} />
               <TroHubLogo size="large" inverted />
               <View style={styles.brandCopy}>
                 <Text style={styles.brandTitle}>Mọi việc ở trọ, rõ ràng hơn.</Text>
@@ -94,7 +96,7 @@ export default function LoginScreen({ onLogin }: Props) {
                 <View style={[styles.rulePrimary, { backgroundColor: theme.primary }]} />
                 <View style={[styles.rulePositive, { backgroundColor: theme.positive }]} />
               </View>
-            </View>
+            </ImageBackground>
 
             <View
               style={[
@@ -176,37 +178,25 @@ export default function LoginScreen({ onLogin }: Props) {
                 ) : null}
               </View>
 
-              <Pressable
-                accessibilityRole="button"
+              <AppButton
                 disabled={isSubmitting}
+                icon="key-outline"
+                loading={isSubmitting}
                 onPress={handleSubmit}
-                style={({ pressed }) => [
-                  styles.primaryButton,
-                  { backgroundColor: theme.primary },
-                  pressed && styles.buttonPressed,
-                  isSubmitting && styles.buttonDisabled,
-                ]}
+                style={styles.primaryButton}
               >
-                {isSubmitting ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.primaryButtonText}>Đăng nhập</Text>
-                )}
-              </Pressable>
+                Đăng nhập
+              </AppButton>
 
-              <Pressable
-                accessibilityRole="button"
+              <AppButton
                 disabled={isSubmitting}
+                icon="help-circle-outline"
                 onPress={() => setForgotVisible(true)}
-                style={({ pressed }) => [
-                  styles.forgotButton,
-                  pressed && styles.buttonPressed,
-                ]}
+                style={styles.forgotButton}
+                variant="ghost"
               >
-                <Text style={[styles.forgotText, { color: theme.primary }]}>
-                  Quên mật khẩu?
-                </Text>
-              </Pressable>
+                Quên mật khẩu?
+              </AppButton>
 
               <View
                 style={[
@@ -249,11 +239,16 @@ const styles = StyleSheet.create({
     paddingVertical: 28,
   },
   brandPanel: {
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     minHeight: 210,
     overflow: "hidden",
     padding: 24,
+  },
+  brandArtwork: { opacity: 0.55 },
+  brandOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(4, 55, 47, 0.72)",
   },
   brandCopy: {
     marginTop: 28,
@@ -293,10 +288,14 @@ const styles = StyleSheet.create({
     height: 5,
   },
   formPanel: {
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
-    borderWidth: 1,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
     padding: 24,
+    shadowColor: "#04100E",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    elevation: 5,
   },
   eyebrow: {
     fontFamily: FONT_FAMILIES.sans,
@@ -329,7 +328,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   input: {
-    borderRadius: 10,
+    borderRadius: 16,
     borderWidth: 1,
     fontFamily: FONT_FAMILIES.sans,
     fontSize: 16,
@@ -344,10 +343,6 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   primaryButton: {
-    alignItems: "center",
-    borderRadius: 10,
-    height: 52,
-    justifyContent: "center",
     marginTop: 24,
   },
   buttonPressed: {
@@ -363,9 +358,6 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   forgotButton: {
-    alignItems: "center",
-    minHeight: 44,
-    justifyContent: "center",
     marginTop: 8,
   },
   forgotText: {

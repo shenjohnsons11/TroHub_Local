@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Landmark, ReceiptText, UserRound } from "lucide-react";
+import { ArrowUpRight, Landmark, ReceiptText, Settings2, UserRound } from "lucide-react";
+import { PageHeader } from "@/components/calm-ops/page-header";
 
 const items = [
   { href: "/dashboard/settings/account", title: "Tài khoản", description: "Thông tin Chủ trọ/Admin và mật khẩu.", icon: UserRound },
@@ -10,15 +11,27 @@ const items = [
 export default function SettingsPage() {
   return (
     <div className="space-y-6">
-      <header><p className="text-sm font-bold uppercase tracking-[.12em] text-primary">Thiết lập vận hành</p><h1 className="mt-1 text-3xl font-black tracking-[-.025em]">Cài đặt</h1></header>
+      <PageHeader eyebrow="Thiết lập vận hành" title="Cài đặt" description="Quản lý hồ sơ, nhận thanh toán và chính sách hóa đơn tại một nơi." />
       <div className="grid gap-4 md:grid-cols-3">
         {items.map(({ href, title, description, icon: Icon }) => (
-          <Link key={href} href={href} className="rounded-[14px] border border-border bg-card p-5 transition-colors hover:border-primary/50 hover:bg-primary/5">
-            <Icon className="h-6 w-6 text-primary" />
-            <h2 className="mt-5 text-lg font-black">{title}</h2>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>
+          <Link
+            key={href}
+            href={href}
+            aria-label={`Mở ${title}`}
+            className="group calm-surface relative min-h-52 overflow-hidden p-5 transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/35"
+          >
+            <span className="grid size-12 place-items-center rounded-[16px] bg-accent text-primary">
+              <Icon aria-hidden="true" className="size-5" />
+            </span>
+            <ArrowUpRight aria-hidden="true" className="absolute right-5 top-5 size-5 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+            <h2 className="mt-8 text-xl font-black tracking-[-.025em]">{title}</h2>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">{description}</p>
           </Link>
         ))}
+      </div>
+      <div className="flex items-center gap-3 rounded-[20px] bg-primary px-5 py-4 text-primary-foreground shadow-[var(--calm-shadow)]">
+        <Settings2 aria-hidden="true" className="size-5" />
+        <p className="text-sm font-bold">Mọi thay đổi được áp dụng trực tiếp cho vận hành TroHub.</p>
       </div>
     </div>
   );

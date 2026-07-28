@@ -1,16 +1,15 @@
 import React, { useEffect, useState } from "react";
 import {
-  ScrollView,
+  FlatList,
   Text,
   StyleSheet,
   View,
   Pressable,
   ActivityIndicator,
-  Alert,
   RefreshControl,
 } from "react-native";
 import Card from "../components/Card";
-import { COLORS } from "../constants/theme";
+import { useAppTheme } from "../contexts/ThemeContext";
 import { Contract, ContractStatus } from "../types/Contract";
 import SignContractWizard from "../components/SignContractWizard";
 import PaymentModal from "../components/PaymentModal";
@@ -18,6 +17,10 @@ import { contractService } from "../services/contractService";
 import { invoiceService } from "../services/invoiceService";
 import { Invoice } from "../types/Invoice";
 import { useNotification } from "../hooks/useNotification";
+import { Ionicons } from "@expo/vector-icons";
+import GradientHero from "../components/ui/GradientHero";
+import AnimatedEntry from "../components/ui/AnimatedEntry";
+import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
 
 const getStatusLabel = (status: ContractStatus): string => {
   switch (status) {
@@ -30,25 +33,25 @@ const getStatusLabel = (status: ContractStatus): string => {
   }
 };
 
-const getStatusColor = (status: ContractStatus): string => {
+const getStatusColor = (status: ContractStatus, theme: ReturnType<typeof useAppTheme>["theme"]): string => {
   switch (status) {
-    case "pending": return COLORS.orange;
-    case "active": return COLORS.green;
-    case "expired": return COLORS.muted;
-    case "cancelled": return COLORS.red;
-    case "awaiting_approval": return "#007AFF";
-    default: return COLORS.muted;
+    case "pending": return theme.warningForeground;
+    case "active": return theme.positive;
+    case "expired": return theme.muted;
+    case "cancelled": return theme.danger;
+    case "awaiting_approval": return theme.primary;
+    default: return theme.muted;
   }
 };
 
-const getStatusBg = (status: ContractStatus): string => {
+const getStatusBg = (status: ContractStatus, theme: ReturnType<typeof useAppTheme>["theme"]): string => {
   switch (status) {
-    case "pending": return COLORS.orangeSoft || "#FFF5ED";
-    case "active": return "#EAF9F1";
-    case "expired": return "#E8E9ED";
-    case "cancelled": return "#FFF1F1";
-    case "awaiting_approval": return "#E8F4FD";
-    default: return "#E8E9ED";
+    case "pending": return theme.warningSoft;
+    case "active": return theme.positiveSoft;
+    case "expired": return theme.surfaceElevated;
+    case "cancelled": return theme.warningSoft;
+    case "awaiting_approval": return theme.primarySoft;
+    default: return theme.surfaceElevated;
   }
 };
 
@@ -58,6 +61,8 @@ type Props = {
 
 export default function ContractScreen({ onNavigate }: Props) {
   const notification = useNotification();
+  const { theme } = useAppTheme();
+  const styles = createStyles(theme);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -154,86 +159,84 @@ export default function ContractScreen({ onNavigate }: Props) {
     notification.success("Thanh toán tiền cọc đã được ghi nhận.");
   };
 
-  const handleRequestTerminate = (contract: Contract) => {
-    Alert.alert(
-      "Yêu cầu trả phòng",
-      `Bạn có chắc chắn muốn gửi yêu cầu trả phòng ${contract.room}?\n\n` +
-      "Lưu ý: Bạn phải thanh toán toàn bộ hóa đơn nợ trước khi gửi yêu cầu. Sau khi gửi, chủ trọ sẽ kiểm tra phòng và chốt hợp đồng.",
-      [
-        { text: "Hủy", style: "cancel" },
-        {
-          text: "Gửi yêu cầu",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              setIsLoading(true);
-              await contractService.requestTerminate(contract.id);
-              Alert.alert(
-                "Thành công",
-                "Đã gửi yêu cầu trả phòng! Vui lòng chờ chủ trọ xác nhận."
-              );
-              const data = await contractService.getMyContracts();
-              setContracts(data);
-            } catch (error) {
-              Alert.alert(
-                "Lỗi",
-                error instanceof Error ? error.message : "Gửi yêu cầu thất bại. Vui lòng thử lại."
-              );
-            } finally {
-              setIsLoading(false);
-            }
-          },
-        },
-      ]
-    );
+  const handleRequestTerminate = async (contract: Contract) => {
+    const confirmed = await notification.confirm({
+      title: "Yêu cầu trả phòng",
+      message:
+        `Bạn có chắc chắn muốn gửi yêu cầu trả phòng ${contract.room}?\n\n` +
+        "Lưu ý: Bạn phải thanh toán toàn bộ hóa đơn nợ trước khi gửi yêu cầu. Sau khi gửi, chủ trọ sẽ kiểm tra phòng và chốt hợp đồng.",
+      cancelText: "Hủy",
+      confirmText: "Gửi yêu cầu",
+      destructive: true,
+    });
+    if (!confirmed) return;
+
+    try {
+      setIsLoading(true);
+      await contractService.requestTerminate(contract.id);
+      notification.success(
+        "Đã gửi yêu cầu trả phòng! Vui lòng chờ chủ trọ xác nhận.",
+        { title: "Thành công" },
+      );
+      const data = await contractService.getMyContracts();
+      setContracts(data);
+    } catch (error) {
+      notification.error(
+        error instanceof Error ? error.message : "Gửi yêu cầu thất bại. Vui lòng thử lại.",
+        { title: "Lỗi" },
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (isLoading) {
     return (
       <View style={styles.loadingBox}>
-        <ActivityIndicator size="large" color={COLORS.orange} />
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
 
-  if (contracts.length === 0) {
-    return (
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.emptyContainer}
-        refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={COLORS.orange} />
-        }
-      >
-        <Text style={styles.emptyIcon}>📄</Text>
-        <Text style={styles.emptyTitle}>Chưa có hợp đồng</Text>
-        <Text style={styles.emptyText}>
-          Bạn chưa có hợp đồng nào. Khi chủ trọ tạo hợp đồng, nó sẽ xuất hiện ở đây.
-        </Text>
-        <Text style={styles.emptyHint}>Kéo xuống để làm mới</Text>
-      </ScrollView>
-    );
-  }
-
   return (
-    <ScrollView
+    <>
+    <FlatList
+      data={contracts}
+      keyExtractor={(contract) => contract.id}
+      contentContainerStyle={[styles.content, contracts.length === 0 && styles.emptyListContent]}
       style={styles.container}
-      contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
       refreshControl={
-        <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={COLORS.orange} />
+        <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={theme.primary} />
       }
-    >
-      <Text style={styles.title}>Hợp đồng của tôi</Text>
-      <Text style={styles.subtitle}>
-        Xem và xác nhận hợp đồng thuê phòng của bạn.
-      </Text>
-
-      {contracts.map((contract) => {
+      ListHeaderComponent={
+        <>
+          <Text style={styles.title}>Hợp đồng của tôi</Text>
+          <Text style={styles.subtitle}>Xem và xác nhận hợp đồng thuê phòng của bạn.</Text>
+        </>
+      }
+      ListEmptyComponent={
+        <View style={styles.emptyContainer}>
+          <IllustratedEmptyState
+            description="Khi chủ trọ tạo hợp đồng, hợp đồng sẽ xuất hiện ở đây."
+            kind="contract"
+            title="Chưa có hợp đồng"
+          />
+          <Text style={styles.emptyHint}>Kéo xuống để làm mới</Text>
+        </View>
+      }
+      renderItem={({ item: contract, index }) => {
         const isSigning = signingId === contract.id;
 
         return (
-          <Card key={contract.id} style={styles.contractCard}>
+          <AnimatedEntry delay={Math.min(index, 5) * 45}>
+          <GradientHero
+            detail={`${getStatusLabel(contract.status)} · ${contract.startDate} — ${contract.endDate}`}
+            icon="document-text-outline"
+            label={`PHÒNG ${contract.room} · TIỀN THUÊ`}
+            value={contract.rentFee}
+          />
+          <Card style={styles.contractCard}>
             {/* Header: Phòng + Badge */}
             <View style={styles.cardHeader}>
               <View style={styles.cardHeaderLeft}>
@@ -241,8 +244,8 @@ export default function ContractScreen({ onNavigate }: Props) {
                 <Text style={styles.tenantText}>{contract.tenantName}</Text>
               </View>
 
-              <View style={[styles.statusBadge, { backgroundColor: getStatusBg(contract.status) }]}>
-                <Text style={[styles.statusText, { color: getStatusColor(contract.status) }]}>
+              <View style={[styles.statusBadge, { backgroundColor: getStatusBg(contract.status, theme) }]}>
+                <Text style={[styles.statusText, { color: getStatusColor(contract.status, theme) }]}>
                   {getStatusLabel(contract.status)}
                 </Text>
               </View>
@@ -296,7 +299,13 @@ export default function ContractScreen({ onNavigate }: Props) {
                 <Text style={styles.servicesTitle}>Phí dịch vụ</Text>
                 <View style={styles.servicesGrid}>
                   <Text style={styles.serviceItem}>⚡ {contract.serviceFees.electric}</Text>
+                  <Text style={styles.serviceItem}>
+                    Chỉ số điện đầu: {contract.meterTerms.initialElectricity}
+                  </Text>
                   <Text style={styles.serviceItem}>💧 {contract.serviceFees.water}</Text>
+                  <Text style={styles.serviceItem}>
+                    Chỉ số nước đầu: {contract.meterTerms.initialWater}
+                  </Text>
                   <Text style={styles.serviceItem}>🅿️ {contract.serviceFees.parking}</Text>
                   <Text style={styles.serviceItem}>🌐 {contract.serviceFees.internet}</Text>
                 </View>
@@ -317,9 +326,9 @@ export default function ContractScreen({ onNavigate }: Props) {
                   disabled={isSigning}
                 >
                   {isSigning ? (
-                    <ActivityIndicator color="#FFFFFF" />
+                    <ActivityIndicator color={theme.background} />
                   ) : (
-                    <Text style={styles.signButtonText}>✍️ Ký xác nhận hợp đồng</Text>
+                    <><Ionicons name="create-outline" size={19} color={theme.background} /><Text style={styles.signButtonText}>Ký xác nhận hợp đồng</Text></>
                   )}
                 </Pressable>
               </View>
@@ -369,11 +378,11 @@ export default function ContractScreen({ onNavigate }: Props) {
                       >
                         {loadingDepositInvoiceId ===
                         contract.depositPayment.invoiceId ? (
-                          <ActivityIndicator color="#FFFFFF" size="small" />
+                          <ActivityIndicator color={theme.background} size="small" />
                         ) : (
-                          <Text style={styles.depositPaymentButtonText}>
+                          <><Ionicons name="card-outline" size={18} color={theme.background} /><Text style={styles.depositPaymentButtonText}>
                             Thanh toán ngay
-                          </Text>
+                          </Text></>
                         )}
                       </Pressable>
                     </View>
@@ -385,14 +394,14 @@ export default function ContractScreen({ onNavigate }: Props) {
             {contract.status === "active" && (
               <View style={styles.signBox}>
                 <Pressable
-                  style={[styles.signButton, { backgroundColor: COLORS.red }, isLoading && styles.signButtonDisabled]}
+                  style={[styles.signButton, { backgroundColor: theme.danger }, isLoading && styles.signButtonDisabled]}
                   onPress={() => handleRequestTerminate(contract)}
                   disabled={isLoading}
                 >
                   {isLoading ? (
-                    <ActivityIndicator color="#FFFFFF" />
+                    <ActivityIndicator color={theme.dangerForeground} />
                   ) : (
-                    <Text style={styles.signButtonText}>🚪 Yêu cầu trả phòng</Text>
+                    <><Ionicons name="exit-outline" size={19} color={theme.dangerForeground} /><Text style={[styles.signButtonText, { color: theme.dangerForeground }]}>Yêu cầu trả phòng</Text></>
                   )}
                 </Pressable>
               </View>
@@ -407,9 +416,10 @@ export default function ContractScreen({ onNavigate }: Props) {
               </View>
             )}
           </Card>
+          </AnimatedEntry>
         );
-      })}
-
+      }}
+    />
       <SignContractWizard
         visible={wizardVisible}
         contract={selectedContract}
@@ -422,51 +432,35 @@ export default function ContractScreen({ onNavigate }: Props) {
         onClose={() => setPaymentInvoice(null)}
         onConfirm={handleDepositPaymentConfirmed}
       />
-    </ScrollView>
+    </>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSheet.create({
   loadingBox: {
     flex: 1,
-    backgroundColor: "#F4F5F7",
+    backgroundColor: theme.background,
     alignItems: "center",
     justifyContent: "center",
   },
   container: {
     flex: 1,
-    backgroundColor: "#F4F5F7",
+    backgroundColor: theme.background,
   },
   content: {
     paddingHorizontal: 22,
     paddingTop: 34,
     paddingBottom: 30,
   },
+  emptyListContent: { flexGrow: 1 },
   emptyContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 30,
   },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: "900",
-    color: COLORS.text,
-    marginBottom: 8,
-  },
-  emptyText: {
-    color: COLORS.muted,
-    fontSize: 14,
-    lineHeight: 22,
-    textAlign: "center",
-    marginBottom: 12,
-  },
   emptyHint: {
-    color: COLORS.orange,
+    color: theme.primary,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -474,10 +468,10 @@ const styles = StyleSheet.create({
     fontSize: 24,
     lineHeight: 31,
     fontWeight: "900",
-    color: COLORS.text,
+    color: theme.text,
   },
   subtitle: {
-    color: COLORS.muted,
+    color: theme.muted,
     fontSize: 13,
     lineHeight: 20,
     marginTop: 6,
@@ -485,6 +479,10 @@ const styles = StyleSheet.create({
   },
   contractCard: {
     marginBottom: 16,
+    marginTop: 12,
+    backgroundColor: theme.surface,
+    borderColor: "transparent",
+    borderRadius: 20,
   },
   cardHeader: {
     flexDirection: "row",
@@ -499,18 +497,18 @@ const styles = StyleSheet.create({
   roomTitle: {
     fontSize: 18,
     fontWeight: "900",
-    color: COLORS.text,
+    color: theme.text,
   },
   tenantText: {
     fontSize: 13,
-    color: COLORS.muted,
+    color: theme.muted,
     fontWeight: "600",
     marginTop: 3,
   },
   statusBadge: {
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 999,
   },
   statusText: {
     fontSize: 11,
@@ -524,20 +522,20 @@ const styles = StyleSheet.create({
   },
   infoItem: {
     width: "48%",
-    backgroundColor: "#F8F9FB",
-    borderRadius: 10,
+    backgroundColor: theme.surfaceElevated,
+    borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
   infoLabel: {
     fontSize: 11,
-    color: COLORS.muted,
+    color: theme.muted,
     fontWeight: "600",
     marginBottom: 3,
   },
   infoValue: {
     fontSize: 13,
-    color: COLORS.text,
+    color: theme.text,
     fontWeight: "800",
   },
   progressBox: {
@@ -547,12 +545,12 @@ const styles = StyleSheet.create({
   progressBg: {
     height: 8,
     borderRadius: 999,
-    backgroundColor: "#ECEEF2",
+    backgroundColor: theme.primarySoft,
     overflow: "hidden",
   },
   progressFill: {
     height: "100%",
-    backgroundColor: COLORS.orange,
+    backgroundColor: theme.primary,
     borderRadius: 999,
   },
   progressTextRow: {
@@ -561,20 +559,18 @@ const styles = StyleSheet.create({
     marginTop: 9,
   },
   progressText: {
-    color: COLORS.muted,
+    color: theme.muted,
     fontSize: 12,
     fontWeight: "700",
   },
   servicesBox: {
     marginTop: 10,
     paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#F0F1F3",
   },
   servicesTitle: {
     fontSize: 13,
     fontWeight: "800",
-    color: COLORS.text,
+    color: theme.text,
     marginBottom: 8,
   },
   servicesGrid: {
@@ -584,35 +580,35 @@ const styles = StyleSheet.create({
   },
   serviceItem: {
     fontSize: 12,
-    color: COLORS.muted,
+    color: theme.muted,
     fontWeight: "600",
-    backgroundColor: "#F8F9FB",
+    backgroundColor: theme.surfaceElevated,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 999,
   },
   signBox: {
     marginTop: 14,
     paddingTop: 14,
-    borderTopWidth: 1,
-    borderTopColor: "#F0F1F3",
   },
   signHintBox: {
-    backgroundColor: "#FFF8F0",
-    borderRadius: 10,
+    backgroundColor: theme.warningSoft,
+    borderRadius: 16,
     padding: 12,
     marginBottom: 12,
   },
   signHint: {
     fontSize: 12,
-    color: COLORS.orange,
+    color: theme.warningForeground,
     fontWeight: "700",
     lineHeight: 20,
   },
   signButton: {
     height: 50,
-    backgroundColor: COLORS.orange,
-    borderRadius: 12,
+    backgroundColor: theme.primary,
+    borderRadius: 16,
+    flexDirection: "row",
+    gap: 8,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -620,50 +616,46 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   signButtonText: {
-    color: "#FFFFFF",
+    color: theme.background,
     fontSize: 15,
     fontWeight: "900",
   },
   awaitingBox: {
     marginTop: 14,
     paddingTop: 14,
-    borderTopWidth: 1,
-    borderTopColor: "#F0F1F3",
   },
   awaitingText: {
     fontSize: 13,
-    color: "#007AFF",
+    color: theme.primary,
     fontWeight: "700",
     lineHeight: 20,
-    backgroundColor: "#E8F4FD",
-    borderRadius: 10,
+    backgroundColor: theme.primarySoft,
+    borderRadius: 16,
     padding: 12,
     overflow: "hidden",
   },
   depositPaymentCard: {
     marginTop: 12,
     padding: 14,
-    borderWidth: 1,
-    borderColor: "#F2C078",
-    borderRadius: 12,
-    backgroundColor: "#FFF8ED",
+    borderRadius: 16,
+    backgroundColor: theme.warningSoft,
     gap: 12,
   },
   depositPaymentCopy: {
     gap: 4,
   },
   depositPaymentTitle: {
-    color: "#9A4C00",
+    color: theme.warningForeground,
     fontSize: 14,
     fontWeight: "900",
   },
   depositPaymentAmount: {
-    color: COLORS.text,
+    color: theme.text,
     fontSize: 20,
     fontWeight: "900",
   },
   depositPaymentHint: {
-    color: COLORS.muted,
+    color: theme.muted,
     fontSize: 12,
     fontWeight: "600",
     lineHeight: 18,
@@ -672,11 +664,13 @@ const styles = StyleSheet.create({
     minHeight: 46,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 10,
-    backgroundColor: COLORS.orange,
+    borderRadius: 16,
+    backgroundColor: theme.primary,
+    flexDirection: "row",
+    gap: 8,
   },
   depositPaymentButtonText: {
-    color: "#FFFFFF",
+    color: theme.background,
     fontSize: 14,
     fontWeight: "900",
   },

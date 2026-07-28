@@ -5,15 +5,15 @@ import {
   Text,
   TextInput,
   StyleSheet,
-  Pressable,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
 } from "react-native";
-import { COLORS } from "../constants/theme";
-import Toast from "react-native-toast-message";
 import { authService } from "../services/authService";
+import { useAppTheme } from "../contexts/ThemeContext";
+import { useNotification } from "../hooks/useNotification";
+import AppButton from "../components/ui/AppButton";
+import { Ionicons } from "@expo/vector-icons";
 
 type Props = {
   onSuccess: () => void;
@@ -21,6 +21,9 @@ type Props = {
 };
 
 export default function ChangePasswordScreen({ onSuccess, onLogout }: Props) {
+  const { theme } = useAppTheme();
+  const notification = useNotification();
+  const styles = createStyles(theme);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -28,29 +31,25 @@ export default function ChangePasswordScreen({ onSuccess, onLogout }: Props) {
 
   const handleSubmit = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
-      Toast.show({ type: "error", text1: "Lỗi", text2: "Vui lòng nhập đầy đủ thông tin" });
+      notification.error("Vui lòng nhập đầy đủ thông tin", { title: "Lỗi" });
       return;
     }
     if (newPassword.length < 6) {
-      Toast.show({ type: "error", text1: "Lỗi", text2: "Mật khẩu mới phải từ 6 ký tự trở lên" });
+      notification.error("Mật khẩu mới phải từ 6 ký tự trở lên", { title: "Lỗi" });
       return;
     }
     if (newPassword !== confirmPassword) {
-      Toast.show({ type: "error", text1: "Lỗi", text2: "Mật khẩu xác nhận không khớp" });
+      notification.error("Mật khẩu xác nhận không khớp", { title: "Lỗi" });
       return;
     }
 
     try {
       setIsSubmitting(true);
       await authService.changePassword(currentPassword, newPassword);
-      Toast.show({ type: "success", text1: "Thành công", text2: "Đổi mật khẩu thành công!" });
+      notification.success("Đổi mật khẩu thành công!", { title: "Thành công" });
       onSuccess(); // Chuyển về home
     } catch (error) {
-      Toast.show({
-        type: "error",
-        text1: "Lỗi",
-        text2: error instanceof Error ? error.message : "Có lỗi xảy ra",
-      });
+      notification.error(error instanceof Error ? error.message : "Có lỗi xảy ra", { title: "Lỗi" });
     } finally {
       setIsSubmitting(false);
     }
@@ -65,6 +64,9 @@ export default function ChangePasswordScreen({ onSuccess, onLogout }: Props) {
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <View style={styles.container}>
             <View style={styles.header}>
+              <View style={styles.securityIcon}>
+                <Ionicons name="shield-checkmark-outline" size={30} color={theme.primary} />
+              </View>
               <Text style={styles.title}>Đổi mật khẩu bắt buộc</Text>
               <Text style={styles.subtitle}>
                 Để bảo mật tài khoản, bạn vui lòng đổi mật khẩu trước khi sử dụng hệ thống.
@@ -78,6 +80,7 @@ export default function ChangePasswordScreen({ onSuccess, onLogout }: Props) {
                 value={currentPassword}
                 onChangeText={setCurrentPassword}
                 placeholder="Nhập mật khẩu cũ (VD: 123456)"
+                placeholderTextColor={theme.muted}
                 secureTextEntry
                 editable={!isSubmitting}
               />
@@ -88,6 +91,7 @@ export default function ChangePasswordScreen({ onSuccess, onLogout }: Props) {
                 value={newPassword}
                 onChangeText={setNewPassword}
                 placeholder="Nhập mật khẩu mới (từ 6 ký tự)"
+                placeholderTextColor={theme.muted}
                 secureTextEntry
                 editable={!isSubmitting}
               />
@@ -98,25 +102,23 @@ export default function ChangePasswordScreen({ onSuccess, onLogout }: Props) {
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 placeholder="Nhập lại mật khẩu mới"
+                placeholderTextColor={theme.muted}
                 secureTextEntry
                 editable={!isSubmitting}
               />
 
-              <Pressable
-                style={[styles.primaryButton, isSubmitting && styles.disabledButton]}
+              <AppButton
                 onPress={handleSubmit}
                 disabled={isSubmitting}
+                loading={isSubmitting}
+                icon="shield-checkmark-outline"
               >
-                {isSubmitting ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.primaryText}>Xác nhận đổi mật khẩu</Text>
-                )}
-              </Pressable>
+                Xác nhận đổi mật khẩu
+              </AppButton>
 
-              <Pressable style={styles.logoutButton} onPress={onLogout} disabled={isSubmitting}>
-                <Text style={styles.logoutText}>Đăng xuất</Text>
-              </Pressable>
+              <AppButton variant="danger" icon="log-out-outline" onPress={onLogout} disabled={isSubmitting}>
+                Đăng xuất
+              </AppButton>
             </View>
           </View>
         </ScrollView>
@@ -125,10 +127,10 @@ export default function ChangePasswordScreen({ onSuccess, onLogout }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: "#F4F5F7",
+    backgroundColor: theme.background,
   },
   keyboardView: { flex: 1 },
   scrollContent: { flexGrow: 1 },
@@ -136,47 +138,64 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 26,
     paddingTop: 50,
-    backgroundColor: "#F4F5F7",
+    backgroundColor: theme.background,
   },
   header: {
     alignItems: "center",
     marginBottom: 40,
   },
+  securityIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: theme.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 18,
+  },
   title: {
     fontSize: 24,
     fontWeight: "800",
-    color: COLORS.text,
+    color: theme.text,
     marginBottom: 10,
     textAlign: "center",
   },
   subtitle: {
     fontSize: 14,
-    color: COLORS.muted,
+    color: theme.muted,
     textAlign: "center",
     lineHeight: 20,
   },
-  form: { width: "100%" },
+  form: {
+    width: "100%",
+    gap: 12,
+    backgroundColor: theme.surface,
+    borderColor: theme.border,
+    borderWidth: 1,
+    borderRadius: 20,
+    padding: 18,
+  },
   label: {
     fontSize: 14,
-    color: COLORS.muted,
+    color: theme.muted,
     marginBottom: 8,
     marginTop: 16,
   },
   input: {
     width: "100%",
     height: 48,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.surfaceElevated,
     borderRadius: 10,
     paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: "#E8E9ED",
+    borderColor: theme.border,
     fontSize: 15,
-    color: COLORS.text,
+    color: theme.text,
   },
   primaryButton: {
     width: "100%",
     height: 52,
-    backgroundColor: COLORS.orange,
+    backgroundColor: theme.primary,
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
@@ -184,7 +203,7 @@ const styles = StyleSheet.create({
   },
   disabledButton: { opacity: 0.75 },
   primaryText: {
-    color: "#FFFFFF",
+    color: theme.background,
     fontSize: 15,
     fontWeight: "800",
   },
@@ -194,7 +213,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   logoutText: {
-    color: COLORS.red || "#FF3B30",
+    color: theme.danger,
     fontSize: 15,
     fontWeight: "600",
   },

@@ -4,10 +4,10 @@ import {
 } from "../../../../../../utils/contractDate";
 
 export const CONTRACT_STEPS = [
-  { id: 1, label: "Phòng và Người thuê" },
-  { id: 2, label: "Điều khoản" },
-  { id: 3, label: "Dịch vụ" },
-  { id: 4, label: "Xác nhận" },
+  { id: 1, label: "Chọn phòng" },
+  { id: 2, label: "Thông tin khách" },
+  { id: 3, label: "Điện & nước" },
+  { id: 4, label: "Ký & xác nhận" },
 ] as const;
 
 export type ContractDraft = {

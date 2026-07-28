@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
+  FlatList,
   ScrollView,
   Text,
   StyleSheet,
@@ -12,7 +13,7 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import Card from "../components/Card";
-import { COLORS } from "../constants/theme";
+import { useAppTheme } from "../contexts/ThemeContext";
 import {
   Priority,
   RepairRequest,
@@ -22,9 +23,13 @@ import { repairService } from "../services/repairService";
 import { contractService } from "../services/contractService";
 import { useNotification } from "../hooks/useNotification";
 import { getNotificationMessage } from "../utils/notificationMessages";
+import AnimatedEntry from "../components/ui/AnimatedEntry";
+import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
 
 export default function RepairScreen() {
   const notification = useNotification();
+  const { theme } = useAppTheme();
+  const styles = createStyles(theme);
   const [rooms, setRooms] = useState<string[]>([]);
   const [selectedRoom, setSelectedRoom] = useState("");
   const [type, setType] = useState("");
@@ -238,23 +243,27 @@ export default function RepairScreen() {
   if (isLoading) {
     return (
       <View style={styles.loadingBox}>
-        <ActivityIndicator size="large" color={COLORS.orange} />
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
 
   return (
-    <ScrollView
+    <FlatList
+      data={requests}
+      keyExtractor={(item) => item.id}
       style={styles.container}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
-    >
+      ListHeaderComponent={
+      <>
       <Text style={styles.title}>Yêu cầu sửa chữa</Text>
       <Text style={styles.subtitle}>
         Gửi thông tin sự cố để chủ trọ xử lý nhanh hơn.
       </Text>
 
+      <AnimatedEntry>
       <Card style={styles.formCard}>
         <Text style={styles.sectionTitle}>Tạo yêu cầu mới</Text>
 
@@ -295,7 +304,7 @@ export default function RepairScreen() {
             if (typeError) setTypeError("");
           }}
           placeholder="Điện, nước, internet, máy lạnh..."
-          placeholderTextColor={COLORS.muted}
+          placeholderTextColor={theme.muted}
         />
         {typeError ? <Text style={styles.errorText}>{typeError}</Text> : null}
 
@@ -312,7 +321,7 @@ export default function RepairScreen() {
             if (descriptionError) setDescriptionError("");
           }}
           placeholder="Ví dụ: Máy lạnh không hoạt động, nước chảy yếu..."
-          placeholderTextColor={COLORS.muted}
+          placeholderTextColor={theme.muted}
           multiline
         />
         {descriptionError ? (
@@ -320,7 +329,7 @@ export default function RepairScreen() {
         ) : null}
 
         <Pressable style={styles.uploadBox} onPress={pickImage}>
-          <Text style={styles.uploadIcon}>＋</Text>
+          <View style={styles.uploadIcon}><Ionicons name="images-outline" size={25} color={theme.primary} /></View>
           <Text style={styles.uploadText}>Upload ảnh sự cố</Text>
           <Text style={styles.uploadHint}>PNG, JPG hoặc JPEG ({images.length} ảnh đã chọn)</Text>
         </Pressable>
@@ -330,7 +339,12 @@ export default function RepairScreen() {
             {images.map((img, idx) => (
               <View key={idx} style={styles.imagePreviewBox}>
                 <Image source={{ uri: img }} style={styles.previewImage} />
-                <Pressable style={styles.removeImageBtn} onPress={() => setImages(prev => prev.filter((_, i) => i !== idx))}>
+                <Pressable
+                  accessibilityLabel={`Xóa ảnh ${idx + 1}`}
+                  accessibilityRole="button"
+                  style={styles.removeImageBtn}
+                  onPress={() => setImages(prev => prev.filter((_, i) => i !== idx))}
+                >
                   <Text style={styles.removeImageText}>×</Text>
                 </Pressable>
               </View>
@@ -339,9 +353,11 @@ export default function RepairScreen() {
         )}
 
         <Pressable style={styles.submitButton} onPress={handleSubmit}>
+          <Ionicons name="paper-plane-outline" size={18} color={theme.background} />
           <Text style={styles.submitText}>Gửi yêu cầu</Text>
         </Pressable>
       </Card>
+      </AnimatedEntry>
 
       <Text style={styles.historyTitle}>Yêu cầu đã gửi</Text>
 
@@ -358,31 +374,58 @@ export default function RepairScreen() {
 
       {/* Tùy chọn chọn tất cả */}
       {requests.length > 0 && (
-        <Pressable style={styles.selectAllContainer} onPress={toggleAll}>
+        <Pressable
+          accessibilityLabel="Chọn tất cả yêu cầu sửa chữa"
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: selectedIds.length === requests.length }}
+          style={styles.selectAllContainer}
+          onPress={toggleAll}
+        >
           <Ionicons 
             name={selectedIds.length === requests.length ? "checkbox" : "square-outline"} 
             size={22} 
-            color={selectedIds.length === requests.length ? COLORS.orange : COLORS.muted} 
+            color={selectedIds.length === requests.length ? theme.primary : theme.muted}
           />
           <Text style={styles.selectAllText}>Chọn tất cả</Text>
         </Pressable>
       )}
-
-      {requests.length === 0 ? (
-        <Card style={styles.emptyCard}>
-          <Text style={styles.emptyText}>Chưa có yêu cầu sửa chữa nào.</Text>
-        </Card>
-      ) : (
-        requests.map((item) => (
-          <Pressable key={item.id} onLongPress={() => toggleSelection(item.id)}>
+      </>
+      }
+      ListEmptyComponent={
+        <IllustratedEmptyState
+          description="Các yêu cầu đã gửi sẽ xuất hiện tại đây."
+          kind="repair"
+          title="Chưa có yêu cầu sửa chữa"
+        />
+      }
+      renderItem={({ item, index }) => (
+          <AnimatedEntry delay={Math.min(index, 5) * 40}>
+          <View style={styles.timelineRow}>
+          <View style={styles.timelineRail}>
+            {index < requests.length - 1 ? <View style={styles.timelineLine} /> : null}
+            <View style={[styles.timelineNode, getStatusStyle(item.status)]}>
+              <Ionicons
+                name={item.status === "done" ? "checkmark" : item.priority === "Cao" ? "alert" : "construct-outline"}
+                size={14}
+                color={theme.text}
+              />
+            </View>
+          </View>
+          <Pressable onLongPress={() => toggleSelection(item.id)} style={styles.timelineContent}>
             <Card style={[styles.requestCard, selectedIds.includes(item.id) && styles.requestCardSelected]}>
               <View style={styles.requestHeader}>
                 <View style={styles.requestLeft}>
-                  <Pressable onPress={() => toggleSelection(item.id)} style={styles.checkboxArea}>
+                  <Pressable
+                    accessibilityLabel={`Chọn yêu cầu ${item.type}`}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: selectedIds.includes(item.id) }}
+                    onPress={() => toggleSelection(item.id)}
+                    style={styles.checkboxArea}
+                  >
                     <Ionicons 
                       name={selectedIds.includes(item.id) ? "checkbox" : "square-outline"} 
                       size={22} 
-                      color={selectedIds.includes(item.id) ? COLORS.orange : COLORS.muted} 
+                      color={selectedIds.includes(item.id) ? theme.primary : theme.muted}
                     />
                   </Pressable>
                   <View>
@@ -393,7 +436,8 @@ export default function RepairScreen() {
                   </View>
                 </View>
 
-                <View style={[styles.statusBadge, getStatusStyle(item.status)]}>
+              <View style={[styles.statusBadge, getStatusStyle(item.status)]}>
+                <Ionicons name="ellipse" size={8} color={theme.primary} />
                 <Text style={styles.statusText}>
                   {getStatusText(item.status)}
                 </Text>
@@ -417,28 +461,30 @@ export default function RepairScreen() {
                 <Text style={styles.priorityBadgeText}>{item.priority}</Text>
               </View>
 
-              <Pressable onPress={() => handleDelete(item.id)}>
+              <Pressable onPress={() => handleDelete(item.id)} style={styles.deleteButton}>
+                <Ionicons name="trash-outline" size={17} color={theme.danger} />
                 <Text style={styles.deleteText}>Xóa</Text>
               </Pressable>
             </View>
             </Card>
           </Pressable>
-        ))
+          </View>
+          </AnimatedEntry>
       )}
-    </ScrollView>
+    />
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSheet.create({
   loadingBox: {
     flex: 1,
-    backgroundColor: "#F4F5F7",
+    backgroundColor: theme.background,
     alignItems: "center",
     justifyContent: "center",
   },
   container: {
     flex: 1,
-    backgroundColor: "#F4F5F7",
+    backgroundColor: theme.background,
   },
   content: {
     paddingHorizontal: 22,
@@ -449,10 +495,10 @@ const styles = StyleSheet.create({
     fontSize: 24,
     lineHeight: 31,
     fontWeight: "900",
-    color: COLORS.text,
+    color: theme.text,
   },
   subtitle: {
-    color: COLORS.muted,
+    color: theme.muted,
     fontSize: 13,
     lineHeight: 20,
     marginTop: 6,
@@ -460,16 +506,19 @@ const styles = StyleSheet.create({
   },
   formCard: {
     marginBottom: 22,
+    backgroundColor: theme.primarySoft,
+    borderColor: "transparent",
+    borderRadius: 24,
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: "900",
-    color: COLORS.text,
+    color: theme.text,
     marginBottom: 12,
   },
   label: {
     fontSize: 13,
-    color: COLORS.muted,
+    color: theme.muted,
     marginBottom: 8,
     marginTop: 10,
     fontWeight: "700",
@@ -477,31 +526,31 @@ const styles = StyleSheet.create({
   input: {
     width: "100%",
     minHeight: 48,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 10,
+    backgroundColor: theme.surfaceElevated,
+    borderRadius: 16,
     paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: "#E8E9ED",
+    borderColor: theme.border,
     fontSize: 14,
-    color: COLORS.text,
+    color: theme.text,
   },
   inputDisabled: {
     width: "100%",
     height: 48,
-    backgroundColor: "#ECEEF2",
-    borderRadius: 10,
+    backgroundColor: theme.surface,
+    borderRadius: 16,
     paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: "#E1E3E8",
+    borderColor: theme.border,
     fontSize: 14,
-    color: COLORS.muted,
+    color: theme.muted,
   },
   inputError: {
-    borderColor: "#FF3B30",
-    backgroundColor: "#FFF7F7",
+    borderColor: theme.danger,
+    backgroundColor: theme.warningSoft,
   },
   errorText: {
-    color: "#FF3B30",
+    color: theme.danger,
     fontSize: 12,
     fontWeight: "600",
     marginTop: 6,
@@ -515,23 +564,23 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 42,
     borderRadius: 10,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: theme.border,
     alignItems: "center",
     justifyContent: "center",
   },
   priorityActive: {
-    backgroundColor: COLORS.orange,
-    borderColor: COLORS.orange,
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
   },
   priorityText: {
     fontSize: 12,
     fontWeight: "800",
-    color: COLORS.muted,
+    color: theme.muted,
   },
   priorityTextActive: {
-    color: "#FFFFFF",
+    color: theme.background,
   },
   textArea: {
     height: 105,
@@ -542,46 +591,51 @@ const styles = StyleSheet.create({
     height: 116,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#FFD8C2",
+    borderColor: theme.primary,
     borderStyle: "dashed",
-    backgroundColor: "#FFF7F2",
+    backgroundColor: theme.surface,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 18,
     marginBottom: 16,
   },
   uploadIcon: {
-    color: COLORS.orange,
-    fontSize: 26,
-    fontWeight: "900",
+    alignItems: "center",
+    backgroundColor: theme.primarySoft,
+    borderRadius: 16,
+    height: 44,
+    justifyContent: "center",
     marginBottom: 4,
+    width: 44,
   },
   uploadText: {
-    color: COLORS.orange,
+    color: theme.primary,
     fontWeight: "800",
     fontSize: 14,
   },
   uploadHint: {
-    color: COLORS.muted,
+    color: theme.muted,
     fontSize: 12,
     marginTop: 4,
   },
   submitButton: {
     height: 52,
-    backgroundColor: COLORS.orange,
-    borderRadius: 11,
+    backgroundColor: theme.primary,
+    borderRadius: 16,
     alignItems: "center",
+    flexDirection: "row",
+    gap: 8,
     justifyContent: "center",
   },
   submitText: {
-    color: "#FFFFFF",
+    color: theme.background,
     fontSize: 15,
     fontWeight: "900",
   },
   historyTitle: {
     fontSize: 16,
     fontWeight: "900",
-    color: COLORS.text,
+    color: theme.text,
     marginBottom: 12,
   },
   bulkActionContainer: {
@@ -589,18 +643,18 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 8,
-    backgroundColor: "#FFF0F0",
+    backgroundColor: theme.warningSoft,
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 8,
   },
   bulkText: {
-    color: COLORS.red,
+    color: theme.danger,
     fontWeight: "700",
     fontSize: 14,
   },
   bulkDeleteButton: {
-    backgroundColor: COLORS.red,
+    backgroundColor: theme.danger,
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
@@ -622,25 +676,36 @@ const styles = StyleSheet.create({
   },
   selectAllText: {
     fontSize: 14,
-    color: COLORS.muted,
+    color: theme.muted,
     fontWeight: "600",
-  },
-  emptyCard: {
-    alignItems: "center",
-  },
-  emptyText: {
-    color: COLORS.muted,
-    fontSize: 13,
-    fontWeight: "700",
-    textAlign: "center",
   },
   requestCard: {
     marginBottom: 12,
     padding: 16,
+    backgroundColor: theme.surface,
+    borderColor: "transparent",
+    borderRadius: 20,
+  },
+  timelineRow: { flexDirection: "row", gap: 10 },
+  timelineContent: { flex: 1 },
+  timelineRail: { alignItems: "center", width: 28 },
+  timelineLine: {
+    backgroundColor: theme.border,
+    bottom: -12,
+    position: "absolute",
+    top: 30,
+    width: 2,
+  },
+  timelineNode: {
+    alignItems: "center",
+    borderRadius: 999,
+    height: 28,
+    justifyContent: "center",
+    width: 28,
   },
   requestCardSelected: {
-    backgroundColor: "#FFF5ED",
-    borderColor: COLORS.orange,
+    backgroundColor: theme.primarySoft,
+    borderColor: theme.primary,
     borderWidth: 1,
   },
   requestHeader: {
@@ -657,35 +722,38 @@ const styles = StyleSheet.create({
   requestTitle: {
     fontSize: 15,
     fontWeight: "900",
-    color: COLORS.text,
+    color: theme.text,
   },
   requestDate: {
-    color: COLORS.muted,
+    color: theme.muted,
     fontSize: 12,
     marginTop: 5,
   },
   statusBadge: {
+    alignItems: "center",
     alignSelf: "flex-start",
+    flexDirection: "row",
+    gap: 6,
     paddingHorizontal: 9,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 999,
   },
   statusPending: {
-    backgroundColor: "#FFF4E5",
+    backgroundColor: theme.warningSoft,
   },
   statusProcessing: {
-    backgroundColor: "#E6FAFF",
+    backgroundColor: theme.primarySoft,
   },
   statusDone: {
-    backgroundColor: "#EAFBEF",
+    backgroundColor: theme.positiveSoft,
   },
   statusText: {
-    color: COLORS.text,
+    color: theme.text,
     fontSize: 11,
     fontWeight: "900",
   },
   requestDesc: {
-    color: COLORS.muted,
+    color: theme.muted,
     fontSize: 13,
     lineHeight: 20,
     marginTop: 12,
@@ -714,15 +782,16 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(100, 116, 139, 0.15)",
   },
   priorityBadgeText: {
-    color: COLORS.text,
+    color: theme.text,
     fontSize: 12,
     fontWeight: "900",
   },
   deleteText: {
-    color: COLORS.red,
+    color: theme.danger,
     fontSize: 13,
     fontWeight: "900",
   },
+  deleteButton: { alignItems: "center", flexDirection: "row", gap: 5, minHeight: 44 },
   roomSelectRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -733,23 +802,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     height: 42,
     borderRadius: 10,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: theme.border,
     alignItems: "center",
     justifyContent: "center",
   },
   roomActive: {
-    backgroundColor: COLORS.orange,
-    borderColor: COLORS.orange,
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
   },
   roomText: {
     fontSize: 12,
     fontWeight: "800",
-    color: COLORS.muted,
+    color: theme.muted,
   },
   roomTextActive: {
-    color: "#FFFFFF",
+    color: theme.background,
   },
   imagePreviewContainer: {
     flexDirection: "row",
@@ -765,13 +834,13 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#E8E9ED",
+    borderColor: theme.border,
   },
   removeImageBtn: {
     position: "absolute",
     top: -5,
     right: -5,
-    backgroundColor: COLORS.red,
+    backgroundColor: theme.danger,
     borderRadius: 10,
     width: 20,
     height: 20,
@@ -795,6 +864,6 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: "#E8E9ED",
+    borderColor: theme.border,
   },
 });

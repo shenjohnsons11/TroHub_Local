@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, StyleSheet, SafeAreaView, useColorScheme } from "react-native";
+import { View, StyleSheet, SafeAreaView } from "react-native";
 import Toast from "react-native-toast-message";
 
 import BottomNav from "../components/BottomNav";
@@ -21,7 +21,7 @@ import BulkInvoiceScreen from "../screens/BulkInvoiceScreen";
 import ChangePasswordScreen from "../screens/ChangePasswordScreen";
 import AdminSettingsScreen from "../screens/AdminSettingsScreen";
 import AppLoadingScreen from "../components/AppLoadingScreen";
-import { TROHUB_THEMES } from "../constants/theme";
+import { useAppTheme } from "../contexts/ThemeContext";
 
 import { UserProfile } from "../types/UserProfile";
 import { authService } from "../services/authService";
@@ -42,7 +42,7 @@ type Tab =
   | "settings";
 
 export default function App() {
-  const theme = TROHUB_THEMES[useColorScheme() === "dark" ? "dark" : "light"];
+  const { theme } = useAppTheme();
   const [isChecking, setIsChecking] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("home");
@@ -217,14 +217,14 @@ export default function App() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: "#F4F5F7",
+    backgroundColor: "#FAF8F4",
   },
   phone: {
     flex: 1, 
     width: "100%",
     maxWidth: 430,
     alignSelf: "center",
-    backgroundColor: "#F4F5F7",
+    backgroundColor: "#FAF8F4",
   },
   content: {
     flex: 1,
