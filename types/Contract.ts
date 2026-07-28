@@ -25,5 +25,11 @@ export type Contract = {
     parking: string;
     internet: string;
   };
+  meterTerms: {
+    electricityPrice: number;
+    waterPrice: number;
+    initialElectricity: number;
+    initialWater: number;
+  };
   note: string;
 };
