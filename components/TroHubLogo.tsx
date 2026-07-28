@@ -37,7 +37,7 @@ const styles = StyleSheet.create({
   green: { backgroundColor: "#17834A" },
   letter: { color: "#F8F8F6", fontSize: 18, fontWeight: "900" },
   wordmark: { gap: 2 },
-  name: { color: "#25292D", fontSize: 20, fontWeight: "900", letterSpacing: 0 },
+  name: { color: "#20302A", fontSize: 20, fontWeight: "900", letterSpacing: 0 },
   inverted: { color: "#F4F5F3" },
   tagline: { color: "#697178", fontSize: 8, fontWeight: "800", letterSpacing: 1.4 },
   taglineInverted: { color: "#B6BCC0" },

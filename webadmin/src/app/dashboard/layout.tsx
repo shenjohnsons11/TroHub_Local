@@ -2,7 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, FileText, Home, Droplet, Receipt, Wrench, LogOut, Wallet, Settings2, CreditCard, SlidersHorizontal } from "lucide-react";
+import {
+  CreditCard,
+  Droplet,
+  FileText,
+  Home,
+  LayoutDashboard,
+  LogOut,
+  Receipt,
+  Settings2,
+  SlidersHorizontal,
+  Users,
+  Wallet,
+  Wrench,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { TroHubLogo } from "@/components/trohub-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -10,7 +23,7 @@ import { AppLoading } from "@/components/app-loading";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<{ fullName?: string } | null>(null);
 
   useEffect(() => {
     const userData = localStorage.getItem("trohub_user");
@@ -27,88 +40,133 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     window.location.href = "/";
   };
 
-  const navItems = [
-    { name: "Tổng quan", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Quản lý Phòng", href: "/dashboard/rooms", icon: Home },
-    { name: "Người thuê", href: "/dashboard/tenants", icon: Users },
-    { name: "Hợp đồng", href: "/dashboard/contracts", icon: FileText },
-    { name: "Điện nước", href: "/dashboard/utilities", icon: Droplet },
-    { name: "Hóa đơn", href: "/dashboard/invoices", icon: Receipt },
-    { name: "Công nợ", href: "/dashboard/debts", icon: Wallet },
-    { name: "Thanh toán", href: "/dashboard/payments", icon: CreditCard },
-    { name: "Quản lý dịch vụ", href: "/dashboard/services", icon: Settings2 },
-    { name: "Sửa chữa", href: "/dashboard/repairs", icon: Wrench },
-    { name: "Cài đặt", href: "/dashboard/settings", icon: SlidersHorizontal },
+  const navGroups = [
+    { label: "Vận hành", items: [
+      { name: "Tổng quan", href: "/dashboard", icon: LayoutDashboard },
+      { name: "Quản lý Phòng", href: "/dashboard/rooms", icon: Home },
+      { name: "Người thuê", href: "/dashboard/tenants", icon: Users },
+      { name: "Hợp đồng", href: "/dashboard/contracts", icon: FileText },
+      { name: "Điện nước", href: "/dashboard/utilities", icon: Droplet },
+    ] },
+    { label: "Tài chính", items: [
+      { name: "Hóa đơn", href: "/dashboard/invoices", icon: Receipt },
+      { name: "Công nợ", href: "/dashboard/debts", icon: Wallet },
+      { name: "Thanh toán", href: "/dashboard/payments", icon: CreditCard },
+      { name: "Quản lý dịch vụ", href: "/dashboard/services", icon: Settings2 },
+    ] },
+    { label: "Hỗ trợ", items: [
+      { name: "Sửa chữa", href: "/dashboard/repairs", icon: Wrench },
+      { name: "Cài đặt", href: "/dashboard/settings", icon: SlidersHorizontal },
+    ] },
   ];
+  const navItems = navGroups.flatMap((group) => group.items);
 
   if (!user) return <AppLoading message="Đang mở bảng điều khiển" />;
 
   return (
-    <div className="flex min-h-[100dvh] bg-background">
-      <aside className="fixed hidden h-full w-64 flex-col border-r border-border bg-card md:flex">
-        <div className="flex h-[72px] items-center border-b border-border px-5">
+    <div className="calm-admin flex min-h-[100dvh] bg-background">
+      <aside className="app-sidebar fixed inset-y-3 left-3 z-30 hidden w-[264px] flex-col overflow-hidden rounded-[20px] md:flex">
+        <div className="flex h-[76px] items-center px-5">
           <TroHubLogo />
         </div>
-        
-        <div className="flex-1 space-y-1 overflow-y-auto p-4">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href || (pathname.startsWith(item.href) && item.href !== "/dashboard");
-            const Icon = item.icon;
-            
-            return (
-              <Link 
-                key={item.name} 
-                href={item.href}
-                className={`flex min-h-11 items-center gap-3 rounded-[9px] px-3 py-2.5 font-semibold transition-colors ${
-                  isActive 
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-background hover:text-foreground"
-                }`}
-              >
-                <Icon className="w-5 h-5" />
-                {item.name}
-              </Link>
-            );
-          })}
+
+        <div className="flex-1 overflow-y-auto px-3 py-2">
+          {navGroups.map((group) => (
+            <section key={group.label} className="mb-5">
+              <p className="mb-2 px-3 text-[11px] font-extrabold text-muted-foreground">
+                {group.label}
+              </p>
+              <div className="space-y-1">
+                {group.items.map((item) => {
+                  const isActive = pathname === item.href || (pathname.startsWith(item.href) && item.href !== "/dashboard");
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      aria-current={isActive ? "page" : undefined}
+                      className={`group flex min-h-11 items-center gap-3 rounded-[16px] px-3 py-2.5 text-sm font-bold transition-[background-color,color,transform] duration-200 active:scale-[.98] ${
+                        isActive
+                          ? "bg-primary text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_24%,transparent)]"
+                          : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                      }`}
+                    >
+                      <span className={`grid size-8 place-items-center rounded-xl ${isActive ? "bg-white/14" : "bg-accent group-hover:bg-card"}`}>
+                        <Icon className="size-[18px]" aria-hidden="true" />
+                      </span>
+                      {item.name}
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
         </div>
 
-        <div className="border-t border-border p-4">
-          <div className="flex items-center gap-3 px-3 py-2 mb-2">
-            <div className="grid h-10 w-10 place-items-center rounded-full bg-background font-bold text-foreground">
+        <div className="m-3 rounded-[16px] bg-accent/75 p-2">
+          <div className="mb-1 flex items-center gap-3 px-2 py-2">
+            <div className="grid size-10 place-items-center rounded-full bg-primary font-black text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_22%,transparent)]">
               {user.fullName ? user.fullName[0].toUpperCase() : "A"}
             </div>
             <div className="flex-1 overflow-hidden">
-              <p className="truncate text-sm font-semibold text-foreground">{user.fullName || "Admin"}</p>
+              <p className="truncate text-sm font-extrabold text-foreground">{user.fullName || "Admin"}</p>
               <p className="truncate text-xs text-muted-foreground">Chủ trọ</p>
             </div>
           </div>
-          <button 
+          <button
             onClick={handleLogout}
-            className="flex min-h-11 w-full items-center gap-3 rounded-[9px] px-3 py-2.5 font-semibold text-red-600 transition-colors hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-950/30"
+            className="flex min-h-11 w-full items-center gap-3 rounded-[16px] px-3 py-2.5 text-sm font-bold text-destructive transition-colors hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-destructive/30"
           >
-            <LogOut className="w-5 h-5" />
+            <LogOut className="size-[18px]" aria-hidden="true" />
             Đăng xuất
           </button>
         </div>
       </aside>
 
-      <main className="min-w-0 flex-1 md:ml-64">
-        <header className="sticky top-0 z-20 border-b border-border bg-card/95 backdrop-blur">
-          <div className="flex h-[72px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-          <div className="md:hidden"><TroHubLogo compact /></div>
-          <h2 className="hidden text-xl font-black text-foreground sm:block">
-            {navItems.find(item => pathname === item.href || (pathname.startsWith(item.href) && item.href !== "/dashboard"))?.name || "Dashboard"}
-          </h2>
-          <ThemeToggle />
+      <main className="min-w-0 flex-1 md:ml-[288px]">
+        <header className="app-topbar sticky top-0 z-20">
+          <div className="flex h-[76px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+            <div className="md:hidden"><TroHubLogo compact /></div>
+            <div className="hidden sm:block">
+              <p className="text-xs font-bold text-muted-foreground">Không gian vận hành</p>
+              <h2 className="text-xl font-black tracking-[-.025em] text-foreground">
+                {navItems.find(item => pathname === item.href || (pathname.startsWith(item.href) && item.href !== "/dashboard"))?.name || "Dashboard"}
+              </h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="theme-icon-button text-destructive md:hidden"
+                aria-label="Đăng xuất"
+                title="Đăng xuất"
+              >
+                <LogOut aria-hidden="true" />
+              </button>
+            </div>
           </div>
-          <nav className="flex gap-1 overflow-x-auto border-t border-border px-3 py-2 md:hidden" aria-label="Điều hướng chính">
+          <nav className="flex gap-1 overflow-x-auto px-3 pb-3 md:hidden" aria-label="Điều hướng chính">
             {navItems.map((item) => {
               const active = pathname === item.href || (pathname.startsWith(item.href) && item.href !== "/dashboard");
-              return <Link key={item.href} href={item.href} className={`shrink-0 rounded-[8px] px-3 py-2 text-sm font-semibold ${active ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{item.name}</Link>;
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  className={`flex min-h-11 shrink-0 items-center gap-2 rounded-[16px] px-3 py-2 text-sm font-bold transition-colors ${
+                    active ? "bg-primary text-primary-foreground" : "bg-card/75 text-muted-foreground"
+                  }`}
+                >
+                  <Icon className="size-4" aria-hidden="true" />
+                  {item.name}
+                </Link>
+              );
             })}
           </nav>
         </header>
-        <div className="p-4 sm:p-6 lg:p-8">
+        <div className="p-4 sm:p-6 lg:p-8 xl:p-10">
           {children}
         </div>
       </main>

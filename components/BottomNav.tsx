@@ -1,7 +1,8 @@
 import React from "react";
-import { View, Text, Pressable, StyleSheet, useColorScheme } from "react-native";
+import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { COLORS, TROHUB_THEMES } from "../constants/theme";
+import { BlurView } from "expo-blur";
+import { useAppTheme } from "../contexts/ThemeContext";
 
 type Tab =
   | "home"
@@ -102,39 +103,52 @@ const landlordTabs: {
 
 export default function BottomNav({ activeTab, onChangeTab, role }: Props) {
   const tabs = role === 1 ? landlordTabs : tenantTabs;
-  const theme = TROHUB_THEMES[useColorScheme() === "dark" ? "dark" : "light"];
+  const { theme, themeMode } = useAppTheme();
 
   return (
     <View style={[styles.wrapper, { backgroundColor: theme.background }]}>
-      <View style={[styles.container, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-        {tabs.map((tab) => {
-          const active =
-            activeTab === tab.key ||
-            (activeTab === "utility" && tab.key === "home") ||
-            (activeTab === "profile" && tab.key === "account");
+      <View style={[styles.shadowShell, { shadowColor: theme.text }]}>
+        <BlurView
+          intensity={themeMode === "dark" ? 52 : 72}
+          tint={themeMode}
+          style={[styles.container, { borderColor: theme.border }]}
+        >
+          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: theme.surface, opacity: 0.82 }]} />
+          {tabs.map((tab) => {
+            const active =
+              activeTab === tab.key ||
+              (activeTab === "utility" && tab.key === "home") ||
+              (activeTab === "profile" && tab.key === "account");
 
-          return (
-            <Pressable
-              key={tab.key}
-              style={styles.item}
-              onPress={() => onChangeTab(tab.key)}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: active }}
-            >
-              <View style={[styles.iconBox, active && styles.iconBoxActive]}>
-                <Ionicons
-                  name={active ? tab.activeIcon : tab.icon}
-                  size={21}
-                  color={active ? theme.primary : theme.muted}
-                />
-              </View>
+            return (
+              <Pressable
+                key={tab.key}
+                style={styles.item}
+                onPress={() => onChangeTab(tab.key)}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: active }}
+              >
+                <View
+                  style={[
+                    styles.iconBox,
+                    active && styles.iconBoxActive,
+                    active && { backgroundColor: theme.primarySoft, shadowColor: theme.primary },
+                  ]}
+                >
+                  <Ionicons
+                    name={active ? tab.activeIcon : tab.icon}
+                    size={21}
+                    color={active ? theme.primary : theme.muted}
+                  />
+                </View>
 
-              <Text style={[styles.label, { color: theme.muted }, active && styles.activeLabel, active && { color: theme.primary }]}>
-                {tab.label}
-              </Text>
-            </Pressable>
-          );
-        })}
+                <Text style={[styles.label, { color: theme.muted }, active && styles.activeLabel, active && { color: theme.primary }]}>
+                  {tab.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </BlurView>
       </View>
     </View>
   );
@@ -142,52 +156,52 @@ export default function BottomNav({ activeTab, onChangeTab, role }: Props) {
 
 const styles = StyleSheet.create({
   wrapper: {
-    backgroundColor: "#F4F5F7",
-    paddingHorizontal: 14,
+    backgroundColor: "transparent",
+    paddingHorizontal: 12,
     paddingBottom: 10,
     paddingTop: 6,
   },
+  shadowShell: {
+    borderRadius: 22,
+    shadowOpacity: 0.14,
+    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 20,
+    elevation: 10,
+  },
   container: {
-    height: 68,
-    backgroundColor: "#FFFFFF",
+    minHeight: 72,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-around",
-    borderRadius: 13,
+    borderRadius: 22,
     borderWidth: 1,
-    shadowColor: "#25292D",
-    shadowOpacity: 0.08,
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowRadius: 20,
-    elevation: 8,
+    overflow: "hidden",
   },
   item: {
     flex: 1,
-    minHeight: 52,
+    minHeight: 56,
     alignItems: "center",
     justifyContent: "center",
   },
   iconBox: {
-    width: 34,
-    height: 28,
-    borderRadius: 9,
+    width: 38,
+    height: 30,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 3,
   },
   iconBoxActive: {
-    backgroundColor: COLORS.orangeSoft,
+    shadowOpacity: 0.24,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 7,
+    elevation: 5,
   },
   label: {
-    fontSize: 10,
-    color: COLORS.muted,
+    fontSize: 10.5,
     fontWeight: "700",
   },
   activeLabel: {
-    color: COLORS.orange,
     fontWeight: "900",
   },
 });

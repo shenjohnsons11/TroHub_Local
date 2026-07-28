@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
-  ScrollView,
+  FlatList,
   Text,
   StyleSheet,
   View,
@@ -8,12 +8,17 @@ import {
   ActivityIndicator,
 } from "react-native";
 import Card from "../components/Card";
-import { COLORS } from "../constants/theme";
+import { useAppTheme } from "../contexts/ThemeContext";
+import { useNotification } from "../hooks/useNotification";
 import InvoiceDetailModal from "../components/InvoiceDetailModal";
 import PaymentModal from "../components/PaymentModal";
 import { Invoice } from "../types/Invoice";
 import { invoiceService } from "../services/invoiceService";
-import Toast from "react-native-toast-message";
+import { Ionicons } from "@expo/vector-icons";
+import GradientHero from "../components/ui/GradientHero";
+import AnimatedEntry from "../components/ui/AnimatedEntry";
+import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
+import { calculateUnpaidTotal } from "../utils/invoicePresentation";
 
 type FilterType = "all" | "unpaid" | "paid";
 
@@ -22,17 +27,16 @@ type Props = {
 };
 
 export default function InvoiceScreen({ params }: Props) {
+  const { theme } = useAppTheme();
+  const notification = useNotification();
+  const styles = createStyles(theme);
   const [filter, setFilter] = useState<FilterType>(params?.filter || "all");
   const [invoiceList, setInvoiceList] = useState<Invoice[]>([]);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [paymentInvoice, setPaymentInvoice] = useState<Invoice | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadInvoices();
-  }, []);
-
-  const loadInvoices = async () => {
+  const loadInvoices = useCallback(async () => {
     try {
       setIsLoading(true);
       const data = await invoiceService.getInvoices();
@@ -46,25 +50,26 @@ export default function InvoiceScreen({ params }: Props) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [params?.paymentInvoiceId]);
+
+  useEffect(() => {
+    void loadInvoices();
+  }, [loadInvoices]);
 
   const filteredInvoices = invoiceList.filter((item) => {
     if (filter === "all") return true;
     return item.status === filter;
   });
+  const unpaidInvoices = invoiceList.filter((invoice) => invoice.status === "unpaid");
+  const unpaidTotal = calculateUnpaidTotal(invoiceList);
 
   const handlePayment = async (_invoiceId: string) => {
     try {
       await loadInvoices();
       setSelectedInvoice(null);
       setPaymentInvoice(null);
-
-      Toast.show({
-        type: 'success',
-        text1: 'Thanh toán thành công',
-        text2: 'Cảm ơn Người thuê đã thanh toán hóa đơn.',
-        position: 'top',
-        visibilityTime: 4000,
+      notification.success("Cảm ơn Người thuê đã thanh toán hóa đơn.", {
+        title: "Thanh toán thành công",
       });
     } catch (error) {
       console.log("Lỗi refresh hóa đơn sau thanh toán:", error);
@@ -87,136 +92,101 @@ export default function InvoiceScreen({ params }: Props) {
   if (isLoading) {
     return (
       <View style={styles.loadingBox}>
-        <ActivityIndicator size="large" color={COLORS.orange} />
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
 
   return (
     <>
-      <ScrollView
+      <FlatList
+        data={filteredInvoices}
+        keyExtractor={(invoice) => invoice.id}
         style={styles.container}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
-      >
-        <Text style={styles.title}>Hóa đơn</Text>
-
-        <View style={styles.filterRow}>
-          <Pressable
-            style={[
-              styles.filterButton,
-              filter === "all" && styles.filterActive,
-            ]}
-            onPress={() => setFilter("all")}
-          >
-            <Text
-              style={[
-                styles.filterText,
-                filter === "all" && styles.filterTextActive,
-              ]}
-            >
-              Tất cả
-            </Text>
-          </Pressable>
-
-          <Pressable
-            style={[
-              styles.filterButton,
-              filter === "unpaid" && styles.filterActive,
-            ]}
-            onPress={() => setFilter("unpaid")}
-          >
-            <Text
-              style={[
-                styles.filterText,
-                filter === "unpaid" && styles.filterTextActive,
-              ]}
-            >
-              Chưa TT
-            </Text>
-          </Pressable>
-
-          <Pressable
-            style={[
-              styles.filterButton,
-              filter === "paid" && styles.filterActive,
-            ]}
-            onPress={() => setFilter("paid")}
-          >
-            <Text
-              style={[
-                styles.filterText,
-                filter === "paid" && styles.filterTextActive,
-              ]}
-            >
-              Đã TT
-            </Text>
-          </Pressable>
-        </View>
-
-        {filteredInvoices.length === 0 ? (
-          <Card style={styles.emptyCard}>
-            <Text style={styles.emptyText}>Không có hóa đơn phù hợp.</Text>
-          </Card>
-        ) : (
-          filteredInvoices.map((invoice) => {
-            const isPaid = invoice.status === "paid";
-
-            return (
-              <Card key={invoice.id} style={styles.invoiceCard}>
+        ListHeaderComponent={
+          <>
+            <Text style={styles.title}>Hóa đơn</Text>
+            {unpaidInvoices.length > 0 ? (
+              <AnimatedEntry>
+                <GradientHero
+                  actionIcon="card-outline"
+                  actionLabel="Thanh toán hóa đơn"
+                  detail={`${unpaidInvoices.length} hóa đơn chưa thanh toán`}
+                  icon="receipt-outline"
+                  label="TỔNG CẦN THANH TOÁN"
+                  onAction={() => openPaymentModal(unpaidInvoices[0])}
+                  value={`${new Intl.NumberFormat("vi-VN").format(unpaidTotal)}đ`}
+                />
+              </AnimatedEntry>
+            ) : null}
+            <View style={styles.filterRow}>
+              {(["all", "unpaid", "paid"] as const).map((value) => (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: filter === value }}
+                  key={value}
+                  onPress={() => setFilter(value)}
+                  style={[styles.filterButton, filter === value && styles.filterActive]}
+                >
+                  <Text style={[styles.filterText, filter === value && styles.filterTextActive]}>
+                    {value === "all" ? "Tất cả" : value === "unpaid" ? "Chưa TT" : "Đã TT"}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </>
+        }
+        ListEmptyComponent={
+          invoiceList.length === 0 ? (
+            <IllustratedEmptyState
+              description="Hóa đơn mới sẽ xuất hiện tại đây."
+              kind="invoice"
+              title="Chưa có hóa đơn"
+            />
+          ) : (
+            <View style={styles.filterEmpty}>
+              <Ionicons name="filter-outline" size={22} color={theme.muted} />
+              <Text style={styles.filterEmptyText}>Không có hóa đơn phù hợp với bộ lọc.</Text>
+            </View>
+          )
+        }
+        renderItem={({ item: invoice, index }) => {
+          const isPaid = invoice.status === "paid";
+          return (
+            <AnimatedEntry delay={Math.min(index, 5) * 35}>
+              <Card style={styles.invoiceCard}>
+                <Text style={styles.amount}>{invoice.amount}</Text>
                 <View style={styles.cardHeader}>
                   <View style={styles.cardLeft}>
-                    <Text style={styles.cardTitle}>
-                      Hóa đơn tháng {invoice.month}
-                    </Text>
+                    <Text style={styles.cardTitle}>Hóa đơn tháng {invoice.month}</Text>
                     <Text style={styles.room}>Phòng {invoice.room}</Text>
                   </View>
-
-                  <View
-                    style={[
-                      styles.statusBadge,
-                      isPaid ? styles.paidBadge : styles.unpaidBadge,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.statusText,
-                        isPaid ? styles.paidText : styles.unpaidText,
-                      ]}
-                    >
+                  <View style={[styles.statusBadge, isPaid ? styles.paidBadge : styles.unpaidBadge]}>
+                    <Text style={[styles.statusText, isPaid ? styles.paidText : styles.unpaidText]}>
                       {invoice.statusText}
                     </Text>
                   </View>
                 </View>
-
-                <Text style={styles.amount}>{invoice.amount}</Text>
-
-                <Text style={styles.dueDate}>
-                  Hạn thanh toán: {invoice.dueDate}
-                </Text>
-
+                <Text style={styles.dueDate}>Hạn thanh toán: {invoice.dueDate}</Text>
                 <View style={styles.actionRow}>
-                  {!isPaid && (
-                    <Pressable
-                      style={styles.payButton}
-                      onPress={() => openPaymentModal(invoice)}
-                    >
+                  {!isPaid ? (
+                    <Pressable style={styles.payButton} onPress={() => openPaymentModal(invoice)}>
+                      <Ionicons name="card-outline" size={18} color={theme.background} />
                       <Text style={styles.payText}>Thanh toán</Text>
                     </Pressable>
-                  )}
-
-                  <Pressable
-                    style={styles.detailButton}
-                    onPress={() => setSelectedInvoice(invoice)}
-                  >
+                  ) : null}
+                  <Pressable style={styles.detailButton} onPress={() => setSelectedInvoice(invoice)}>
+                    <Ionicons name="eye-outline" size={18} color={theme.primary} />
                     <Text style={styles.detailText}>Xem chi tiết</Text>
                   </Pressable>
                 </View>
               </Card>
-            );
-          })
-        )}
-      </ScrollView>
+            </AnimatedEntry>
+          );
+        }}
+      />
 
       <InvoiceDetailModal
         visible={selectedInvoice !== null}
@@ -235,16 +205,16 @@ export default function InvoiceScreen({ params }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSheet.create({
   loadingBox: {
     flex: 1,
-    backgroundColor: "#F4F5F7",
+    backgroundColor: theme.background,
     alignItems: "center",
     justifyContent: "center",
   },
   container: {
     flex: 1,
-    backgroundColor: "#F4F5F7",
+    backgroundColor: theme.background,
   },
   content: {
     paddingHorizontal: 22,
@@ -255,8 +225,9 @@ const styles = StyleSheet.create({
     fontSize: 24,
     lineHeight: 31,
     fontWeight: "900",
-    color: COLORS.text,
+    color: theme.text,
     marginBottom: 18,
+    marginTop: 18,
   },
   filterRow: {
     flexDirection: "row",
@@ -267,37 +238,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 9,
     borderRadius: 999,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    backgroundColor: theme.surface,
   },
   filterActive: {
-    backgroundColor: COLORS.orange,
-    borderColor: COLORS.orange,
+    backgroundColor: theme.primary,
   },
   filterText: {
-    color: COLORS.muted,
+    color: theme.muted,
     fontSize: 13,
     fontWeight: "800",
   },
   filterTextActive: {
-    color: "#FFFFFF",
+    color: theme.background,
   },
-  emptyCard: {
+  filterEmpty: {
     alignItems: "center",
+    backgroundColor: theme.surface,
+    borderRadius: 20,
+    flexDirection: "row",
+    gap: 10,
+    padding: 18,
   },
-  emptyText: {
-    color: COLORS.muted,
-    fontSize: 13,
-    fontWeight: "700",
-  },
+  filterEmptyText: { color: theme.muted, flex: 1, fontSize: 13, fontWeight: "700" },
   invoiceCard: {
     marginBottom: 14,
+    backgroundColor: theme.surface,
+    borderColor: "transparent",
+    borderRadius: 20,
   },
   cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     gap: 12,
+    marginTop: 10,
   },
   cardLeft: {
     flex: 1,
@@ -305,10 +278,10 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 15,
     fontWeight: "900",
-    color: COLORS.text,
+    color: theme.text,
   },
   room: {
-    color: COLORS.muted,
+    color: theme.muted,
     fontSize: 13,
     marginTop: 5,
   },
@@ -316,32 +289,32 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     paddingHorizontal: 9,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 999,
   },
   unpaidBadge: {
-    backgroundColor: COLORS.orangeSoft,
+    backgroundColor: theme.warningSoft,
   },
   paidBadge: {
-    backgroundColor: "#EAFBEF",
+    backgroundColor: theme.positiveSoft,
   },
   statusText: {
     fontSize: 11,
     fontWeight: "900",
   },
   unpaidText: {
-    color: COLORS.orange,
+    color: theme.warningForeground,
   },
   paidText: {
-    color: COLORS.green,
+    color: theme.positive,
   },
   amount: {
     fontSize: 24,
     fontWeight: "900",
-    color: COLORS.text,
+    color: theme.text,
     marginTop: 18,
   },
   dueDate: {
-    color: COLORS.muted,
+    color: theme.muted,
     fontSize: 13,
     marginTop: 8,
   },
@@ -352,24 +325,29 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   payButton: {
-    backgroundColor: COLORS.orange,
+    alignItems: "center",
+    backgroundColor: theme.primary,
+    flexDirection: "row",
+    gap: 7,
     paddingHorizontal: 18,
     paddingVertical: 11,
-    borderRadius: 10,
+    borderRadius: 16,
   },
   payText: {
-    color: "#FFFFFF",
+    color: theme.background,
     fontWeight: "800",
   },
   detailButton: {
-    borderWidth: 1,
-    borderColor: COLORS.orange,
+    alignItems: "center",
+    backgroundColor: theme.primarySoft,
+    flexDirection: "row",
+    gap: 7,
     paddingHorizontal: 18,
     paddingVertical: 10,
-    borderRadius: 10,
+    borderRadius: 16,
   },
   detailText: {
-    color: COLORS.orange,
+    color: theme.primary,
     fontWeight: "800",
   },
 });

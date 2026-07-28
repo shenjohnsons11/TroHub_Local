@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
 import NextTopLoader from "nextjs-toploader";
+import "sweetalert2/dist/sweetalert2.min.css";
 
 import "./globals.css";
+import { ThemeProvider } from "@/components/theme-provider";
 import { NotificationProvider } from "@/providers/notification-provider";
+
+const themeScript = `(function(){var t;try{t=localStorage.getItem("trohub_theme")}catch(e){}var d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d)})()`;
 
 export const metadata: Metadata = {
   title: "TRO HUB - Quản lý nhà trọ",
@@ -15,10 +19,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="vi" className="h-full antialiased">
+    <html lang="vi" className="h-full antialiased" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className="min-h-full flex flex-col">
-        <NextTopLoader color="#f37021" showSpinner={false} />
-        <NotificationProvider>{children}</NotificationProvider>
+        <NextTopLoader color="#0e806d" showSpinner={false} />
+        <ThemeProvider>
+          <NotificationProvider>{children}</NotificationProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

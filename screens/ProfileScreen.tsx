@@ -6,11 +6,13 @@ import {
   View,
   TextInput,
   Pressable,
-  Alert,
 } from "react-native";
 import Card from "../components/Card";
-import { COLORS } from "../constants/theme";
 import { UserProfile } from "../types/UserProfile";
+import { useAppTheme } from "../contexts/ThemeContext";
+import { useNotification } from "../hooks/useNotification";
+import AppButton from "../components/ui/AppButton";
+import { Ionicons } from "@expo/vector-icons";
 
 type Props = {
   profile: UserProfile;
@@ -19,6 +21,9 @@ type Props = {
 };
 
 export default function ProfileScreen({ profile, onSave, onBack }: Props) {
+  const { theme } = useAppTheme();
+  const notification = useNotification();
+  const styles = createStyles(theme);
   const formatPhone = (val: any) => {
     let v = String(val || "").replace(/\D/g, "");
     if (v.length > 7) return v.replace(/(\d{4})(\d{3})(\d+)/, "$1.$2.$3");
@@ -83,18 +88,19 @@ export default function ProfileScreen({ profile, onSave, onBack }: Props) {
       cccd: cccd.replace(/\D/g, ""),
     });
 
-    Alert.alert("Thành công", "Thông tin cá nhân đã được cập nhật");
+    notification.success("Thông tin cá nhân đã được cập nhật", { title: "Thành công" });
   };
 
   return (
     <ScrollView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: theme.background }]}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
       <Pressable style={styles.backButton} onPress={onBack}>
-        <Text style={styles.backText}>‹ Quay lại</Text>
+        <Ionicons name="chevron-back" size={18} color={theme.primary} />
+        <Text style={styles.backText}>Quay lại</Text>
       </Pressable>
 
       <Text style={styles.title}>Thông tin cá nhân</Text>
@@ -102,7 +108,7 @@ export default function ProfileScreen({ profile, onSave, onBack }: Props) {
         Xem và cập nhật thông tin người thuê phòng.
       </Text>
 
-      <Card style={styles.avatarCard}>
+      <Card style={[styles.card, styles.avatarCard]}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>
             {fullName ? fullName.charAt(0).toUpperCase() : "A"}
@@ -113,7 +119,7 @@ export default function ProfileScreen({ profile, onSave, onBack }: Props) {
         <Text style={styles.roomText}>Phòng {room}</Text>
       </Card>
 
-      <Card style={styles.formCard}>
+      <Card style={[styles.card, styles.formCard]}>
         <Text style={styles.sectionTitle}>Thông tin người thuê</Text>
 
         <Text style={styles.label}>Họ và tên</Text>
@@ -125,12 +131,13 @@ export default function ProfileScreen({ profile, onSave, onBack }: Props) {
             if (fullNameError) setFullNameError("");
           }}
           placeholder="Nhập họ và tên"
-          placeholderTextColor={COLORS.muted}
+          placeholderTextColor={theme.muted}
         />
         {fullNameError ? (
           <Text style={styles.errorText}>{fullNameError}</Text>
         ) : null}
 
+        <Text style={styles.groupTitle}>Liên hệ</Text>
         <Text style={styles.label}>Số điện thoại</Text>
         <TextInput
           style={[styles.input, phoneError ? styles.inputError : null]}
@@ -139,7 +146,7 @@ export default function ProfileScreen({ profile, onSave, onBack }: Props) {
           keyboardType="phone-pad"
           maxLength={15}
           placeholder="Nhập số điện thoại"
-          placeholderTextColor={COLORS.muted}
+          placeholderTextColor={theme.muted}
         />
         {phoneError ? <Text style={styles.errorText}>{phoneError}</Text> : null}
 
@@ -151,7 +158,7 @@ export default function ProfileScreen({ profile, onSave, onBack }: Props) {
           keyboardType="email-address"
           autoCapitalize="none"
           placeholder="Nhập email"
-          placeholderTextColor={COLORS.muted}
+          placeholderTextColor={theme.muted}
         />
 
         <Text style={styles.label}>CMND/CCCD</Text>
@@ -166,9 +173,10 @@ export default function ProfileScreen({ profile, onSave, onBack }: Props) {
           keyboardType="number-pad"
           maxLength={14}
           placeholder="Nhập CMND/CCCD"
-          placeholderTextColor={COLORS.muted}
+          placeholderTextColor={theme.muted}
         />
 
+        <Text style={styles.groupTitle}>Thông tin thuê phòng</Text>
         <Text style={styles.label}>Phòng</Text>
         <TextInput style={styles.inputDisabled} value={room} editable={false} />
 
@@ -179,18 +187,16 @@ export default function ProfileScreen({ profile, onSave, onBack }: Props) {
           editable={false}
         />
 
-        <Pressable style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveText}>Lưu thay đổi</Text>
-        </Pressable>
+        <AppButton icon="save-outline" onPress={handleSave}>Lưu thay đổi</AppButton>
       </Card>
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F4F5F7",
+    backgroundColor: theme.background,
   },
   content: {
     paddingHorizontal: 22,
@@ -200,9 +206,12 @@ const styles = StyleSheet.create({
   backButton: {
     alignSelf: "flex-start",
     marginBottom: 14,
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
   },
   backText: {
-    color: COLORS.orange,
+    color: theme.primary,
     fontSize: 14,
     fontWeight: "900",
   },
@@ -210,14 +219,19 @@ const styles = StyleSheet.create({
     fontSize: 24,
     lineHeight: 31,
     fontWeight: "900",
-    color: COLORS.text,
+    color: theme.text,
   },
   subtitle: {
-    color: COLORS.muted,
+    color: theme.muted,
     fontSize: 13,
     lineHeight: 20,
     marginTop: 6,
     marginBottom: 20,
+  },
+  card: {
+    backgroundColor: theme.surface,
+    borderColor: theme.border,
+    shadowColor: theme.text,
   },
   avatarCard: {
     alignItems: "center",
@@ -227,24 +241,24 @@ const styles = StyleSheet.create({
     width: 86,
     height: 86,
     borderRadius: 43,
-    backgroundColor: COLORS.orange,
+    backgroundColor: theme.primary,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 14,
   },
   avatarText: {
-    color: "#FFFFFF",
+    color: theme.background,
     fontSize: 34,
     fontWeight: "900",
   },
   name: {
     fontSize: 20,
     fontWeight: "900",
-    color: COLORS.text,
+    color: theme.text,
     textAlign: "center",
   },
   roomText: {
-    color: COLORS.orange,
+    color: theme.primary,
     fontSize: 13,
     fontWeight: "900",
     marginTop: 6,
@@ -255,12 +269,21 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: "900",
-    color: COLORS.text,
+    color: theme.text,
     marginBottom: 12,
+  },
+  groupTitle: {
+    color: theme.text,
+    fontSize: 14,
+    fontWeight: "900",
+    marginTop: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: theme.border,
   },
   label: {
     fontSize: 13,
-    color: COLORS.muted,
+    color: theme.muted,
     marginBottom: 8,
     marginTop: 10,
     fontWeight: "700",
@@ -268,45 +291,45 @@ const styles = StyleSheet.create({
   input: {
     width: "100%",
     height: 48,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.surfaceElevated,
     borderRadius: 10,
     paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: "#E8E9ED",
+    borderColor: theme.border,
     fontSize: 14,
-    color: COLORS.text,
+    color: theme.text,
   },
   inputDisabled: {
     width: "100%",
     height: 48,
-    backgroundColor: "#ECEEF2",
+    backgroundColor: theme.primarySoft,
     borderRadius: 10,
     paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: "#E1E3E8",
+    borderColor: theme.border,
     fontSize: 14,
-    color: COLORS.muted,
+    color: theme.muted,
   },
   inputError: {
-    borderColor: "#FF3B30",
-    backgroundColor: "#FFF7F7",
+    borderColor: theme.danger,
+    backgroundColor: theme.warningSoft,
   },
   errorText: {
-    color: "#FF3B30",
+    color: theme.danger,
     fontSize: 12,
     fontWeight: "600",
     marginTop: 6,
   },
   saveButton: {
     height: 52,
-    backgroundColor: COLORS.orange,
+    backgroundColor: theme.primary,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 22,
   },
   saveText: {
-    color: "#FFFFFF",
+    color: theme.background,
     fontSize: 15,
     fontWeight: "900",
   },

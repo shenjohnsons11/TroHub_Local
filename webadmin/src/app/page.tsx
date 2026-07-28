@@ -1,6 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
+import { Building2, KeyRound, LoaderCircle, LogIn, ShieldCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,46 +58,51 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="relative grid min-h-[100dvh] bg-background lg:grid-cols-[1.08fr_.92fr]">
+    <main className="login-shell relative grid min-h-[100dvh] bg-background lg:grid-cols-[1.08fr_.92fr]">
       <div className="absolute right-4 top-4 z-10 lg:right-7 lg:top-7">
         <ThemeToggle />
       </div>
 
-      <section className="login-identity-panel hidden min-h-[100dvh] flex-col justify-between border-r border-border bg-[#25292d] p-10 text-[#f4f5f3] lg:flex xl:p-16">
-        <TroHubLogo className="[&_.text-foreground]:!text-[#f4f5f3] [&_.text-muted-foreground]:!text-[#c8cdd0]" />
+      <section className="login-identity-panel relative hidden min-h-[100dvh] flex-col justify-between overflow-hidden p-10 text-[#effff8] lg:flex xl:p-16">
+        <TroHubLogo className="[&_.text-foreground]:!text-[#effff8] [&_.text-muted-foreground]:!text-[#a9cfc2]" />
 
-        <div className="max-w-xl pb-10">
-          <p className="mb-5 text-sm font-extrabold tracking-[0.16em] text-[#ff7a32]">
-            TRO HUB ADMIN
-          </p>
-          <h1 className="max-w-[12ch] text-5xl font-black leading-[1.06] tracking-[-0.035em] text-balance">
+        <div className="relative z-[1] max-w-xl py-10">
+          <span className="mb-6 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-2 text-sm font-bold text-[#b8f5da]">
+            <Building2 className="size-4" aria-hidden="true" />
+            Không gian quản trị TRO HUB
+          </span>
+          <h1 className="max-w-[12ch] text-5xl font-black leading-[1.06] tracking-[-0.035em] text-balance xl:text-6xl">
             Quản lý nhà trọ rõ ràng hơn.
           </h1>
-          <p className="mt-5 max-w-[52ch] text-lg leading-relaxed text-[#c8cdd0] text-pretty">
+          <p className="mt-5 max-w-[52ch] text-lg leading-relaxed text-[#b8d7cd] text-pretty">
             Theo dõi phòng, Người thuê, hợp đồng, hóa đơn và sửa chữa trong một
             hệ thống thống nhất.
           </p>
         </div>
 
-        <div className="grid grid-cols-[1.35fr_.65fr] gap-3" aria-hidden="true">
-          <div className="h-2 rounded-[3px] bg-[#ef6a22]" />
-          <div className="h-2 rounded-[3px] bg-[#17834a]" />
+        <div className="login-property-frame" aria-hidden="true">
+          <Image
+            src="/trohub-property-loading.png"
+            alt=""
+            fill
+            priority
+            sizes="55vw"
+            className="object-cover"
+          />
         </div>
       </section>
 
       <section className="flex min-h-[100dvh] items-center justify-center px-4 py-20 sm:px-8">
-        <div className="w-full max-w-[440px]">
+        <div className="login-form-panel w-full max-w-[460px] rounded-[24px] bg-card p-6 sm:p-9">
           <div className="mb-10 lg:hidden">
             <TroHubLogo />
           </div>
 
           <div>
-            <p className="mb-3 text-sm font-extrabold tracking-[0.12em] text-primary">
-              KHU VỰC QUẢN TRỊ
-            </p>
-            <h2 className="text-3xl font-black tracking-[-0.025em] text-foreground text-balance">
-              Chào mừng bạn trở lại
-            </h2>
+            <span className="mb-4 inline-flex size-12 items-center justify-center rounded-[16px] bg-accent text-primary">
+              <KeyRound className="size-5" aria-hidden="true" />
+            </span>
+            <h2 className="text-3xl font-black tracking-[-0.025em] text-foreground text-balance">Chào mừng trở lại</h2>
             <p className="mb-8 mt-2 max-w-[46ch] leading-relaxed text-muted-foreground text-pretty">
               Đăng nhập bằng tài khoản Chủ trọ hoặc Admin đã được cấp.
             </p>
@@ -115,7 +122,7 @@ export default function LoginPage() {
                   onChange={(event) => setIdentifier(event.target.value)}
                   placeholder="Ví dụ: 0901234567 hoặc nguyenvana"
                   required
-                  className="h-12 rounded-[10px] bg-card px-4 text-base placeholder:text-muted-foreground focus-visible:ring-primary"
+                  className="h-12 rounded-[16px] bg-background px-4 text-base placeholder:text-muted-foreground focus-visible:ring-primary"
                 />
                 <p className="text-sm leading-relaxed text-muted-foreground">
                   Tài khoản email cũ vẫn có thể đăng nhập bình thường.
@@ -136,7 +143,7 @@ export default function LoginPage() {
                   placeholder="Nhập mật khẩu"
                   required
                   minLength={6}
-                  className="h-12 rounded-[10px] bg-card px-4 text-base placeholder:text-muted-foreground focus-visible:ring-primary"
+                  className="h-12 rounded-[16px] bg-background px-4 text-base placeholder:text-muted-foreground focus-visible:ring-primary"
                 />
               </div>
 
@@ -144,7 +151,7 @@ export default function LoginPage() {
                 <input
                   type="checkbox"
                   id="remember"
-                  className="h-4 w-4 accent-[#ef6a22]"
+                  className="size-4 accent-primary"
                   defaultChecked
                 />
                 <label
@@ -158,7 +165,7 @@ export default function LoginPage() {
               {error ? (
                 <div
                   role="alert"
-                  className="rounded-[10px] border border-red-300 bg-red-50 p-3 text-sm font-semibold leading-relaxed text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
+                  className="rounded-[16px] bg-destructive/10 p-4 text-sm font-semibold leading-relaxed text-destructive"
                 >
                   {error}
                 </div>
@@ -167,15 +174,19 @@ export default function LoginPage() {
               <Button
                 type="submit"
                 disabled={loading}
-                className="h-12 w-full rounded-[10px] bg-primary text-base font-extrabold text-primary-foreground transition-transform hover:bg-[#a83b07] active:scale-[0.98] dark:hover:bg-[#ff8d52]"
+                className="h-12 w-full rounded-[16px] bg-primary text-base font-extrabold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_25%,transparent)] transition-transform hover:bg-primary/90 active:scale-[0.98]"
               >
-                {loading ? "Đang đăng nhập..." : "Đăng nhập"}
+                {loading ? (
+                  <><LoaderCircle className="animate-spin" aria-hidden="true" />Đang đăng nhập...</>
+                ) : (
+                  <><LogIn aria-hidden="true" />Đăng nhập</>
+                )}
               </Button>
             </form>
 
-            <div className="mt-7 rounded-[10px] bg-primary/10 px-4 py-3 text-sm font-medium leading-relaxed text-foreground">
-              Chưa có tài khoản? Vui lòng liên hệ quản trị hệ thống để được cấp
-              quyền truy cập.
+            <div className="mt-7 flex gap-3 rounded-[16px] bg-accent px-4 py-3 text-sm font-medium leading-relaxed text-foreground">
+              <ShieldCheck className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden="true" />
+              <span>Chưa có tài khoản? Vui lòng liên hệ quản trị hệ thống để được cấp quyền truy cập.</span>
             </div>
           </div>
         </div>

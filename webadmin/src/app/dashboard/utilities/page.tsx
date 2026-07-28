@@ -1,20 +1,30 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { fetchAPI } from "@/lib/api";
+import { useEffect, useState } from "react";
+import Image from "next/image";
+import { CalendarRange, Eye, Gauge, Search, Send, Save } from "lucide-react";
+import { AppLoading } from "@/components/app-loading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Save } from "lucide-react";
 import { useNotification } from "@/hooks/use-notification";
+import { fetchAPI } from "@/lib/api";
 import { getNotificationMessage } from "@/lib/notification-messages";
+import { PageHeader } from "@/components/calm-ops/page-header";
+
+const steps = [
+  { label: "Chọn kỳ", icon: CalendarRange },
+  { label: "Chốt điện/nước", icon: Gauge },
+  { label: "Preview", icon: Eye },
+  { label: "Phát hành", icon: Send },
+];
 
 export default function UtilitiesPage() {
   const notification = useNotification();
   const [previews, setPreviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [utilitiesState, setUtilitiesState] = useState<Record<string, { electricity: string, water: string }>>({});
+  const [utilitiesState, setUtilitiesState] = useState<Record<string, { electricity: string; water: string }>>({});
 
   const loadPreviews = async () => {
     try {
@@ -22,11 +32,11 @@ export default function UtilitiesPage() {
       const data = await fetchAPI("/invoices/bulk-preview");
       if (data.success && data.data) {
         setPreviews(data.data);
-        const stateInit: any = {};
+        const stateInit: Record<string, { electricity: string; water: string }> = {};
         data.data.forEach((p: any) => {
-          stateInit[p.contractId] = { 
-            electricity: p.electricityDraft ? p.electricityDraft.toString() : "", 
-            water: p.waterDraft ? p.waterDraft.toString() : "" 
+          stateInit[p.contractId] = {
+            electricity: p.electricityDraft ? p.electricityDraft.toString() : "",
+            water: p.waterDraft ? p.waterDraft.toString() : "",
           };
         });
         setUtilitiesState(stateInit);
@@ -39,27 +49,29 @@ export default function UtilitiesPage() {
   };
 
   useEffect(() => {
-    loadPreviews();
+    void loadPreviews();
   }, []);
 
   const handleUpdateInput = (contractId: string, field: "electricity" | "water", value: string) => {
-    setUtilitiesState(prev => ({
+    setUtilitiesState((prev) => ({
       ...prev,
-      [contractId]: { ...prev[contractId], [field]: value }
+      [contractId]: { ...prev[contractId], [field]: value },
     }));
   };
 
   const handleSaveBulk = async () => {
     setLoading(true);
     try {
-      const utilitiesToUpdate = previews.map(p => {
-        const inputState = utilitiesState[p.contractId];
-        return {
-          roomId: p.roomId,
-          draftElectricity: inputState?.electricity,
-          draftWater: inputState?.water
-        };
-      }).filter(item => item.draftElectricity || item.draftWater);
+      const utilitiesToUpdate = previews
+        .map((p) => {
+          const inputState = utilitiesState[p.contractId];
+          return {
+            roomId: p.roomId,
+            draftElectricity: inputState?.electricity,
+            draftWater: inputState?.water,
+          };
+        })
+        .filter((item) => item.draftElectricity || item.draftWater);
 
       if (utilitiesToUpdate.length === 0) {
         notification.warning("Vui lòng nhập số liệu mới cho ít nhất 1 phòng.");
@@ -74,7 +86,7 @@ export default function UtilitiesPage() {
 
       if (res.success) {
         notification.success("Đã lưu nháp sổ điện nước. Bạn có thể chuyển sang Hóa đơn để phát hành.");
-        loadPreviews();
+        void loadPreviews();
       } else {
         notification.error(getNotificationMessage(res.message, "Không thể lưu chỉ số điện nước."));
       }
@@ -85,74 +97,104 @@ export default function UtilitiesPage() {
     }
   };
 
-  const filteredPreviews = previews.filter(p => p.room?.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredPreviews = previews.filter((p) => p.room?.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div className="relative w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <Input 
-            placeholder="Tìm theo mã phòng..." 
-            className="pl-9 h-10 bg-white"
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-          />
+      <PageHeader
+        eyebrow="Vận hành · Quy trình hóa đơn"
+        title="Chốt điện nước"
+        description="Ghi chỉ số mới theo phòng, kiểm tra bản xem trước rồi chuyển sang phát hành hóa đơn."
+        action={
+          <Button onClick={handleSaveBulk} disabled={loading}>
+            <Save aria-hidden="true" /> {loading ? "Đang xử lý..." : "Lưu sổ điện nước"}
+          </Button>
+        }
+      />
+
+      <ol aria-label="Tiến trình tạo hóa đơn hàng loạt" className="grid gap-2 rounded-[20px] bg-card p-3 shadow-[var(--calm-shadow)] ring-1 ring-border/50 sm:grid-cols-4">
+        {steps.map(({ label, icon: Icon }, index) => {
+          const active = index === 1;
+          const complete = index < 1;
+          return (
+            <li
+              key={label}
+              aria-current={active ? "step" : undefined}
+              className={`flex items-center gap-3 rounded-[16px] px-3 py-3 ${active ? "bg-primary text-primary-foreground" : complete ? "bg-accent text-accent-foreground" : "text-muted-foreground"}`}
+            >
+              <span className="grid size-9 shrink-0 place-items-center rounded-full bg-current/10">
+                <Icon aria-hidden="true" className="size-4" />
+              </span>
+              <span>
+                <span className="block text-[11px] font-bold uppercase tracking-[.12em] opacity-70">Bước {index + 1}</span>
+                <span className="text-sm font-extrabold">{label}</span>
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+
+      <section className="calm-surface overflow-hidden">
+        <div className="flex flex-col gap-3 bg-muted/35 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full sm:max-w-sm">
+            <Search aria-hidden="true" className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              aria-label="Tìm theo mã phòng"
+              placeholder="Tìm theo mã phòng..."
+              className="h-11 pl-9"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+            />
+          </div>
+          <p className="text-sm font-bold text-muted-foreground">{previews.length} phòng đang hiệu lực</p>
         </div>
-
-        <Button onClick={handleSaveBulk} disabled={loading} className="bg-[#f37021] hover:bg-[#e85f12] text-white">
-          <Save className="w-4 h-4 mr-2" /> {loading ? "Đang xử lý..." : "Lưu sổ điện nước"}
-        </Button>
-      </div>
-
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <Table>
-          <TableHeader className="bg-slate-50">
+          <TableHeader>
             <TableRow>
-              <TableHead className="font-semibold text-slate-800">Mã phòng</TableHead>
-              <TableHead className="font-semibold text-slate-800">Tiền phòng</TableHead>
-              <TableHead className="font-semibold text-slate-800">Số Điện cũ</TableHead>
-              <TableHead className="font-semibold text-slate-800 text-blue-600 bg-blue-50/50">Số Điện mới</TableHead>
-              <TableHead className="font-semibold text-slate-800">Số Nước cũ</TableHead>
-              <TableHead className="font-semibold text-slate-800 text-blue-600 bg-blue-50/50">Số Nước mới</TableHead>
+              <TableHead>Mã phòng</TableHead>
+              <TableHead>Tiền phòng</TableHead>
+              <TableHead>Số điện cũ</TableHead>
+              <TableHead className="text-primary">Số điện mới</TableHead>
+              <TableHead>Số nước cũ</TableHead>
+              <TableHead className="text-primary">Số nước mới</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-slate-500">
-                  Đang tải dữ liệu...
-                </TableCell>
-              </TableRow>
+              <TableRow><TableCell colSpan={6} className="py-8"><AppLoading message="Đang tải bản xem trước điện nước" /></TableCell></TableRow>
             ) : filteredPreviews.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-slate-500">
-                  Không tìm thấy phòng nào có hợp đồng đang hiệu lực.
+                <TableCell colSpan={6} className="h-64 text-center">
+                  <Image src="/trohub-empty-states.png" alt="" width={170} height={100} className="mx-auto h-24 w-40 rounded-[20px] object-cover object-left" />
+                  <p className="font-extrabold">Không có phòng phù hợp</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Thử từ khóa khác hoặc kiểm tra hợp đồng đang hiệu lực.</p>
                 </TableCell>
               </TableRow>
             ) : (
               filteredPreviews.map((p) => (
-                <TableRow key={p.contractId} className="hover:bg-slate-50/50">
-                  <TableCell className="font-medium">{p.room}</TableCell>
-                  <TableCell>{p.roomAmount.toLocaleString('vi-VN')} đ</TableCell>
-                  <TableCell className="text-slate-500">{p.electricityOld}</TableCell>
-                  <TableCell className="bg-blue-50/20">
-                    <Input 
-                      className="w-24 h-8 bg-white border-blue-200"
+                <TableRow key={p.contractId}>
+                  <TableCell className="font-extrabold">{p.room}</TableCell>
+                  <TableCell className="font-bold">{p.roomAmount.toLocaleString("vi-VN")} đ</TableCell>
+                  <TableCell className="text-muted-foreground">{p.electricityOld}</TableCell>
+                  <TableCell>
+                    <Input
+                      aria-label={`Số điện mới phòng ${p.room}`}
+                      className="h-9 w-28 bg-accent/45"
                       placeholder="Số mới"
                       type="number"
                       value={utilitiesState[p.contractId]?.electricity || ""}
-                      onChange={(e) => handleUpdateInput(p.contractId, "electricity", e.target.value)}
+                      onChange={(event) => handleUpdateInput(p.contractId, "electricity", event.target.value)}
                     />
                   </TableCell>
-                  <TableCell className="text-slate-500">{p.waterOld}</TableCell>
-                  <TableCell className="bg-blue-50/20">
-                    <Input 
-                      className="w-24 h-8 bg-white border-blue-200"
+                  <TableCell className="text-muted-foreground">{p.waterOld}</TableCell>
+                  <TableCell>
+                    <Input
+                      aria-label={`Số nước mới phòng ${p.room}`}
+                      className="h-9 w-28 bg-accent/45"
                       placeholder="Số mới"
                       type="number"
                       value={utilitiesState[p.contractId]?.water || ""}
-                      onChange={(e) => handleUpdateInput(p.contractId, "water", e.target.value)}
+                      onChange={(event) => handleUpdateInput(p.contractId, "water", event.target.value)}
                     />
                   </TableCell>
                 </TableRow>
@@ -160,7 +202,7 @@ export default function UtilitiesPage() {
             )}
           </TableBody>
         </Table>
-      </div>
+      </section>
     </div>
   );
 }

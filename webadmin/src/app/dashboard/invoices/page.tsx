@@ -1,20 +1,30 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
 import { fetchAPI } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Trash2, CheckCircle } from "lucide-react";
+import { CalendarDays, CheckCircle, ChevronLeft, ChevronRight, FileText, Gauge, Plus, ScanSearch, Search, Send, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { parseFormattedNumber } from "@/lib/utils";
 import { useNotification } from "@/hooks/use-notification";
 import { getNotificationMessage } from "@/lib/notification-messages";
+import { PageHeader } from "@/components/calm-ops/page-header";
+
+const INVOICE_STEPS = [
+  { label: "Chọn kỳ", icon: CalendarDays },
+  { label: "Chốt điện/nước", icon: Gauge },
+  { label: "Preview", icon: ScanSearch },
+  { label: "Phát hành", icon: Send },
+];
 
 export default function InvoicesPage() {
   const notification = useNotification();
+  const bulkFormRef = useRef<HTMLFormElement>(null);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -24,6 +34,7 @@ export default function InvoicesPage() {
   const [issuedAt, setIssuedAt] = useState(() => new Date().toLocaleDateString("en-CA"));
   const [bulkData, setBulkData] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [bulkStep, setBulkStep] = useState(1);
 
   useEffect(() => {
     if (isAddOpen) {
@@ -138,9 +149,9 @@ export default function InvoicesPage() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "Đã thanh toán": return <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none">Đã thanh toán</Badge>;
-      case "Chưa thanh toán": return <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100 border-none">Chưa thanh toán</Badge>;
-      case "Quá hạn": return <Badge className="bg-red-100 text-red-700 hover:bg-red-100 border-none">Quá hạn</Badge>;
+      case "Đã thanh toán": return <Badge className="border-0 bg-primary/10 text-primary">Đã thanh toán</Badge>;
+      case "Chưa thanh toán": return <Badge className="border-0 bg-[var(--warning-soft)] text-warning-foreground">Chưa thanh toán</Badge>;
+      case "Quá hạn": return <Badge className="border-0 bg-destructive/10 text-destructive">Quá hạn</Badge>;
       default: return <Badge variant="outline">{status}</Badge>;
     }
   };
@@ -149,30 +160,41 @@ export default function InvoicesPage() {
     const roomStr = i.contractId?.roomId?.roomCode || i.room || i.roomCode || "";
     return roomStr.toLowerCase().includes(searchTerm.toLowerCase());
   });
+  const nextBulkStep = () => {
+    if (!bulkFormRef.current?.reportValidity()) return;
+    setBulkStep((current) => Math.min(4, current + 1));
+  };
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div className="relative w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+      <PageHeader eyebrow="Tài chính" title="Hóa đơn" description="Lập hóa đơn, kiểm tra chỉ số và theo dõi trạng thái thanh toán." />
+      <section className="calm-surface flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative w-full sm:max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input 
             placeholder="Tìm theo mã phòng..." 
-            className="pl-9 h-10 bg-white"
+            className="pl-9"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
           />
         </div>
 
-        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-          <DialogTrigger className="bg-[#f37021] hover:bg-[#e85f12] text-white flex items-center h-10 px-4 rounded-md font-medium text-sm">
+        <Dialog open={isAddOpen} onOpenChange={(open) => { setIsAddOpen(open); if (open) setBulkStep(1); }}>
+          <DialogTrigger className="flex h-10 items-center justify-center gap-2 rounded-[16px] bg-primary px-4 text-sm font-bold text-primary-foreground shadow-[var(--calm-shadow)] transition hover:opacity-90">
             <Plus className="w-4 h-4 mr-2" /> Tạo hóa đơn mới
           </DialogTrigger>
           <DialogContent className="sm:max-w-[1000px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Tạo hóa đơn hàng loạt</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 mt-4">
-              <div className="grid gap-4 sm:grid-cols-2">
+            <ol aria-label="Tiến trình tạo hóa đơn hàng loạt" className="mt-3 grid grid-cols-4 gap-2">
+              {INVOICE_STEPS.map(({ label, icon: Icon }, index) => {
+                const itemStep = index + 1;
+                return <li key={label} aria-current={itemStep === bulkStep ? "step" : undefined} className={`rounded-[16px] p-3 text-center transition ${itemStep === bulkStep ? "bg-primary text-primary-foreground shadow-[var(--calm-shadow)]" : itemStep < bulkStep ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}><Icon className="mx-auto size-5" /><span className="mt-1 block text-[11px] font-bold leading-tight sm:text-sm">{label}</span></li>;
+              })}
+            </ol>
+            <form ref={bulkFormRef} onSubmit={handleCreateBulkInvoices} className="mt-5 space-y-5">
+              {bulkStep === 1 && <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="title">Kỳ thanh toán *</Label>
                   <Input id="title" value={title} onChange={e => setTitle(e.target.value)} required placeholder="VD: Tháng 6/2026" />
@@ -182,18 +204,19 @@ export default function InvoicesPage() {
                   <Input id="issuedAt" type="date" max={new Date().toLocaleDateString("en-CA")} value={issuedAt} onChange={e => setIssuedAt(e.target.value)} required />
                   <p className="text-xs text-muted-foreground">Có thể chọn ngày quá khứ để demo trạng thái quá hạn.</p>
                 </div>
-              </div>
+              </div>}
               
-              <div className="border rounded-md overflow-x-auto bg-white">
+              {bulkStep === 2 && <div className="calm-workbench">
                 <Table>
-                  <TableHeader className="bg-slate-50">
+                  <TableHeader className="bg-background">
                     <TableRow>
                       <TableHead className="w-12">
                         <input 
+                          aria-label="Chọn tất cả phòng"
                           type="checkbox" 
                           checked={bulkData.length > 0 && bulkData.every(x => x.selected)} 
                           onChange={e => setBulkData(bulkData.map(x => ({ ...x, selected: e.target.checked })))}
-                          className="rounded border-slate-300 text-[#f37021] focus:ring-[#f37021]"
+                          className="rounded border-border text-primary focus:ring-primary"
                         />
                       </TableHead>
                       <TableHead className="whitespace-nowrap font-semibold">Phòng</TableHead>
@@ -221,6 +244,7 @@ export default function InvoicesPage() {
                           <TableRow key={item.contractId} className={!item.selected ? "opacity-50" : ""}>
                             <TableCell>
                               <input 
+                                aria-label={`Chọn phòng ${item.room}`}
                                 type="checkbox" 
                                 checked={item.selected} 
                                 onChange={e => {
@@ -228,61 +252,70 @@ export default function InvoicesPage() {
                                   updated[index].selected = e.target.checked;
                                   setBulkData(updated);
                                 }}
-                                className="rounded border-slate-300 text-[#f37021] focus:ring-[#f37021]"
+                                className="rounded border-border text-primary focus:ring-primary"
                               />
                             </TableCell>
                             <TableCell className="font-medium">{item.room}</TableCell>
-                            <TableCell><Input className="w-20 h-8 px-2 text-sm bg-white" type="number" value={item.electricityOldInput} onChange={e => { const u=[...bulkData]; u[index].electricityOldInput=e.target.value; setBulkData(u); }} /></TableCell>
+                            <TableCell><Input className="w-20 h-8 px-2 text-sm bg-card" type="number" value={item.electricityOldInput} onChange={e => { const u=[...bulkData]; u[index].electricityOldInput=e.target.value; setBulkData(u); }} /></TableCell>
                             <TableCell>
-                              <Input className="w-20 h-8 px-2 text-sm bg-white" type="number" value={item.electricityNewInput} onChange={e => { const u=[...bulkData]; u[index].electricityNewInput=e.target.value; setBulkData(u); }} />
-                              {!item.electricityPrice && <span className="text-[10px] text-red-500 block">Thiếu giá Điện</span>}
+                              <Input className="w-20 h-8 px-2 text-sm bg-card" type="number" value={item.electricityNewInput} onChange={e => { const u=[...bulkData]; u[index].electricityNewInput=e.target.value; setBulkData(u); }} />
+                              {!item.electricityPrice && <span className="block text-[10px] text-destructive">Thiếu giá Điện</span>}
                             </TableCell>
-                            <TableCell><Input className="w-20 h-8 px-2 text-sm bg-white" type="number" value={item.waterOldInput} onChange={e => { const u=[...bulkData]; u[index].waterOldInput=e.target.value; setBulkData(u); }} /></TableCell>
+                            <TableCell><Input className="w-20 h-8 px-2 text-sm bg-card" type="number" value={item.waterOldInput} onChange={e => { const u=[...bulkData]; u[index].waterOldInput=e.target.value; setBulkData(u); }} /></TableCell>
                             <TableCell>
-                              <Input className="w-20 h-8 px-2 text-sm bg-white" type="number" value={item.waterNewInput} onChange={e => { const u=[...bulkData]; u[index].waterNewInput=e.target.value; setBulkData(u); }} />
-                              {!item.waterPrice && <span className="text-[10px] text-red-500 block">Thiếu giá Nước</span>}
+                              <Input className="w-20 h-8 px-2 text-sm bg-card" type="number" value={item.waterNewInput} onChange={e => { const u=[...bulkData]; u[index].waterNewInput=e.target.value; setBulkData(u); }} />
+                              {!item.waterPrice && <span className="block text-[10px] text-destructive">Thiếu giá Nước</span>}
                             </TableCell>
-                            <TableCell className="text-right font-medium text-slate-700">{total.toLocaleString("vi-VN")} đ</TableCell>
+                            <TableCell className="text-right font-medium text-foreground">{total.toLocaleString("vi-VN")} đ</TableCell>
                           </TableRow>
                         );
                       })
                     )}
                   </TableBody>
                 </Table>
+              </div>}
+              {bulkStep === 3 && <div className="grid gap-4 sm:grid-cols-3">
+                <div className="rounded-[20px] bg-primary/10 p-5"><p className="text-sm text-muted-foreground">Kỳ thanh toán</p><p className="mt-1 text-xl font-black">{title}</p></div>
+                <div className="rounded-[20px] bg-muted p-5"><p className="text-sm text-muted-foreground">Ngày phát hành</p><p className="mt-1 text-xl font-black">{new Date(issuedAt).toLocaleDateString("vi-VN")}</p></div>
+                <div className="rounded-[20px] bg-[var(--warning-soft)] p-5"><p className="text-sm text-muted-foreground">Hóa đơn đã chọn</p><p className="mt-1 text-3xl font-black">{bulkData.filter((item) => item.selected).length}</p></div>
+              </div>}
+              {bulkStep === 4 && <div className="calm-surface bg-primary/8 p-6 text-center"><Send className="mx-auto size-9 text-primary" /><h3 className="mt-3 text-xl font-black">Sẵn sàng phát hành</h3><p className="mt-1 text-muted-foreground">{bulkData.filter((item) => item.selected).length} hóa đơn cho {title}</p></div>}
+              <div className="flex justify-between gap-3">
+                <Button type="button" variant="outline" disabled={bulkStep === 1} onClick={() => setBulkStep((current) => Math.max(1, current - 1))}><ChevronLeft className="size-4" />Quay lại</Button>
+                {bulkStep < 4
+                  ? <Button type="button" onClick={nextBulkStep}>Tiếp tục<ChevronRight className="size-4" /></Button>
+                  : <Button type="submit" disabled={isSubmitting}><Send className="size-4" />{isSubmitting ? "Đang xử lý..." : `Phát hành ${bulkData.filter((item) => item.selected).length} hóa đơn`}</Button>}
               </div>
-              <Button onClick={handleCreateBulkInvoices} disabled={isSubmitting} className="w-full bg-[#f37021] hover:bg-[#e85f12]">
-                {isSubmitting ? "Đang xử lý..." : `Tạo ${bulkData.filter(x => x.selected).length} hóa đơn`}
-              </Button>
-            </div>
+            </form>
           </DialogContent>
         </Dialog>
-      </div>
+      </section>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="calm-workbench">
         <Table>
-          <TableHeader className="bg-slate-50">
+          <TableHeader className="bg-background">
             <TableRow>
-              <TableHead className="font-semibold text-slate-800">Mã HD</TableHead>
-              <TableHead className="font-semibold text-slate-800">Kỳ thanh toán</TableHead>
-              <TableHead className="font-semibold text-slate-800">Phòng</TableHead>
-              <TableHead className="font-semibold text-slate-800">Tổng tiền</TableHead>
-              <TableHead className="font-semibold text-slate-800">Trạng thái</TableHead>
-              <TableHead className="text-right font-semibold text-slate-800">Thao tác</TableHead>
+              <TableHead className="font-semibold text-foreground">Mã HD</TableHead>
+              <TableHead className="font-semibold text-foreground">Kỳ thanh toán</TableHead>
+              <TableHead className="font-semibold text-foreground">Phòng</TableHead>
+              <TableHead className="font-semibold text-foreground">Tổng tiền</TableHead>
+              <TableHead className="font-semibold text-foreground">Trạng thái</TableHead>
+              <TableHead className="text-right font-semibold text-foreground">Thao tác</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-slate-500">Đang tải dữ liệu...</TableCell>
+                <TableCell colSpan={6} className="h-40 text-center text-muted-foreground"><FileText className="mx-auto mb-2 size-8 animate-pulse text-primary" />Đang tải hóa đơn…</TableCell>
               </TableRow>
             ) : filteredInvoices.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-slate-500">Không tìm thấy hóa đơn nào</TableCell>
+                <TableCell colSpan={6} className="h-64 text-center"><Image src="/trohub-empty-states.png" alt="" width={170} height={100} className="mx-auto h-24 w-40 rounded-[20px] object-cover object-left" /><p className="mt-3 font-black">Không tìm thấy hóa đơn nào</p></TableCell>
               </TableRow>
             ) : (
               filteredInvoices.map(invoice => (
                 <TableRow key={invoice._id || invoice.id}>
-                  <TableCell className="font-medium text-slate-900">{invoice.id?.substring(0, 8) || "HD"}</TableCell>
+                  <TableCell className="font-medium text-foreground">{invoice.id?.substring(0, 8) || "HD"}</TableCell>
                   <TableCell>{invoice.title}</TableCell>
                   <TableCell>{invoice.roomCode}</TableCell>
                   <TableCell>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(invoice.totalAmount || 0)}</TableCell>
@@ -290,11 +323,11 @@ export default function InvoicesPage() {
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       {invoice.status !== "Đã thanh toán" && (
-                        <Button onClick={() => handleMarkPaid(invoice._id || invoice.id)} variant="ghost" size="icon" title="Đánh dấu đã thu" className="h-8 w-8 text-green-500 hover:text-green-700 hover:bg-green-50">
+                        <Button aria-label="Đánh dấu hóa đơn đã thu" onClick={() => handleMarkPaid(invoice._id || invoice.id)} variant="ghost" size="icon" title="Đánh dấu đã thu" className="text-primary hover:bg-primary/10 hover:text-primary">
                           <CheckCircle className="w-4 h-4" />
                         </Button>
                       )}
-                      <Button onClick={() => handleDelete(invoice._id || invoice.id)} variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50">
+                      <Button aria-label="Xóa hóa đơn" onClick={() => handleDelete(invoice._id || invoice.id)} variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive">
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>

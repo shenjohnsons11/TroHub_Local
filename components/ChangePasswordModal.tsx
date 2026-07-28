@@ -1,16 +1,22 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  AccessibilityInfo,
+  findNodeHandle,
   Modal,
   View,
   Text,
   Pressable,
   StyleSheet,
   TextInput,
-  Alert,
-  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from "react-native";
-import { COLORS } from "../constants/theme";
 import { authService } from "../services/authService";
+import { useAppTheme } from "../contexts/ThemeContext";
+import { useNotification } from "../hooks/useNotification";
+import AppButton from "./ui/AppButton";
+import { Ionicons } from "@expo/vector-icons";
 
 type Props = {
   visible: boolean;
@@ -18,6 +24,9 @@ type Props = {
 };
 
 export default function ChangePasswordModal({ visible, onClose }: Props) {
+  const { theme } = useAppTheme();
+  const notification = useNotification();
+  const styles = createStyles(theme);
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -27,6 +36,16 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
   const [confirmError, setConfirmError] = useState("");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const titleRef = useRef<Text>(null);
+
+  useEffect(() => {
+    if (!visible) return;
+    const timer = setTimeout(() => {
+      const node = findNodeHandle(titleRef.current);
+      if (node) AccessibilityInfo.setAccessibilityFocus(node);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [visible]);
 
   const resetForm = () => {
     setOldPassword("");
@@ -83,23 +102,44 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
 
       await authService.changePassword(oldPassword, newPassword);
 
-      Alert.alert("Thành công", "Đổi mật khẩu thành công");
+      notification.success("Đổi mật khẩu thành công", { title: "Thành công" });
       handleClose();
     } catch (error) {
       console.log("Lỗi đổi mật khẩu:", error);
-      Alert.alert("Lỗi", "Không thể đổi mật khẩu. Vui lòng thử lại.");
+      notification.error("Không thể đổi mật khẩu. Vui lòng thử lại.", { title: "Lỗi" });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide">
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={isSubmitting ? () => undefined : handleClose}
+    >
       <View style={styles.overlay}>
-        <View style={styles.box}>
+        <KeyboardAvoidingView
+          style={styles.keyboard}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+        <ScrollView
+          style={styles.formScroll}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.scroll}
+        >
+        <View style={styles.box} accessibilityViewIsModal>
           <View style={styles.header}>
             <View style={styles.headerText}>
-              <Text style={styles.title}>Đổi mật khẩu</Text>
+              <Text
+                ref={titleRef}
+                style={styles.title}
+                accessibilityRole="header"
+                accessibilityLiveRegion="polite"
+              >
+                Đổi mật khẩu
+              </Text>
               <Text style={styles.subtitle}>
                 Cập nhật mật khẩu đăng nhập tài khoản
               </Text>
@@ -109,8 +149,10 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
               style={styles.closeButton}
               onPress={handleClose}
               disabled={isSubmitting}
+              accessibilityRole="button"
+              accessibilityLabel="Đóng đổi mật khẩu"
             >
-              <Text style={styles.closeText}>×</Text>
+              <Ionicons name="close" size={22} color={theme.text} />
             </Pressable>
           </View>
 
@@ -124,6 +166,7 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
             }}
             secureTextEntry
             placeholder=""
+            placeholderTextColor={theme.muted}
             editable={!isSubmitting}
           />
           {oldError ? <Text style={styles.errorText}>{oldError}</Text> : null}
@@ -138,6 +181,7 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
             }}
             secureTextEntry
             placeholder=""
+            placeholderTextColor={theme.muted}
             editable={!isSubmitting}
           />
           {newError ? <Text style={styles.errorText}>{newError}</Text> : null}
@@ -152,39 +196,42 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
             }}
             secureTextEntry
             placeholder=""
+            placeholderTextColor={theme.muted}
             editable={!isSubmitting}
           />
           {confirmError ? (
             <Text style={styles.errorText}>{confirmError}</Text>
           ) : null}
 
-          <Pressable
-            style={[styles.button, isSubmitting && styles.buttonDisabled]}
+          <AppButton
             onPress={handleSubmit}
             disabled={isSubmitting}
+            loading={isSubmitting}
+            icon="lock-closed-outline"
           >
-            {isSubmitting ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.buttonText}>Cập nhật mật khẩu</Text>
-            )}
-          </Pressable>
+            Cập nhật mật khẩu
+          </AppButton>
         </View>
+        </ScrollView>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
+    backgroundColor: theme.overlay,
     justifyContent: "flex-end",
   },
+  keyboard: { flex: 1, justifyContent: "flex-end" },
+  formScroll: { flex: 1, flexShrink: 1 },
+  scroll: { flexGrow: 1, justifyContent: "flex-end" },
   box: {
-    backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 26,
-    borderTopRightRadius: 26,
+    backgroundColor: theme.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     paddingHorizontal: 22,
     paddingTop: 22,
     paddingBottom: 32,
@@ -201,57 +248,57 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: "900",
-    color: COLORS.text,
+    color: theme.text,
   },
   subtitle: {
-    color: COLORS.muted,
+    color: theme.muted,
     fontSize: 13,
     marginTop: 5,
     lineHeight: 20,
   },
   closeButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: "#F1F2F4",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: theme.surfaceElevated,
     alignItems: "center",
     justifyContent: "center",
   },
   closeText: {
     fontSize: 26,
-    color: COLORS.text,
+    color: theme.text,
     marginTop: -2,
   },
   label: {
     fontSize: 13,
-    color: COLORS.muted,
+    color: theme.muted,
     marginBottom: 8,
     marginTop: 10,
     fontWeight: "700",
   },
   input: {
     height: 48,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.surfaceElevated,
     borderRadius: 10,
     paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    color: COLORS.text,
+    borderColor: theme.border,
+    color: theme.text,
     fontSize: 14,
   },
   inputError: {
-    borderColor: "#FF3B30",
-    backgroundColor: "#FFF7F7",
+    borderColor: theme.danger,
+    backgroundColor: theme.warningSoft,
   },
   errorText: {
-    color: "#FF3B30",
+    color: theme.danger,
     fontSize: 12,
     fontWeight: "600",
     marginTop: 6,
   },
   button: {
     height: 52,
-    backgroundColor: COLORS.orange,
+    backgroundColor: theme.primary,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
@@ -261,7 +308,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   buttonText: {
-    color: "#FFFFFF",
+    color: theme.background,
     fontSize: 15,
     fontWeight: "900",
   },
