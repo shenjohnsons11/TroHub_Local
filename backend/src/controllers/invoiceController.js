@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET || 'trohub_secret_key_2026';
 const Account = require('../models/Account');
 const BillingPolicy = require('../models/BillingPolicy');
+const Room = require('../models/Room');
 const {
     CalculationError,
     calculateInvoiceAmounts,
@@ -19,6 +20,9 @@ const {
     applyOverduePenalty,
     buildLateFeeSnapshot,
 } = require('../services/overdueInvoice');
+const {
+    resolveContractMeterSnapshot,
+} = require('../services/contractTerms');
 
 async function buildInvoicePolicySnapshot(req, issuedAt, penaltyBaseAmount) {
     const policy = await BillingPolicy.findOne({ landlordId: req.auth.id });
@@ -61,7 +65,6 @@ exports.getBulkPreview = async (req, res) => {
         }
         if (!userId) return res.status(401).json({ success: false, message: 'Chưa đăng nhập' });
 
-        const Room = require('../models/Room');
         const rooms = await Room.find({ landlordId: userId });
         const roomIds = rooms.map(r => r._id);
 
@@ -80,10 +83,12 @@ exports.getBulkPreview = async (req, res) => {
 
             const roomAmount = contract.fixedRentPrice || 0;
 
-            let electricityOld = 0;
-            let waterOld = 0;
-            let electricityPrice = 0;
-            let waterPrice = 0;
+            const {
+                electricityOld,
+                waterOld,
+                electricityPrice,
+                waterPrice,
+            } = resolveContractMeterSnapshot(contract, previousInvoice);
             let servicesTotal = 0;
             let parking = 0;
             let internet = 0;
@@ -94,15 +99,7 @@ exports.getBulkPreview = async (req, res) => {
                 if (!service) continue;
                 const sName = service.name.toLowerCase();
 
-                if (service.type === 1) {
-                    if (sName.includes('điện') || sName.includes('dien')) {
-                        electricityPrice = item.fixedPrice || 0;
-                        if (previousInvoice && previousInvoice.electricityNew !== undefined) electricityOld = previousInvoice.electricityNew;
-                    } else if (sName.includes('nước') || sName.includes('nuoc')) {
-                        waterPrice = item.fixedPrice || 0;
-                        if (previousInvoice && previousInvoice.waterNew !== undefined) waterOld = previousInvoice.waterNew;
-                    }
-                } else {
+                if (service.type !== 1) {
                     if (sName.includes('xe') || sName.includes('parking')) {
                         parking += item.fixedPrice || 0;
                     } else if (sName.includes('wifi') || sName.includes('internet') || sName.includes('mạng') || sName.includes('mang')) {
@@ -159,36 +156,58 @@ exports.createBulkInvoices = async (req, res) => {
             data,
             amounts: calculateInvoiceAmounts({ ...data, penalty: 0 }),
         }));
-        const createdInvoices = [];
-
-        for (const { data, amounts } of preparedInvoices) {
-            const policySnapshot = await buildInvoicePolicySnapshot(
-                req,
-                data.issuedAt || issuedAt,
-                amounts.totalAmount
+        const contractIds = [...new Set(
+            preparedInvoices
+                .map(({ data }) => data.contractId)
+                .filter(Boolean)
+                .map(String)
+        )];
+        const [policy, unpaidInvoices, contracts] = await Promise.all([
+            BillingPolicy.findOne({ landlordId: req.auth.id }),
+            contractIds.length
+                ? Invoice.find({
+                    contractId: { $in: contractIds },
+                    status: { $in: [1, 3] }
+                }).select('contractId totalAmount').lean()
+                : [],
+            contractIds.length
+                ? Contract.find({ _id: { $in: contractIds } }).select('_id roomId').lean()
+                : [],
+        ]);
+        const debtByContract = new Map();
+        for (const invoice of unpaidInvoices) {
+            const contractId = String(invoice.contractId);
+            debtByContract.set(
+                contractId,
+                (debtByContract.get(contractId) || 0) + (invoice.totalAmount || 0)
             );
+        }
+
+        let resolvedPeriod = period;
+        if (!resolvedPeriod) {
+            const d = new Date();
+            resolvedPeriod = `${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+        }
+
+        const invoiceDocuments = preparedInvoices.map(({ data, amounts }) => {
+            const policySnapshot = buildLateFeeSnapshot({
+                issuedAt: data.issuedAt || issuedAt || new Date(),
+                graceDays: policy?.lateFeeGraceDays ?? 3,
+                penaltyRate: policy?.lateFeeRate ?? 5,
+                penaltyBaseAmount: amounts.totalAmount,
+            });
             const penaltyAppliedAt = policySnapshot.isOverdue ? new Date() : null;
             const penalty = policySnapshot.isOverdue ? policySnapshot.penalty : 0;
 
-            let resolvedPeriod = period;
-            if (!resolvedPeriod) {
-                const d = new Date();
-                resolvedPeriod = `${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-            }
-
             let warningNote = "";
             if (data.contractId) {
-                const unpaidInvoices = await Invoice.find({
-                    contractId: data.contractId,
-                    status: { $in: [1, 3] }
-                });
-                const totalDebt = unpaidInvoices.reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
+                const totalDebt = debtByContract.get(String(data.contractId)) || 0;
                 if (totalDebt > 0) {
                     warningNote = `LƯU Ý: Phòng đang có khoản nợ ${totalDebt.toLocaleString("vi-VN")}đ từ kỳ trước chưa thanh toán.`;
                 }
             }
 
-            const newInvoice = new Invoice({
+            return {
                 contractId: data.contractId || null,
                 period: resolvedPeriod,
                 issuedAt: policySnapshot.issuedAt,
@@ -217,22 +236,15 @@ exports.createBulkInvoices = async (req, res) => {
                 discount: amounts.discount,
                 note: warningNote,
                 details: []
-            });
-
-            await newInvoice.save();
-            createdInvoices.push(newInvoice);
-
-            // Xóa nháp điện nước sau khi đã xuất hóa đơn
-            if (data.contractId) {
-                const Contract = require('../models/Contract');
-                const Room = require('../models/Room');
-                const contract = await Contract.findById(data.contractId);
-                if (contract && contract.roomId) {
-                    await Room.findByIdAndUpdate(contract.roomId, {
-                        $unset: { draftElectricity: "", draftWater: "" }
-                    });
-                }
-            }
+            };
+        });
+        const createdInvoices = await Invoice.insertMany(invoiceDocuments);
+        const roomIds = [...new Set(contracts.map((contract) => String(contract.roomId)))];
+        if (roomIds.length) {
+            await Room.updateMany(
+                { _id: { $in: roomIds } },
+                { $unset: { draftElectricity: "", draftWater: "" } }
+            );
         }
 
         res.status(201).json({ success: true, message: `Đã tạo thành công ${createdInvoices.length} hóa đơn!`, data: createdInvoices });

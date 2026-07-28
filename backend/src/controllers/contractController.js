@@ -5,6 +5,26 @@ const {
     buildDepositPayment,
     signContractAndEnsureDeposit,
 } = require('../services/contractSigningService');
+const {
+    ContractTermsError,
+    normalizeContractMeterTerms,
+} = require('../services/contractTerms');
+
+function sendContractError(res, error, fallbackMessage) {
+    if (error instanceof ContractTermsError) {
+        return res.status(error.status).json({
+            success: false,
+            code: error.code,
+            field: error.field,
+            message: error.message,
+        });
+    }
+
+    return res.status(500).json({
+        success: false,
+        message: `${fallbackMessage}: ${error.message}`,
+    });
+}
 
 // 1. Lấy danh sách toàn bộ hợp đồng (Chủ trọ xem trên Web)
 exports.getAllContracts = async (req, res) => {
@@ -83,7 +103,8 @@ exports.createContract = async (req, res) => {
     try {
         // Dữ liệu truyền lên bao gồm thông tin cơ bản và mảng các dịch vụ đã chốt giá
         // Mảng services có dạng: [{ serviceId: "...", fixedPrice: 4000 }]
-        const { roomId, tenantId, startDate, endDate, fixedRentPrice, fixedDeposit, services, initialElectricity, initialWater } = req.body;
+        const { roomId, tenantId, startDate, endDate, fixedRentPrice, fixedDeposit, services } = req.body;
+        const meterTerms = normalizeContractMeterTerms(req.body);
 
         // 1. Ràng buộc Phòng: Kiểm tra phòng có đang trống không
         const room = await Room.findById(roomId);
@@ -106,8 +127,8 @@ exports.createContract = async (req, res) => {
         }
 
         // Cập nhật chỉ số đầu cho phòng (nếu có truyền)
-        if (initialElectricity !== undefined) room.draftElectricity = Number(initialElectricity);
-        if (initialWater !== undefined) room.draftWater = Number(initialWater);
+        room.draftElectricity = meterTerms.initialElectricity;
+        room.draftWater = meterTerms.initialWater;
         await room.save();
 
         const newContract = new Contract({
@@ -117,6 +138,7 @@ exports.createContract = async (req, res) => {
             endDate,
             fixedRentPrice,
             fixedDeposit,
+            ...meterTerms,
             services: services || [], // Nhúng thẳng mảng dịch vụ vào đây
             status: 0 // Trạng thái mặc định: 0 - Chờ Người thuê xác nhận
         });
@@ -128,7 +150,7 @@ exports.createContract = async (req, res) => {
             data: newContract
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: "Lỗi khi tạo hợp đồng: " + error.message });
+        return sendContractError(res, error, 'Lỗi khi tạo hợp đồng');
     }
 };
 
@@ -221,7 +243,8 @@ exports.confirmContract = async (req, res) => {
 // 5. Cập nhật thông tin hợp đồng (Chủ trọ sửa trên Web)
 exports.updateContract = async (req, res) => {
     try {
-        const { roomId, tenantId, startDate, endDate, fixedRentPrice, fixedDeposit, status, services, initialElectricity, initialWater } = req.body;
+        const { roomId, tenantId, startDate, endDate, fixedRentPrice, fixedDeposit, status, services } = req.body;
+        const meterTerms = normalizeContractMeterTerms(req.body, { partial: true });
 
         const existing = await Contract.findById(req.params.id);
         if (!existing) return res.status(404).json({ success: false, message: "Không tìm thấy hợp đồng!" });
@@ -248,6 +271,7 @@ exports.updateContract = async (req, res) => {
         if (fixedDeposit !== undefined) updateData.fixedDeposit = fixedDeposit;
         if (status !== undefined) updateData.status = status;
         if (services !== undefined) updateData.services = services;
+        Object.assign(updateData, meterTerms);
 
         const updated = await Contract.findByIdAndUpdate(req.params.id, updateData, { new: true })
             .populate('roomId', 'roomCode area')
@@ -260,15 +284,22 @@ exports.updateContract = async (req, res) => {
         }
 
         // Nếu admin cập nhật số điện/nước đầu
-        if (targetRoomId && (initialElectricity !== undefined || initialWater !== undefined)) {
+        if (targetRoomId && (
+            meterTerms.initialElectricity !== undefined
+            || meterTerms.initialWater !== undefined
+        )) {
             const roomUpdates = {};
-            if (initialElectricity !== undefined) roomUpdates.draftElectricity = Number(initialElectricity);
-            if (initialWater !== undefined) roomUpdates.draftWater = Number(initialWater);
+            if (meterTerms.initialElectricity !== undefined) {
+                roomUpdates.draftElectricity = meterTerms.initialElectricity;
+            }
+            if (meterTerms.initialWater !== undefined) {
+                roomUpdates.draftWater = meterTerms.initialWater;
+            }
             await Room.findByIdAndUpdate(targetRoomId, roomUpdates);
         }
 
         res.status(200).json({ success: true, message: "Cập nhật hợp đồng thành công!", data: updated });
     } catch (error) {
-        res.status(500).json({ success: false, message: "Lỗi khi cập nhật hợp đồng: " + error.message });
+        return sendContractError(res, error, 'Lỗi khi cập nhật hợp đồng');
     }
 };

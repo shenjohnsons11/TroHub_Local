@@ -33,6 +33,10 @@ type ApiContract = {
   endDate: string;
   fixedRentPrice: number;
   fixedDeposit: number;
+  electricityPrice?: number;
+  waterPrice?: number;
+  initialElectricity?: number;
+  initialWater?: number;
   status: number;
   services?: ApiServiceItem[];
   tenantConfirmedAt?: string;
@@ -120,8 +124,12 @@ const mapApiContractToContract = (apiContract: ApiContract): Contract => {
     100
   );
 
-  const electricPrice = getServicePrice(services, ["điện", "dien"]);
-  const waterPrice = getServicePrice(services, ["nước", "nuoc"]);
+  const legacyElectricPrice = getServicePrice(services, ["điện", "dien"]);
+  const legacyWaterPrice = getServicePrice(services, ["nước", "nuoc"]);
+  const electricPrice =
+    apiContract.electricityPrice ?? legacyElectricPrice;
+  const waterPrice =
+    apiContract.waterPrice ?? legacyWaterPrice;
   const parkingPrice = getServicePrice(services, ["xe", "parking"]);
   const internetPrice = getServicePrice(services, [
     "internet",
@@ -149,6 +157,12 @@ const mapApiContractToContract = (apiContract: ApiContract): Contract => {
       water: `${formatMoney(waterPrice)} / m³`,
       parking: `${formatMoney(parkingPrice)} / tháng`,
       internet: `${formatMoney(internetPrice)} / tháng`,
+    },
+    meterTerms: {
+      electricityPrice: electricPrice,
+      waterPrice,
+      initialElectricity: apiContract.initialElectricity ?? 0,
+      initialWater: apiContract.initialWater ?? 0,
     },
     note:
       "Người thuê cần thanh toán tiền phòng trước ngày 05 hằng tháng. Nếu có nhu cầu gia hạn hợp đồng, vui lòng liên hệ chủ trọ trước 30 ngày.",
