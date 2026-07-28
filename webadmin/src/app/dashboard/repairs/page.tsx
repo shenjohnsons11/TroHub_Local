@@ -1,14 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { fetchAPI } from "@/lib/api";
+import { useEffect, useState } from "react";
+import Image from "next/image";
+import { CheckCircle2, Search } from "lucide-react";
+import { AppLoading } from "@/components/app-loading";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Search, CheckCircle } from "lucide-react";
+import { PageHeader } from "@/components/calm-ops/page-header";
+import { useNotification } from "@/hooks/use-notification";
+import { fetchAPI } from "@/lib/api";
+import { getNotificationMessage } from "@/lib/notification-messages";
 
 export default function RepairsPage() {
+  const notification = useNotification();
   const [repairs, setRepairs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -16,9 +22,7 @@ export default function RepairsPage() {
   const loadRepairs = async () => {
     try {
       const data = await fetchAPI("/repairs");
-      if (data.success) {
-        setRepairs(data.data);
-      }
+      if (data.success) setRepairs(data.data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -27,7 +31,7 @@ export default function RepairsPage() {
   };
 
   useEffect(() => {
-    loadRepairs();
+    void loadRepairs();
   }, []);
 
   const handleUpdateStatus = async (id: string, newStatus: string) => {
@@ -36,89 +40,91 @@ export default function RepairsPage() {
         method: "PUT",
         body: JSON.stringify({ status: newStatus }),
       });
-      loadRepairs();
-    } catch (err: any) {
-      alert("Lỗi: " + err.message);
+      void loadRepairs();
+    } catch (err: unknown) {
+      notification.error(getNotificationMessage(err, "Không thể cập nhật trạng thái sửa chữa."));
     }
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "Đã hoàn thành": return <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none">Đã hoàn thành</Badge>;
-      case "Đang xử lý": return <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-none">Đang xử lý</Badge>;
-      case "Chờ tiếp nhận": return <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100 border-none">Chờ tiếp nhận</Badge>;
+      case "Đã hoàn thành": return <Badge className="bg-primary/12 text-primary">Đã hoàn thành</Badge>;
+      case "Đang xử lý": return <Badge variant="secondary">Đang xử lý</Badge>;
+      case "Chờ tiếp nhận": return <Badge className="bg-warning-soft text-warning-foreground">Chờ tiếp nhận</Badge>;
       default: return <Badge variant="outline">{status}</Badge>;
     }
   };
 
-  const filteredRepairs = repairs.filter(r => 
-    r.roomCode?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    r.content?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredRepairs = repairs.filter((repair) =>
+    repair.roomCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    repair.content?.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div className="relative w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <Input 
-            placeholder="Tìm theo phòng, nội dung..." 
-            className="pl-9 h-10 bg-white"
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-          />
+      <PageHeader eyebrow="Hỗ trợ" title="Yêu cầu sửa chữa" description="Tiếp nhận, phản hồi và cập nhật tiến độ cho Người thuê." />
+      <section className="calm-surface overflow-hidden">
+        <div className="flex flex-col gap-3 bg-muted/35 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full sm:max-w-sm">
+            <Search aria-hidden="true" className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              aria-label="Tìm yêu cầu sửa chữa"
+              placeholder="Tìm theo phòng, nội dung..."
+              className="h-11 pl-9"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+            />
+          </div>
+          <p className="text-sm font-bold text-muted-foreground">{repairs.length} yêu cầu</p>
         </div>
-      </div>
-
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <Table>
-          <TableHeader className="bg-slate-50">
+          <TableHeader>
             <TableRow>
-              <TableHead className="font-semibold text-slate-800">Ngày báo</TableHead>
-              <TableHead className="font-semibold text-slate-800">Phòng</TableHead>
-              <TableHead className="font-semibold text-slate-800">Nội dung</TableHead>
-              <TableHead className="font-semibold text-slate-800">Chi phí dự kiến</TableHead>
-              <TableHead className="font-semibold text-slate-800">Trạng thái</TableHead>
-              <TableHead className="text-right font-semibold text-slate-800">Thao tác</TableHead>
+              <TableHead>Ngày báo</TableHead>
+              <TableHead>Phòng</TableHead>
+              <TableHead>Nội dung</TableHead>
+              <TableHead>Chi phí dự kiến</TableHead>
+              <TableHead>Trạng thái</TableHead>
+              <TableHead className="text-right">Thao tác</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-slate-500">Đang tải dữ liệu...</TableCell>
-              </TableRow>
+              <TableRow><TableCell colSpan={6} className="py-8"><AppLoading message="Đang tải yêu cầu sửa chữa" /></TableCell></TableRow>
             ) : filteredRepairs.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-slate-500">Không có yêu cầu sửa chữa nào</TableCell>
+                <TableCell colSpan={6} className="h-64 text-center">
+                  <Image src="/trohub-empty-states.png" alt="" width={170} height={100} className="mx-auto h-24 w-40 rounded-[20px] object-cover object-center" />
+                  <p className="font-extrabold">Chưa có sự cố</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Các yêu cầu mới sẽ xuất hiện tại đây.</p>
+                </TableCell>
               </TableRow>
             ) : (
-              filteredRepairs.map(repair => (
+              filteredRepairs.map((repair) => (
                 <TableRow key={repair._id || repair.id}>
-                  <TableCell className="font-medium text-slate-900">{repair.date || "Hôm nay"}</TableCell>
-                  <TableCell>{repair.roomCode}</TableCell>
-                  <TableCell className="max-w-[200px] truncate">{repair.content}</TableCell>
-                  <TableCell>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(repair.cost || 0)}</TableCell>
+                  <TableCell className="font-medium">{repair.date || "Chưa cập nhật"}</TableCell>
+                  <TableCell className="font-extrabold">{repair.roomCode}</TableCell>
+                  <TableCell className="max-w-[260px] truncate">{repair.content}</TableCell>
+                  <TableCell className="font-bold">{new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(repair.cost || 0)}</TableCell>
                   <TableCell>{getStatusBadge(repair.status)}</TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      {repair.status === "Chờ tiếp nhận" && (
-                        <Button onClick={() => handleUpdateStatus(repair._id || repair.id, "Đang xử lý")} variant="ghost" size="icon" title="Tiếp nhận sửa chữa" className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50">
-                          <CheckCircle className="w-4 h-4" />
-                        </Button>
-                      )}
-                      {repair.status === "Đang xử lý" && (
-                        <Button onClick={() => handleUpdateStatus(repair._id || repair.id, "Đã hoàn thành")} variant="ghost" size="icon" title="Xác nhận hoàn thành" className="h-8 w-8 text-green-500 hover:text-green-700 hover:bg-green-50">
-                          <CheckCircle className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
+                    {repair.status === "Chờ tiếp nhận" && (
+                      <Button onClick={() => handleUpdateStatus(repair._id || repair.id, "Đang xử lý")} variant="ghost" size="icon" aria-label={`Tiếp nhận sửa chữa phòng ${repair.roomCode}`}>
+                        <CheckCircle2 aria-hidden="true" />
+                      </Button>
+                    )}
+                    {repair.status === "Đang xử lý" && (
+                      <Button onClick={() => handleUpdateStatus(repair._id || repair.id, "Đã hoàn thành")} variant="ghost" size="icon" aria-label={`Xác nhận hoàn thành sửa chữa phòng ${repair.roomCode}`}>
+                        <CheckCircle2 aria-hidden="true" />
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))
             )}
           </TableBody>
         </Table>
-      </div>
+      </section>
     </div>
   );
 }

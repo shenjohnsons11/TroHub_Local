@@ -8,12 +8,16 @@ import {
   View,
 } from "react-native";
 import Card from "../components/Card";
-import { COLORS } from "../constants/theme";
+import { useAppTheme } from "../contexts/ThemeContext";
 import { homeService } from "../services/homeService";
 import { Invite, inviteService } from "../services/inviteService";
 import { HomeData } from "../types/HomeData";
 import TroHubLogo from "../components/TroHubLogo";
 import { Ionicons } from "@expo/vector-icons";
+import StatusBadge from "../components/calm-ops/StatusBadge";
+import SectionHeader from "../components/calm-ops/SectionHeader";
+import GradientHero from "../components/ui/GradientHero";
+import AnimatedEntry from "../components/ui/AnimatedEntry";
 
 type Props = {
   refreshKey: number;
@@ -22,6 +26,8 @@ type Props = {
 };
 
 export default function HomeScreen({ refreshKey, onNavigate, onLogout }: Props) {
+  const { theme } = useAppTheme();
+  const styles = createStyles(theme);
   const [homeData, setHomeData] = useState<HomeData | null>(null);
   const [invites, setInvites] = useState<Invite[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -49,7 +55,7 @@ export default function HomeScreen({ refreshKey, onNavigate, onLogout }: Props) 
   if (isLoading || !homeData) {
     return (
       <View style={styles.loadingBox}>
-        <ActivityIndicator size="large" color={COLORS.orange} />
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
@@ -74,8 +80,13 @@ export default function HomeScreen({ refreshKey, onNavigate, onLogout }: Props) 
     >
       <View style={styles.brandRow}>
         <TroHubLogo compact />
-        <Pressable style={styles.logoutButton} onPress={onLogout}>
-          <Ionicons name="log-out-outline" size={20} color={COLORS.red} />
+        <Pressable
+          accessibilityLabel="Đăng xuất"
+          accessibilityRole="button"
+          style={styles.logoutButton}
+          onPress={onLogout}
+        >
+          <Ionicons name="log-out-outline" size={20} color={theme.danger} />
         </Pressable>
       </View>
 
@@ -87,9 +98,10 @@ export default function HomeScreen({ refreshKey, onNavigate, onLogout }: Props) 
         </Text>
       </View>
 
-      {invites.length > 0 && invites.map(invite => (
-        <Card key={invite.id} style={[styles.amountCard, { backgroundColor: '#FFF9E6', borderColor: '#FFE58F' }]}>
-          <Text style={[styles.cardTitle, { color: '#D48806', marginBottom: 4 }]}>🏠 Lời mời vào nhà trọ</Text>
+      {invites.length > 0 && invites.map((invite, index) => (
+        <AnimatedEntry delay={index * 40} key={invite.id}>
+        <Card style={[styles.amountCard, styles.inviteCard]}>
+          <Text style={[styles.cardTitle, { color: theme.warningForeground, marginBottom: 4 }]}>Lời mời vào nhà trọ</Text>
           <Text style={styles.smallText}>
             Chủ trọ <Text style={{fontWeight: 'bold'}}>{invite.landlordName}</Text> ({invite.phone}) vừa thêm bạn vào danh sách quản lý.
           </Text>
@@ -98,45 +110,41 @@ export default function HomeScreen({ refreshKey, onNavigate, onLogout }: Props) 
               style={[styles.primaryButton, { flex: 1, marginTop: 0 }]}
               onPress={() => handleAcceptInvite(invite.id)}
             >
+              <Ionicons name="checkmark-circle-outline" size={18} color={theme.background} />
               <Text style={styles.primaryText}>Chấp nhận</Text>
             </Pressable>
             <Pressable
-              style={[styles.primaryButton, { flex: 1, marginTop: 0, backgroundColor: '#FFE58F' }]}
+              style={[styles.secondaryButton, { flex: 1 }]}
               onPress={() => handleRejectInvite(invite.id)}
             >
-              <Text style={[styles.primaryText, { color: '#D48806' }]}>Từ chối</Text>
+              <Ionicons name="close-circle-outline" size={18} color={theme.warningForeground} />
+              <Text style={[styles.primaryText, { color: theme.warningForeground }]}>Từ chối</Text>
             </Pressable>
           </View>
         </Card>
+        </AnimatedEntry>
       ))}
 
-      <Card style={styles.amountCard}>
-        <Text style={styles.smallText}>Tổng tiền</Text>
+      <AnimatedEntry delay={60}>
+        <GradientHero
+          actionIcon="card-outline"
+          actionLabel={isUnpaid ? "Thanh toán qua VNPay" : undefined}
+          detail={`${homeData.paymentStatusText} · Hạn thanh toán: ${homeData.dueDate}`}
+          icon="wallet-outline"
+          label="HÓA ĐƠN HIỆN TẠI"
+          onAction={isUnpaid ? () => onNavigate("invoice") : undefined}
+          value={homeData.totalAmount}
+        />
+      </AnimatedEntry>
 
-        <Text style={styles.amount}>{homeData.totalAmount}</Text>
-
-        <Text style={isUnpaid ? styles.unpaid : styles.paid}>
-          {homeData.paymentStatusText}
-        </Text>
-
-        <Text style={styles.smallText}>Hạn thanh toán: {homeData.dueDate}</Text>
-
-        {isUnpaid && (
-          <Pressable
-            style={styles.primaryButton}
-            onPress={() => onNavigate("invoice")}
-          >
-            <Text style={styles.primaryText}>Thanh toán ngay</Text>
-          </Pressable>
-        )}
-      </Card>
-
-      <View style={styles.quickGrid}>
+      <SectionHeader title="Tiện ích của bạn" />
+      <AnimatedEntry delay={100} style={styles.quickGrid}>
         <Pressable
           style={styles.quickItem}
           onPress={() => onNavigate("contract")}
         >
           <Card style={styles.quickCard}>
+            <View style={styles.quickIcon}><Ionicons name="document-text-outline" size={22} color={theme.primary} /></View>
             <Text style={styles.quickText}>Hợp đồng</Text>
           </Card>
         </Pressable>
@@ -146,6 +154,7 @@ export default function HomeScreen({ refreshKey, onNavigate, onLogout }: Props) 
           onPress={() => onNavigate("utility")}
         >
           <Card style={styles.quickCard}>
+            <View style={styles.quickIcon}><Ionicons name="water-outline" size={22} color={theme.primary} /></View>
             <Text style={styles.quickText}>Điện nước</Text>
           </Card>
         </Pressable>
@@ -155,6 +164,7 @@ export default function HomeScreen({ refreshKey, onNavigate, onLogout }: Props) 
           onPress={() => onNavigate("repair")}
         >
           <Card style={styles.quickCard}>
+            <View style={styles.quickIcon}><Ionicons name="construct-outline" size={22} color={theme.primary} /></View>
             <Text style={styles.quickText}>Sửa chữa</Text>
           </Card>
         </Pressable>
@@ -164,11 +174,13 @@ export default function HomeScreen({ refreshKey, onNavigate, onLogout }: Props) 
           onPress={() => onNavigate("invoice")}
         >
           <Card style={styles.quickCard}>
+            <View style={styles.quickIcon}><Ionicons name="receipt-outline" size={22} color={theme.primary} /></View>
             <Text style={styles.quickText}>Hóa đơn</Text>
           </Card>
         </Pressable>
-      </View>
+      </AnimatedEntry>
 
+      <AnimatedEntry delay={140}>
       <Pressable onPress={() => onNavigate("contract")}>
         <Card style={styles.infoCard}>
           <Text style={styles.cardTitle}>Hợp đồng</Text>
@@ -177,30 +189,30 @@ export default function HomeScreen({ refreshKey, onNavigate, onLogout }: Props) 
           </Text>
         </Card>
       </Pressable>
+      </AnimatedEntry>
 
+      <AnimatedEntry delay={180}>
       <Pressable onPress={() => onNavigate("repair")}>
         <Card style={styles.infoCard}>
           <Text style={styles.cardTitle}>{homeData.recentRepair.title}</Text>
-
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{homeData.recentRepair.status}</Text>
-          </View>
+          <StatusBadge label={homeData.recentRepair.status || "Đang xử lý"} />
         </Card>
       </Pressable>
+      </AnimatedEntry>
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSheet.create({
   loadingBox: {
     flex: 1,
-    backgroundColor: "#F4F5F7",
+    backgroundColor: theme.background,
     alignItems: "center",
     justifyContent: "center",
   },
   container: {
     flex: 1,
-    backgroundColor: "#F4F5F7",
+    backgroundColor: theme.background,
   },
   content: {
     paddingHorizontal: 22,
@@ -229,10 +241,10 @@ const styles = StyleSheet.create({
     marginBottom: 18,
     padding: 22,
     borderRadius: 16,
-    backgroundColor: "#25292D",
+    backgroundColor: theme.primarySoft,
   },
   heroKicker: {
-    color: "#67D69A",
+    color: theme.primary,
     fontSize: 10,
     fontWeight: "900",
     letterSpacing: 1.4,
@@ -240,13 +252,13 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     maxWidth: 270,
-    color: "#F4F5F3",
+    color: theme.text,
     fontSize: 26,
     lineHeight: 31,
     fontWeight: "900",
   },
   heroRoom: {
-    color: "#FF8D52",
+    color: theme.primary,
     fontSize: 14,
     fontWeight: "800",
     marginTop: 8,
@@ -254,97 +266,127 @@ const styles = StyleSheet.create({
   logoutButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFF1F1",
-    borderWidth: 1,
-    borderColor: "#FFD4D4",
+    backgroundColor: theme.warningSoft,
     paddingHorizontal: 10,
     paddingVertical: 6,
     width: 44,
     height: 44,
     justifyContent: "center",
-    borderRadius: 9,
+    borderRadius: 16,
   },
   hello: {
     fontSize: 21,
     lineHeight: 28,
     fontWeight: "900",
-    color: COLORS.text,
+    color: theme.text,
   },
   room: {
-    color: COLORS.muted,
+    color: theme.muted,
     fontSize: 14,
     marginTop: 4,
   },
   amountCard: {
     marginBottom: 18,
+    backgroundColor: theme.surface,
+    borderColor: "transparent",
+  },
+  inviteCard: {
+    backgroundColor: theme.warningSoft,
   },
   smallText: {
     fontSize: 13,
-    color: COLORS.muted,
+    color: theme.muted,
   },
   amount: {
     fontSize: 31,
     fontWeight: "900",
-    color: COLORS.orange,
+    color: theme.text,
     marginTop: 10,
     marginBottom: 4,
   },
   unpaid: {
-    color: COLORS.orange,
+    color: theme.warningForeground,
     fontSize: 13,
     fontWeight: "800",
     marginBottom: 12,
   },
   paid: {
-    color: COLORS.green,
+    color: theme.positive,
     fontSize: 13,
     fontWeight: "800",
     marginBottom: 12,
   },
   primaryButton: {
     height: 46,
-    backgroundColor: COLORS.orange,
-    borderRadius: 10,
+    backgroundColor: theme.primary,
+    borderRadius: 16,
+    flexDirection: "row",
+    gap: 7,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 16,
   },
   primaryText: {
-    color: "#FFFFFF",
+    color: theme.background,
     fontWeight: "800",
+  },
+  secondaryButton: {
+    alignItems: "center",
+    backgroundColor: theme.surfaceElevated,
+    borderRadius: 16,
+    flexDirection: "row",
+    gap: 7,
+    height: 46,
+    justifyContent: "center",
   },
   quickGrid: {
     flexDirection: "row",
     gap: 10,
+    marginTop: 10,
     marginBottom: 18,
   },
   quickItem: {
     flex: 1,
   },
   quickCard: {
-    height: 68,
+    height: 84,
     paddingHorizontal: 6,
     paddingVertical: 8,
     alignItems: "center",
     justifyContent: "center",
+    gap: 7,
+    backgroundColor: theme.surface,
+    borderColor: "transparent",
+    borderRadius: 20,
+  },
+  quickIcon: {
+    alignItems: "center",
+    backgroundColor: theme.primarySoft,
+    borderRadius: 14,
+    height: 40,
+    justifyContent: "center",
+    width: 40,
   },
   quickText: {
     fontSize: 11,
     fontWeight: "800",
-    color: COLORS.text,
+    color: theme.text,
     textAlign: "center",
   },
   infoCard: {
     marginBottom: 14,
+    backgroundColor: theme.surface,
+    borderColor: "transparent",
+    borderRadius: 20,
   },
   cardTitle: {
     fontSize: 15,
     fontWeight: "900",
-    color: COLORS.text,
+    color: theme.text,
     marginBottom: 8,
   },
   cardDesc: {
-    color: COLORS.muted,
+    color: theme.muted,
     fontSize: 13,
   },
   badge: {

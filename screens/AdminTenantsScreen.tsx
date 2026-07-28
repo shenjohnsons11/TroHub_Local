@@ -1,16 +1,30 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, FlatList, Pressable, TextInput, Modal, ActivityIndicator, Alert } from "react-native";
+import { View, Text, StyleSheet, FlatList, Pressable, TextInput, Modal, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { COLORS } from "../constants/theme";
 import { adminService, AdminTenant, AdminRoom } from "../services/adminService";
+import { useAppTheme } from "../contexts/ThemeContext";
+import { useNotification } from "../hooks/useNotification";
+import AppLoadingScreen from "../components/AppLoadingScreen";
+import AppButton from "../components/ui/AppButton";
+import AnimatedEntry from "../components/ui/AnimatedEntry";
+import GradientHero from "../components/ui/GradientHero";
+import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
+import ProgressStepper from "../components/ui/ProgressStepper";
+
+const steps = [
+  { label: "Thông tin", icon: "person-outline" as const },
+  { label: "Liên hệ", icon: "call-outline" as const },
+  { label: "Xác nhận", icon: "checkmark-circle-outline" as const },
+];
 
 export default function AdminTenantsScreen() {
+  const { theme } = useAppTheme();
+  const notification = useNotification();
   const [tenants, setTenants] = useState<AdminTenant[]>([]);
   const [rooms, setRooms] = useState<AdminRoom[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Modal states for adding tenant
   const [modalVisible, setModalVisible] = useState(false);
+  const [step, setStep] = useState(0);
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -22,431 +36,96 @@ export default function AdminTenantsScreen() {
 
   const loadData = async () => {
     try {
-      const [tenantsData, roomsData] = await Promise.all([
-        adminService.getTenants(),
-        adminService.getRooms(),
-      ]);
-      setTenants(tenantsData);
-      setRooms(roomsData);
-    } catch (error) {
-      console.log("Lỗi tải dữ liệu người thuê:", error);
-    } finally {
-      setLoading(false);
-    }
+      const [tenantsData, roomsData] = await Promise.all([adminService.getTenants(), adminService.getRooms()]);
+      setTenants(tenantsData); setRooms(roomsData);
+    } catch (error) { console.log("Lỗi tải dữ liệu người thuê:", error); }
+    finally { setLoading(false); }
   };
+  useEffect(() => { void loadData(); }, []);
 
   const handleCheckDuplicate = async (field: string, value: string) => {
     if (!value.trim()) return;
     try {
       let cleanValue = value.trim();
-      if (field === 'phone' || field === 'idCard') {
-        cleanValue = value.replace(/\D/g, "");
-      }
-      
-      // Basic format check before calling API
-      if (field === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanValue)) {
-        setEmailError("Email không hợp lệ");
-        return;
-      }
-      if (field === 'phone' && cleanValue.length !== 10) {
-        setPhoneError("Số điện thoại chưa đủ 10 số");
-        return;
-      }
-      if (field === 'idCard' && cleanValue.length !== 12) {
-        setIdCardError("CCCD chưa đủ 12 số");
-        return;
-      }
-
+      if (field === "phone" || field === "idCard") cleanValue = value.replace(/\D/g, "");
+      if (field === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanValue)) { setEmailError("Email không hợp lệ"); return; }
+      if (field === "phone" && cleanValue.length !== 10) { setPhoneError("Số điện thoại chưa đủ 10 số"); return; }
+      if (field === "idCard" && cleanValue.length !== 12) { setIdCardError("CCCD chưa đủ 12 số"); return; }
       const result = await adminService.checkTenantDuplicate(field, cleanValue);
-      if (field === 'email') setEmailError(result.message || "");
-      if (field === 'phone') setPhoneError(result.message || "");
-      if (field === 'idCard') setIdCardError(result.message || "");
-    } catch (error) {
-      console.log("Error checking duplicate:", error);
-    }
+      if (field === "email") setEmailError(result.message || "");
+      if (field === "phone") setPhoneError(result.message || "");
+      if (field === "idCard") setIdCardError(result.message || "");
+    } catch (error) { console.log("Error checking duplicate:", error); }
   };
-
-  useEffect(() => {
-    loadData();
-  }, []);
 
   const handleAddTenant = async () => {
-    if (!fullName.trim() || !phone.trim() || !email.trim() || !idCard.trim()) {
-      Alert.alert("Lỗi", "Vui lòng điền đầy đủ thông tin!");
-      return;
-    }
-
+    if (!fullName.trim() || !phone.trim() || !email.trim() || !idCard.trim()) { notification.error("Vui lòng điền đầy đủ thông tin!"); return; }
     const cleanPhone = phone.trim().replace(/\D/g, "");
     const cleanIdCard = idCard.trim().replace(/\D/g, "");
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) {
-      Alert.alert("Lỗi", "Vui lòng nhập Email đúng định dạng (ví dụ: nguyenvanA@gmail.com) để làm tên đăng nhập!");
-      return;
-    }
-
-    if (cleanPhone.length !== 10) {
-      Alert.alert("Lỗi", "Số điện thoại phải gồm đúng 10 chữ số!");
-      return;
-    }
-    if (cleanIdCard.length !== 12) {
-      Alert.alert("Lỗi", "Số CCCD phải gồm đúng 12 chữ số!");
-      return;
-    }
-
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { notification.error("Vui lòng nhập Email đúng định dạng (ví dụ: nguyenvanA@gmail.com) để làm tên đăng nhập!"); return; }
+    if (cleanPhone.length !== 10) { notification.error("Số điện thoại phải gồm đúng 10 chữ số!"); return; }
+    if (cleanIdCard.length !== 12) { notification.error("Số CCCD phải gồm đúng 12 chữ số!"); return; }
     try {
       setSubmitting(true);
-      await adminService.createTenant({
-        fullName: fullName.trim(),
-        phone: cleanPhone,
-        email: email.trim(),
-        idCard: cleanIdCard,
-      });
-      Alert.alert("Thành công", "Đã thêm người thuê mới!");
-      setModalVisible(false);
-      setFullName("");
-      setPhone("");
-      setEmail("");
-      setIdCard("");
-      setEmailError("");
-      setPhoneError("");
-      setIdCardError("");
-      loadData();
-    } catch (error) {
-      Alert.alert("Lỗi", error instanceof Error ? error.message : "Thêm người thuê thất bại!");
-    } finally {
-      setSubmitting(false);
-    }
+      await adminService.createTenant({ fullName: fullName.trim(), phone: cleanPhone, email: email.trim(), idCard: cleanIdCard });
+      notification.success("Đã thêm người thuê mới!");
+      setModalVisible(false); setStep(0); setFullName(""); setPhone(""); setEmail(""); setIdCard(""); setEmailError(""); setPhoneError(""); setIdCardError("");
+      void loadData();
+    } catch (error) { notification.error(error instanceof Error ? error.message : "Thêm người thuê thất bại!"); }
+    finally { setSubmitting(false); }
   };
 
-  const vacantRooms = rooms.filter(room => room.status === 0);
+  const advance = () => {
+    if (step === 0 && !fullName.trim()) { notification.error("Vui lòng nhập họ và tên!"); return; }
+    if (step === 1 && (!email.trim() || !phone.trim() || !idCard.trim())) { notification.error("Vui lòng điền đầy đủ thông tin liên hệ!"); return; }
+    setStep((current) => Math.min(current + 1, 2));
+  };
+  const openCreateModal = () => {
+    setStep(0);
+    setModalVisible(true);
+  };
+  if (loading) return <AppLoadingScreen />;
+  const vacantRooms = rooms.filter((room) => room.status === 0);
+  const inputStyle = [styles.input, { backgroundColor: theme.background, color: theme.text }];
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.orange} />
-      </View>
-    );
-  }
+  return <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <FlatList data={tenants} keyExtractor={(item) => item._id} contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}
+      ListHeaderComponent={<GradientHero icon="people-outline" label="CỘNG ĐỒNG NGƯỜI THUÊ" value={`${tenants.length} người`} detail={`${vacantRooms.length} phòng trống sẵn sàng tiếp nhận`} actionLabel="Thêm khách" actionIcon="person-add-outline" onAction={openCreateModal} />}
+      ListEmptyComponent={<IllustratedEmptyState kind="contract" title="Chưa có người thuê" description="Thêm người thuê đầu tiên để bắt đầu quản lý." actionLabel="Thêm khách" actionIcon="person-add-outline" onAction={openCreateModal} />}
+      renderItem={({ item, index }) => <AnimatedEntry delay={Math.min(index, 6) * 45}><View style={[styles.card, { backgroundColor: theme.surfaceElevated, shadowColor: theme.text }]}><View style={[styles.avatar, { backgroundColor: theme.primarySoft }]}><Text style={[styles.avatarText, { color: theme.primary }]}>{item.fullName.slice(0, 2).toUpperCase()}</Text></View><View style={styles.info}><Text style={[styles.name, { color: theme.text }]}>{item.fullName}</Text><Text style={[styles.sub, { color: theme.muted }]}><Ionicons name="call-outline" size={12} /> {item.phone ? String(item.phone).replace(/\D/g, "").replace(/(\d{4})(\d{3})(\d+)/, "$1.$2.$3").replace(/(\d{4})(\d+)/, "$1.$2") : "-"}</Text>{item.email ? <Text style={[styles.sub, { color: theme.muted }]}><Ionicons name="mail-outline" size={12} /> {item.email}</Text> : null}</View></View></AnimatedEntry>} />
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Danh sách người thuê</Text>
-        <Pressable style={styles.addButton} onPress={() => setModalVisible(true)}>
-          <Ionicons name="person-add" size={18} color="#FFFFFF" />
-          <Text style={styles.addButtonText}>Thêm khách</Text>
-        </Pressable>
-      </View>
+    <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => { if (!submitting) setModalVisible(false); }}>
+      <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === "ios" ? "padding" : undefined}><View style={[StyleSheet.absoluteFill, { backgroundColor: theme.overlay }]} /><View accessibilityViewIsModal style={[styles.sheet, { backgroundColor: theme.surfaceElevated }]}>
+        <View style={styles.modalHeader}><Text accessibilityRole="header" style={[styles.modalTitle, { color: theme.text }]}>Thêm người thuê mới</Text><Pressable accessibilityRole="button" accessibilityLabel="Đóng thêm người thuê" disabled={submitting} onPress={() => setModalVisible(false)}><Ionicons name="close" size={26} color={theme.text} /></Pressable></View>
+        <ProgressStepper steps={steps} currentStep={step} />
+        <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          {step === 0 ? <Field label="Họ và tên" value={fullName} setValue={setFullName} placeholder="Nhập họ và tên khách" style={inputStyle} muted={theme.muted} /> : null}
+          {step === 1 ? <>
+            <Field label="Email (Tên đăng nhập)" value={email} setValue={(text: string) => { setEmail(text); setEmailError(""); }} placeholder="Nhập email" style={[...inputStyle, emailError && { backgroundColor: theme.warningSoft }]} muted={theme.muted} keyboardType="email-address" onBlur={() => void handleCheckDuplicate("email", email)} error={emailError} danger={theme.danger} />
+            <Field label="Số điện thoại (Bắt buộc 10 số)" value={phone} setValue={(text: string) => { let value = text.replace(/\D/g, "").slice(0, 10); if (value.length > 7) value = value.replace(/(\d{4})(\d{3})(\d+)/, "$1.$2.$3"); else if (value.length > 4) value = value.replace(/(\d{4})(\d+)/, "$1.$2"); setPhone(value); setPhoneError(""); }} placeholder="Nhập 10 số điện thoại" style={inputStyle} muted={theme.muted} keyboardType="phone-pad" onBlur={() => void handleCheckDuplicate("phone", phone)} error={phoneError} danger={theme.danger} />
+            <Field label="Số CCCD (Bắt buộc 12 số)" value={idCard} setValue={(text: string) => { let value = text.replace(/\D/g, "").slice(0, 12); if (value.length > 8) value = value.replace(/(\d{4})(\d{4})(\d+)/, "$1.$2.$3"); else if (value.length > 4) value = value.replace(/(\d{4})(\d+)/, "$1.$2"); setIdCard(value); setIdCardError(""); }} placeholder="Nhập CCCD" style={inputStyle} muted={theme.muted} keyboardType="numeric" onBlur={() => void handleCheckDuplicate("idCard", idCard)} error={idCardError} danger={theme.danger} />
+          </> : null}
+          {step === 2 ? <View style={[styles.summary, { backgroundColor: theme.background }]}><Ionicons name="shield-checkmark-outline" size={34} color={theme.primary} /><Text style={[styles.summaryTitle, { color: theme.text }]}>{fullName}</Text><Text style={[styles.summaryText, { color: theme.muted }]}>{email}</Text><Text style={[styles.summaryText, { color: theme.muted }]}>{phone} · CCCD {idCard}</Text></View> : null}
+          <View style={styles.actions}>{step > 0 ? <View style={styles.action}><AppButton icon="arrow-back" variant="secondary" disabled={submitting} onPress={() => setStep((current) => current - 1)}>Quay lại</AppButton></View> : null}<View style={styles.action}><AppButton icon={step === 2 ? "person-add-outline" : "arrow-forward"} iconPosition={step === 2 ? "left" : "right"} loading={submitting} onPress={step === 2 ? handleAddTenant : advance}>{step === 2 ? "Thêm người thuê" : "Tiếp tục"}</AppButton></View></View>
+        </ScrollView>
+      </View></KeyboardAvoidingView>
+    </Modal>
+  </View>;
+}
 
-      <FlatList
-        data={tenants}
-        keyExtractor={(item) => item._id}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => (
-          <View style={styles.tenantCard}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{item.fullName.slice(0, 2).toUpperCase()}</Text>
-            </View>
-            <View style={styles.tenantInfo}>
-              <Text style={styles.tenantName}>{item.fullName}</Text>
-              <Text style={styles.tenantSub}>SĐT: {item.phone ? String(item.phone).replace(/\D/g, "").replace(/(\d{4})(\d{3})(\d+)/, "$1.$2.$3").replace(/(\d{4})(\d+)/, "$1.$2") : "-"}</Text>
-              {item.email && <Text style={styles.tenantSub}>Email: {item.email}</Text>}
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={COLORS.muted} />
-          </View>
-        )}
-      />
-
-      {/* Modal thêm người thuê */}
-      <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => setModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Thêm người thuê mới</Text>
-              <Pressable onPress={() => setModalVisible(false)}>
-                <Ionicons name="close" size={24} color={COLORS.text} />
-              </Pressable>
-            </View>
-
-            <FlatList
-              data={[1]}
-              keyExtractor={(item) => String(item)}
-              showsVerticalScrollIndicator={false}
-              renderItem={() => (
-                <View style={styles.form}>
-                  <Text style={styles.label}>Họ và tên</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={fullName}
-                    onChangeText={setFullName}
-                    placeholder="Nhập họ và tên khách"
-                  />
-
-                  <Text style={styles.label}>Email (Tên đăng nhập)</Text>
-                  <TextInput
-                    style={[styles.input, emailError ? styles.inputError : null]}
-                    value={email}
-                    onChangeText={(text) => { setEmail(text); setEmailError(""); }}
-                    onBlur={() => handleCheckDuplicate('email', email)}
-                    placeholder="Nhập email"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                  />
-                  {!!emailError && <Text style={styles.errorText}>{emailError}</Text>}
-
-                  <Text style={styles.label}>Số điện thoại (Bắt buộc 10 số)</Text>
-                  <TextInput
-                    style={[styles.input, phoneError ? styles.inputError : null]}
-                    value={phone}
-                    onChangeText={(text) => {
-                      let val = text.replace(/\D/g, "");
-                      if (val.length > 10) val = val.slice(0, 10);
-                      if (val.length > 7) val = val.replace(/(\d{4})(\d{3})(\d+)/, "$1.$2.$3");
-                      else if (val.length > 4) val = val.replace(/(\d{4})(\d+)/, "$1.$2");
-                      setPhone(val);
-                      setPhoneError("");
-                    }}
-                    onBlur={() => handleCheckDuplicate('phone', phone)}
-                    placeholder="Nhập 10 số điện thoại"
-                    keyboardType="phone-pad"
-                    maxLength={12}
-                  />
-                  {!!phoneError && <Text style={styles.errorText}>{phoneError}</Text>}
-
-                  <Text style={styles.label}>Số CCCD (Bắt buộc 12 số)</Text>
-                  <TextInput
-                    style={[styles.input, idCardError ? styles.inputError : null]}
-                    value={idCard}
-                    onChangeText={(text) => {
-                      let val = text.replace(/\D/g, "");
-                      if (val.length > 12) val = val.slice(0, 12);
-                      if (val.length > 8) val = val.replace(/(\d{4})(\d{4})(\d+)/, "$1.$2.$3");
-                      else if (val.length > 4) val = val.replace(/(\d{4})(\d+)/, "$1.$2");
-                      setIdCard(val);
-                      setIdCardError("");
-                    }}
-                    onBlur={() => handleCheckDuplicate('idCard', idCard)}
-                    placeholder="Nhập CCCD"
-                    keyboardType="numeric"
-                    maxLength={14}
-                  />
-                  {!!idCardError && <Text style={styles.errorText}>{idCardError}</Text>}
-
-                  <Pressable
-                    style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
-                    onPress={handleAddTenant}
-                    disabled={submitting}
-                  >
-                    {submitting ? (
-                      <ActivityIndicator color="#FFFFFF" />
-                    ) : (
-                      <Text style={styles.submitButtonText}>Thêm người thuê</Text>
-                    )}
-                  </Pressable>
-                </View>
-              )}
-            />
-          </View>
-        </View>
-      </Modal>
-    </View>
-  );
+function Field({ label, value, setValue, placeholder, style, muted, keyboardType, onBlur, error, danger }: any) {
+  return <View style={styles.field}><Text style={[styles.label, { color: style[1].color }]}>{label}</Text><TextInput style={style} value={value} onChangeText={setValue} onBlur={onBlur} placeholder={placeholder} placeholderTextColor={muted} keyboardType={keyboardType} autoCapitalize={keyboardType === "email-address" ? "none" : undefined} />{error ? <Text accessibilityLiveRegion="polite" style={[styles.error, { color: danger }]}>{error}</Text> : null}</View>;
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F4F5F7",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#F4F5F7",
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 18,
-    paddingTop: 18,
-    paddingBottom: 14,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "900",
-    color: COLORS.text,
-  },
-  addButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: COLORS.orange,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-  },
-  addButtonText: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "800",
-    marginLeft: 4,
-  },
-  listContent: {
-    paddingHorizontal: 18,
-    paddingBottom: 20,
-  },
-  tenantCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.02,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.orangeSoft,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  avatarText: {
-    fontSize: 14,
-    color: COLORS.orange,
-    fontWeight: "900",
-  },
-  tenantInfo: {
-    flex: 1,
-  },
-  tenantName: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: COLORS.text,
-  },
-  tenantSub: {
-    fontSize: 12,
-    color: COLORS.muted,
-    fontWeight: "600",
-    marginTop: 2,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    maxHeight: "85%",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderBottomWidth: 1,
-    borderColor: "#F0F0F0",
-    paddingBottom: 14,
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "900",
-    color: COLORS.text,
-  },
-  form: {
-    width: "100%",
-    paddingBottom: 20,
-  },
-  label: {
-    fontSize: 12,
-    color: COLORS.muted,
-    fontWeight: "700",
-    marginBottom: 6,
-    marginTop: 12,
-  },
-  input: {
-    width: "100%",
-    height: 44,
-    backgroundColor: "#F4F5F7",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    fontSize: 14,
-    color: COLORS.text,
-  },
-  inputError: {
-    borderWidth: 1,
-    borderColor: COLORS.red,
-    backgroundColor: "#FFF5F5",
-  },
-  errorText: {
-    color: COLORS.red,
-    fontSize: 11,
-    fontWeight: "500",
-    marginTop: 4,
-    marginLeft: 4,
-  },
-  dropdownContainer: {
-    width: "100%",
-    minHeight: 44,
-    justifyContent: "center",
-    marginTop: 2,
-  },
-  noVacantText: {
-    fontSize: 13,
-    color: COLORS.red,
-    fontWeight: "700",
-  },
-  roomSelectGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  roomSelectItem: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#E8E9ED",
-    backgroundColor: "#FFFFFF",
-  },
-  roomSelectActive: {
-    backgroundColor: COLORS.orangeSoft,
-    borderColor: COLORS.orange,
-  },
-  roomSelectText: {
-    fontSize: 13,
-    color: COLORS.text,
-    fontWeight: "700",
-  },
-  roomSelectTextActive: {
-    color: COLORS.orange,
-    fontWeight: "900",
-  },
-  submitButton: {
-    height: 48,
-    backgroundColor: COLORS.orange,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 24,
-  },
-  submitButtonDisabled: {
-    opacity: 0.75,
-  },
-  submitButtonText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "800",
-  },
+  container: { flex: 1 }, list: { padding: 18, paddingBottom: 36, gap: 10 },
+  card: { flexDirection: "row", alignItems: "center", borderRadius: 22, padding: 14, elevation: 3, shadowOpacity: .09, shadowOffset: { width: 0, height: 5 }, shadowRadius: 10 },
+  avatar: { width: 48, height: 48, borderRadius: 18, justifyContent: "center", alignItems: "center", marginRight: 12 },
+  avatarText: { fontSize: 14, fontWeight: "900" }, info: { flex: 1 }, name: { fontSize: 16, fontWeight: "900" }, sub: { fontSize: 12, fontWeight: "600", marginTop: 3 },
+  overlay: { flex: 1, justifyContent: "flex-end" }, sheet: { maxHeight: "92%", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20 },
+  modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }, modalTitle: { flex: 1, fontSize: 20, fontWeight: "900" },
+  form: { paddingTop: 20, paddingBottom: 8 }, field: { marginBottom: 14 }, label: { fontSize: 12, fontWeight: "800", marginBottom: 7 },
+  input: { minHeight: 48, borderRadius: 16, paddingHorizontal: 14, fontSize: 14 }, error: { fontSize: 11, fontWeight: "700", marginTop: 5 },
+  summary: { alignItems: "center", borderRadius: 20, padding: 22 }, summaryTitle: { fontSize: 20, fontWeight: "900", marginTop: 10 }, summaryText: { fontSize: 13, marginTop: 5 },
+  actions: { flexDirection: "row", gap: 10, marginTop: 20 }, action: { flex: 1 },
 });

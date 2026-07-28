@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from "react";
 import {
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   Text,
   StyleSheet,
@@ -10,11 +13,15 @@ import {
   TextInput,
 } from "react-native";
 import Card from "../components/Card";
-import { COLORS } from "../constants/theme";
+import { useAppTheme } from "../contexts/ThemeContext";
 import { UtilityRecord } from "../types/UtilityRecord";
 import { utilityService } from "../services/utilityService";
 import { useNotification } from "../hooks/useNotification";
 import { getNotificationMessage } from "../utils/notificationMessages";
+import { Ionicons } from "@expo/vector-icons";
+import GradientHero from "../components/ui/GradientHero";
+import AnimatedEntry from "../components/ui/AnimatedEntry";
+import AppButton from "../components/ui/AppButton";
 
 type Props = {
   onBack: () => void;
@@ -22,6 +29,8 @@ type Props = {
 
 export default function UtilityScreen({ onBack }: Props) {
   const notification = useNotification();
+  const { theme } = useAppTheme();
+  const styles = createStyles(theme);
   const [utilityHistory, setUtilityHistory] = useState<UtilityRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
@@ -64,7 +73,7 @@ export default function UtilityScreen({ onBack }: Props) {
   if (isLoading) {
     return (
       <View style={styles.loadingBox}>
-        <ActivityIndicator size="large" color={COLORS.orange} />
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
@@ -72,22 +81,42 @@ export default function UtilityScreen({ onBack }: Props) {
   const current = utilityHistory[0];
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      <Pressable style={styles.backButton} onPress={onBack}>
-        <Text style={styles.backText}>‹ Quay lại</Text>
-      </Pressable>
-
-      <Text style={styles.title}>Điện nước</Text>
-      <Text style={styles.subtitle}>
-        Theo dõi chỉ số điện nước và chi phí sử dụng hằng tháng.
-      </Text>
-
-      {current ? (
-        <>
+    <>
+      <FlatList
+        contentContainerStyle={styles.content}
+        data={utilityHistory}
+        keyExtractor={(item) => item.id}
+        style={styles.container}
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={
+          <>
+            <Pressable style={styles.backButton} onPress={onBack}>
+              <Ionicons name="arrow-back" size={18} color={theme.primary} />
+              <Text style={styles.backText}>Quay lại</Text>
+            </Pressable>
+            <Text style={styles.title}>Điện nước</Text>
+            <Text style={styles.subtitle}>Theo dõi chỉ số điện nước và chi phí sử dụng hằng tháng.</Text>
+            {current ? (
+              <>
+          <AnimatedEntry>
+            <GradientHero
+              icon="speedometer-outline"
+              label={`CHỈ SỐ THÁNG ${current.month}`}
+              value={`${current.electricMoney} + ${current.waterMoney}`}
+              detail="Chi phí điện nước hiện tại"
+            >
+              <View style={styles.meterRow}>
+                <View style={styles.meterItem}>
+                  <Ionicons name="flash-outline" size={20} color="#8CF2C9" />
+                  <Text style={styles.meterValue}>{current.electricUsed} kWh</Text>
+                </View>
+                <View style={styles.meterItem}>
+                  <Ionicons name="water-outline" size={20} color="#8CF2C9" />
+                  <Text style={styles.meterValue}>{current.waterUsed} m³</Text>
+                </View>
+              </View>
+            </GradientHero>
+          </AnimatedEntry>
           <View style={styles.summaryRow}>
             <Card style={styles.summaryCard}>
               <Text style={styles.summaryLabel}>Điện đã dùng</Text>
@@ -115,11 +144,6 @@ export default function UtilityScreen({ onBack }: Props) {
               <Text style={styles.infoValue}>{current.electricNew}</Text>
             </View>
 
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Đơn giá điện</Text>
-              <Text style={styles.infoValue}>4.000đ / kWh</Text>
-            </View>
-
             <View style={styles.divider} />
 
             <View style={styles.infoRow}>
@@ -132,45 +156,58 @@ export default function UtilityScreen({ onBack }: Props) {
               <Text style={styles.infoValue}>{current.waterNew}</Text>
             </View>
 
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Đơn giá nước</Text>
-              <Text style={styles.infoValue}>15.000đ / m³</Text>
+            <View style={styles.priceNote}>
+              <Ionicons name="information-circle-outline" size={19} color={theme.primary} />
+              <Text style={styles.priceNoteText}>
+                Đơn giá áp dụng được thể hiện trong chi tiết hóa đơn.
+              </Text>
             </View>
           </Card>
-        </>
-      ) : (
-        <Card style={styles.emptyCard}>
-          <Text style={styles.emptyText}>Chưa có dữ liệu điện nước.</Text>
-        </Card>
-      )}
+              </>
+            ) : null}
+            <AppButton icon="speedometer-outline" onPress={() => setModalVisible(true)} style={styles.reportButton}>
+              Chốt số điện nước tháng này
+            </AppButton>
+            <Text style={styles.historyTitle}>Lịch sử điện nước</Text>
+          </>
+        }
+        ListEmptyComponent={
+          <Card style={styles.emptyCard}>
+            <Text style={styles.emptyText}>Chưa có dữ liệu điện nước.</Text>
+          </Card>
+        }
+        renderItem={({ item, index }) => (
+          <AnimatedEntry delay={Math.min(index, 5) * 35}>
+            <Card style={styles.historyCard}>
+              <View style={styles.historyHeader}>
+                <Text style={styles.historyMonth}>Tháng {item.month}</Text>
+                <Text style={styles.historyTotal}>{item.electricMoney} + {item.waterMoney}</Text>
+              </View>
+              <View style={styles.historyRow}>
+                <Text style={styles.historyText}>Điện: {item.electricUsed} kWh</Text>
+                <Text style={styles.historyText}>Nước: {item.waterUsed} m³</Text>
+              </View>
+            </Card>
+          </AnimatedEntry>
+        )}
+      />
 
-      <Pressable style={styles.reportButton} onPress={() => setModalVisible(true)}>
-        <Text style={styles.reportButtonText}>+ Chốt số điện nước tháng này</Text>
-      </Pressable>
-
-      <Text style={styles.historyTitle}>Lịch sử điện nước</Text>
-
-      {utilityHistory.map((item) => (
-        <Card key={item.id} style={styles.historyCard}>
-          <View style={styles.historyHeader}>
-            <Text style={styles.historyMonth}>Tháng {item.month}</Text>
-            <Text style={styles.historyTotal}>
-              {item.electricMoney} + {item.waterMoney}
-            </Text>
-          </View>
-
-          <View style={styles.historyRow}>
-            <Text style={styles.historyText}>Điện: {item.electricUsed} kWh</Text>
-            <Text style={styles.historyText}>Nước: {item.waterUsed} m³</Text>
-          </View>
-        </Card>
-      ))}
-
-      <Modal visible={modalVisible} transparent animationType="slide">
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Báo cáo chỉ số điện nước</Text>
-            
+      <Modal
+        animationType="slide"
+        onRequestClose={() => setModalVisible(false)}
+        transparent
+        visible={modalVisible}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.modalContainer}
+        >
+          <ScrollView
+            contentContainerStyle={styles.modalScroll}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Báo cáo chỉ số điện nước</Text>
             <Text style={styles.label}>Số điện mới:</Text>
             <TextInput 
               style={styles.input} 
@@ -178,6 +215,7 @@ export default function UtilityScreen({ onBack }: Props) {
               value={draftElec} 
               onChangeText={setDraftElec} 
               placeholder="Nhập số điện trên đồng hồ..." 
+              placeholderTextColor={theme.muted}
             />
             
             <Text style={styles.label}>Số nước mới:</Text>
@@ -187,33 +225,37 @@ export default function UtilityScreen({ onBack }: Props) {
               value={draftWater} 
               onChangeText={setDraftWater} 
               placeholder="Nhập số nước trên đồng hồ..." 
+              placeholderTextColor={theme.muted}
             />
 
-            <View style={styles.modalActions}>
+              <View style={styles.modalActions}>
               <Pressable style={[styles.btn, styles.btnCancel]} onPress={() => setModalVisible(false)}>
+                <Ionicons name="close-outline" size={18} color={theme.text} />
                 <Text style={styles.btnText}>Hủy</Text>
               </Pressable>
               <Pressable style={[styles.btn, styles.btnSubmit]} onPress={handleReport}>
-                <Text style={[styles.btnText, { color: "#fff" }]}>Gửi báo cáo</Text>
+                <Ionicons name="send-outline" size={18} color={theme.background} />
+                <Text style={[styles.btnText, { color: theme.background }]}>Gửi báo cáo</Text>
               </Pressable>
+              </View>
             </View>
-          </View>
-        </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </Modal>
-    </ScrollView>
+    </>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSheet.create({
   loadingBox: {
     flex: 1,
-    backgroundColor: "#F4F5F7",
+    backgroundColor: theme.background,
     alignItems: "center",
     justifyContent: "center",
   },
   container: {
     flex: 1,
-    backgroundColor: "#F4F5F7",
+    backgroundColor: theme.background,
   },
   content: {
     paddingHorizontal: 22,
@@ -222,10 +264,13 @@ const styles = StyleSheet.create({
   },
   backButton: {
     alignSelf: "flex-start",
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 7,
     marginBottom: 14,
   },
   backText: {
-    color: COLORS.orange,
+    color: theme.primary,
     fontSize: 14,
     fontWeight: "900",
   },
@@ -233,10 +278,10 @@ const styles = StyleSheet.create({
     fontSize: 24,
     lineHeight: 31,
     fontWeight: "900",
-    color: COLORS.text,
+    color: theme.text,
   },
   subtitle: {
-    color: COLORS.muted,
+    color: theme.muted,
     fontSize: 13,
     lineHeight: 20,
     marginTop: 6,
@@ -246,36 +291,43 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 12,
     marginBottom: 14,
+    marginTop: 14,
   },
   summaryCard: {
     flex: 1,
     alignItems: "center",
     paddingHorizontal: 8,
+    backgroundColor: theme.surface,
+    borderColor: "transparent",
+    borderRadius: 20,
   },
   summaryLabel: {
-    color: COLORS.muted,
+    color: theme.muted,
     fontSize: 12,
     fontWeight: "700",
   },
   summaryNumber: {
-    color: COLORS.text,
+    color: theme.text,
     fontSize: 22,
     fontWeight: "900",
     marginTop: 8,
   },
   summaryMoney: {
-    color: COLORS.orange,
+    color: theme.primary,
     fontSize: 14,
     fontWeight: "900",
     marginTop: 6,
   },
   currentCard: {
     marginBottom: 20,
+    backgroundColor: theme.surface,
+    borderColor: "transparent",
+    borderRadius: 20,
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: "900",
-    color: COLORS.text,
+    color: theme.text,
     marginBottom: 10,
   },
   infoRow: {
@@ -285,37 +337,52 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   infoLabel: {
-    color: COLORS.muted,
+    color: theme.muted,
     fontSize: 13,
   },
   infoValue: {
-    color: COLORS.text,
+    color: theme.text,
     fontSize: 13,
     fontWeight: "900",
     textAlign: "right",
   },
   divider: {
     height: 1,
-    backgroundColor: "#F0F1F3",
+    backgroundColor: theme.border,
     marginVertical: 8,
   },
+  priceNote: {
+    alignItems: "center",
+    backgroundColor: theme.primarySoft,
+    borderRadius: 16,
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 10,
+    padding: 12,
+  },
+  priceNoteText: { color: theme.text, flex: 1, fontSize: 12, lineHeight: 18 },
   emptyCard: {
     alignItems: "center",
+    backgroundColor: theme.surface,
+    borderColor: "transparent",
     marginBottom: 20,
   },
   emptyText: {
-    color: COLORS.muted,
+    color: theme.muted,
     fontSize: 13,
     fontWeight: "700",
   },
   historyTitle: {
     fontSize: 16,
     fontWeight: "900",
-    color: COLORS.text,
+    color: theme.text,
     marginBottom: 12,
   },
   historyCard: {
     marginBottom: 12,
+    backgroundColor: theme.surface,
+    borderColor: "transparent",
+    borderRadius: 20,
   },
   historyHeader: {
     flexDirection: "row",
@@ -323,12 +390,12 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   historyMonth: {
-    color: COLORS.text,
+    color: theme.text,
     fontSize: 15,
     fontWeight: "900",
   },
   historyTotal: {
-    color: COLORS.orange,
+    color: theme.primary,
     fontSize: 13,
     fontWeight: "900",
     textAlign: "right",
@@ -340,33 +407,26 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   historyText: {
-    color: COLORS.muted,
+    color: theme.muted,
     fontSize: 13,
   },
   reportButton: {
-    backgroundColor: COLORS.orange,
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: "center",
     marginBottom: 20,
-  },
-  reportButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 15,
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: theme.overlay,
     justifyContent: "center",
     padding: 20,
   },
+  modalScroll: { flexGrow: 1, justifyContent: "center" },
   modalContent: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
+    backgroundColor: theme.surface,
+    borderRadius: 24,
     padding: 20,
   },
   modalTitle: {
+    color: theme.text,
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 16,
@@ -375,13 +435,15 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: "bold",
-    color: COLORS.text,
+    color: theme.text,
     marginBottom: 8,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 8,
+    borderColor: theme.border,
+    borderRadius: 16,
+    backgroundColor: theme.surfaceElevated,
+    color: theme.text,
     padding: 12,
     marginBottom: 16,
   },
@@ -392,16 +454,31 @@ const styles = StyleSheet.create({
   btn: {
     flex: 1,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 16,
     alignItems: "center",
+    flexDirection: "row",
+    gap: 7,
+    justifyContent: "center",
   },
   btnCancel: {
-    backgroundColor: "#E2E8F0",
+    backgroundColor: theme.surfaceElevated,
   },
   btnSubmit: {
-    backgroundColor: COLORS.orange,
+    backgroundColor: theme.primary,
   },
   btnText: {
+    color: theme.text,
     fontWeight: "bold",
   },
+  meterRow: { flexDirection: "row", gap: 10, marginTop: 16 },
+  meterItem: {
+    alignItems: "center",
+    backgroundColor: "rgba(221,251,240,0.12)",
+    borderRadius: 16,
+    flex: 1,
+    flexDirection: "row",
+    gap: 7,
+    padding: 12,
+  },
+  meterValue: { color: "#DDFBF0", fontSize: 13, fontWeight: "900" },
 });
