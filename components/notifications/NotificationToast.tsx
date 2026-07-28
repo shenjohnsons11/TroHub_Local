@@ -1,46 +1,63 @@
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useRef } from "react";
+import {
+  AccessibilityInfo,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import Toast, {
   ToastConfig,
   ToastConfigParams,
 } from "react-native-toast-message";
 
 import { FONT_FAMILIES } from "../../constants/theme";
+import { useAppTheme } from "../../contexts/ThemeContext";
+import { NotificationStatusAnimation } from "./NotificationStatusAnimation";
 
 type Variant = "success" | "error" | "warning" | "info";
-
-const PALETTE = {
-  success: { accent: "#17834A", surface: "#EFF8F3", icon: "checkmark-circle" },
-  error: { accent: "#C83F49", surface: "#FFF1F2", icon: "close-circle" },
-  warning: { accent: "#A85E00", surface: "#FFF7E8", icon: "warning" },
-  info: { accent: "#2166A5", surface: "#EFF6FC", icon: "information-circle" },
-} as const;
 
 function ToastSurface({
   variant,
   text1,
   text2,
 }: ToastConfigParams<Record<string, unknown>> & { variant: Variant }) {
-  const colors = PALETTE[variant];
+  const { theme } = useAppTheme();
+  const announcement = [text1, text2].filter(Boolean).join(". ");
+  const announced = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (
+      Platform.OS === "ios" &&
+      announcement &&
+      announced.current !== announcement
+    ) {
+      announced.current = announcement;
+      AccessibilityInfo.announceForAccessibility(announcement);
+    }
+  }, [announcement]);
 
   return (
     <View
-      accessibilityLiveRegion="polite"
+      accessibilityLabel={announcement}
+      accessibilityLiveRegion={Platform.OS === "android" ? "polite" : "none"}
       style={[
         styles.container,
-        { backgroundColor: colors.surface, borderColor: colors.accent },
+        { backgroundColor: theme.surfaceElevated, shadowColor: theme.text },
       ]}
     >
-      <Ionicons
-        color={colors.accent}
-        name={colors.icon}
-        size={22}
-        style={styles.icon}
-      />
-      <View style={styles.copy}>
-        {text1 ? <Text style={styles.title}>{text1}</Text> : null}
-        {text2 ? <Text style={styles.message}>{text2}</Text> : null}
+      {variant !== "info" ? (
+        <NotificationStatusAnimation size={44} variant={variant} />
+      ) : null}
+      <View style={[styles.copy, variant === "info" && styles.infoCopy]}>
+        {text1 ? (
+          <Text style={[styles.title, { color: theme.text }]}>{text1}</Text>
+        ) : null}
+        {text2 ? (
+          <Text style={[styles.message, { color: theme.muted }]}>{text2}</Text>
+        ) : null}
       </View>
       <Pressable
         accessibilityLabel="Đóng thông báo"
@@ -52,7 +69,7 @@ function ToastSurface({
           pressed && styles.closePressed,
         ]}
       >
-        <Ionicons color="#697178" name="close" size={18} />
+        <Ionicons color={theme.muted} name="close" size={18} />
       </Pressable>
     </View>
   );
@@ -67,38 +84,35 @@ export const notificationToastConfig: ToastConfig = {
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: "flex-start",
-    borderRadius: 12,
-    borderWidth: 1,
+    alignItems: "center",
+    borderRadius: 16,
     elevation: 4,
     flexDirection: "row",
     maxWidth: 420,
     minHeight: 68,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    shadowColor: "#25292D",
+    shadowColor: "#20302A",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
     shadowRadius: 8,
     width: "92%",
   },
-  icon: {
-    marginRight: 10,
-    marginTop: 1,
-  },
   copy: {
     flex: 1,
+    marginLeft: 10,
     paddingRight: 6,
   },
+  infoCopy: {
+    marginLeft: 0,
+  },
   title: {
-    color: "#25292D",
     fontFamily: FONT_FAMILIES.sans,
     fontSize: 14,
     fontWeight: "800",
     lineHeight: 19,
   },
   message: {
-    color: "#4F575E",
     fontFamily: FONT_FAMILIES.sans,
     fontSize: 13,
     lineHeight: 19,
