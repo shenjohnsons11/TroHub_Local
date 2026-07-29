@@ -7,13 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, CheckCircle, ChevronLeft, ChevronRight, FileText, Gauge, Plus, ScanSearch, Search, Send, Trash2 } from "lucide-react";
+import { CalendarDays, Bell, CheckCircle, ChevronLeft, ChevronRight, Eye, FileText, Gauge, Plus, Printer, ScanSearch, Search, Send, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { parseFormattedNumber } from "@/lib/utils";
 import { useNotification } from "@/hooks/use-notification";
 import { getNotificationMessage } from "@/lib/notification-messages";
 import { PageHeader } from "@/components/calm-ops/page-header";
+import { addWebNotification } from "@/components/notification-bell";
 
 const INVOICE_STEPS = [
   { label: "Chọn kỳ", icon: CalendarDays },
@@ -35,6 +36,17 @@ export default function InvoicesPage() {
   const [bulkData, setBulkData] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bulkStep, setBulkStep] = useState(1);
+
+  // Single invoice
+  const [isSingleOpen, setIsSingleOpen] = useState(false);
+  const [singleRoomId, setSingleRoomId] = useState("");
+  const [singlePeriod, setSinglePeriod] = useState(() => { const d = new Date(); return `${d.getMonth()+1}/${d.getFullYear()}`; });
+  const [singleDueDate, setSingleDueDate] = useState(() => new Date().toLocaleDateString("en-CA"));
+  const [singleRooms, setSingleRooms] = useState<any[]>([]);
+  const [singleSubmitting, setSingleSubmitting] = useState(false);
+
+  // Detail
+  const [detailInvoice, setDetailInvoice] = useState<any>(null);
 
   useEffect(() => {
     if (isAddOpen) {
@@ -72,6 +84,7 @@ export default function InvoicesPage() {
 
   useEffect(() => {
     loadInvoices();
+    fetchAPI("/rooms").then(r => { if (r.success) setSingleRooms(r.data.filter((rm: any) => rm.status === 1)); }).catch(() => {});
   }, []);
 
   const handleCreateBulkInvoices = async (e: React.FormEvent) => {
@@ -108,6 +121,7 @@ export default function InvoicesPage() {
         body: JSON.stringify(payload),
       });
       notification.success("Tạo hóa đơn thành công.");
+      addWebNotification("invoice", "Phát hành hóa đơn", `Đã tạo ${selectedItems.length} hóa đơn cho kỳ ${title}`);
       setIsAddOpen(false);
       loadInvoices();
     } catch (err: unknown) {
@@ -147,6 +161,31 @@ export default function InvoicesPage() {
     }
   };
 
+  const handleCreateSingleInvoice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!singleRoomId || !singlePeriod || !singleDueDate) { notification.error("Vui lòng điền đầy đủ thông tin!"); return; }
+    setSingleSubmitting(true);
+    try {
+      await fetchAPI("/invoices", { method: "POST", body: JSON.stringify({ roomId: singleRoomId, period: singlePeriod, dueDate: singleDueDate, status: 1 }) });
+      notification.success("Tạo hóa đơn lẻ thành công!");
+      addWebNotification("invoice", "Tạo hóa đơn", `Đã tạo hóa đơn lẻ cho kỳ ${singlePeriod}`);
+      setIsSingleOpen(false);
+      loadInvoices();
+    } catch (err) {
+      notification.error(getNotificationMessage(err, "Tạo hóa đơn thất bại."));
+    } finally { setSingleSubmitting(false); }
+  };
+
+  const handleRemind = async (invoiceId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await fetchAPI(`/invoices/${invoiceId}/remind`, { method: "POST" });
+      notification.success("Đã gửi nhắc nhở thành công!");
+    } catch (err) {
+      notification.error(getNotificationMessage(err, "Gửi nhắc nhở thất bại."));
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "Đã thanh toán": return <Badge className="border-0 bg-primary/10 text-primary">Đã thanh toán</Badge>;
@@ -179,7 +218,39 @@ export default function InvoicesPage() {
           />
         </div>
 
-        <Dialog open={isAddOpen} onOpenChange={(open) => { setIsAddOpen(open); if (open) setBulkStep(1); }}>
+        <div className="flex items-center gap-2">
+          {/* Single invoice */}
+          <Dialog open={isSingleOpen} onOpenChange={setIsSingleOpen}>
+            <DialogTrigger className="flex h-10 items-center gap-2 rounded-[16px] border border-border bg-card px-4 text-sm font-bold transition hover:bg-accent">
+              <Plus className="size-4" /> Tạo đơn lẻ
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader><DialogTitle>Tạo Hóa đơn lẻ</DialogTitle></DialogHeader>
+              <form onSubmit={handleCreateSingleInvoice} className="mt-4 space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="singleRoom">Chọn phòng *</Label>
+                  <select id="singleRoom" value={singleRoomId} onChange={e => setSingleRoomId(e.target.value)} required
+                    className="h-10 w-full rounded-[12px] border border-input bg-background px-3 text-sm">
+                    <option value="">-- Chọn phòng --</option>
+                    {singleRooms.map((r: any) => <option key={r._id} value={r._id}>{r.roomCode}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="singlePeriod">Kỳ thanh toán *</Label>
+                  <Input id="singlePeriod" placeholder="VD: 7/2026" value={singlePeriod} onChange={e => setSinglePeriod(e.target.value)} required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="singleDue">Ngày hết hạn *</Label>
+                  <Input id="singleDue" type="date" value={singleDueDate} onChange={e => setSingleDueDate(e.target.value)} required />
+                </div>
+                <button type="submit" disabled={singleSubmitting} className="flex h-10 w-full items-center justify-center gap-2 rounded-[16px] bg-primary text-sm font-bold text-primary-foreground disabled:opacity-60">
+                  {singleSubmitting ? "Đang tạo..." : "Tạo hóa đơn"}
+                </button>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={isAddOpen} onOpenChange={(open) => { setIsAddOpen(open); if (open) setBulkStep(1); }}>
           <DialogTrigger className="flex h-10 items-center justify-center gap-2 rounded-[16px] bg-primary px-4 text-sm font-bold text-primary-foreground shadow-[var(--calm-shadow)] transition hover:opacity-90">
             <Plus className="w-4 h-4 mr-2" /> Tạo hóa đơn mới
           </DialogTrigger>
@@ -289,6 +360,7 @@ export default function InvoicesPage() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </section>
 
       <div className="calm-workbench">
@@ -314,21 +386,31 @@ export default function InvoicesPage() {
               </TableRow>
             ) : (
               filteredInvoices.map(invoice => (
-                <TableRow key={invoice._id || invoice.id}>
-                  <TableCell className="font-medium text-foreground">{invoice.id?.substring(0, 8) || "HD"}</TableCell>
-                  <TableCell>{invoice.title}</TableCell>
-                  <TableCell>{invoice.roomCode}</TableCell>
+                <TableRow key={invoice._id || invoice.id} className="cursor-pointer hover:bg-accent/40" onClick={() => setDetailInvoice(invoice)}>
+                  <TableCell className="font-medium text-foreground">
+                    {`HD-${(invoice.period || "").replace("/", "")}-${(invoice._id || invoice.id || "000").substring(0, 3).toUpperCase()}`}
+                  </TableCell>
+                  <TableCell>{invoice.period}</TableCell>
+                  <TableCell>{invoice.room || invoice.contractId?.roomId?.roomCode || "N/A"}</TableCell>
                   <TableCell>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(invoice.totalAmount || 0)}</TableCell>
                   <TableCell>{getStatusBadge(invoice.status)}</TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
+                    <div className="flex justify-end gap-1" onClick={e => e.stopPropagation()}>
+                      <Button aria-label="Xem chi tiết hóa đơn" onClick={e => { e.stopPropagation(); setDetailInvoice(invoice); }} variant="ghost" size="icon" title="Xem chi tiết" className="text-muted-foreground hover:text-foreground">
+                        <Eye className="size-4" />
+                      </Button>
                       {invoice.status !== "Đã thanh toán" && (
-                        <Button aria-label="Đánh dấu hóa đơn đã thu" onClick={() => handleMarkPaid(invoice._id || invoice.id)} variant="ghost" size="icon" title="Đánh dấu đã thu" className="text-primary hover:bg-primary/10 hover:text-primary">
-                          <CheckCircle className="w-4 h-4" />
-                        </Button>
+                        <>
+                          <Button aria-label="Nhắc nhở thanh toán" onClick={e => handleRemind(invoice._id || invoice.id, e)} variant="ghost" size="icon" title="Nhắc nợ" className="text-amber-600 hover:bg-amber-50 hover:text-amber-700">
+                            <Bell className="size-4" />
+                          </Button>
+                          <Button aria-label="Đánh dấu hóa đơn đã thu" onClick={e => { e.stopPropagation(); handleMarkPaid(invoice._id || invoice.id); }} variant="ghost" size="icon" title="Đánh dấu đã thu" className="text-primary hover:bg-primary/10 hover:text-primary">
+                            <CheckCircle className="size-4" />
+                          </Button>
+                        </>
                       )}
-                      <Button aria-label="Xóa hóa đơn" onClick={() => handleDelete(invoice._id || invoice.id)} variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive">
-                        <Trash2 className="w-4 h-4" />
+                      <Button aria-label="Xóa hóa đơn" onClick={e => { e.stopPropagation(); handleDelete(invoice._id || invoice.id); }} variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive">
+                        <Trash2 className="size-4" />
                       </Button>
                     </div>
                   </TableCell>
@@ -338,6 +420,43 @@ export default function InvoicesPage() {
           </TableBody>
         </Table>
       </div>
+
+      {/* Invoice Detail Modal */}
+      <Dialog open={!!detailInvoice} onOpenChange={open => { if (!open) setDetailInvoice(null); }}>
+        <DialogContent className="max-w-lg print:shadow-none">
+          <div id="invoice-print-area">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-black">Chi tiết Hóa đơn</DialogTitle>
+            </DialogHeader>
+            {detailInvoice && (
+              <div className="mt-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Mã hóa đơn</p>
+                    <p className="font-black">{`HD-${(detailInvoice.period || "").replace("/", "")}-${(detailInvoice._id || "000").substring(0, 3).toUpperCase()}`}</p>
+                  </div>
+                  {getStatusBadge(detailInvoice.status)}
+                </div>
+                <div className="grid grid-cols-2 gap-3 rounded-[16px] bg-muted p-4 text-sm">
+                  <div><p className="text-muted-foreground">Phòng</p><p className="font-bold">{detailInvoice.room || detailInvoice.contractId?.roomId?.roomCode || "N/A"}</p></div>
+                  <div><p className="text-muted-foreground">Kỳ thanh toán</p><p className="font-bold">{detailInvoice.period || "-"}</p></div>
+                  <div><p className="text-muted-foreground">Tiền thuê</p><p className="font-bold">{new Intl.NumberFormat('vi-VN').format(detailInvoice.rent || 0)}đ</p></div>
+                  <div><p className="text-muted-foreground">Điện</p><p className="font-bold">{new Intl.NumberFormat('vi-VN').format(detailInvoice.electricity || 0)}đ</p></div>
+                  <div><p className="text-muted-foreground">Nước</p><p className="font-bold">{new Intl.NumberFormat('vi-VN').format(detailInvoice.water || 0)}đ</p></div>
+                  <div><p className="text-muted-foreground">Dịch vụ khác</p><p className="font-bold">{new Intl.NumberFormat('vi-VN').format(detailInvoice.services || 0)}đ</p></div>
+                </div>
+                <div className="flex items-center justify-between rounded-[16px] bg-primary/10 px-5 py-4">
+                  <p className="font-black text-foreground">Tổng cộng</p>
+                  <p className="text-2xl font-black text-primary">{new Intl.NumberFormat('vi-VN').format(detailInvoice.totalAmount || 0)}đ</p>
+                </div>
+                <button onClick={() => window.print()} className="flex w-full items-center justify-center gap-2 rounded-[16px] border border-border bg-card py-2.5 text-sm font-bold transition hover:bg-accent">
+                  <Printer className="size-4" /> In hóa đơn
+                </button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { BadgeCheck, ChevronLeft, ChevronRight, Contact, Edit, Plus, Search, Trash2, UserRound } from "lucide-react";
+import { BadgeCheck, ChevronLeft, ChevronRight, Contact, Edit, Plus, Search, Trash2, UserRound, Send } from "lucide-react";
 import { PageHeader } from "@/components/calm-ops/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,9 @@ export default function TenantsPage() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingTenantId, setEditingTenantId] = useState<string | null>(null);
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [invitePhone, setInvitePhone] = useState("");
+  const [inviteTenantName, setInviteTenantName] = useState("");
   const [tenantStep, setTenantStep] = useState(1);
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
@@ -117,6 +120,25 @@ export default function TenantsPage() {
     setTenantStep((current) => Math.min(3, current + 1));
   };
 
+  const openInviteModal = (tenant: any) => {
+    setInvitePhone(tenant.phone || "");
+    setInviteTenantName(tenant.fullName || tenant.name || "");
+    setInviteModalOpen(true);
+  };
+
+  const handleSendInvite = (type: "zalo" | "sms") => {
+    if (!invitePhone) return;
+    const cleanPhone = invitePhone.replace(/\D/g, "");
+    if (type === "zalo") {
+      window.open(`https://zalo.me/${cleanPhone}`, "_blank");
+    } else {
+      const message = encodeURIComponent(`Chào ${inviteTenantName}, mời bạn tham gia ứng dụng TroHub để theo dõi hóa đơn và hợp đồng.`);
+      window.location.href = `sms:${cleanPhone}?body=${message}`;
+    }
+    notification.success(`Đã mở ứng dụng ${type === "zalo" ? "Zalo" : "SMS"} để gửi lời mời.`);
+    setInviteModalOpen(false);
+  };
+
   const filteredTenants = tenants.filter((tenant) =>
     tenant.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) || tenant.phone?.includes(searchTerm),
   );
@@ -172,6 +194,21 @@ export default function TenantsPage() {
             </form>
           </DialogContent>
         </Dialog>
+        <Dialog open={inviteModalOpen} onOpenChange={setInviteModalOpen}>
+          <DialogContent className="sm:max-w-[400px]">
+            <DialogHeader><DialogTitle>Gửi lời mời tham gia App</DialogTitle></DialogHeader>
+            <div className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label htmlFor="invitePhone">Số điện thoại nhận</Label>
+                <Input id="invitePhone" value={invitePhone} onChange={(e) => setInvitePhone(formatPhoneInput(e.target.value))} />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <Button className="w-full bg-[#0068FF] hover:bg-[#0054cc] text-white" onClick={() => handleSendInvite("zalo")}>Gửi Zalo</Button>
+                <Button className="w-full" variant="outline" onClick={() => handleSendInvite("sms")}>Gửi SMS</Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </section>
 
       <div className="calm-workbench">
@@ -184,7 +221,7 @@ export default function TenantsPage() {
                   <TableCell className="font-bold">{tenant.fullName || tenant.name}</TableCell>
                   <TableCell>{tenant.phone}</TableCell>
                   <TableCell>{tenant.roomCode || "Chưa xếp phòng"}</TableCell>
-                  <TableCell>{tenant.linkedAccountId ? <Badge className="border-0 bg-primary/10 text-primary">Đã liên kết</Badge> : <Badge variant="secondary">Chưa liên kết App</Badge>}</TableCell>
+                  <TableCell>{tenant.linkedAccountId ? <Badge className="border-0 bg-primary/10 text-primary">Đã liên kết</Badge> : <div className="flex flex-col items-start gap-1"><Badge variant="secondary">Chưa liên kết App</Badge><Button variant="link" size="sm" className="h-auto p-0 text-xs text-primary" onClick={() => openInviteModal(tenant)}><Send className="mr-1 size-3" /> Gửi lời mời</Button></div>}</TableCell>
                   <TableCell><div className="flex justify-end gap-2"><Button aria-label={`Sửa ${tenant.fullName || tenant.name}`} onClick={() => openEditModal(tenant)} variant="ghost" size="icon"><Edit className="size-4" /></Button><Button aria-label={`Xóa ${tenant.fullName || tenant.name}`} onClick={() => void handleDelete(tenant._id || tenant.id)} variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive"><Trash2 className="size-4" /></Button></div></TableCell>
                 </TableRow>)}
           </TableBody>

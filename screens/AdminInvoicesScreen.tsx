@@ -7,6 +7,7 @@ import AppLoadingScreen from "../components/AppLoadingScreen";
 import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
 import GradientHero from "../components/ui/GradientHero";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
+import { notificationService } from "../services/notificationService";
 import AppButton from "../components/ui/AppButton";
 import { adminService, AdminInvoice, AdminRoom, AdminContract } from "../services/adminService";
 import InvoiceDetailModal from "../components/InvoiceDetailModal";
@@ -197,6 +198,14 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
         status: 1 // 1: Chưa thanh toán
       });
       notification.success("Tạo hóa đơn thành công!");
+      
+      // Kích hoạt thông báo giả lập cho Khách thuê
+      notificationService.addNotification(
+        "invoice",
+        "Hóa đơn mới được phát hành",
+        `Hóa đơn kỳ ${period} của phòng ${roomCode} đã được tạo với tổng tiền ${rentPrice.toLocaleString("vi-VN")}đ.`
+      );
+
       setModalVisible(false);
       loadData();
     } catch (error) {
@@ -363,44 +372,6 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Quản lý hóa đơn</Text>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Tạo hóa đơn hàng loạt" style={styles.bulkButton} onPress={() => onNavigate && onNavigate("invoice_bulk")}>
-            <Ionicons name="documents-outline" size={18} color={theme.background} />
-            <Text style={styles.addButtonText}>Hàng loạt</Text>
-          </Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel="Tạo hóa đơn mới" style={styles.addButton} onPress={() => setModalVisible(true)}>
-            <Ionicons name="receipt" size={18} color={theme.background} />
-            <Text style={styles.addButtonText}>Tạo</Text>
-          </Pressable>
-        </View>
-      </View>
-
-      {/* Bộ lọc */}
-      <View style={styles.filterContainer}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityState={{ selected: filter === "all" }}
-          style={[styles.filterButton, filter === "all" && styles.filterActive]}
-          onPress={() => setFilter("all")}
-        >
-          <Text style={[styles.filterText, filter === "all" && styles.filterTextActive]}>Tất cả</Text>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityState={{ selected: filter === "unpaid" }}
-          style={[styles.filterButton, filter === "unpaid" && styles.filterActive]}
-          onPress={() => setFilter("unpaid")}
-        >
-          <Text style={[styles.filterText, filter === "unpaid" && styles.filterTextActive]}>Chưa thu</Text>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityState={{ selected: filter === "paid" }}
-          style={[styles.filterButton, filter === "paid" && styles.filterActive]}
-          onPress={() => setFilter("paid")}
-        >
-          <Text style={[styles.filterText, filter === "paid" && styles.filterTextActive]}>Đã thu</Text>
-        </Pressable>
       </View>
 
       <FlatList
@@ -408,11 +379,62 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
         keyExtractor={(item) => item._id}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        ListHeaderComponent={<GradientHero icon="receipt-outline" label="TỔNG GIÁ TRỊ HÓA ĐƠN" value={`${invoices.reduce((sum, invoice) => sum + (invoice.totalAmount || 0), 0).toLocaleString("vi-VN")}đ`} detail={`${invoices.length} hóa đơn trong hệ thống`} />}
+        ListHeaderComponent={
+          <>
+            <GradientHero icon="receipt-outline" label="TỔNG GIÁ TRỊ HÓA ĐƠN" value={`${invoices.reduce((sum, invoice) => sum + (invoice.totalAmount || 0), 0).toLocaleString("vi-VN")}đ`} detail={`${invoices.length} hóa đơn trong hệ thống`} />
+
+            {/* Section Header Row — Tầng 3 */}
+            <View style={styles.sectionRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sectionTitle}>Quản lý hóa đơn</Text>
+                <Text style={styles.sectionSub}>Theo dõi và phát hành hóa đơn hàng tháng</Text>
+              </View>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <Pressable accessibilityRole="button" style={[styles.sectionBtn, { backgroundColor: theme.primarySoft }]} onPress={() => onNavigate && onNavigate('invoice_bulk')}>
+                  <Ionicons name="documents-outline" size={16} color={theme.primary} />
+                  <Text style={[styles.sectionBtnText, { color: theme.primary }]}>Hàng loạt</Text>
+                </Pressable>
+                <Pressable accessibilityRole="button" style={[styles.sectionBtn, { backgroundColor: theme.primary }]} onPress={() => setModalVisible(true)}>
+                  <Ionicons name="add" size={16} color="#fff" />
+                  <Text style={[styles.sectionBtnText, { color: '#fff' }]}>Tạo mới</Text>
+                </Pressable>
+              </View>
+            </View>
+
+            {/* Bộ lọc */}
+            <View style={styles.filterContainer}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ selected: filter === "all" }}
+                style={[styles.filterButton, filter === "all" && styles.filterActive]}
+                onPress={() => setFilter("all")}
+              >
+                <Text style={[styles.filterText, filter === "all" && styles.filterTextActive]}>Tất cả</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ selected: filter === "unpaid" }}
+                style={[styles.filterButton, filter === "unpaid" && styles.filterActive]}
+                onPress={() => setFilter("unpaid")}
+              >
+                <Text style={[styles.filterText, filter === "unpaid" && styles.filterTextActive]}>Chưa thu</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ selected: filter === "paid" }}
+                style={[styles.filterButton, filter === "paid" && styles.filterActive]}
+                onPress={() => setFilter("paid")}
+              >
+                <Text style={[styles.filterText, filter === "paid" && styles.filterTextActive]}>Đã thu</Text>
+              </Pressable>
+            </View>
+          </>
+        }
         ListEmptyComponent={<IllustratedEmptyState kind="invoice" title={invoices.length ? "Không có hóa đơn phù hợp" : "Chưa có hóa đơn"} description={invoices.length ? "Hãy chọn bộ lọc khác." : "Tạo hóa đơn đầu tiên cho phòng đang thuê."} actionLabel={invoices.length ? undefined : "Tạo hóa đơn"} actionIcon="receipt-outline" onAction={invoices.length ? undefined : () => setModalVisible(true)} />}
         renderItem={({ item, index }) => (
           <AnimatedEntry delay={Math.min(index, 6) * 45}><Pressable accessibilityRole="button" accessibilityLabel={`Mở chi tiết hóa đơn phòng ${item.room || item.contractId?.roomId?.roomCode || "N/A"}`} style={styles.invoiceCard} onPress={() => handleOpenDetail(item)}>
             <View style={styles.invoiceInfo}>
+              <Text style={styles.invoicePeriod}>Mã HD: HD-{(item.period || "").replace("/", "")}-{(item._id || "000").substring(0, 3).toUpperCase()}</Text>
               <Text style={styles.roomCode}>Phòng {item.room || item.contractId?.roomId?.roomCode || "N/A"}</Text>
               <Text style={styles.invoicePeriod}>Kỳ hóa đơn: {item.period}</Text>
               <Text style={styles.invoiceAmount}>Tổng tiền: {item.totalAmount?.toLocaleString("vi-VN")}đ</Text>
@@ -701,6 +723,35 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginTop: 8,
     paddingHorizontal: 10,
     paddingVertical: 7,
+  },
+  sectionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 18,
+    marginBottom: 6,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: theme.text,
+  },
+  sectionSub: {
+    fontSize: 11,
+    color: theme.muted,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  sectionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    gap: 5,
+  },
+  sectionBtnText: {
+    fontSize: 12,
+    fontWeight: '800',
   },
   modalOverlay: {
     flex: 1,
