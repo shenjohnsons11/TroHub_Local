@@ -12,13 +12,14 @@ import {
 import { useColorScheme } from "react-native";
 import { TROHUB_THEMES } from "../constants/theme";
 
-export type ThemeMode = "light" | "dark";
+export type ThemeMode = "light" | "dark" | "system";
 
 const storageKey = "trohub_theme";
 
 type ThemeContextValue = {
   themeMode: ThemeMode;
-  theme: (typeof TROHUB_THEMES)[ThemeMode];
+  resolvedTheme: "light" | "dark";
+  theme: (typeof TROHUB_THEMES)["light" | "dark"];
   setTheme: (mode: ThemeMode) => void;
   toggleTheme: () => void;
 };
@@ -26,16 +27,25 @@ type ThemeContextValue = {
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
 export function ThemeProvider({ children }: PropsWithChildren) {
-  const systemTheme = useColorScheme();
-  const initialTheme = systemTheme === "dark" ? "dark" : "light";
+  const systemScheme = useColorScheme();
   const userInteracted = useRef(false);
-  const themeModeRef = useRef<ThemeMode>(initialTheme);
-  const [themeMode, setThemeMode] = useState<ThemeMode>(initialTheme);
+  const themeModeRef = useRef<ThemeMode>("system");
+  const [themeMode, setThemeMode] = useState<ThemeMode>("system");
+  const [currentTimeHour, setCurrentTimeHour] = useState(() => new Date().getHours());
 
   const persist = useCallback((mode: ThemeMode) => {
     void AsyncStorage.setItem(storageKey, mode).catch(() => undefined);
   }, []);
 
+  // Update current time hour periodically to trigger auto mode transition
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTimeHour(new Date().getHours());
+    }, 60000); // Check every minute
+    return () => clearInterval(interval);
+  }, []);
+
+  // Sync initial theme mode from storage
   useEffect(() => {
     let active = true;
 
@@ -43,10 +53,10 @@ export function ThemeProvider({ children }: PropsWithChildren) {
       if (
         active &&
         !userInteracted.current &&
-        (storedTheme === "light" || storedTheme === "dark")
+        (storedTheme === "light" || storedTheme === "dark" || storedTheme === "system")
       ) {
-        themeModeRef.current = storedTheme;
-        setThemeMode(storedTheme);
+        themeModeRef.current = storedTheme as ThemeMode;
+        setThemeMode(storedTheme as ThemeMode);
       }
     }).catch(() => undefined);
 
@@ -54,6 +64,18 @@ export function ThemeProvider({ children }: PropsWithChildren) {
       active = false;
     };
   }, []);
+
+  const getActiveTheme = useCallback((mode: ThemeMode): "light" | "dark" => {
+    if (mode === "system") {
+      const isNightTime = currentTimeHour >= 18 || currentTimeHour < 6;
+      const prefersDark = systemScheme === "dark";
+      return (isNightTime || prefersDark) ? "dark" : "light";
+    }
+    return mode;
+  }, [systemScheme, currentTimeHour]);
+
+  const resolvedTheme = useMemo(() => getActiveTheme(themeMode), [themeMode, getActiveTheme]);
+  const theme = useMemo(() => TROHUB_THEMES[resolvedTheme], [resolvedTheme]);
 
   const setTheme = useCallback((mode: ThemeMode) => {
     userInteracted.current = true;
@@ -63,7 +85,14 @@ export function ThemeProvider({ children }: PropsWithChildren) {
   }, [persist]);
 
   const toggleTheme = useCallback(() => {
-    const next = themeModeRef.current === "dark" ? "light" : "dark";
+    let next: ThemeMode = "light";
+    if (themeModeRef.current === "light") {
+      next = "dark";
+    } else if (themeModeRef.current === "dark") {
+      next = "system";
+    } else {
+      next = "light";
+    }
     userInteracted.current = true;
     themeModeRef.current = next;
     setThemeMode(next);
@@ -73,11 +102,12 @@ export function ThemeProvider({ children }: PropsWithChildren) {
   const value = useMemo(
     () => ({
       themeMode,
-      theme: TROHUB_THEMES[themeMode],
+      resolvedTheme,
+      theme,
       setTheme,
       toggleTheme,
     }),
-    [setTheme, themeMode, toggleTheme],
+    [setTheme, themeMode, resolvedTheme, theme, toggleTheme],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

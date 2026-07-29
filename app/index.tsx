@@ -20,6 +20,8 @@ import AdminTenantsScreen from "../screens/AdminTenantsScreen";
 import BulkInvoiceScreen from "../screens/BulkInvoiceScreen";
 import ChangePasswordScreen from "../screens/ChangePasswordScreen";
 import AdminSettingsScreen from "../screens/AdminSettingsScreen";
+import NotificationsScreen from "../screens/NotificationsScreen";
+import MeterScannerScreen from "../screens/MeterScannerScreen";
 import AppLoadingScreen from "../components/AppLoadingScreen";
 import { useAppTheme } from "../contexts/ThemeContext";
 
@@ -39,7 +41,9 @@ type Tab =
   | "rooms"
   | "tenants"
   | "change_password"
-  | "settings";
+  | "settings"
+  | "notifications"
+  | "scan_meter";
 
 export default function App() {
   const { theme } = useAppTheme();
@@ -165,6 +169,8 @@ export default function App() {
                   onLogout={handleLogout}
                 />
               )}
+
+              {activeTab === "notifications" && <NotificationsScreen onBack={() => setActiveTab("home")} />}
             </>
           ) : (
             <>
@@ -191,6 +197,7 @@ export default function App() {
                   profile={profile}
                   onSave={handleSaveProfile}
                   onBack={() => setActiveTab("account")}
+                  onLogout={handleLogout}
                 />
               )}
 
@@ -200,6 +207,14 @@ export default function App() {
                   onLogout={handleLogout}
                   onNavigate={(screen) => setActiveTab(screen)}
                 />
+              )}
+
+              {activeTab === "notifications" && (
+                <NotificationsScreen onBack={() => setActiveTab("home")} onNavigate={handleChangeTab} />
+              )}
+
+              {activeTab === "scan_meter" && (
+                <MeterScannerScreen onBack={() => setActiveTab("home")} onSuccess={() => setActiveTab("utility")} />
               )}
             </>
           )}

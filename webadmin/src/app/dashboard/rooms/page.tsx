@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { DoorOpen, Edit, Plus, Search, Trash2 } from "lucide-react";
+import { DoorOpen, Edit, Plus, Search, Trash2, Settings } from "lucide-react";
 import { PageHeader } from "@/components/calm-ops/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ export default function RoomsPage() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingRoomId, setEditingRoomId] = useState<string | null>(null);
+  const [statusDropdown, setStatusDropdown] = useState<string | null>(null);
   const [roomCode, setRoomCode] = useState("");
   const [price, setPrice] = useState("");
   const [area, setArea] = useState("");
@@ -97,11 +98,40 @@ export default function RoomsPage() {
   };
 
   const filteredRooms = rooms.filter((room) => room.roomCode?.toLowerCase().includes(searchTerm.toLowerCase()));
-  const statusBadge = (status: number) => status === 0
-    ? <Badge className="border-0 bg-primary/10 text-primary">Còn trống</Badge>
-    : status === 1
-      ? <Badge className="border-0 bg-accent text-accent-foreground">Đang thuê</Badge>
-      : <Badge className="border-0 bg-[var(--warning-soft)] text-warning-foreground">Bảo trì</Badge>;
+
+  const handleStatusChange = async (id: string, status: number) => {
+    try {
+      await fetchAPI(`/rooms/${id}`, { method: "PUT", body: JSON.stringify({ status }) });
+      notification.success("Đã cập nhật trạng thái phòng.");
+      setStatusDropdown(null);
+      await loadRooms();
+    } catch (error) {
+      notification.error(getNotificationMessage(error, "Không thể cập nhật trạng thái."));
+    }
+  };
+
+  const statusBadge = (room: any) => {
+    const status = room.status;
+    return (
+      <div className="flex items-center gap-2">
+        {status === 0
+          ? <Badge className="border-0 bg-primary/10 text-primary">Còn trống</Badge>
+          : status === 1
+            ? <Badge className="border-0 bg-accent text-accent-foreground">Đang thuê</Badge>
+            : <Badge className="border-0 bg-[var(--warning-soft)] text-warning-foreground">Bảo trì</Badge>}
+        <div className="relative">
+          <Button variant="ghost" size="icon" onClick={() => setStatusDropdown(statusDropdown === (room._id || room.id) ? null : (room._id || room.id))} className="size-6 rounded-full"><Settings className="size-3" /></Button>
+          {statusDropdown === (room._id || room.id) && (
+            <div className="absolute right-0 top-8 z-10 w-36 rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+              <button onClick={() => void handleStatusChange(room._id || room.id, 0)} className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent">✅ Còn trống</button>
+              <button onClick={() => void handleStatusChange(room._id || room.id, 1)} className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent">🏠 Đang thuê</button>
+              <button onClick={() => void handleStatusChange(room._id || room.id, 2)} className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent">🔧 Bảo trì</button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   const roomForm = (edit = false) => (
     <form onSubmit={handleSaveRoom} className="mt-4 space-y-4">
@@ -152,7 +182,7 @@ export default function RoomsPage() {
             <article key={room._id || room.id} className="calm-surface group overflow-hidden p-5 transition duration-200 hover:-translate-y-0.5 hover:shadow-lg">
               <div className="flex items-start justify-between gap-4">
                 <div><p className="text-xs font-bold uppercase tracking-[.16em] text-muted-foreground">Căn hộ</p><h2 className="mt-1 text-2xl font-black">{room.roomCode}</h2></div>
-                {statusBadge(room.status)}
+                {statusBadge(room)}
               </div>
               <div className="mt-6 rounded-[20px] bg-primary/8 p-4">
                 <p className="text-sm text-muted-foreground">Giá thuê mỗi tháng</p>
