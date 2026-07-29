@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, FlatList, Pressable, TextInput, Modal, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { adminService, AdminRoom } from "../services/adminService";
+import { apiClient } from "../services/apiClient";
+import { authService } from "../services/authService";
 import { useAppTheme } from "../contexts/ThemeContext";
 import { useNotification } from "../hooks/useNotification";
 import AppLoadingScreen from "../components/AppLoadingScreen";
@@ -26,6 +28,8 @@ export default function AdminRoomsScreen({ params }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<AdminRoom | null>(null);
   const [detailVisible, setDetailVisible] = useState(false);
+  const [meterModalVisible, setMeterModalVisible] = useState(false);
+  const [meterReadings, setMeterReadings] = useState<Record<string, { electricity: string; water: string }>>({}); 
 
   const loadRooms = async () => {
     try { setRooms(await adminService.getRooms()); }
@@ -33,6 +37,31 @@ export default function AdminRoomsScreen({ params }: Props) {
     finally { setLoading(false); }
   };
   useEffect(() => { void loadRooms(); }, []);
+
+  const handleBulkMeterReport = async () => {
+    try {
+      setSubmitting(true);
+      const payload = Object.entries(meterReadings)
+        .filter(([, data]) => data.electricity.trim() !== "" || data.water.trim() !== "")
+        .map(([roomId, data]) => ({
+          roomId,
+          electricity: data.electricity ? Number(data.electricity) : undefined,
+          water: data.water ? Number(data.water) : undefined,
+        }));
+      if (payload.length === 0) { notification.error("Vui lòng nhập ít nhất một chỉ số"); return; }
+      const token = await authService.getToken();
+      const response = await apiClient.post<{ success: boolean }>("/rooms/bulk-report-utility", { readings: payload }, token);
+      if (response.success) {
+        notification.success("Đã lưu chỉ số điện nước hàng loạt!");
+        setMeterModalVisible(false);
+        setMeterReadings({});
+      }
+    } catch (error) {
+      notification.error(error instanceof Error ? error.message : "Có lỗi xảy ra!");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const handleAddRoom = async () => {
     if (!roomCode.trim() || !area.trim() || !rentPrice.trim() || !deposit.trim()) {
@@ -65,16 +94,32 @@ export default function AdminRoomsScreen({ params }: Props) {
       <FlatList
         data={filteredRooms}
         keyExtractor={(item) => item._id}
+        numColumns={2}
+        columnWrapperStyle={{ gap: 10 }}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={<>
-          <GradientHero icon="home-outline" label="DANH MỤC PHÒNG" value={`${rooms.length} phòng`} detail={`${rooms.filter((room) => room.status === 0).length} phòng đang trống`} actionLabel="Thêm phòng" actionIcon="add" onAction={() => setModalVisible(true)} />
+          <GradientHero icon="home-outline" label="DANH MỤC PHÒNG" value={`${rooms.length} phòng`} detail={`${rooms.filter((room) => room.status === 0).length} phòng đang trống`} />
+          <View style={styles.sectionRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>Danh sách phòng trọ</Text>
+              <Text style={[styles.sectionSub, { color: theme.muted }]}>Quản lý và theo dõi trạng thái từng phòng</Text>
+            </View>
+            <Pressable accessibilityRole="button" style={[styles.sectionBtn, { backgroundColor: theme.warningForeground }]} onPress={() => { setMeterReadings({}); setMeterModalVisible(true); }}>
+              <Ionicons name="flash" size={16} color="#fff" />
+              <Text style={styles.sectionBtnText}>Chốt điện nước</Text>
+            </Pressable>
+            <Pressable accessibilityRole="button" style={[styles.sectionBtn, { backgroundColor: theme.primary }]} onPress={() => setModalVisible(true)}>
+              <Ionicons name="add" size={16} color="#fff" />
+              <Text style={styles.sectionBtnText}>Thêm phòng</Text>
+            </Pressable>
+          </View>
           <View style={styles.filters}>{(["all", "empty", "occupied", "repair"] as const).map((value) => <Pressable key={value} accessibilityRole="button" accessibilityState={{ selected: filter === value }} style={[styles.filter, { backgroundColor: filter === value ? theme.primarySoft : theme.surfaceElevated }]} onPress={() => setFilter(value)}><Text style={[styles.filterText, { color: filter === value ? theme.primary : theme.muted }]}>{({ all: "Tất cả", empty: "Trống", occupied: "Đang thuê", repair: "Sửa chữa" })[value]}</Text></Pressable>)}</View>
         </>}
         ListEmptyComponent={<IllustratedEmptyState kind="contract" title={rooms.length ? "Không có phòng phù hợp" : "Chưa có phòng trọ"} description={rooms.length ? "Hãy chọn bộ lọc khác." : "Thêm phòng đầu tiên để bắt đầu vận hành."} actionLabel={rooms.length ? undefined : "Thêm phòng"} actionIcon="add" onAction={rooms.length ? undefined : () => setModalVisible(true)} />}
         renderItem={({ item, index }) => {
           const [label, color, background] = statusMeta(item.status);
-          return <AnimatedEntry delay={Math.min(index, 6) * 45}><Pressable accessibilityRole="button" style={[styles.card, { backgroundColor: theme.surfaceElevated, shadowColor: theme.text }]} onPress={() => { setSelectedRoom(item); setDetailVisible(true); }}><View style={[styles.iconTile, { backgroundColor: theme.primarySoft }]}><Ionicons name="business-outline" size={22} color={theme.primary} /></View><View style={styles.info}><Text style={[styles.roomCode, { color: theme.text }]}>{item.roomCode}</Text><Text style={[styles.sub, { color: theme.muted }]}>{item.area} · {item.defaultRentPrice.toLocaleString("vi-VN")}đ/tháng</Text></View><View style={[styles.badge, { backgroundColor: background as string }]}><Text style={[styles.badgeText, { color: color as string }]}>{label}</Text></View></Pressable></AnimatedEntry>;
+          return <AnimatedEntry delay={Math.min(index, 6) * 45} style={{ flex: 1 }}><Pressable accessibilityRole="button" style={[styles.card, { backgroundColor: theme.surfaceElevated, shadowColor: theme.text }]} onPress={() => { setSelectedRoom(item); setDetailVisible(true); }}><View style={{ flexDirection: "row", justifyContent: "space-between", width: "100%" }}><View style={[styles.iconTile, { backgroundColor: theme.primarySoft }]}><Ionicons name="business-outline" size={22} color={theme.primary} /></View><View style={[styles.badge, { backgroundColor: background as string }]}><Text style={[styles.badgeText, { color: color as string }]}>{label}</Text></View></View><View style={styles.info}><Text style={[styles.roomCode, { color: theme.text }]}>{item.roomCode}</Text><Text style={[styles.sub, { color: theme.muted }]}>{item.area}</Text><Text style={[styles.sub, { color: theme.primary }]}>{item.defaultRentPrice.toLocaleString("vi-VN")}đ/th</Text></View></Pressable></AnimatedEntry>;
         }}
       />
 
@@ -95,6 +140,45 @@ export default function AdminRoomsScreen({ params }: Props) {
           </ScrollView>
         </View></KeyboardAvoidingView>
       </Modal>
+
+      <Modal visible={meterModalVisible} transparent animationType="slide" onRequestClose={() => { if (!submitting) setMeterModalVisible(false); }}>
+        <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.overlay }]} />
+          <View accessibilityViewIsModal style={[styles.sheet, { backgroundColor: theme.surfaceElevated, maxHeight: "90%" }]}>
+            <View style={styles.modalHeader}>
+              <Text accessibilityRole="header" style={[styles.modalTitle, { color: theme.text }]}>Chốt chỉ số điện nước</Text>
+              <Pressable disabled={submitting} onPress={() => setMeterModalVisible(false)}><Ionicons name="close" size={26} color={theme.text} /></Pressable>
+            </View>
+            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              {rooms.filter(r => r.status === 1).length === 0 && (
+                <Text style={{ color: theme.muted, textAlign: "center", marginVertical: 40 }}>Không có phòng đang thuê</Text>
+              )}
+              {rooms.filter(r => r.status === 1).map(room => (
+                <View key={room._id} style={{ marginBottom: 14, padding: 12, backgroundColor: theme.background, borderRadius: 12 }}>
+                  <Text style={{ fontWeight: "800", color: theme.text, marginBottom: 10 }}>Phòng: {room.roomCode}</Text>
+                  <View style={{ flexDirection: "row", gap: 10 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.label, { color: theme.muted }]}>Điện mới (kWh)</Text>
+                      <TextInput style={inputStyle} keyboardType="numeric" placeholder="Số điện" placeholderTextColor={theme.muted}
+                        value={meterReadings[room._id]?.electricity || ""}
+                        onChangeText={(val) => setMeterReadings(prev => ({ ...prev, [room._id]: { ...prev[room._id], electricity: val, water: prev[room._id]?.water || "" } }))}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.label, { color: theme.muted }]}>Nước mới (m³)</Text>
+                      <TextInput style={inputStyle} keyboardType="numeric" placeholder="Số nước" placeholderTextColor={theme.muted}
+                        value={meterReadings[room._id]?.water || ""}
+                        onChangeText={(val) => setMeterReadings(prev => ({ ...prev, [room._id]: { ...prev[room._id], water: val, electricity: prev[room._id]?.electricity || "" } }))}
+                      />
+                    </View>
+                  </View>
+                </View>
+              ))}
+              <AppButton icon="save-outline" loading={submitting} onPress={handleBulkMeterReport}>Lưu tất cả</AppButton>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -105,13 +189,13 @@ const styles = StyleSheet.create({
   filters: { flexDirection: "row", gap: 7, marginVertical: 18 },
   filter: { borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
   filterText: { fontSize: 12, fontWeight: "800" },
-  card: { flexDirection: "row", alignItems: "center", borderRadius: 22, padding: 14, elevation: 3, shadowOpacity: .09, shadowOffset: { width: 0, height: 5 }, shadowRadius: 10 },
+  card: { flex: 1, flexDirection: "column", alignItems: "flex-start", borderRadius: 22, padding: 14, elevation: 3, shadowOpacity: .09, shadowOffset: { width: 0, height: 5 }, shadowRadius: 10 },
   iconTile: { width: 46, height: 46, borderRadius: 16, alignItems: "center", justifyContent: "center" },
-  info: { flex: 1, marginLeft: 12 },
+  info: { flex: 1, marginTop: 12 },
   roomCode: { fontSize: 17, fontWeight: "900" },
   sub: { fontSize: 12, fontWeight: "600", marginTop: 4 },
-  badge: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
-  badgeText: { fontSize: 11, fontWeight: "900" },
+  badge: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4, alignSelf: "flex-start" },
+  badgeText: { fontSize: 10, fontWeight: "900" },
   overlay: { flex: 1, justifyContent: "flex-end" },
   sheet: { maxHeight: "88%", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20 },
   modalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 },
@@ -123,4 +207,9 @@ const styles = StyleSheet.create({
   field: { marginBottom: 14 },
   label: { fontSize: 12, fontWeight: "800", marginBottom: 7 },
   input: { minHeight: 48, borderRadius: 16, paddingHorizontal: 14, fontSize: 14 },
+  sectionRow: { flexDirection: "row", alignItems: "center", marginTop: 18, marginBottom: 6 },
+  sectionTitle: { fontSize: 16, fontWeight: "900" },
+  sectionSub: { fontSize: 11, fontWeight: "600", marginTop: 2 },
+  sectionBtn: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, gap: 5 },
+  sectionBtnText: { fontSize: 12, fontWeight: "800", color: "#fff" },
 });

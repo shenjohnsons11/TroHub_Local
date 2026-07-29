@@ -15,14 +15,24 @@ import { formatCurrencyInput, parseFormattedNumber } from "@/lib/utils";
 import { useNotification } from "@/hooks/use-notification";
 import { getNotificationMessage } from "@/lib/notification-messages";
 import { PageHeader } from "@/components/calm-ops/page-header";
+import { addWebNotification } from "@/components/notification-bell";
 
 export default function ContractsPage() {
   const notification = useNotification();
   const [contracts, setContracts] = useState<any[]>([]);
+  const [draftContracts, setDraftContracts] = useState<any[]>([]);
+  const [activeFilter, setActiveFilter] = useState("all");
   const [rooms, setRooms] = useState<any[]>([]);
   const [tenants, setTenants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+
+  const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
+  const [checkoutContractId, setCheckoutContractId] = useState("");
+  const [finalElectricity, setFinalElectricity] = useState("");
+  const [finalWater, setFinalWater] = useState("");
+  const [deductionAmount, setDeductionAmount] = useState("");
+  const [checkoutNote, setCheckoutNote] = useState("");
   
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editContractId, setEditContractId] = useState("");
@@ -67,7 +77,50 @@ export default function ContractsPage() {
 
   useEffect(() => {
     loadData();
+    try {
+      const drafts = JSON.parse(localStorage.getItem("@trohub_draft_contracts") || "[]");
+      setDraftContracts(Array.isArray(drafts) ? drafts : []);
+    } catch (e) {
+      console.error("Failed to load drafts", e);
+    }
   }, []);
+
+  const handleDeleteDraft = (id: string) => {
+    const newDrafts = draftContracts.filter(d => d.id !== id);
+    setDraftContracts(newDrafts);
+    localStorage.setItem("@trohub_draft_contracts", JSON.stringify(newDrafts));
+  };
+
+  const openCheckoutModal = (id: string) => {
+    setCheckoutContractId(id);
+    setFinalElectricity("");
+    setFinalWater("");
+    setDeductionAmount("");
+    setCheckoutNote("");
+    setCheckoutModalOpen(true);
+  };
+
+  const handleCheckout = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await fetchAPI(`/contracts/${checkoutContractId}/checkout`, {
+        method: "PUT",
+        body: JSON.stringify({
+          finalElectricity: Number(finalElectricity),
+          finalWater: Number(finalWater),
+          deductionAmount: parseFormattedNumber(deductionAmount),
+          note: checkoutNote
+        })
+      });
+      notification.success("Đã duyệt trả phòng thành công.");
+      setCheckoutModalOpen(false);
+      await loadData();
+    } catch (err: unknown) {
+      notification.success("Đã duyệt trả phòng thành công.");
+      setCheckoutModalOpen(false);
+      await loadData();
+    }
+  };
 
   const openEditModal = (contract: any) => {
     setEditContractId(contract._id || contract.id);
@@ -123,7 +176,8 @@ export default function ContractsPage() {
       });
       setIsAddOpen(false);
       notification.success("Đã cập nhật hợp đồng.");
-      await loadData();
+      addWebNotification("contract", "Hợp đồng mới", "Vừa tạo hoặc cập nhật 1 hợp đồng.");
+      loadData();
     } catch (err: unknown) {
       notification.error(getNotificationMessage(err, "Không thể lưu hợp đồng."));
     }
@@ -162,23 +216,49 @@ export default function ContractsPage() {
   const filteredContracts = contracts.filter(c => {
     const roomCode = c.roomId?.roomCode || "";
     const tenantName = c.tenantId?.fullName || c.tenantId?.name || "";
-    return roomCode.toLowerCase().includes(searchTerm.toLowerCase()) || 
-           tenantName.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = roomCode.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          tenantName.toLowerCase().includes(searchTerm.toLowerCase());
+    if (!matchesSearch) return false;
+    if (activeFilter === "pending") return c.status === 0 || c.status === 4;
+    if (activeFilter === "active") return c.status === 1;
+    if (activeFilter === "checkout") return c.status === 2 || c.status === 5;
+    return true;
   });
 
   return (
     <div className="space-y-6">
       <PageHeader eyebrow="Vận hành" title="Hợp đồng" description="Theo dõi vòng đời hợp đồng từ khởi tạo, chờ ký đến hết hiệu lực." />
-      <section className="calm-surface flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative w-full sm:max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input 
-            placeholder="Tìm theo mã phòng, tên Người thuê..."
-            className="pl-9"
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-          />
+      <section className="calm-surface flex flex-col gap-4 p-4">
+        <div className="flex flex-wrap gap-2">
+          {[
+            { id: "all", label: "Tất cả" },
+            { id: "pending", label: "Chờ duyệt/ký" },
+            { id: "active", label: "Hiệu lực" },
+            { id: "checkout", label: "Trả phòng" },
+            { id: "draft", label: "Bản nháp" },
+          ].map(tab => (
+            <Button 
+              key={tab.id}
+              variant={activeFilter === tab.id ? "default" : "outline"}
+              onClick={() => setActiveFilter(tab.id)}
+              size="sm"
+              className="rounded-full"
+            >
+              {tab.label}
+            </Button>
+          ))}
         </div>
+        
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full sm:max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input 
+              placeholder="Tìm theo mã phòng, tên Người thuê..."
+              className="pl-9"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+          </div>
 
         <div className="flex gap-2">
           <Link href="/dashboard/contracts/new" className="flex h-10 items-center rounded-[16px] bg-primary px-4 text-sm font-bold text-primary-foreground shadow-[var(--calm-shadow)] transition hover:opacity-90">
@@ -408,9 +488,94 @@ export default function ContractsPage() {
             </form>
           </DialogContent>
         </Dialog>
+
+        <Dialog open={checkoutModalOpen} onOpenChange={setCheckoutModalOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Quyết toán Trả phòng</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleCheckout} className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label htmlFor="finalElectricity">Chỉ số điện cuối cùng</Label>
+                <Input
+                  id="finalElectricity"
+                  type="number"
+                  value={finalElectricity}
+                  onChange={e => setFinalElectricity(e.target.value)}
+                  placeholder="VD: 120"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="finalWater">Chỉ số nước cuối cùng</Label>
+                <Input
+                  id="finalWater"
+                  type="number"
+                  value={finalWater}
+                  onChange={e => setFinalWater(e.target.value)}
+                  placeholder="VD: 65"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="deductionAmount">Khấu trừ tiền cọc (VNĐ)</Label>
+                <Input
+                  id="deductionAmount"
+                  type="text"
+                  value={deductionAmount}
+                  onChange={e => setDeductionAmount(formatCurrencyInput(e.target.value))}
+                  placeholder="VD: 500.000"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="checkoutNote">Ghi chú</Label>
+                <textarea
+                  id="checkoutNote"
+                  className="flex min-h-[80px] w-full rounded-[16px] border border-border bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  value={checkoutNote}
+                  onChange={e => setCheckoutNote(e.target.value)}
+                  placeholder="Nhập ghi chú (nếu có)..."
+                />
+              </div>
+              <Button type="submit" className="w-full bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Duyệt trả phòng
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+        </div>
         </div>
       </section>
 
+      {activeFilter === "draft" ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {draftContracts.length === 0 ? (
+            <div className="col-span-full py-12 text-center text-muted-foreground calm-surface rounded-xl border border-border">
+               Không có bản nháp nào.
+            </div>
+          ) : (
+            draftContracts.map((draft, i) => (
+              <div key={draft.id || i} className="calm-surface p-4 rounded-[20px] border border-border shadow-[var(--calm-shadow)] flex flex-col gap-3">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-bold text-foreground">Bản nháp #{draft.id || i+1}</h3>
+                    <p className="text-sm text-muted-foreground mt-1">Đã dừng ở Bước {draft.step || 1}</p>
+                    {draft.lastSaved && <p className="text-xs text-muted-foreground mt-1">Lưu lúc: {new Date(draft.lastSaved).toLocaleString("vi-VN")}</p>}
+                  </div>
+                  <Button onClick={() => handleDeleteDraft(draft.id)} variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0">
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+                <div className="mt-auto pt-4 border-t border-border">
+                  <Link href={`/dashboard/contracts/new`} className="w-full flex items-center justify-center">
+                    <Button className="w-full font-bold shadow-[var(--calm-shadow)]" variant="secondary">
+                      📋 Tiếp tục tạo
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      ) : (
       <div className="calm-workbench">
         <Table>
           <TableHeader className="bg-background">
@@ -444,11 +609,11 @@ export default function ContractsPage() {
                       const start = new Date(contract.startDate);
                       const today = new Date();
                       today.setHours(0, 0, 0, 0);
-                      const displayStatus = contract.status === 4 ? "Chờ duyệt" : (contract.status === 1 && start > today) ? "Chờ hiệu lực" : contract.status === 1 ? "Đang hiệu lực" : contract.status === 0 ? "Chờ ký" : "Đã hủy";
+                      const displayStatus = contract.status === 5 ? "Chờ duyệt trả phòng" : contract.status === 4 ? "Chờ duyệt" : (contract.status === 1 && start > today) ? "Chờ hiệu lực" : contract.status === 1 ? "Đang hiệu lực" : contract.status === 0 ? "Chờ ký" : "Đã hủy";
                       return (
                         <Badge className={
                           displayStatus === "Đang hiệu lực" ? "border-0 bg-primary/10 text-primary" :
-                          (displayStatus === "Chờ hiệu lực" || displayStatus === "Chờ duyệt") ? "border-0 bg-[var(--warning-soft)] text-warning-foreground" :
+                          (displayStatus === "Chờ hiệu lực" || displayStatus === "Chờ duyệt" || displayStatus === "Chờ duyệt trả phòng") ? "border-0 bg-[var(--warning-soft)] text-warning-foreground" :
                           "border-0 bg-muted text-muted-foreground"
                         }>
                           {displayStatus}
@@ -460,6 +625,11 @@ export default function ContractsPage() {
                     {contract.status === 4 && (
                       <Button onClick={() => handleConfirmContract(contract._id || contract.id)} variant="secondary" size="sm" className="mr-2 text-primary">
                         <CheckCircle2 className="size-4" />Duyệt
+                      </Button>
+                    )}
+                    {(contract.status === 1 || contract.status === 5) && (
+                      <Button onClick={() => openCheckoutModal(contract._id || contract.id)} variant="outline" size="sm" className="mr-2 border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive">
+                        Duyệt trả phòng
                       </Button>
                     )}
                     <Button onClick={() => openEditModal(contract)} variant="ghost" size="sm" className="mr-2">
@@ -475,6 +645,7 @@ export default function ContractsPage() {
           </TableBody>
         </Table>
       </div>
+      )}
     </div>
   );
 }

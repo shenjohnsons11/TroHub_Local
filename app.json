@@ -10,7 +10,12 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.TroHub"
+      "bundleIdentifier": "com.anonymous.TroHub",
+      "entitlements": {
+        "com.apple.security.application-groups": [
+          "group.com.trohub.app"
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {

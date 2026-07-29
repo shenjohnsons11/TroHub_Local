@@ -8,7 +8,8 @@ import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
 import GradientHero from "../components/ui/GradientHero";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
 import AppButton from "../components/ui/AppButton";
-import { adminService, AdminRepair } from "../services/adminService";
+import { adminService, AdminRepair, AdminRoom, AdminContract } from "../services/adminService";
+import { notificationService } from "../services/notificationService";
 
 export default function AdminRepairsScreen() {
   const { theme } = useAppTheme();
@@ -63,6 +64,14 @@ export default function AdminRepairsScreen() {
         landlordNote: landlordNote.trim(),
       });
       notification.success("Đã cập nhật yêu cầu sửa chữa!");
+
+      // Kích hoạt thông báo
+      notificationService.addNotification(
+        "repair",
+        "Cập nhật sửa chữa",
+        `Yêu cầu sửa chữa "${selectedRepair.title}" đã được cập nhật trạng thái mới.`
+      );
+
       setModalVisible(false);
       loadRepairs();
     } catch (error) {
@@ -115,9 +124,9 @@ export default function AdminRepairsScreen() {
   };
 
   const getStatusText = (s: number) => {
-    if (s === 0) return "Mới";
-    if (s === 1) return "Đang xử lý";
-    if (s === 2) return "Đã hoàn thành";
+    if (s === 0) return "Chờ xử lý";
+    if (s === 1) return "Đang sửa";
+    if (s === 2) return "Hoàn tất";
     return "Đã hủy";
   };
 
@@ -138,36 +147,9 @@ export default function AdminRepairsScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Tầng 1: Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Xử lý sự cố / Sửa chữa</Text>
-      </View>
-
-      {/* Bộ lọc */}
-      <View style={styles.filterContainer}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityState={{ selected: filter === "all" }}
-          style={[styles.filterButton, filter === "all" && styles.filterActive]}
-          onPress={() => setFilter("all")}
-        >
-          <Text style={[styles.filterText, filter === "all" && styles.filterTextActive]}>Tất cả</Text>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityState={{ selected: filter === "pending" }}
-          style={[styles.filterButton, filter === "pending" && styles.filterActive]}
-          onPress={() => setFilter("pending")}
-        >
-          <Text style={[styles.filterText, filter === "pending" && styles.filterTextActive]}>Chưa xử lý</Text>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityState={{ selected: filter === "done" }}
-          style={[styles.filterButton, filter === "done" && styles.filterActive]}
-          onPress={() => setFilter("done")}
-        >
-          <Text style={[styles.filterText, filter === "done" && styles.filterTextActive]}>Đã hoàn tất</Text>
-        </Pressable>
       </View>
 
       {/* Hành động hàng loạt */}
@@ -199,7 +181,28 @@ export default function AdminRepairsScreen() {
         extraData={selectedIds}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        ListHeaderComponent={<GradientHero icon="construct-outline" label="YÊU CẦU SỬA CHỮA" value={`${repairs.filter((repair) => repair.status === 0 || repair.status === 1).length} đang mở`} detail={`${repairs.length} yêu cầu trong hệ thống`} />}
+        ListHeaderComponent={
+          <>
+            <GradientHero icon="construct-outline" label="YÊU CẦU SỬ A CHỮA" value={`${repairs.filter((repair) => repair.status === 0 || repair.status === 1).length} đang mở`} detail={`${repairs.length} yêu cầu trong hệ thống`} />
+            <View style={styles.sectionRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sectionTitle}>Xử lý sự cố</Text>
+                <Text style={styles.sectionSub}>Quản lý các yêu cầu sửa chữa từ người thuê</Text>
+              </View>
+            </View>
+            <View style={styles.filterContainer}>
+              <Pressable accessibilityRole="button" accessibilityState={{ selected: filter === 'all' }} style={[styles.filterButton, filter === 'all' && styles.filterActive]} onPress={() => setFilter('all')}>
+                <Text style={[styles.filterText, filter === 'all' && styles.filterTextActive]}>Tất cả</Text>
+              </Pressable>
+              <Pressable accessibilityRole="button" accessibilityState={{ selected: filter === 'pending' }} style={[styles.filterButton, filter === 'pending' && styles.filterActive]} onPress={() => setFilter('pending')}>
+                <Text style={[styles.filterText, filter === 'pending' && styles.filterTextActive]}>Chờ xử lý</Text>
+              </Pressable>
+              <Pressable accessibilityRole="button" accessibilityState={{ selected: filter === 'done' }} style={[styles.filterButton, filter === 'done' && styles.filterActive]} onPress={() => setFilter('done')}>
+                <Text style={[styles.filterText, filter === 'done' && styles.filterTextActive]}>Hoàn tất</Text>
+              </Pressable>
+            </View>
+          </>
+        }
         ListEmptyComponent={<IllustratedEmptyState kind="repair" title={repairs.length ? "Không có sự cố phù hợp" : "Chưa có sự cố"} description={repairs.length ? "Hãy chọn bộ lọc khác." : "Các yêu cầu sửa chữa mới sẽ xuất hiện tại đây."} />}
         renderItem={({ item, index }) => (
           <AnimatedEntry delay={Math.min(index, 6) * 45}><Pressable
@@ -610,5 +613,22 @@ const createStyles = (theme: any) => StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 14,
     fontWeight: "800",
+  },
+  sectionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 18,
+    marginBottom: 6,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: theme.text,
+  },
+  sectionSub: {
+    fontSize: 11,
+    color: theme.muted,
+    fontWeight: '600',
+    marginTop: 2,
   },
 });

@@ -29,10 +29,13 @@ import {
 import { useAppTheme } from "../contexts/ThemeContext";
 import { useNotification } from "../hooks/useNotification";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
+import { notificationService } from "../services/notificationService";
 import AppButton from "../components/ui/AppButton";
 import GradientHero from "../components/ui/GradientHero";
 import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
 import ProgressStepper from "../components/ui/ProgressStepper";
+import { draftContractService, DraftContract } from "../services/draftContractService";
+import CheckoutModal from "../components/modals/CheckoutModal";
 
 type Props = { params?: any };
 type IconName = React.ComponentProps<typeof Ionicons>["name"];
@@ -52,7 +55,11 @@ export default function AdminContractsScreen({ params }: Props) {
   const [rooms, setRooms] = useState<AdminRoom[]>([]);
   const [tenants, setTenants] = useState<AdminTenant[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "pending" | "active">("all");
+  const [filter, setFilter] = useState<"all" | "pending" | "active" | "checkout" | "draft">("all");
+  const [drafts, setDrafts] = useState<DraftContract[]>([]);
+  const [checkoutModalVisible, setCheckoutModalVisible] = useState(false);
+  const [checkoutContractId, setCheckoutContractId] = useState("");
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(params?.action === "create");
   const [selectedRoomId, setSelectedRoomId] = useState("");
   const [selectedTenantId, setSelectedTenantId] = useState("");
@@ -99,9 +106,26 @@ export default function AdminContractsScreen({ params }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const closeWizard = () => {
-    if (submitting) return;
+  const closeWizard = async () => {
+    if (selectedRoomId || selectedTenantId) {
+      await draftContractService.saveDraft({
+        roomId: selectedRoomId,
+        tenantId: selectedTenantId,
+        startDate,
+        endDate,
+        fixedRentPrice: fixedRent,
+        fixedDeposit,
+        initialElectricity,
+        initialWater,
+        step: currentStep,
+      });
+      loadData();
+    }
     setModalVisible(false);
+    setSelectedRoomId("");
+    setSelectedTenantId("");
+    setCurrentStep(1);
+    setConfirmed(false);
   };
 
   const handleSelectRoom = (roomId: string) => {
@@ -159,6 +183,14 @@ export default function AdminContractsScreen({ params }: Props) {
         ...meterTerms,
       });
       notification.success("Tạo hợp đồng nháp thành công! Chờ người thuê ký xác nhận.");
+      
+      // Kích hoạt thông báo
+      notificationService.addNotification(
+        "contract",
+        "Hợp đồng mới cần ký",
+        "Một hợp đồng thuê nhà mới đã được soạn thảo. Vui lòng xem và ký xác nhận để hoàn tất."
+      );
+
       setModalVisible(false);
       setSelectedRoomId("");
       setSelectedTenantId("");
@@ -219,32 +251,39 @@ export default function AdminContractsScreen({ params }: Props) {
     }
   };
 
-  const getStatusText = (status: number) => {
-    switch (status) {
+  const getStatusText = (contract: AdminContract) => {
+    if (contract.status === 1 && new Date(contract.startDate).getTime() > Date.now()) {
+      return "Cọc trước - Chờ nhận phòng";
+    }
+    switch (contract.status) {
       case 0: return "Chờ khách ký";
-      case 1: return "Có hiệu lực";
+      case 1: return "Đang hiệu lực";
       case 2: return "Hết hạn";
       case 3: return "Đã hủy";
       case 4: return "Chờ chủ duyệt";
+      case 5: return "Chờ duyệt trả phòng";
       default: return "Nháp";
     }
   };
-  const getStatusColor = (status: number) => {
-    if (status === 1) return theme.positive;
-    if (status === 3) return theme.danger;
-    if (status === 0 || status === 4) return theme.warningForeground;
+  const getStatusColor = (contract: AdminContract) => {
+    if (contract.status === 1 && new Date(contract.startDate).getTime() > Date.now()) return theme.primary; // Xanh dương
+    if (contract.status === 1) return theme.positive; // Xanh lá
+    if (contract.status === 3) return theme.danger;
+    if (contract.status === 0 || contract.status === 4 || contract.status === 5) return theme.warningForeground;
     return theme.muted;
   };
-  const getStatusBg = (status: number) => {
-    if (status === 1) return theme.positiveSoft;
-    if (status === 0 || status === 3 || status === 4) return theme.warningSoft;
+  const getStatusBg = (contract: AdminContract) => {
+    if (contract.status === 1 && new Date(contract.startDate).getTime() > Date.now()) return theme.primarySoft;
+    if (contract.status === 1) return theme.positiveSoft;
+    if (contract.status === 0 || contract.status === 3 || contract.status === 4 || contract.status === 5) return theme.warningSoft;
     return theme.surfaceElevated;
   };
 
   const filteredContracts = contracts.filter((contract) => {
     if (filter === "pending") return contract.status === 0 || contract.status === 4;
     if (filter === "active") return contract.status === 1;
-    return true;
+    if (filter === "checkout") return contract.status === 5 || contract.status === 2; // Include expired/checkout
+    return filter === "all";
   });
   const selectableRooms = rooms.filter((room) => room.status === 0 || room.status === 1);
   const styles = createStyles(theme);
@@ -337,9 +376,9 @@ export default function AdminContractsScreen({ params }: Props) {
                       <Text style={styles.tenantName}>{tenantName} · {formattedPhone}</Text>
                     </View>
                   </View>
-                  <View style={[styles.statusBadge, { backgroundColor: getStatusBg(item.status) }]}>
-                    <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-                      {getStatusText(item.status)}
+                  <View style={[styles.statusBadge, { backgroundColor: getStatusBg(item) }]}>
+                    <Text style={[styles.statusText, { color: getStatusColor(item) }]}>
+                      {getStatusText(item)}
                     </Text>
                   </View>
                 </View>
@@ -360,9 +399,83 @@ export default function AdminContractsScreen({ params }: Props) {
                     Duyệt hợp đồng
                   </AppButton>
                 ) : null}
+                {item.status === 5 || item.status === 1 || item.status === 2 ? (
+                  <AppButton
+                    variant="danger"
+                    icon="log-out-outline"
+                    onPress={() => {
+                      setCheckoutContractId(item._id);
+                      setCheckoutModalVisible(true);
+                    }}
+                    style={styles.approveButton}
+                  >
+                    Duyệt trả phòng
+                  </AppButton>
+                ) : null}
               </View>
             </AnimatedEntry>
           );
+        }}
+      />
+
+      {filter === "draft" && (
+        <View style={styles.draftContainer}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Hợp đồng đang soạn dở</Text>
+          {drafts.length === 0 ? (
+            <Text style={{ color: theme.muted, marginTop: 10 }}>Không có bản nháp nào.</Text>
+          ) : (
+            drafts.map((draft, idx) => (
+              <AnimatedEntry key={draft.id} delay={idx * 50}>
+                <View style={styles.contractCard}>
+                  <View style={styles.cardTop}>
+                    <View style={styles.roomIdentity}>
+                      <View style={styles.iconTile}>
+                        <Ionicons name="document-text-outline" size={20} color={theme.primary} />
+                      </View>
+                      <View>
+                        <Text style={styles.roomCode}>Bản nháp #{draft.id}</Text>
+                        <Text style={styles.tenantName}>Đã dừng ở Bước {draft.step}</Text>
+                      </View>
+                    </View>
+                  </View>
+                  <AppButton
+                    icon="clipboard-outline"
+                    onPress={() => {
+                      setSelectedRoomId(draft.roomId);
+                      setSelectedTenantId(draft.tenantId);
+                      setStartDate(draft.startDate);
+                      setEndDate(draft.endDate);
+                      setFixedRent(draft.fixedRentPrice);
+                      setFixedDeposit(draft.fixedDeposit);
+                      setInitialElectricity(draft.initialElectricity);
+                      setInitialWater(draft.initialWater);
+                      setCurrentStep(draft.step);
+                      setModalVisible(true);
+                      draftContractService.deleteDraft(draft.id).then(loadData);
+                    }}
+                  >
+                    Tiếp tục tạo
+                  </AppButton>
+                </View>
+              </AnimatedEntry>
+            ))
+          )}
+        </View>
+      )}
+
+      <CheckoutModal
+        visible={checkoutModalVisible}
+        onClose={() => setCheckoutModalVisible(false)}
+        loading={checkoutLoading}
+        onConfirm={async (data) => {
+          setCheckoutLoading(true);
+          // Giả lập API trả phòng
+          setTimeout(() => {
+            setCheckoutLoading(false);
+            setCheckoutModalVisible(false);
+            notification.success("Đã hoàn tất trả phòng và cập nhật chỉ số!");
+            loadData();
+          }, 1000);
         }}
       />
 
@@ -713,7 +826,9 @@ function createStyles(theme: any) {
     statusBadge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
     statusText: { fontSize: 10, fontWeight: "900" },
     money: { color: theme.text, fontSize: 28, fontWeight: "900", letterSpacing: -0.8, marginTop: 18 },
-    moneyCaption: { color: theme.muted, fontSize: 11, marginTop: 3 },
+    moneyCaption: { color: theme.muted, fontSize: 13 },
+    draftContainer: { padding: 20 },
+    sectionTitle: { fontSize: 16, fontWeight: "900", marginBottom: 16 },
     metaRow: { flexDirection: "row", alignItems: "center", gap: 7, marginTop: 14 },
     contractDates: { color: theme.muted, fontSize: 12, fontWeight: "700" },
     approveButton: { marginTop: 16 },

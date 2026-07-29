@@ -1,5 +1,7 @@
+"use client";
+
 import Link from "next/link";
-import { ArrowUpRight, Landmark, ReceiptText, Settings2, UserRound } from "lucide-react";
+import { ArrowUpRight, Landmark, ReceiptText, Settings2, UserRound, LogOut } from "lucide-react";
 import { PageHeader } from "@/components/calm-ops/page-header";
 
 const items = [
@@ -9,6 +11,12 @@ const items = [
 ];
 
 export default function SettingsPage() {
+  const handleLogout = () => {
+    localStorage.removeItem("trohub_token");
+    localStorage.removeItem("trohub_user");
+    window.location.href = "/";
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader eyebrow="Thiết lập vận hành" title="Cài đặt" description="Quản lý hồ sơ, nhận thanh toán và chính sách hóa đơn tại một nơi." />
@@ -32,6 +40,16 @@ export default function SettingsPage() {
       <div className="flex items-center gap-3 rounded-[20px] bg-primary px-5 py-4 text-primary-foreground shadow-[var(--calm-shadow)]">
         <Settings2 aria-hidden="true" className="size-5" />
         <p className="text-sm font-bold">Mọi thay đổi được áp dụng trực tiếp cho vận hành TroHub.</p>
+      </div>
+
+      <div className="pt-4 border-t border-border/50">
+        <button
+          onClick={handleLogout}
+          className="flex min-h-12 items-center justify-center gap-3 rounded-[16px] bg-destructive px-6 py-3 text-sm font-bold text-destructive-foreground transition-all hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-destructive/30"
+        >
+          <LogOut className="size-5" aria-hidden="true" />
+          Đăng xuất
+        </button>
       </div>
     </div>
   );
