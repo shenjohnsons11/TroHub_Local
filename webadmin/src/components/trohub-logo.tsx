@@ -1,11 +1,19 @@
-import { Building2 } from "lucide-react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 export function TroHubLogo({ compact = false, className }: { compact?: boolean; className?: string }) {
   return (
     <span className={cn("inline-flex items-center gap-3", className)} aria-label="TRO HUB">
-      <span className="logo-mark grid size-11 place-items-center rounded-[15px] bg-primary text-primary-foreground" aria-hidden="true">
-        <Building2 className="size-[22px]" strokeWidth={2.25} />
+      <span className="relative flex-shrink-0" aria-hidden="true">
+        <Image
+          src="/app_logo.png"
+          alt="TroHub Logo"
+          width={44}
+          height={44}
+          priority
+          className="rounded-[13px] object-cover"
+          style={{ width: 44, height: 44 }}
+        />
       </span>
       {!compact && (
         <span className="grid gap-0.5 leading-none">

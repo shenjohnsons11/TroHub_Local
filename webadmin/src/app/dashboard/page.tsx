@@ -12,6 +12,8 @@ import { StatCard } from "@/components/calm-ops/stat-card";
 import { StatusBadge } from "@/components/calm-ops/status-badge";
 import { AppLoading } from "@/components/app-loading";
 
+import { getRealtimeGreeting } from "@/lib/utils";
+
 type Stats = { totalRooms: number; occupiedRooms: number; totalTenants: number; pendingRepairs: number; totalRevenue: number };
 
 export default function DashboardPage() {
@@ -33,7 +35,7 @@ export default function DashboardPage() {
   const vacantRooms = Math.max(0, stats.totalRooms - stats.occupiedRooms);
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Tổng quan vận hành" title="Chào buổi sáng." description="Những việc cần chú ý được đưa lên trước để Chủ trọ xử lý nhanh và không bỏ sót." />
+      <PageHeader eyebrow="Tổng quan vận hành" title={getRealtimeGreeting()} description="Những việc cần chú ý được đưa lên trước để Chủ trọ xử lý nhanh và không bỏ sót." />
 
       <PriorityPanel title="Cần xử lý hôm nay" count={stats.pendingRepairs} action={<Link href="/dashboard/repairs" className="text-sm font-extrabold text-primary hover:underline">Xem tất cả</Link>}>
         <div>
@@ -44,11 +46,33 @@ export default function DashboardPage() {
         </div>
       </PriorityPanel>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard label="Tổng số phòng" value={stats.totalRooms} detail={`${stats.occupiedRooms} phòng đang thuê`} icon={Building2} />
         <StatCard label="Phòng trống" value={vacantRooms} detail="Sẵn sàng tạo hợp đồng" icon={FileText} urgent={vacantRooms > 0} />
         <StatCard label="Người thuê" value={stats.totalTenants} detail="Đang hoạt động" icon={Users} />
         <StatCard label="Sửa chữa mở" value={stats.pendingRepairs} detail="Cần theo dõi tiến độ" icon={Wrench} urgent={stats.pendingRepairs > 0} />
+        <div className="calm-surface flex flex-col justify-center rounded-[var(--calm-radius)] bg-card p-5">
+          <p className="text-xs font-extrabold text-muted-foreground">Tỷ lệ lấp đầy</p>
+          <div className="mt-3 flex items-center gap-4">
+            <div className="relative size-16 shrink-0">
+              <svg className="size-full -rotate-90" viewBox="0 0 36 36">
+                <path className="stroke-current text-muted/25" strokeWidth="3" fill="none"
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                <path className="stroke-current text-primary transition-all duration-1000 ease-out" strokeWidth="3"
+                  strokeLinecap="round" fill="none"
+                  strokeDasharray={`${Math.round((stats.occupiedRooms / Math.max(stats.totalRooms, 1)) * 100)}, 100`}
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              </svg>
+              <span className="absolute inset-0 flex items-center justify-center text-xs font-black">
+                {Math.round((stats.occupiedRooms / Math.max(stats.totalRooms, 1)) * 100)}%
+              </span>
+            </div>
+            <div>
+              <p className="text-2xl font-black">{stats.occupiedRooms}<span className="text-base font-bold text-muted-foreground">/{stats.totalRooms}</span></p>
+              <p className="text-xs text-muted-foreground">Phòng đang thuê</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.2fr_.8fr]">

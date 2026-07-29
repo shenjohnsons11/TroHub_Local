@@ -24,6 +24,9 @@ export default function UtilitiesPage() {
   const [previews, setPreviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const currentMonthStr = new Date().toISOString().slice(0, 7);
+  const [startMonth, setStartMonth] = useState(currentMonthStr);
+  const [endMonth, setEndMonth] = useState(currentMonthStr);
   const [utilitiesState, setUtilitiesState] = useState<Record<string, { electricity: string; water: string }>>({});
 
   const loadPreviews = async () => {
@@ -112,6 +115,17 @@ export default function UtilitiesPage() {
         }
       />
 
+      <div className="flex gap-4 p-4 calm-surface rounded-[20px]">
+        <div className="space-y-1">
+          <label className="text-xs font-bold text-muted-foreground">Từ tháng</label>
+          <Input type="month" value={startMonth} onChange={(e) => setStartMonth(e.target.value)} />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-bold text-muted-foreground">Đến tháng</label>
+          <Input type="month" value={endMonth} onChange={(e) => setEndMonth(e.target.value)} />
+        </div>
+      </div>
+
       <ol aria-label="Tiến trình tạo hóa đơn hàng loạt" className="grid gap-2 rounded-[20px] bg-card p-3 shadow-[var(--calm-shadow)] ring-1 ring-border/50 sm:grid-cols-4">
         {steps.map(({ label, icon: Icon }, index) => {
           const active = index === 1;
@@ -150,6 +164,11 @@ export default function UtilitiesPage() {
         </div>
         <Table>
           <TableHeader>
+            <TableRow>
+              <TableHead colSpan={6} className="bg-muted/50 py-2 text-center text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Kỳ ghi nhận: {startMonth} đến {endMonth}
+              </TableHead>
+            </TableRow>
             <TableRow>
               <TableHead>Mã phòng</TableHead>
               <TableHead>Tiền phòng</TableHead>

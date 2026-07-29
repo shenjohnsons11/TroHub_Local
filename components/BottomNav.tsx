@@ -15,7 +15,9 @@ type Tab =
   | "rooms"
   | "tenants"
   | "invoice_bulk"
-  | "settings";
+  | "settings"
+  | "notifications"
+  | "scan_meter";
 
 type Props = {
   activeTab: Tab;
@@ -103,14 +105,14 @@ const landlordTabs: {
 
 export default function BottomNav({ activeTab, onChangeTab, role }: Props) {
   const tabs = role === 1 ? landlordTabs : tenantTabs;
-  const { theme, themeMode } = useAppTheme();
+  const { theme, resolvedTheme } = useAppTheme();
 
   return (
     <View style={[styles.wrapper, { backgroundColor: theme.background }]}>
       <View style={[styles.shadowShell, { shadowColor: theme.text }]}>
         <BlurView
-          intensity={themeMode === "dark" ? 52 : 72}
-          tint={themeMode}
+          intensity={resolvedTheme === "dark" ? 52 : 72}
+          tint={resolvedTheme}
           style={[styles.container, { borderColor: theme.border }]}
         >
           <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: theme.surface, opacity: 0.82 }]} />

@@ -4,24 +4,39 @@ import { useAppTheme } from "../contexts/ThemeContext";
 
 export default function ThemeToggle() {
   const { theme, themeMode, toggleTheme } = useAppTheme();
-  const dark = themeMode === "dark";
 
   return (
     <View style={[styles.row, { backgroundColor: theme.surface, borderColor: theme.border }]}>
       <View>
         <Text style={[styles.title, { color: theme.text }]}>Giao diện</Text>
         <Text style={[styles.description, { color: theme.muted }]}>
-          {dark ? "Chế độ tối" : "Chế độ sáng"}
+          {themeMode === "light"
+            ? "Chế độ sáng"
+            : themeMode === "dark"
+              ? "Chế độ tối"
+              : "Giao diện tự động"}
         </Text>
       </View>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={dark ? "Chuyển sang chế độ sáng" : "Chuyển sang chế độ tối"}
+        accessibilityLabel={
+          themeMode === "light"
+            ? "Chuyển sang chế độ tối"
+            : themeMode === "dark"
+              ? "Chuyển sang chế độ tự động"
+              : "Chuyển sang chế độ sáng"
+        }
         onPress={toggleTheme}
         style={[styles.button, { backgroundColor: theme.primarySoft, borderColor: theme.border }]}
       >
         <Ionicons
-          name={dark ? "sunny-outline" : "moon-outline"}
+          name={
+            themeMode === "light"
+              ? "sunny-outline"
+              : themeMode === "dark"
+                ? "moon-outline"
+                : "contrast-outline"
+          }
           size={21}
           color={theme.primary}
         />
