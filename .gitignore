@@ -42,11 +42,19 @@ app-example
 /ios
 /android
 
-# Agent and Environment
+# Agent, AI and Skills
 GEMINI.md
 .agents/
 .gemini/
+.codex/
+.superpowers/
 .worktrees/
+docs/superpowers/
+design-demos/
+design-references/
+patch_contracts.js
+scratch_clone/
+reports/
 docker-compose.yml
 Dockerfile
 .dockerignore
