@@ -160,6 +160,7 @@ export default function InvoiceScreen({ params }: Props) {
                 <Text style={styles.amount}>{invoice.amount}</Text>
                 <View style={styles.cardHeader}>
                   <View style={styles.cardLeft}>
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: theme.primary, marginBottom: 2 }}>Mã HD: HD-{(invoice.month || "").replace("/", "")}-{(invoice.id || "000").substring(0, 3).toUpperCase()}</Text>
                     <Text style={styles.cardTitle}>Hóa đơn tháng {invoice.month}</Text>
                     <Text style={styles.room}>Phòng {invoice.room}</Text>
                   </View>

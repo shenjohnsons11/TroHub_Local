@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Calendar,
   CreditCard,
   Droplet,
   FileText,
@@ -20,6 +21,8 @@ import { useEffect, useState } from "react";
 import { TroHubLogo } from "@/components/trohub-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AppLoading } from "@/components/app-loading";
+import { NotificationBell } from "@/components/notification-bell";
+import { MiniCalendarPopover } from "@/components/mini-calendar-popover";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -113,13 +116,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <p className="truncate text-xs text-muted-foreground">Chủ trọ</p>
             </div>
           </div>
-          <button
-            onClick={handleLogout}
-            className="flex min-h-11 w-full items-center gap-3 rounded-[16px] px-3 py-2.5 text-sm font-bold text-destructive transition-colors hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-destructive/30"
-          >
-            <LogOut className="size-[18px]" aria-hidden="true" />
-            Đăng xuất
-          </button>
         </div>
       </aside>
 
@@ -134,16 +130,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </h2>
             </div>
             <div className="flex items-center gap-2">
+              <div className="hidden sm:block">
+                <MiniCalendarPopover />
+              </div>
+              <NotificationBell />
               <ThemeToggle />
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="theme-icon-button text-destructive md:hidden"
-                aria-label="Đăng xuất"
-                title="Đăng xuất"
-              >
-                <LogOut aria-hidden="true" />
-              </button>
             </div>
           </div>
           <nav className="flex gap-1 overflow-x-auto px-3 pb-3 md:hidden" aria-label="Điều hướng chính">
