@@ -18,9 +18,10 @@ type Props = {
   profile: UserProfile;
   onSave: (profile: UserProfile) => void;
   onBack: () => void;
+  onLogout: () => void;
 };
 
-export default function ProfileScreen({ profile, onSave, onBack }: Props) {
+export default function ProfileScreen({ profile, onSave, onBack, onLogout }: Props) {
   const { theme } = useAppTheme();
   const notification = useNotification();
   const styles = createStyles(theme);
@@ -188,6 +189,13 @@ export default function ProfileScreen({ profile, onSave, onBack }: Props) {
         />
 
         <AppButton icon="save-outline" onPress={handleSave}>Lưu thay đổi</AppButton>
+        <AppButton 
+          icon="log-out-outline" 
+          onPress={onLogout}
+          style={{ marginTop: 12, backgroundColor: theme.danger }}
+        >
+          Đăng xuất
+        </AppButton>
       </Card>
     </ScrollView>
   );

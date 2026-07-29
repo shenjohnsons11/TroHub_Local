@@ -9,6 +9,7 @@ import {
   Text,
   TextInput,
   View,
+  Pressable,
 } from "react-native";
 import ForgotPasswordModal from "../components/ForgotPasswordModal";
 import TroHubLogo from "../components/TroHubLogo";
@@ -17,6 +18,7 @@ import { FONT_FAMILIES } from "../constants/theme";
 import { useAppTheme } from "../contexts/ThemeContext";
 import { useNotification } from "../hooks/useNotification";
 import { getNotificationMessage } from "../utils/notificationMessages";
+import { authService } from "../services/authService";
 
 type Props = {
   onLogin: (identifier: string, password: string) => Promise<void>;
@@ -25,14 +27,24 @@ type Props = {
 export default function LoginScreen({ onLogin }: Props) {
   const notification = useNotification();
   const { theme, themeMode } = useAppTheme();
+  
+  const [mode, setMode] = useState<"login" | "register">("login");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [idCard, setIdCard] = useState("");
+  
   const [identifierError, setIdentifierError] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [fullNameError, setFullNameError] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [idCardError, setIdCardError] = useState("");
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [forgotVisible, setForgotVisible] = useState(false);
 
-  const validate = () => {
+  const validateLogin = () => {
     const nextIdentifierError = identifier.trim()
       ? ""
       : "Vui lòng nhập số điện thoại hoặc tên đăng nhập";
@@ -47,19 +59,86 @@ export default function LoginScreen({ onLogin }: Props) {
     return !nextIdentifierError && !nextPasswordError;
   };
 
-  const handleSubmit = async () => {
-    if (!validate()) return;
+  const validateRegister = () => {
+    let isValid = true;
+    
+    if (!fullName.trim()) {
+      setFullNameError("Vui lòng nhập họ và tên");
+      isValid = false;
+    } else {
+      setFullNameError("");
+    }
 
-    try {
-      setIsSubmitting(true);
-      await onLogin(identifier.trim(), password);
-      notification.success("Đăng nhập thành công.");
-    } catch (error) {
-      notification.error(getNotificationMessage(error, "Không thể đăng nhập. Vui lòng thử lại."), {
-        title: "Đăng nhập thất bại",
-      });
-    } finally {
-      setIsSubmitting(false);
+    const cleanPhone = identifier.replace(/\D/g, "");
+    if (cleanPhone.length !== 10) {
+      setIdentifierError("Số điện thoại phải gồm đúng 10 chữ số");
+      isValid = false;
+    } else {
+      setIdentifierError("");
+    }
+
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setEmailError("Email không đúng định dạng");
+      isValid = false;
+    } else {
+      setEmailError("");
+    }
+
+    const cleanId = idCard.replace(/\D/g, "");
+    if (cleanId.length !== 12) {
+      setIdCardError("CCCD phải gồm đúng 12 chữ số");
+      isValid = false;
+    } else {
+      setIdCardError("");
+    }
+
+    if (!password || password.length < 6) {
+      setPasswordError("Mật khẩu phải từ 6 ký tự trở lên");
+      isValid = false;
+    } else {
+      setPasswordError("");
+    }
+
+    return isValid;
+  };
+
+  const handleSubmit = async () => {
+    if (mode === "login") {
+      if (!validateLogin()) return;
+
+      try {
+        setIsSubmitting(true);
+        await onLogin(identifier.trim(), password);
+        notification.success("Đăng nhập thành công.");
+      } catch (error) {
+        notification.error(getNotificationMessage(error, "Không thể đăng nhập. Vui lòng thử lại."), {
+          title: "Đăng nhập thất bại",
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
+    } else {
+      if (!validateRegister()) return;
+
+      try {
+        setIsSubmitting(true);
+        const cleanPhone = identifier.replace(/\D/g, "");
+        const cleanId = idCard.replace(/\D/g, "");
+        await authService.registerTenant({
+          fullName: fullName.trim(),
+          phone: cleanPhone,
+          email: email.trim(),
+          idCard: cleanId,
+          password,
+        });
+        notification.success("Đăng ký tài khoản Khách thuê thành công!");
+        setMode("login");
+        setPassword("");
+      } catch (error) {
+        notification.error(error instanceof Error ? error.message : "Đăng ký tài khoản thất bại.");
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -105,28 +184,54 @@ export default function LoginScreen({ onLogin }: Props) {
               ]}
             >
               <Text style={[styles.eyebrow, { color: theme.primary }]}>TRO HUB</Text>
-              <Text style={[styles.title, { color: theme.text }]}>Đăng nhập</Text>
+              <Text style={[styles.title, { color: theme.text }]}>
+                {mode === "login" ? "Đăng nhập" : "Đăng ký Khách thuê"}
+              </Text>
               <Text style={[styles.subtitle, { color: theme.muted }]}>
-                Sử dụng tài khoản do Chủ trọ hoặc Admin cung cấp.
+                {mode === "login"
+                  ? "Sử dụng số điện thoại / tài khoản để bắt đầu."
+                  : "Điền các thông tin để tự tạo tài khoản Khách thuê."}
               </Text>
 
+              {mode === "register" && (
+                <View style={styles.field}>
+                  <Text style={[styles.label, { color: theme.text }]}>Họ và tên</Text>
+                  <TextInput
+                    editable={!isSubmitting}
+                    onChangeText={(value) => {
+                      setFullName(value);
+                      if (fullNameError) setFullNameError("");
+                    }}
+                    placeholder="Ví dụ: Nguyễn Văn A"
+                    placeholderTextColor={theme.muted}
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: theme.surfaceElevated,
+                        borderColor: fullNameError ? theme.danger : theme.border,
+                        color: theme.text,
+                      },
+                    ]}
+                    value={fullName}
+                  />
+                  {fullNameError ? (
+                    <Text style={[styles.errorText, { color: theme.danger }]}>{fullNameError}</Text>
+                  ) : null}
+                </View>
+              )}
+
               <View style={styles.field}>
-                <Text style={[styles.label, { color: theme.text }]}>
-                  Số điện thoại hoặc tên đăng nhập
-                </Text>
+                <Text style={[styles.label, { color: theme.text }]}>Số điện thoại</Text>
                 <TextInput
-                  accessibilityLabel="Số điện thoại hoặc tên đăng nhập"
-                  autoCapitalize="none"
-                  autoComplete="username"
-                  autoCorrect={false}
+                  accessibilityLabel="Số điện thoại"
+                  keyboardType="phone-pad"
                   editable={!isSubmitting}
                   onChangeText={(value) => {
                     setIdentifier(value);
                     if (identifierError) setIdentifierError("");
                   }}
-                  placeholder="Ví dụ: 0901234567 hoặc nguyenvana"
+                  placeholder="Ví dụ: 0901234567"
                   placeholderTextColor={theme.muted}
-                  returnKeyType="next"
                   style={[
                     styles.input,
                     {
@@ -138,19 +243,71 @@ export default function LoginScreen({ onLogin }: Props) {
                   value={identifier}
                 />
                 {identifierError ? (
-                  <Text style={[styles.errorText, { color: theme.danger }]}>
-                    {identifierError}
-                  </Text>
+                  <Text style={[styles.errorText, { color: theme.danger }]}>{identifierError}</Text>
                 ) : null}
               </View>
+
+              {mode === "register" && (
+                <>
+                  <View style={styles.field}>
+                    <Text style={[styles.label, { color: theme.text }]}>Email (Tên đăng nhập)</Text>
+                    <TextInput
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      editable={!isSubmitting}
+                      onChangeText={(value) => {
+                        setEmail(value);
+                        if (emailError) setEmailError("");
+                      }}
+                      placeholder="Ví dụ: tenant@gmail.com"
+                      placeholderTextColor={theme.muted}
+                      style={[
+                        styles.input,
+                        {
+                          backgroundColor: theme.surfaceElevated,
+                          borderColor: emailError ? theme.danger : theme.border,
+                          color: theme.text,
+                        },
+                      ]}
+                      value={email}
+                    />
+                    {emailError ? (
+                      <Text style={[styles.errorText, { color: theme.danger }]}>{emailError}</Text>
+                    ) : null}
+                  </View>
+
+                  <View style={styles.field}>
+                    <Text style={[styles.label, { color: theme.text }]}>Số CCCD (12 số)</Text>
+                    <TextInput
+                      keyboardType="numeric"
+                      editable={!isSubmitting}
+                      onChangeText={(value) => {
+                        setIdCard(value.replace(/\D/g, "").slice(0, 12));
+                        if (idCardError) setIdCardError("");
+                      }}
+                      placeholder="Nhập 12 số CCCD"
+                      placeholderTextColor={theme.muted}
+                      style={[
+                        styles.input,
+                        {
+                          backgroundColor: theme.surfaceElevated,
+                          borderColor: idCardError ? theme.danger : theme.border,
+                          color: theme.text,
+                        },
+                      ]}
+                      value={idCard}
+                    />
+                    {idCardError ? (
+                      <Text style={[styles.errorText, { color: theme.danger }]}>{idCardError}</Text>
+                    ) : null}
+                  </View>
+                </>
+              )}
 
               <View style={styles.field}>
                 <Text style={[styles.label, { color: theme.text }]}>Mật khẩu</Text>
                 <TextInput
                   accessibilityLabel="Mật khẩu"
-                  autoCapitalize="none"
-                  autoComplete="current-password"
-                  autoCorrect={false}
                   editable={!isSubmitting}
                   onChangeText={(value) => {
                     setPassword(value);
@@ -159,7 +316,6 @@ export default function LoginScreen({ onLogin }: Props) {
                   onSubmitEditing={handleSubmit}
                   placeholder="Nhập mật khẩu"
                   placeholderTextColor={theme.muted}
-                  returnKeyType="go"
                   secureTextEntry
                   style={[
                     styles.input,
@@ -172,31 +328,43 @@ export default function LoginScreen({ onLogin }: Props) {
                   value={password}
                 />
                 {passwordError ? (
-                  <Text style={[styles.errorText, { color: theme.danger }]}>
-                    {passwordError}
-                  </Text>
+                  <Text style={[styles.errorText, { color: theme.danger }]}>{passwordError}</Text>
                 ) : null}
               </View>
 
               <AppButton
                 disabled={isSubmitting}
-                icon="key-outline"
+                icon={mode === "login" ? "key-outline" : "person-add-outline"}
                 loading={isSubmitting}
                 onPress={handleSubmit}
                 style={styles.primaryButton}
               >
-                Đăng nhập
+                {mode === "login" ? "Đăng nhập" : "Đăng ký ngay"}
               </AppButton>
 
-              <AppButton
-                disabled={isSubmitting}
-                icon="help-circle-outline"
-                onPress={() => setForgotVisible(true)}
-                style={styles.forgotButton}
-                variant="ghost"
-              >
-                Quên mật khẩu?
-              </AppButton>
+              {mode === "login" && (
+                <AppButton
+                  disabled={isSubmitting}
+                  icon="help-circle-outline"
+                  onPress={() => setForgotVisible(true)}
+                  style={styles.forgotButton}
+                  variant="ghost"
+                >
+                  Quên mật khẩu?
+                </AppButton>
+              )}
+
+              <View style={styles.toggleContainer}>
+                {mode === "login" ? (
+                  <Pressable onPress={() => { setMode("register"); setIdentifierError(""); setPasswordError(""); }}>
+                    <Text style={[styles.toggleText, { color: theme.primary }]}>Đăng ký tài khoản Khách thuê</Text>
+                  </Pressable>
+                ) : (
+                  <Pressable onPress={() => { setMode("login"); setIdentifierError(""); setPasswordError(""); }}>
+                    <Text style={[styles.toggleText, { color: theme.primary }]}>Quay lại Đăng nhập</Text>
+                  </Pressable>
+                )}
+              </View>
 
               <View
                 style={[
@@ -205,8 +373,9 @@ export default function LoginScreen({ onLogin }: Props) {
                 ]}
               >
                 <Text style={[styles.accountNoticeText, { color: theme.text }]}>
-                  Chưa có tài khoản? Hãy liên hệ Chủ trọ để được cấp quyền truy
-                  cập.
+                  {mode === "login" 
+                    ? "Chưa có tài khoản? Khách thuê có thể tự đăng ký ở trên, hoặc được tạo bởi Chủ trọ."
+                    : "Hệ thống bảo mật dữ liệu Khách thuê theo tiêu chuẩn mã hóa SSL/TLS."}
                 </Text>
               </View>
             </View>
@@ -345,25 +514,8 @@ const styles = StyleSheet.create({
   primaryButton: {
     marginTop: 24,
   },
-  buttonPressed: {
-    transform: [{ scale: 0.98 }],
-  },
-  buttonDisabled: {
-    opacity: 0.68,
-  },
-  primaryButtonText: {
-    color: "#FFFFFF",
-    fontFamily: FONT_FAMILIES.sans,
-    fontSize: 16,
-    fontWeight: "800",
-  },
   forgotButton: {
     marginTop: 8,
-  },
-  forgotText: {
-    fontFamily: FONT_FAMILIES.sans,
-    fontSize: 14,
-    fontWeight: "800",
   },
   accountNotice: {
     borderRadius: 10,
@@ -377,5 +529,14 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     lineHeight: 20,
     textAlign: "center",
+  },
+  toggleContainer: {
+    marginTop: 18,
+    alignItems: "center",
+  },
+  toggleText: {
+    fontFamily: FONT_FAMILIES.sans,
+    fontSize: 14,
+    fontWeight: "800",
   },
 });

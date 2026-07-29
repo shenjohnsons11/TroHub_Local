@@ -8,6 +8,10 @@ import AppLoadingScreen from "../components/AppLoadingScreen";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
 import GradientHero from "../components/ui/GradientHero";
 import PriorityCard from "../components/calm-ops/PriorityCard";
+import { getRealtimeGreeting } from "../utils/dateHelpers";
+import MiniCalendarPopover from "../components/MiniCalendarPopover";
+import TroHubWidgetView from "../components/widgets/TroHubWidgetView";
+import { notificationService } from "../services/notificationService";
 
 type Props = { profile?: UserProfile; onNavigate: (tab: any, params?: any) => void; onLogout: () => void };
 
@@ -16,8 +20,14 @@ export default function AdminDashboardScreen({ profile, onNavigate }: Props) {
   const [stats, setStats] = useState<AdminDashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
   const loadStats = async () => {
-    try { setStats(await adminService.getDashboardStats()); }
+    try {
+      setStats(await adminService.getDashboardStats());
+      const count = await notificationService.getUnreadCount();
+      setUnreadCount(count);
+    }
     catch (error) { console.log("Lỗi tải thống kê:", error); }
     finally { setLoading(false); setRefreshing(false); }
   };
@@ -30,23 +40,71 @@ export default function AdminDashboardScreen({ profile, onNavigate }: Props) {
     ["Thêm phòng", "add-circle-outline", () => onNavigate("rooms", { action: "create" })],
     ["Tạo hợp đồng", "document-text-outline", () => onNavigate("contract", { action: "create" })],
     ["Xử lý sự cố", "construct-outline", () => onNavigate("repair")],
-    ["Lập hóa đơn", "receipt-outline", () => onNavigate("invoice_bulk")],
+    ["Quét Camera AI", "camera-outline", () => onNavigate("scan_meter")],
   ] as const;
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: theme.background }]} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void loadStats(); }} colors={[theme.primary]} tintColor={theme.primary} />}>
       <View style={styles.heading}>
-        <View>
+        <View style={{ flex: 1, paddingRight: 10 }}>
           <Text style={[styles.eyebrow, { color: theme.primary }]}>TỔNG QUAN VẬN HÀNH</Text>
-          <Text style={[styles.title, { color: theme.text }]}>Chào {name},</Text>
+          <Text style={[styles.title, { color: theme.text }]}>
+            {getRealtimeGreeting().slice(0, -1)} {name},
+          </Text>
           <Text style={[styles.subtitle, { color: theme.muted }]}>{stats?.pendingRepairs || 0} việc cần xem hôm nay.</Text>
+          <MiniCalendarPopover />
         </View>
-        <Pressable accessibilityRole="button" accessibilityLabel="Mở cài đặt" style={[styles.settings, { backgroundColor: theme.surfaceElevated, shadowColor: theme.text }]} onPress={() => onNavigate("settings")}><Ionicons name="settings-outline" size={22} color={theme.text} /></Pressable>
+
+        <View style={styles.headerActions}>
+          {/* Quả chuông Thông báo */}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Thông báo"
+            style={[styles.headerBtn, { backgroundColor: theme.surfaceElevated, shadowColor: theme.text }]}
+            onPress={() => onNavigate("notifications")}
+          >
+            <Ionicons name="notifications-outline" size={22} color={theme.text} />
+            {unreadCount > 0 && (
+              <View style={[styles.unreadBadge, { backgroundColor: theme.danger }]}>
+                <Text style={styles.unreadBadgeText}>
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </Text>
+              </View>
+            )}
+          </Pressable>
+
+          {/* Bánh răng Cài đặt */}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Mở cài đặt"
+            style={[styles.headerBtn, { backgroundColor: theme.surfaceElevated, shadowColor: theme.text }]}
+            onPress={() => onNavigate("settings")}
+          >
+            <Ionicons name="settings-outline" size={22} color={theme.text} />
+          </Pressable>
+        </View>
       </View>
 
       <AnimatedEntry>
         <GradientHero icon="wallet-outline" label="DOANH THU ĐÃ THU TRONG KỲ" value={`${(stats?.totalRevenue || 0).toLocaleString("vi-VN")}đ`} detail={`${stats?.occupiedRooms || 0}/${stats?.totalRooms || 0} phòng đang được thuê · ${occupancyRate}% lấp đầy`} />
       </AnimatedEntry>
+
+      <Text style={[styles.sectionTitle, { color: theme.text }]}>Native Home Widget (4x2)</Text>
+      <TroHubWidgetView
+        size="medium"
+        data={{
+          totalRevenue: stats?.totalRevenue || 186883000,
+          occupancyRate,
+          occupiedRooms: stats?.occupiedRooms || 8,
+          totalRooms: stats?.totalRooms || 10,
+          outstandingDebt: 12500000,
+          utilityReadingProgress: `${(stats?.occupiedRooms || 8) - 2}/${stats?.occupiedRooms || 8} phòng`,
+          openRepairsCount: stats?.pendingRepairs || 2,
+          lastSyncedAt: new Date().toISOString(),
+        }}
+        onNavigate={onNavigate}
+        onScanCamera={() => onNavigate("scan_meter")}
+      />
 
       <Text style={[styles.sectionTitle, { color: theme.text }]}>Cần xử lý</Text>
       <PriorityCard title="sửa chữa đang mở" count={stats?.pendingRepairs || 0} description="Tiếp nhận và cập nhật tiến độ cho người thuê." urgent={Boolean(stats?.pendingRepairs)} onPress={() => onNavigate("repair")} />
@@ -76,7 +134,10 @@ const styles = StyleSheet.create({
   eyebrow: { fontSize: 11, fontWeight: "900", letterSpacing: 1.3 },
   title: { fontSize: 28, lineHeight: 34, fontWeight: "900", marginTop: 4 },
   subtitle: { fontSize: 13, marginTop: 4 },
-  settings: { width: 48, height: 48, alignItems: "center", justifyContent: "center", borderRadius: 16, elevation: 4, shadowOpacity: .12, shadowOffset: { width: 0, height: 5 }, shadowRadius: 10 },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 10 },
+  headerBtn: { width: 44, height: 44, alignItems: "center", justifyContent: "center", borderRadius: 16, elevation: 4, shadowOpacity: .12, shadowOffset: { width: 0, height: 5 }, shadowRadius: 10, position: "relative" },
+  unreadBadge: { position: "absolute", top: -3, right: -3, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4, alignItems: "center", justifyContent: "center" },
+  unreadBadgeText: { color: "#ffffff", fontSize: 9, fontWeight: "900" },
   sectionTitle: { fontSize: 18, fontWeight: "900", marginTop: 26, marginBottom: 12 },
   quickRow: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 10 },
   quickWrap: { width: "48%" },

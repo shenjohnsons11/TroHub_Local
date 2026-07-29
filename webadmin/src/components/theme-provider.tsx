@@ -10,7 +10,7 @@ import {
   useState,
 } from "react";
 
-export type ThemeMode = "light" | "dark";
+export type ThemeMode = "light" | "dark" | "system";
 
 const storageKey = "trohub_theme";
 
@@ -23,8 +23,21 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
+function getActiveTheme(mode: ThemeMode): "light" | "dark" {
+  if (mode === "system") {
+    const hour = new Date().getHours();
+    const isNight = hour >= 18 || hour < 6;
+    const prefersDark = typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    return (isNight || prefersDark) ? "dark" : "light";
+  }
+  return mode;
+}
+
 function applyTheme(mode: ThemeMode) {
-  document.documentElement.classList.toggle("dark", mode === "dark");
+  const active = getActiveTheme(mode);
+  if (typeof document !== "undefined") {
+    document.documentElement.classList.toggle("dark", active === "dark");
+  }
 }
 
 function persist(mode: ThemeMode) {
@@ -41,18 +54,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const systemTheme: ThemeMode = window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
-    let mode = systemTheme;
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const systemTheme: ThemeMode = mediaQuery.matches ? "dark" : "light";
+    let mode: ThemeMode = "system";
 
     try {
       const stored = localStorage.getItem(storageKey);
-      if (stored === "light" || stored === "dark") {
-        mode = stored;
+      if (stored === "light" || stored === "dark" || stored === "system") {
+        mode = stored as ThemeMode;
       }
     } catch {
-      // Fall back to the system theme when storage is unavailable.
+      mode = "system";
     } finally {
       themeModeRef.current = mode;
       applyTheme(mode);
@@ -60,18 +72,40 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       setMounted(true);
     }
 
+    const handleChange = () => {
+      if (themeModeRef.current === "system") {
+        applyTheme("system");
+        setThemeMode("system");
+      }
+    };
+
+    const interval = setInterval(() => {
+      if (themeModeRef.current === "system") {
+        applyTheme("system");
+        setThemeMode("system");
+      }
+    }, 60000); // 1 minute checks for hour transition
+
+    mediaQuery.addEventListener("change", handleChange);
+    
+    // Also listen to storage events for cross-tab sync
     const handleStorage = (event: StorageEvent) => {
       if (event.key !== storageKey) return;
-      const next = event.newValue === "light" || event.newValue === "dark"
-        ? event.newValue
-        : systemTheme;
+      const next = (event.newValue === "light" || event.newValue === "dark" || event.newValue === "system")
+        ? (event.newValue as ThemeMode)
+        : "system";
       themeModeRef.current = next;
       applyTheme(next);
       setThemeMode(next);
     };
 
     window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
+    
+    return () => {
+      mediaQuery.removeEventListener("change", handleChange);
+      clearInterval(interval);
+      window.removeEventListener("storage", handleStorage);
+    };
   }, []);
 
   const setTheme = useCallback((mode: ThemeMode) => {
@@ -82,7 +116,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const toggleTheme = useCallback(() => {
-    const next = themeModeRef.current === "dark" ? "light" : "dark";
+    let next: ThemeMode = "light";
+    if (themeModeRef.current === "light") {
+      next = "dark";
+    } else if (themeModeRef.current === "dark") {
+      next = "system";
+    } else {
+      next = "light";
+    }
     themeModeRef.current = next;
     applyTheme(next);
     setThemeMode(next);

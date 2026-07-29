@@ -14,14 +14,17 @@ import { Invite, inviteService } from "../services/inviteService";
 import { HomeData } from "../types/HomeData";
 import TroHubLogo from "../components/TroHubLogo";
 import { Ionicons } from "@expo/vector-icons";
+import { notificationService } from "../services/notificationService";
 import StatusBadge from "../components/calm-ops/StatusBadge";
 import SectionHeader from "../components/calm-ops/SectionHeader";
 import GradientHero from "../components/ui/GradientHero";
+import { getRealtimeGreeting } from "../utils/dateHelpers";
+import MiniCalendarPopover from "../components/MiniCalendarPopover";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
 
 type Props = {
   refreshKey: number;
-  onNavigate: (screen: "invoice" | "repair" | "contract" | "utility") => void;
+  onNavigate: (screen: "invoice" | "repair" | "contract" | "utility" | "notifications") => void;
   onLogout: () => void;
 };
 
@@ -31,10 +34,19 @@ export default function HomeScreen({ refreshKey, onNavigate, onLogout }: Props) 
   const [homeData, setHomeData] = useState<HomeData | null>(null);
   const [invites, setInvites] = useState<Invite[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     loadHomeData();
+    const interval = setInterval(checkNotifications, 5000);
+    return () => clearInterval(interval);
   }, [refreshKey]);
+
+  const checkNotifications = async () => {
+    const count = await notificationService.getUnreadCount();
+    setUnreadCount(count);
+  };
 
   const loadHomeData = async () => {
     try {
@@ -49,6 +61,8 @@ export default function HomeScreen({ refreshKey, onNavigate, onLogout }: Props) 
       console.log("Lỗi load trang chủ:", error);
     } finally {
       setIsLoading(false);
+      setRefreshing(false);
+      checkNotifications();
     }
   };
 
@@ -81,21 +95,28 @@ export default function HomeScreen({ refreshKey, onNavigate, onLogout }: Props) 
       <View style={styles.brandRow}>
         <TroHubLogo compact />
         <Pressable
-          accessibilityLabel="Đăng xuất"
           accessibilityRole="button"
-          style={styles.logoutButton}
-          onPress={onLogout}
+          onPress={() => onNavigate("notifications")}
+          style={styles.bellButton}
         >
-          <Ionicons name="log-out-outline" size={20} color={theme.danger} />
+          <Ionicons name="notifications-outline" size={24} color={theme.text} />
+          {unreadCount > 0 && (
+            <View style={styles.bellBadge}>
+              <Text style={styles.bellBadgeText}>{unreadCount}</Text>
+            </View>
+          )}
         </Pressable>
       </View>
 
       <View style={styles.homeHero}>
         <Text style={styles.heroKicker}>KHÔNG GIAN CỦA BẠN</Text>
-        <Text style={styles.heroTitle}>Xin chào, {homeData.tenantName}</Text>
+        <Text style={styles.heroTitle}>
+          {getRealtimeGreeting().slice(0, -1)}, {homeData.tenantName}
+        </Text>
         <Text style={styles.heroRoom}>
           {homeData.room === "Chưa có phòng" ? "Chưa có phòng" : `Phòng ${homeData.room}`}
         </Text>
+        <MiniCalendarPopover />
       </View>
 
       {invites.length > 0 && invites.map((invite, index) => (
@@ -229,11 +250,35 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSh
     marginBottom: 18,
   },
   brandRow: {
-    minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 18,
+    marginBottom: 26,
+    marginTop: 10,
+  },
+  bellButton: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+  },
+  bellBadge: {
+    position: "absolute",
+    top: 6,
+    right: 8,
+    backgroundColor: "#EF4444",
+    borderRadius: 10,
+    minWidth: 16,
+    height: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 4,
+  },
+  bellBadgeText: {
+    color: "#fff",
+    fontSize: 9,
+    fontWeight: "bold",
   },
   homeHero: {
     minHeight: 176,

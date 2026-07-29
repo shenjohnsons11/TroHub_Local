@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/calm-ops/page-header";
+import { addWebNotification } from "@/components/notification-bell";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { useNotification } from "@/hooks/use-notification";
 import { fetchAPI } from "@/lib/api";
 import { getNotificationMessage } from "@/lib/notification-messages";
@@ -18,6 +21,10 @@ export default function RepairsPage() {
   const [repairs, setRepairs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [updateModalOpen, setUpdateModalOpen] = useState(false);
+  const [selectedRepair, setSelectedRepair] = useState<any>(null);
+  const [assignedTo, setAssignedTo] = useState("");
+  const [newStatus, setNewStatus] = useState("");
 
   const loadRepairs = async () => {
     try {
@@ -34,12 +41,23 @@ export default function RepairsPage() {
     void loadRepairs();
   }, []);
 
-  const handleUpdateStatus = async (id: string, newStatus: string) => {
+  const openUpdateModal = (repair: any, status: string) => {
+    setSelectedRepair(repair);
+    setAssignedTo(repair.assignedTo || "");
+    setNewStatus(status);
+    setUpdateModalOpen(true);
+  };
+
+  const submitUpdateStatus = async () => {
+    if (!selectedRepair) return;
     try {
-      await fetchAPI(`/repairs/${id}`, {
+      await fetchAPI(`/repairs/${selectedRepair._id || selectedRepair.id}`, {
         method: "PUT",
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status: newStatus, assignedTo }),
       });
+      notification.success("Đã cập nhật trạng thái sửa chữa.");
+      addWebNotification("repair", "Cập nhật sửa chữa", `Yêu cầu phòng ${selectedRepair.roomCode || "N/A"} -> ${newStatus}`);
+      setUpdateModalOpen(false);
       void loadRepairs();
     } catch (err: unknown) {
       notification.error(getNotificationMessage(err, "Không thể cập nhật trạng thái sửa chữa."));
@@ -84,6 +102,7 @@ export default function RepairsPage() {
               <TableHead>Phòng</TableHead>
               <TableHead>Nội dung</TableHead>
               <TableHead>Chi phí dự kiến</TableHead>
+              <TableHead>Người phụ trách</TableHead>
               <TableHead>Trạng thái</TableHead>
               <TableHead className="text-right">Thao tác</TableHead>
             </TableRow>
@@ -106,15 +125,16 @@ export default function RepairsPage() {
                   <TableCell className="font-extrabold">{repair.roomCode}</TableCell>
                   <TableCell className="max-w-[260px] truncate">{repair.content}</TableCell>
                   <TableCell className="font-bold">{new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(repair.cost || 0)}</TableCell>
+                  <TableCell>{repair.assignedTo || "—"}</TableCell>
                   <TableCell>{getStatusBadge(repair.status)}</TableCell>
                   <TableCell className="text-right">
                     {repair.status === "Chờ tiếp nhận" && (
-                      <Button onClick={() => handleUpdateStatus(repair._id || repair.id, "Đang xử lý")} variant="ghost" size="icon" aria-label={`Tiếp nhận sửa chữa phòng ${repair.roomCode}`}>
+                      <Button onClick={() => openUpdateModal(repair, "Đang xử lý")} variant="ghost" size="icon" aria-label={`Tiếp nhận sửa chữa phòng ${repair.roomCode}`}>
                         <CheckCircle2 aria-hidden="true" />
                       </Button>
                     )}
                     {repair.status === "Đang xử lý" && (
-                      <Button onClick={() => handleUpdateStatus(repair._id || repair.id, "Đã hoàn thành")} variant="ghost" size="icon" aria-label={`Xác nhận hoàn thành sửa chữa phòng ${repair.roomCode}`}>
+                      <Button onClick={() => openUpdateModal(repair, "Đã hoàn thành")} variant="ghost" size="icon" aria-label={`Xác nhận hoàn thành sửa chữa phòng ${repair.roomCode}`}>
                         <CheckCircle2 aria-hidden="true" />
                       </Button>
                     )}
@@ -125,6 +145,21 @@ export default function RepairsPage() {
           </TableBody>
         </Table>
       </section>
+
+      <Dialog open={updateModalOpen} onOpenChange={setUpdateModalOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>{newStatus === "Đang xử lý" ? "Tiếp nhận sửa chữa" : "Cập nhật hoàn thành"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="assignedTo">Người phụ trách</Label>
+              <Input id="assignedTo" value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)} placeholder="Nhập tên người phụ trách..." />
+            </div>
+            <Button className="w-full" onClick={() => void submitUpdateStatus()}>Xác nhận</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
