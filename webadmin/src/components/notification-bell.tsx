@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, Check, Receipt, FileText, Wrench, Users, Zap, Info } from "lucide-react";
 import { fetchAPI } from "@/lib/api";
+import { formatPhone } from "@/lib/formatters";
 
 export type NotificationType = {
   id: string;
@@ -162,7 +163,7 @@ export function NotificationBell() {
               id,
               type: "tenant",
               title: `Người thuê chưa liên kết App: ${t.fullName}`,
-              content: `SĐT: ${t.phone} - Cần gửi lời mời Zalo/SMS để tải ứng dụng.`,
+              content: `SĐT: ${formatPhone(t.phone)} - Cần gửi lời mời Zalo/SMS để tải ứng dụng.`,
               isRead: readIds.includes(id),
               createdAt: t.createdAt || new Date().toISOString()
             });

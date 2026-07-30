@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TroHubLogo } from "@/components/trohub-logo";
 import { useNotification } from "@/hooks/use-notification";
+import { formatPhone, unformatDigits } from "@/lib/formatters";
 
 export default function RequestInvitePage() {
   const notification = useNotification();
@@ -19,7 +20,7 @@ export default function RequestInvitePage() {
     e.preventDefault();
     setLoading(true);
 
-    const cleanPhone = phone.replace(/\D/g, "");
+    const cleanPhone = unformatDigits(phone);
     if (cleanPhone.length !== 10) {
       notification.error("Số điện thoại phải gồm đúng 10 số!");
       setLoading(false);
@@ -81,9 +82,9 @@ export default function RequestInvitePage() {
             </Label>
             <Input
               id="phone"
-              placeholder="Ví dụ: 0901234567"
+              placeholder="Ví dụ: 0901.234.567"
               value={phone}
-              onChange={e => setPhone(e.target.value)}
+              onChange={e => setPhone(formatPhone(e.target.value))}
               required
               type="tel"
               className="h-12 rounded-[16px] bg-background text-base placeholder:text-muted-foreground focus-visible:ring-primary"

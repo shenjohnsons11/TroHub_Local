@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/calm-ops/page-header";
 import { useNotification } from "@/hooks/use-notification";
 import { fetchAPI } from "@/lib/api";
 import { getNotificationMessage } from "@/lib/notification-messages";
+import { formatPhone, unformatDigits } from "@/lib/formatters";
 
 export default function AccountSettingsPage() {
   const notification = useNotification();
@@ -17,7 +18,7 @@ export default function AccountSettingsPage() {
 
   useEffect(() => {
     void fetchAPI("/settings")
-      .then(({ data }) => setForm({ name: data.name || "", phone: data.phone || "", email: data.email || "", password: "" }))
+      .then(({ data }) => setForm({ name: data.name || "", phone: formatPhone(data.phone), email: data.email || "", password: "" }))
       .catch((error) => notification.error(getNotificationMessage(error)));
   }, [notification]);
 
@@ -25,7 +26,10 @@ export default function AccountSettingsPage() {
     event.preventDefault();
     try {
       setSaving(true);
-      await fetchAPI("/settings", { method: "PUT", body: JSON.stringify(form) });
+      await fetchAPI("/settings", {
+        method: "PUT",
+        body: JSON.stringify({ ...form, phone: unformatDigits(form.phone) }),
+      });
       notification.success("Đã cập nhật tài khoản.");
       setForm((value) => ({ ...value, password: "" }));
     } catch (error) {
@@ -57,7 +61,7 @@ export default function AccountSettingsPage() {
           {fields.map(([key, label, type]) => (
             <div className="space-y-2" key={key}>
               <Label htmlFor={key}>{label}</Label>
-              <Input id={key} type={type} value={form[key]} onChange={(event) => setForm({ ...form, [key]: event.target.value })} />
+              <Input id={key} type={type} value={form[key]} onChange={(event) => setForm({ ...form, [key]: key === "phone" ? formatPhone(event.target.value) : event.target.value })} />
             </div>
           ))}
           <div className="flex flex-col gap-3 border-t border-border/60 pt-5 sm:flex-row sm:items-center sm:justify-between">
