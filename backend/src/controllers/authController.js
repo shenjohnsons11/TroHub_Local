@@ -18,9 +18,10 @@ exports.register = async (_req, res) => {
 // 2. Đăng nhập hệ thống tổng hợp (Dùng chung cho cả Web và Mobile App)
 exports.login = async (req, res) => {
     try {
-        const { username, password } = req.body;
+        const identifier = req.body.identifier ?? req.body.username;
+        const { password } = req.body;
 
-        if (typeof username !== 'string' || !username.trim()) {
+        if (typeof identifier !== 'string' || !identifier.trim()) {
             return res.status(400).json({
                 success: false,
                 code: 'LOGIN_IDENTIFIER_REQUIRED',
@@ -37,7 +38,7 @@ exports.login = async (req, res) => {
         }
 
         // Ưu tiên SĐT, sau đó tên đăng nhập; email vẫn được giữ để tương thích tài khoản cũ.
-        const account = await Account.findOne(buildLoginLookup(username));
+        const account = await Account.findOne(buildLoginLookup(identifier));
         if (!account || account.status === 0) {
             return res.status(400).json({ success: false, message: "Tài khoản không tồn tại hoặc đã bị khóa!" });
         }
