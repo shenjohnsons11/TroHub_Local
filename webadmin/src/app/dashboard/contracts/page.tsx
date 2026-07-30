@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { formatCurrencyInput, parseFormattedNumber } from "@/lib/utils";
 import { useNotification } from "@/hooks/use-notification";
 import { getNotificationMessage } from "@/lib/notification-messages";
+import { formatPhone } from "@/lib/formatters";
 import { PageHeader } from "@/components/calm-ops/page-header";
 import { addWebNotification } from "@/components/notification-bell";
 
@@ -303,7 +304,7 @@ export default function ContractsPage() {
                     className="flex h-10 w-full items-center justify-between rounded-[16px] border border-border bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     <option value="" disabled>-- Chọn Người thuê --</option>
-                    {tenants.map(t => <option key={t._id || t.id} value={t._id || t.id}>{t.fullName || t.name} ({t.phone})</option>)}
+                    {tenants.map(t => <option key={t._id || t.id} value={t._id || t.id}>{t.fullName || t.name} ({formatPhone(t.phone)})</option>)}
                   </select>
                 </div>
               </div>

@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useNotification } from "@/hooks/use-notification";
 import { fetchAPI } from "@/lib/api";
 import { getNotificationMessage } from "@/lib/notification-messages";
-import { formatIdCardInput, formatPhoneInput, parseFormattedString } from "@/lib/utils";
+import { formatCCCD, formatPhone, unformatDigits } from "@/lib/formatters";
 
 const TENANT_STEPS = [
   { label: "Thông tin", icon: UserRound },
@@ -68,8 +68,8 @@ export default function TenantsPage() {
 
   const openEditModal = (tenant: any) => {
     setFullName(tenant.fullName || tenant.name);
-    setPhone(tenant.phone);
-    setIdCard(tenant.idCard || "");
+    setPhone(formatPhone(tenant.phone));
+    setIdCard(formatCCCD(tenant.idCard));
     setEditingTenantId(tenant._id || tenant.id);
     setIsEditOpen(true);
   };
@@ -79,9 +79,9 @@ export default function TenantsPage() {
     try {
       const payload = {
         fullName,
-        phone: parseFormattedString(phone),
+        phone: unformatDigits(phone),
         email: email.trim().toLowerCase(),
-        idCard: parseFormattedString(idCard),
+        idCard: unformatDigits(idCard),
         roomCode,
       };
       if (editingTenantId) {
@@ -166,10 +166,10 @@ export default function TenantsPage() {
             <form ref={addFormRef} onSubmit={handleSaveTenant} className="mt-2 space-y-5">
               {tenantStep === 1 && <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2"><Label htmlFor="fullName">Họ và tên</Label><Input id="fullName" autoFocus value={fullName} onChange={(event) => setFullName(event.target.value)} required placeholder="Nguyễn Văn A" /></div>
-                <div className="space-y-2"><Label htmlFor="idCard">CCCD</Label><Input id="idCard" value={idCard} onChange={(event) => setIdCard(formatIdCardInput(event.target.value))} placeholder="079.012.345.678" /></div>
+                <div className="space-y-2"><Label htmlFor="idCard">CCCD</Label><Input id="idCard" value={idCard} onChange={(event) => setIdCard(formatCCCD(event.target.value))} placeholder="0123.4567.8901" /></div>
               </div>}
               {tenantStep === 2 && <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2"><Label htmlFor="phone">Số điện thoại</Label><Input id="phone" autoFocus value={phone} onChange={(event) => setPhone(formatPhoneInput(event.target.value))} placeholder="090.123.4567" required /></div>
+                <div className="space-y-2"><Label htmlFor="phone">Số điện thoại</Label><Input id="phone" autoFocus value={phone} onChange={(event) => setPhone(formatPhone(event.target.value))} placeholder="0901.234.567" required /></div>
                 <div className="space-y-2"><Label htmlFor="email">Email đăng nhập</Label><Input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="nguyenvana@gmail.com" required /></div>
               </div>}
               {tenantStep === 3 && <div className="space-y-4">
@@ -188,8 +188,8 @@ export default function TenantsPage() {
             <DialogHeader><DialogTitle>Sửa thông tin người thuê</DialogTitle></DialogHeader>
             <form onSubmit={handleSaveTenant} className="mt-4 space-y-4">
               <div className="space-y-2"><Label htmlFor="editFullName">Họ và tên</Label><Input id="editFullName" value={fullName} onChange={(event) => setFullName(event.target.value)} required /></div>
-              <div className="space-y-2"><Label htmlFor="editPhone">Số điện thoại</Label><Input id="editPhone" value={phone} onChange={(event) => setPhone(formatPhoneInput(event.target.value))} required /></div>
-              <div className="space-y-2"><Label htmlFor="editIdCard">CCCD</Label><Input id="editIdCard" value={idCard} onChange={(event) => setIdCard(formatIdCardInput(event.target.value))} required /></div>
+              <div className="space-y-2"><Label htmlFor="editPhone">Số điện thoại</Label><Input id="editPhone" value={phone} onChange={(event) => setPhone(formatPhone(event.target.value))} required /></div>
+              <div className="space-y-2"><Label htmlFor="editIdCard">CCCD</Label><Input id="editIdCard" value={idCard} onChange={(event) => setIdCard(formatCCCD(event.target.value))} required /></div>
               <Button type="submit" className="w-full"><UserRound className="size-4" />Cập nhật</Button>
             </form>
           </DialogContent>
@@ -200,7 +200,7 @@ export default function TenantsPage() {
             <div className="space-y-4 pt-4">
               <div className="space-y-2">
                 <Label htmlFor="invitePhone">Số điện thoại nhận</Label>
-                <Input id="invitePhone" value={invitePhone} onChange={(e) => setInvitePhone(formatPhoneInput(e.target.value))} />
+                <Input id="invitePhone" value={invitePhone} onChange={(e) => setInvitePhone(formatPhone(e.target.value))} />
               </div>
               <div className="flex gap-3 pt-2">
                 <Button className="w-full bg-[#0068FF] hover:bg-[#0054cc] text-white" onClick={() => handleSendInvite("zalo")}>Gửi Zalo</Button>
@@ -218,8 +218,8 @@ export default function TenantsPage() {
             {loading ? <TableRow><TableCell colSpan={5} className="h-40 text-center text-muted-foreground"><UserRound className="mx-auto mb-2 size-8 animate-pulse text-primary" />Đang tải hồ sơ…</TableCell></TableRow>
               : filteredTenants.length === 0 ? <TableRow><TableCell colSpan={5} className="h-64 text-center"><Image src="/trohub-empty-states.png" alt="" width={170} height={100} className="mx-auto h-24 w-40 rounded-[20px] object-cover object-center" /><p className="mt-3 font-black">Không tìm thấy người thuê nào</p></TableCell></TableRow>
                 : filteredTenants.map((tenant) => <TableRow key={tenant._id || tenant.id}>
-                  <TableCell className="font-bold">{tenant.fullName || tenant.name}</TableCell>
-                  <TableCell>{tenant.phone}</TableCell>
+                  <TableCell className="font-bold">{tenant.fullName || tenant.name}{tenant.idCard && <span className="mt-1 block text-xs font-normal text-muted-foreground">CCCD {formatCCCD(tenant.idCard)}</span>}</TableCell>
+                  <TableCell>{formatPhone(tenant.phone)}</TableCell>
                   <TableCell>{tenant.roomCode || "Chưa xếp phòng"}</TableCell>
                   <TableCell>{tenant.linkedAccountId ? <Badge className="border-0 bg-primary/10 text-primary">Đã liên kết</Badge> : <div className="flex flex-col items-start gap-1"><Badge variant="secondary">Chưa liên kết App</Badge><Button variant="link" size="sm" className="h-auto p-0 text-xs text-primary" onClick={() => openInviteModal(tenant)}><Send className="mr-1 size-3" /> Gửi lời mời</Button></div>}</TableCell>
                   <TableCell><div className="flex justify-end gap-2"><Button aria-label={`Sửa ${tenant.fullName || tenant.name}`} onClick={() => openEditModal(tenant)} variant="ghost" size="icon"><Edit className="size-4" /></Button><Button aria-label={`Xóa ${tenant.fullName || tenant.name}`} onClick={() => void handleDelete(tenant._id || tenant.id)} variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive"><Trash2 className="size-4" /></Button></div></TableCell>
