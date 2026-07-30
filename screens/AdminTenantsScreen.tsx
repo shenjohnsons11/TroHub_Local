@@ -10,6 +10,7 @@ import AnimatedEntry from "../components/ui/AnimatedEntry";
 import GradientHero from "../components/ui/GradientHero";
 import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
 import ProgressStepper from "../components/ui/ProgressStepper";
+import { formatCCCD, formatPhone, unformatDigits } from "../utils/formatters";
 
 const steps = [
   { label: "Tra cứu", icon: "search-outline" as const },
@@ -37,7 +38,7 @@ export default function AdminTenantsScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   const handleSendInvite = async (tenant: AdminTenant) => {
-    const rawPhone = tenant.phone ? String(tenant.phone).replace(/\D/g, "") : "";
+    const rawPhone = unformatDigits(tenant.phone);
     const useZalo = await notification.confirm({
       title: "Gửi lời mời tải App",
       message: `Gửi lời mời TroHub cho ${tenant.fullName} (${rawPhone}) qua Zalo hoặc SMS?`,
@@ -69,7 +70,7 @@ export default function AdminTenantsScreen() {
     if (!value.trim()) return;
     try {
       let cleanValue = value.trim();
-      if (field === "phone" || field === "idCard") cleanValue = value.replace(/\D/g, "");
+      if (field === "phone" || field === "idCard") cleanValue = unformatDigits(value);
       if (field === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanValue)) { setEmailError("Email không hợp lệ"); return; }
       if (field === "phone" && cleanValue.length !== 10) { setPhoneError("Số điện thoại chưa đủ 10 số"); return; }
       if (field === "idCard" && cleanValue.length !== 12) { setIdCardError("CCCD chưa đủ 12 số"); return; }
@@ -81,7 +82,7 @@ export default function AdminTenantsScreen() {
   };
 
   const handleSearchTenant = async () => {
-    const cleanPhone = phone.trim().replace(/\D/g, "");
+    const cleanPhone = unformatDigits(phone);
     if (cleanPhone.length !== 10) {
       notification.error("Vui lòng nhập đúng 10 số điện thoại để tra cứu!");
       return;
@@ -115,8 +116,8 @@ export default function AdminTenantsScreen() {
 
   const handleAddTenant = async () => {
     if (!fullName.trim() || !phone.trim() || !email.trim() || !idCard.trim()) { notification.error("Vui lòng điền đầy đủ thông tin!"); return; }
-    const cleanPhone = phone.trim().replace(/\D/g, "");
-    const cleanIdCard = idCard.trim().replace(/\D/g, "");
+    const cleanPhone = unformatDigits(phone);
+    const cleanIdCard = unformatDigits(idCard);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { notification.error("Vui lòng nhập Email đúng định dạng (ví dụ: nguyenvanA@gmail.com) để làm tên đăng nhập!"); return; }
     if (cleanPhone.length !== 10) { notification.error("Số điện thoại phải gồm đúng 10 chữ số!"); return; }
     if (cleanIdCard.length !== 12) { notification.error("Số CCCD phải gồm đúng 12 chữ số!"); return; }
@@ -214,9 +215,7 @@ export default function AdminTenantsScreen() {
         }
         renderItem={({ item, index }) => {
           const isLinked = item.mustChangePassword === false;
-          const formattedPhone = item.phone
-            ? String(item.phone).replace(/\D/g, "").replace(/(\d{4})(\d{3})(\d+)/, "$1.$2.$3").replace(/(\d{4})(\d+)/, "$1.$2")
-            : "-";
+          const formattedPhone = formatPhone(item.phone) || "-";
 
           return (
             <AnimatedEntry delay={Math.min(index, 6) * 45}>
@@ -239,7 +238,7 @@ export default function AdminTenantsScreen() {
                   ) : null}
                   {item.idCard ? (
                     <Text style={[styles.sub, { color: theme.muted }]}>
-                      <Ionicons name="card-outline" size={12} /> CCCD: {item.idCard}
+                      <Ionicons name="card-outline" size={12} /> CCCD: {formatCCCD(item.idCard)}
                     </Text>
                   ) : null}
 
@@ -302,10 +301,7 @@ export default function AdminTenantsScreen() {
               label="Số điện thoại của Người thuê"
               value={phone} 
               setValue={(text: string) => { 
-                let value = text.replace(/\D/g, "").slice(0, 10); 
-                if (value.length > 7) value = value.replace(/(\d{4})(\d{3})(\d+)/, "$1.$2.$3"); 
-                else if (value.length > 4) value = value.replace(/(\d{4})(\d+)/, "$1.$2"); 
-                setPhone(value); 
+                setPhone(formatPhone(text));
                 setPhoneError(""); 
               }} 
               placeholder="Nhập 10 số điện thoại để tra cứu" 
@@ -331,7 +327,7 @@ export default function AdminTenantsScreen() {
           {step === 2 ? <>
             <Field label="Email (Tên đăng nhập)" value={email} setValue={(text: string) => { setEmail(text); setEmailError(""); }} placeholder="Nhập email" style={[...inputStyle, emailError && { backgroundColor: theme.warningSoft }]} muted={theme.muted} keyboardType="email-address" onBlur={() => void handleCheckDuplicate("email", email)} error={emailError} danger={theme.danger} />
             <Field label="Số điện thoại" value={phone} setValue={() => {}} style={[...inputStyle, { opacity: 0.6 }]} muted={theme.muted} keyboardType="phone-pad" error={phoneError} danger={theme.danger} editable={false} />
-            <Field label="Số CCCD (Bắt buộc 12 số)" value={idCard} setValue={(text: string) => { let value = text.replace(/\D/g, "").slice(0, 12); if (value.length > 8) value = value.replace(/(\d{4})(\d{4})(\d+)/, "$1.$2.$3"); else if (value.length > 4) value = value.replace(/(\d{4})(\d+)/, "$1.$2"); setIdCard(value); setIdCardError(""); }} placeholder="Nhập CCCD" style={inputStyle} muted={theme.muted} keyboardType="numeric" onBlur={() => void handleCheckDuplicate("idCard", idCard)} error={idCardError} danger={theme.danger} />
+            <Field label="Số CCCD (Bắt buộc 12 số)" value={idCard} setValue={(text: string) => { setIdCard(formatCCCD(text)); setIdCardError(""); }} placeholder="Nhập CCCD" style={inputStyle} muted={theme.muted} keyboardType="numeric" onBlur={() => void handleCheckDuplicate("idCard", idCard)} error={idCardError} danger={theme.danger} />
           </> : null}
 
           {step === 3 ? (

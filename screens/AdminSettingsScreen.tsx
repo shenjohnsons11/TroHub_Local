@@ -8,6 +8,7 @@ import { UserProfile } from "../types/UserProfile";
 import ChangePasswordModal from "../components/ChangePasswordModal";
 import AppButton from "../components/ui/AppButton";
 import GradientHero from "../components/ui/GradientHero";
+import { formatPhone, unformatDigits } from "../utils/formatters";
 
 type Props = { profile: UserProfile; onSave: (profile: UserProfile) => void; onBack: () => void; onLogout: () => void };
 
@@ -15,7 +16,7 @@ export default function AdminSettingsScreen({ profile, onSave, onBack, onLogout 
   const { theme } = useAppTheme();
   const notification = useNotification();
   const [fullName, setFullName] = useState(profile.fullName || "");
-  const [phone, setPhone] = useState(profile.phone || "");
+  const [phone, setPhone] = useState(formatPhone(profile.phone));
   const [email, setEmail] = useState(profile.email || "");
   const [bankId, setBankId] = useState(profile.bankId || "");
   const [bankAccountNo, setBankAccountNo] = useState(profile.bankAccountNo || "");
@@ -28,7 +29,7 @@ export default function AdminSettingsScreen({ profile, onSave, onBack, onLogout 
       notification.error("Vui lòng nhập đầy đủ 3 trường Tên ngân hàng, Số tài khoản và Tên chủ tài khoản, hoặc để trống toàn bộ nếu chưa muốn cài đặt.");
       return;
     }
-    onSave({ ...profile, fullName, phone, email, bankId, bankAccountNo, bankAccountName });
+    onSave({ ...profile, fullName, phone: unformatDigits(phone), email, bankId, bankAccountNo, bankAccountName });
     notification.success("Đã cập nhật thông tin cài đặt");
   };
 
@@ -39,7 +40,7 @@ export default function AdminSettingsScreen({ profile, onSave, onBack, onLogout 
       <GradientHero icon="settings-outline" label="CÀI ĐẶT CHỦ TRỌ" value={fullName || "Chủ trọ"} detail="Thông tin nhận tiền, giao diện và bảo mật tài khoản." />
       <Section title="Thông tin cá nhân" icon="person-outline" theme={theme}>
         <Field label="Họ và tên" value={fullName} setValue={setFullName} placeholder="Nguyễn Văn A" style={inputStyle} muted={theme.muted} />
-        <Field label="Số điện thoại" value={phone} setValue={setPhone} placeholder="0901234567" keyboardType="number-pad" style={inputStyle} muted={theme.muted} />
+        <Field label="Số điện thoại" value={phone} setValue={(value: string) => setPhone(formatPhone(value))} placeholder="0901.234.567" keyboardType="number-pad" style={inputStyle} muted={theme.muted} />
         <Field label="Email" value={email} setValue={setEmail} placeholder="admin@email.com" keyboardType="email-address" style={inputStyle} muted={theme.muted} autoCapitalize="none" />
       </Section>
       <Section title="Tài khoản ngân hàng (Mã QR)" icon="card-outline" theme={theme}>

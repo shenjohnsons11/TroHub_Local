@@ -19,6 +19,7 @@ import { useAppTheme } from "../contexts/ThemeContext";
 import { useNotification } from "../hooks/useNotification";
 import { getNotificationMessage } from "../utils/notificationMessages";
 import { authService } from "../services/authService";
+import { formatCCCD, formatPhone, unformatDigits } from "../utils/formatters";
 
 type Props = {
   onLogin: (identifier: string, password: string) => Promise<void>;
@@ -69,7 +70,7 @@ export default function LoginScreen({ onLogin }: Props) {
       setFullNameError("");
     }
 
-    const cleanPhone = identifier.replace(/\D/g, "");
+    const cleanPhone = unformatDigits(identifier);
     if (cleanPhone.length !== 10) {
       setIdentifierError("Số điện thoại phải gồm đúng 10 chữ số");
       isValid = false;
@@ -84,7 +85,7 @@ export default function LoginScreen({ onLogin }: Props) {
       setEmailError("");
     }
 
-    const cleanId = idCard.replace(/\D/g, "");
+    const cleanId = unformatDigits(idCard);
     if (cleanId.length !== 12) {
       setIdCardError("CCCD phải gồm đúng 12 chữ số");
       isValid = false;
@@ -122,13 +123,11 @@ export default function LoginScreen({ onLogin }: Props) {
 
       try {
         setIsSubmitting(true);
-        const cleanPhone = identifier.replace(/\D/g, "");
-        const cleanId = idCard.replace(/\D/g, "");
         await authService.registerTenant({
           fullName: fullName.trim(),
-          phone: cleanPhone,
+          phone: unformatDigits(identifier),
           email: email.trim(),
-          idCard: cleanId,
+          idCard: unformatDigits(idCard),
           password,
         });
         notification.success("Đăng ký tài khoản Người thuê thành công!");
@@ -230,7 +229,11 @@ export default function LoginScreen({ onLogin }: Props) {
                   autoCapitalize={mode === "login" ? "none" : undefined}
                   editable={!isSubmitting}
                   onChangeText={(value) => {
-                    setIdentifier(value);
+                    setIdentifier(
+                      mode === "register" || /^[\d.\s-]*$/.test(value)
+                        ? formatPhone(value)
+                        : value,
+                    );
                     if (identifierError) setIdentifierError("");
                   }}
                   placeholder="Ví dụ: 0901234567"
@@ -285,7 +288,7 @@ export default function LoginScreen({ onLogin }: Props) {
                       keyboardType="numeric"
                       editable={!isSubmitting}
                       onChangeText={(value) => {
-                        setIdCard(value.replace(/\D/g, "").slice(0, 12));
+                        setIdCard(formatCCCD(value));
                         if (idCardError) setIdCardError("");
                       }}
                       placeholder="Nhập 12 số CCCD"

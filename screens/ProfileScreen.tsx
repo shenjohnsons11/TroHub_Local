@@ -13,6 +13,7 @@ import { useAppTheme } from "../contexts/ThemeContext";
 import { useNotification } from "../hooks/useNotification";
 import AppButton from "../components/ui/AppButton";
 import { Ionicons } from "@expo/vector-icons";
+import { formatCCCD, formatPhone, unformatDigits } from "../utils/formatters";
 
 type Props = {
   profile: UserProfile;
@@ -25,19 +26,6 @@ export default function ProfileScreen({ profile, onSave, onBack, onLogout }: Pro
   const { theme } = useAppTheme();
   const notification = useNotification();
   const styles = createStyles(theme);
-  const formatPhone = (val: any) => {
-    let v = String(val || "").replace(/\D/g, "");
-    if (v.length > 7) return v.replace(/(\d{4})(\d{3})(\d+)/, "$1.$2.$3");
-    if (v.length > 4) return v.replace(/(\d{4})(\d+)/, "$1.$2");
-    return v;
-  };
-
-  const formatCCCD = (val: any) => {
-    let v = String(val || "").replace(/\D/g, "");
-    if (v.length > 8) return v.replace(/(\d{4})(\d{4})(\d+)/, "$1.$2.$3");
-    if (v.length > 4) return v.replace(/(\d{4})(\d+)/, "$1.$2");
-    return v;
-  };
 
   const [fullName, setFullName] = useState(profile.fullName);
   const [phone, setPhone] = useState(formatPhone(profile.phone));
@@ -50,9 +38,7 @@ export default function ProfileScreen({ profile, onSave, onBack, onLogout }: Pro
   const [phoneError, setPhoneError] = useState("");
 
   const handlePhoneChange = (value: string) => {
-    let onlyNumber = value.replace(/[^0-9]/g, "");
-    if (onlyNumber.length > 10) onlyNumber = onlyNumber.slice(0, 10);
-    setPhone(formatPhone(onlyNumber));
+    setPhone(formatPhone(value));
 
     if (phoneError) {
       setPhoneError("");
@@ -72,7 +58,7 @@ export default function ProfileScreen({ profile, onSave, onBack, onLogout }: Pro
     if (!phone.trim()) {
       setPhoneError("Vui lòng nhập số điện thoại");
       isValid = false;
-    } else if (phone.replace(/\D/g, "").length !== 10) {
+    } else if (unformatDigits(phone).length !== 10) {
       setPhoneError("Số điện thoại không hợp lệ (cần 10 số)");
       isValid = false;
     } else {
@@ -84,9 +70,9 @@ export default function ProfileScreen({ profile, onSave, onBack, onLogout }: Pro
     onSave({
       ...profile,
       fullName: fullName.trim(),
-      phone: phone.replace(/\D/g, ""),
+      phone: unformatDigits(phone),
       email: email.trim(),
-      cccd: cccd.replace(/\D/g, ""),
+      cccd: unformatDigits(cccd),
     });
 
     notification.success("Thông tin cá nhân đã được cập nhật", { title: "Thành công" });
@@ -166,11 +152,7 @@ export default function ProfileScreen({ profile, onSave, onBack, onLogout }: Pro
         <TextInput
           style={styles.input}
           value={cccd}
-          onChangeText={(value) => {
-            let digits = value.replace(/[^0-9]/g, "");
-            if (digits.length > 12) digits = digits.slice(0, 12);
-            setCccd(formatCCCD(digits));
-          }}
+          onChangeText={(value) => setCccd(formatCCCD(value))}
           keyboardType="number-pad"
           maxLength={14}
           placeholder="Nhập CMND/CCCD"
