@@ -88,7 +88,7 @@ export const authService = {
       }
 
       const response = await apiClient.post<LoginResponse>("/auth/login", {
-        username: identifier,
+        identifier,
         password,
       });
 
@@ -149,17 +149,23 @@ export const authService = {
     }
   },
 
-  async forgotPassword(phone: string): Promise<boolean> {
-    try {
-      console.log("Quên mật khẩu giả lập:", {
-        phone,
-      });
+  async requestPasswordReset(identifier: string): Promise<string> {
+    const response = await apiClient.post<{ success: boolean; message: string }>("/auth/forgot-password", {
+      identifier,
+    });
+    return response.message;
+  },
 
-      return true;
-    } catch (error) {
-      console.log("Lỗi quên mật khẩu:", error);
-      throw error;
-    }
+  async verifyPasswordResetOtp(identifier: string, otp: string): Promise<string> {
+    const response = await apiClient.post<{ success: boolean; resetToken: string }>("/auth/verify-reset-otp", {
+      identifier,
+      otp,
+    });
+    return response.resetToken;
+  },
+
+  async resetPassword(resetToken: string, newPassword: string): Promise<void> {
+    await apiClient.post("/auth/reset-password", { resetToken, newPassword });
   },
 
   async getToken(): Promise<string | null> {
