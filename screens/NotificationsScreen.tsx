@@ -10,6 +10,7 @@ import { adminService } from "../services/adminService";
 import { invoiceService } from "../services/invoiceService";
 import { contractService } from "../services/contractService";
 import { repairService } from "../services/repairService";
+import { formatPhone } from "../utils/formatters";
 
 const STORAGE_KEY = "@trohub_notifications";
 const READ_KEY = "@trohub_read_notifications";
@@ -123,7 +124,7 @@ export default function NotificationsScreen({ onBack, onNavigate }: Props) {
               id,
               type: "tenant",
               title: `Người thuê chưa cài App: ${t.fullName}`,
-              content: `SĐT: ${t.phone} - Nhấn để gửi tin nhắn Zalo/SMS mời tải App.`,
+              content: `SĐT: ${formatPhone(t.phone)} - Nhấn để gửi tin nhắn Zalo/SMS mời tải App.`,
               isRead: readIds.includes(id),
               createdAt: t.createdAt || new Date().toISOString()
             });

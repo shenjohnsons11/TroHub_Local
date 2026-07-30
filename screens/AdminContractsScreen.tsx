@@ -36,6 +36,7 @@ import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
 import ProgressStepper from "../components/ui/ProgressStepper";
 import { draftContractService, DraftContract } from "../services/draftContractService";
 import CheckoutModal from "../components/modals/CheckoutModal";
+import { formatPhone } from "../utils/formatters";
 
 type Props = { params?: any };
 type IconName = React.ComponentProps<typeof Ionicons>["name"];
@@ -359,9 +360,7 @@ export default function AdminContractsScreen({ params }: Props) {
           const roomCode = item.roomId && typeof item.roomId === "object" ? item.roomId.roomCode : "N/A";
           const tenantName = item.tenantId && typeof item.tenantId === "object" ? item.tenantId.fullName : "N/A";
           const tenantPhone = item.tenantId && typeof item.tenantId === "object" ? item.tenantId.phone : "N/A";
-          const formattedPhone = tenantPhone !== "N/A"
-            ? String(tenantPhone).replace(/\D/g, "").replace(/(\d{4})(\d{3})(\d+)/, "$1.$2.$3").replace(/(\d{4})(\d+)/, "$1.$2")
-            : "N/A";
+          const formattedPhone = tenantPhone !== "N/A" ? formatPhone(tenantPhone) : "N/A";
 
           return (
             <AnimatedEntry delay={Math.min(index, 5) * 45}>
@@ -563,7 +562,7 @@ export default function AdminContractsScreen({ params }: Props) {
                               <Ionicons name={selected ? "checkmark-circle" : "person-circle-outline"} size={20} color={selected ? theme.primary : theme.muted} />
                               <View>
                                 <Text style={[styles.selectionText, selected && styles.selectionTextActive]}>{tenant.fullName}</Text>
-                                <Text style={styles.tenantPhone}>{tenant.phone}</Text>
+                                <Text style={styles.tenantPhone}>{formatPhone(tenant.phone)}</Text>
                               </View>
                             </Pressable>
                           );

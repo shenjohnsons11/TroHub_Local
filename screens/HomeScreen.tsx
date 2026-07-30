@@ -21,6 +21,7 @@ import GradientHero from "../components/ui/GradientHero";
 import { getRealtimeGreeting } from "../utils/dateHelpers";
 import MiniCalendarPopover from "../components/MiniCalendarPopover";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
+import { formatPhone } from "../utils/formatters";
 
 type Props = {
   refreshKey: number;
@@ -135,7 +136,7 @@ export default function HomeScreen({ refreshKey, onNavigate, onLogout }: Props) 
         <Card style={[styles.amountCard, styles.inviteCard]}>
           <Text style={[styles.cardTitle, { color: theme.warningForeground, marginBottom: 4 }]}>Lời mời vào nhà trọ</Text>
           <Text style={styles.smallText}>
-            Chủ trọ <Text style={{fontWeight: 'bold'}}>{invite.landlordName}</Text> ({invite.phone}) vừa thêm bạn vào danh sách quản lý.
+            Chủ trọ <Text style={{fontWeight: 'bold'}}>{invite.landlordName}</Text> ({formatPhone(invite.phone)}) vừa thêm bạn vào danh sách quản lý.
           </Text>
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
             <Pressable

@@ -10,6 +10,7 @@ import { UserProfile } from "../types/UserProfile";
 import { invoiceService } from "../services/invoiceService";
 import { repairService } from "../services/repairService";
 import { contractService } from "../services/contractService";
+import { formatPhone } from "../utils/formatters";
 
 type Props = {
   profile: UserProfile;
@@ -114,7 +115,7 @@ export default function AccountScreen({
           </View>
 
           <Text style={styles.name}>{profile.fullName}</Text>
-          <Text style={styles.phone}>{profile.phone}</Text>
+          <Text style={styles.phone}>{formatPhone(profile.phone)}</Text>
 
           <View style={styles.roomBadge}>
             <Text style={styles.roomText}>
