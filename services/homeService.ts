@@ -3,6 +3,7 @@ import { userService } from "./userService";
 import { invoiceService } from "./invoiceService";
 import { repairService } from "./repairService";
 import { contractService } from "./contractService";
+import { formatCurrency } from "../utils/formatters";
 
 const getRepairStatusText = (status?: string) => {
   if (status === "pending") return "Chờ tiếp nhận";
@@ -35,7 +36,7 @@ export const homeService = {
         tenantName: profile.fullName || "Người thuê",
         room: isSigned ? roomNames.join(", ") : "Chưa có phòng",
 
-        totalAmount: unpaidInvoices.length > 0 ? totalAmountNum.toLocaleString("vi-VN") + "đ" : "0đ",
+        totalAmount: formatCurrency(totalAmountNum),
         paymentStatus: unpaidInvoices.length > 0 ? "unpaid" : "paid",
         paymentStatusText: unpaidInvoices.length > 0 ? "Chưa thanh toán" : "Đã thanh toán",
         dueDate: unpaidInvoices.length > 0 ? unpaidInvoices[0].dueDate : "Không có",

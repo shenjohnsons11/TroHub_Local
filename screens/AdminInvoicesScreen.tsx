@@ -12,6 +12,7 @@ import AppButton from "../components/ui/AppButton";
 import { adminService, AdminInvoice, AdminRoom, AdminContract } from "../services/adminService";
 import InvoiceDetailModal from "../components/InvoiceDetailModal";
 import { Invoice } from "../types/Invoice";
+import { formatCurrency, formatNumberInput, unformatNumber } from "../utils/formatters";
 type Props = {
   params?: any;
   onNavigate?: (tab: any, params?: any) => void;
@@ -65,10 +66,10 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
         const lastInv = sortedInvoices[0];
         
         // Auto fill indexes
-        setElecOld(String(lastInv.electricityNew || 0));
-        setWaterOld(String(lastInv.waterNew || 0));
-        setElecNew(String(lastInv.electricityNew || 0));
-        setWaterNew(String(lastInv.waterNew || 0));
+        setElecOld(formatNumberInput(lastInv.electricityNew));
+        setWaterOld(formatNumberInput(lastInv.waterNew));
+        setElecNew(formatNumberInput(lastInv.electricityNew));
+        setWaterNew(formatNumberInput(lastInv.waterNew));
       } else {
         setElecOld("0");
         setWaterOld("0");
@@ -168,8 +169,8 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
         }
       }
       
-      const electricityAmount = Math.max(0, Number(elecNew) - Number(elecOld)) * electricityPrice;
-      const waterAmount = Math.max(0, Number(waterNew) - Number(waterOld)) * waterPrice;
+      const electricityAmount = Math.max(0, unformatNumber(elecNew) - unformatNumber(elecOld)) * electricityPrice;
+      const waterAmount = Math.max(0, unformatNumber(waterNew) - unformatNumber(waterOld)) * waterPrice;
       const totalAmount = rentPrice + electricityAmount + waterAmount + servicesFee;
 
       const rId = typeof roomContract.roomId === "string" ? roomContract.roomId : roomContract.roomId._id;
@@ -186,11 +187,11 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
         room: roomCode,
         tenant: tenantName,
         roomAmount: rentPrice,
-        electricityOld: Number(elecOld),
-        electricityNew: Number(elecNew),
+        electricityOld: unformatNumber(elecOld),
+        electricityNew: unformatNumber(elecNew),
         electricityPrice: electricityPrice,
-        waterOld: Number(waterOld),
-        waterNew: Number(waterNew),
+        waterOld: unformatNumber(waterOld),
+        waterNew: unformatNumber(waterNew),
         waterPrice: waterPrice,
         services: servicesFee,
         discount: 0,
@@ -203,7 +204,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
       notificationService.addNotification(
         "invoice",
         "Hóa đơn mới được phát hành",
-        `Hóa đơn kỳ ${period} của phòng ${roomCode} đã được tạo với tổng tiền ${rentPrice.toLocaleString("vi-VN")}đ.`
+        `Hóa đơn kỳ ${period} của phòng ${roomCode} đã được tạo với tổng tiền ${formatCurrency(rentPrice)}.`
       );
 
       setModalVisible(false);
@@ -320,26 +321,26 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
       id: item._id,
       month: item.period || "",
       room: item.room || item.contractId?.roomId?.roomCode || "",
-      amount: `${(item.totalAmount || 0).toLocaleString("vi-VN")}đ`,
+      amount: formatCurrency(item.totalAmount),
       status: isPaid ? "paid" : "unpaid",
       statusText: getStatusText(item.status),
       dueDate: item.dueDate || "",
       details: {
-        roomFee: `${roomFee.toLocaleString("vi-VN")}đ`,
+        roomFee: formatCurrency(roomFee),
         electric: {
-          amount: `${elecAmount.toLocaleString("vi-VN")}đ`,
+          amount: formatCurrency(elecAmount),
           oldIndex: elecOld,
           newIndex: elecNew,
         },
         water: {
-          amount: `${waterAmount.toLocaleString("vi-VN")}đ`,
+          amount: formatCurrency(waterAmount),
           oldIndex: waterOld,
           newIndex: waterNew,
         },
-        parking: `${parkingAmount.toLocaleString("vi-VN")}đ`,
-        internet: `${internetAmount.toLocaleString("vi-VN")}đ`,
-        garbage: `${garbageAmount.toLocaleString("vi-VN")}đ`,
-        otherServices: `${otherServicesAmount.toLocaleString("vi-VN")}đ`
+        parking: formatCurrency(parkingAmount),
+        internet: formatCurrency(internetAmount),
+        garbage: formatCurrency(garbageAmount),
+        otherServices: formatCurrency(otherServicesAmount)
       }
     });
   };
@@ -381,7 +382,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <>
-            <GradientHero icon="receipt-outline" label="TỔNG GIÁ TRỊ HÓA ĐƠN" value={`${invoices.reduce((sum, invoice) => sum + (invoice.totalAmount || 0), 0).toLocaleString("vi-VN")}đ`} detail={`${invoices.length} hóa đơn trong hệ thống`} />
+            <GradientHero icon="receipt-outline" label="TỔNG GIÁ TRỊ HÓA ĐƠN" value={formatCurrency(invoices.reduce((sum, invoice) => sum + (invoice.totalAmount || 0), 0))} detail={`${invoices.length} hóa đơn trong hệ thống`} />
 
             {/* Section Header Row — Tầng 3 */}
             <View style={styles.sectionRow}>
@@ -437,7 +438,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
               <Text style={styles.invoicePeriod}>Mã HD: HD-{(item.period || "").replace("/", "")}-{(item._id || "000").substring(0, 3).toUpperCase()}</Text>
               <Text style={styles.roomCode}>Phòng {item.room || item.contractId?.roomId?.roomCode || "N/A"}</Text>
               <Text style={styles.invoicePeriod}>Kỳ hóa đơn: {item.period}</Text>
-              <Text style={styles.invoiceAmount}>Tổng tiền: {item.totalAmount?.toLocaleString("vi-VN")}đ</Text>
+              <Text style={styles.invoiceAmount}>Tổng tiền: {formatCurrency(item.totalAmount)}</Text>
               <Text style={styles.invoiceSub}>Người thuê: {item.tenant || item.contractId?.tenantId?.fullName || "N/A"}</Text>
             </View>
             <View style={{ alignItems: "flex-end" }}>
@@ -530,7 +531,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
                       <TextInput
                         style={styles.input}
                         value={elecOld}
-                        onChangeText={setElecOld}
+                        onChangeText={(value) => setElecOld(formatNumberInput(value))}
                         keyboardType="numeric"
                       />
                     </View>
@@ -539,7 +540,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
                       <TextInput
                         style={styles.input}
                         value={elecNew}
-                        onChangeText={setElecNew}
+                        onChangeText={(value) => setElecNew(formatNumberInput(value))}
                         keyboardType="numeric"
                       />
                     </View>
@@ -552,7 +553,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
                       <TextInput
                         style={styles.input}
                         value={waterOld}
-                        onChangeText={setWaterOld}
+                        onChangeText={(value) => setWaterOld(formatNumberInput(value))}
                         keyboardType="numeric"
                       />
                     </View>
@@ -561,7 +562,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
                       <TextInput
                         style={styles.input}
                         value={waterNew}
-                        onChangeText={setWaterNew}
+                        onChangeText={(value) => setWaterNew(formatNumberInput(value))}
                         keyboardType="numeric"
                       />
                     </View>

@@ -10,7 +10,7 @@ import { adminService } from "../services/adminService";
 import { invoiceService } from "../services/invoiceService";
 import { contractService } from "../services/contractService";
 import { repairService } from "../services/repairService";
-import { formatPhone } from "../utils/formatters";
+import { formatCurrency, formatPhone } from "../utils/formatters";
 
 const STORAGE_KEY = "@trohub_notifications";
 const READ_KEY = "@trohub_read_notifications";
@@ -72,7 +72,7 @@ export default function NotificationsScreen({ onBack, onNavigate }: Props) {
               id,
               type: "invoice",
               title: inv.status === "Quá hạn" || inv.status === 2 ? `Hóa đơn QUÁ HẠN - Phòng ${roomCode}` : `Hóa đơn chưa thu - Phòng ${roomCode}`,
-              content: `Kỳ ${inv.period}: ${(inv.totalAmount || 0).toLocaleString("vi-VN")}đ - Hạn đóng: ${inv.dueDate ? new Date(inv.dueDate).toLocaleDateString("vi-VN") : "N/A"}`,
+              content: `Kỳ ${inv.period}: ${formatCurrency(inv.totalAmount)} - Hạn đóng: ${inv.dueDate ? new Date(inv.dueDate).toLocaleDateString("vi-VN") : "N/A"}`,
               isRead: readIds.includes(id),
               createdAt: inv.createdAt || new Date().toISOString()
             });
@@ -161,7 +161,7 @@ export default function NotificationsScreen({ onBack, onNavigate }: Props) {
               id,
               type: "invoice",
               title: `Hóa đơn đến hạn thanh toán`,
-              content: `Kỳ ${inv.period}: ${(inv.totalAmount || 0).toLocaleString("vi-VN")}đ - Hạn đóng: ${inv.dueDate ? new Date(inv.dueDate).toLocaleDateString("vi-VN") : "N/A"}`,
+              content: `Kỳ ${inv.period}: ${formatCurrency(inv.totalAmount)} - Hạn đóng: ${inv.dueDate ? new Date(inv.dueDate).toLocaleDateString("vi-VN") : "N/A"}`,
               isRead: readIds.includes(id),
               createdAt: inv.createdAt || new Date().toISOString()
             });

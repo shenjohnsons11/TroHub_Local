@@ -12,6 +12,7 @@ import { getRealtimeGreeting } from "../utils/dateHelpers";
 import MiniCalendarPopover from "../components/MiniCalendarPopover";
 import TroHubWidgetView from "../components/widgets/TroHubWidgetView";
 import { notificationService } from "../services/notificationService";
+import { formatCurrency } from "../utils/formatters";
 
 type Props = { profile?: UserProfile; onNavigate: (tab: any, params?: any) => void; onLogout: () => void };
 
@@ -86,7 +87,7 @@ export default function AdminDashboardScreen({ profile, onNavigate }: Props) {
       </View>
 
       <AnimatedEntry>
-        <GradientHero icon="wallet-outline" label="DOANH THU ĐÃ THU TRONG KỲ" value={`${(stats?.totalRevenue || 0).toLocaleString("vi-VN")}đ`} detail={`${stats?.occupiedRooms || 0}/${stats?.totalRooms || 0} phòng đang được thuê · ${occupancyRate}% lấp đầy`} />
+        <GradientHero icon="wallet-outline" label="DOANH THU ĐÃ THU TRONG KỲ" value={formatCurrency(stats?.totalRevenue)} detail={`${stats?.occupiedRooms || 0}/${stats?.totalRooms || 0} phòng đang được thuê · ${occupancyRate}% lấp đầy`} />
       </AnimatedEntry>
 
       <Text style={[styles.sectionTitle, { color: theme.text }]}>Native Home Widget (4x2)</Text>

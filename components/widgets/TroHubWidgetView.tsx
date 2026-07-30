@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "../../contexts/ThemeContext";
 import { WidgetDataSnapshot } from "../../types/WidgetData";
+import { formatCurrency } from "../../utils/formatters";
 
 type WidgetSize = "small" | "medium" | "large";
 
@@ -22,8 +23,8 @@ export default function TroHubWidgetView({ size, data, onNavigate, onScanCamera 
   const subTextColor = isDark ? "#94a3b8" : "#64748b";
   const borderColor = isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.08)";
 
-  const formattedRevenue = `${(data.totalRevenue || 0).toLocaleString("vi-VN")}đ`;
-  const formattedDebt = `${(data.outstandingDebt || 0).toLocaleString("vi-VN")}đ`;
+  const formattedRevenue = formatCurrency(data.totalRevenue);
+  const formattedDebt = formatCurrency(data.outstandingDebt);
 
   if (size === "small") {
     // Small Widget (2x2)
