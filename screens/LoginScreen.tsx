@@ -47,7 +47,7 @@ export default function LoginScreen({ onLogin }: Props) {
   const validateLogin = () => {
     const nextIdentifierError = identifier.trim()
       ? ""
-      : "Vui lòng nhập số điện thoại hoặc tên đăng nhập";
+      : "Vui lòng nhập số điện thoại hoặc Email";
     const nextPasswordError = !password
       ? "Vui lòng nhập mật khẩu"
       : password.length < 6
@@ -189,7 +189,7 @@ export default function LoginScreen({ onLogin }: Props) {
               </Text>
               <Text style={[styles.subtitle, { color: theme.muted }]}>
                 {mode === "login"
-                  ? "Sử dụng số điện thoại / tài khoản để bắt đầu."
+                  ? "Sử dụng số điện thoại hoặc Email để bắt đầu."
                   : "Điền các thông tin để tự tạo tài khoản Khách thuê."}
               </Text>
 
@@ -221,10 +221,13 @@ export default function LoginScreen({ onLogin }: Props) {
               )}
 
               <View style={styles.field}>
-                <Text style={[styles.label, { color: theme.text }]}>Số điện thoại</Text>
+                <Text style={[styles.label, { color: theme.text }]}>
+                  {mode === "login" ? "Số điện thoại hoặc Email" : "Số điện thoại"}
+                </Text>
                 <TextInput
-                  accessibilityLabel="Số điện thoại"
-                  keyboardType="phone-pad"
+                  accessibilityLabel={mode === "login" ? "Số điện thoại hoặc Email" : "Số điện thoại"}
+                  keyboardType={mode === "login" ? "email-address" : "phone-pad"}
+                  autoCapitalize={mode === "login" ? "none" : undefined}
                   editable={!isSubmitting}
                   onChangeText={(value) => {
                     setIdentifier(value);
