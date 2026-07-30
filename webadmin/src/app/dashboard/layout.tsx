@@ -116,6 +116,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <p className="truncate text-xs text-muted-foreground">Chủ trọ</p>
             </div>
           </div>
+          <button
+            type="button"
+            onClick={handleLogout}
+            aria-label="Đăng xuất"
+            title="Đăng xuất"
+            className="flex min-h-10 w-full items-center justify-center gap-2 rounded-[12px] text-sm font-bold text-destructive hover:bg-destructive/10"
+          >
+            <LogOut className="size-4" aria-hidden="true" />
+            Đăng xuất
+          </button>
         </div>
       </aside>
 
@@ -135,6 +145,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </div>
               <NotificationBell />
               <ThemeToggle />
+              <button
+                type="button"
+                onClick={handleLogout}
+                aria-label="Đăng xuất"
+                title="Đăng xuất"
+                className="grid size-10 place-items-center rounded-[14px] text-destructive hover:bg-destructive/10"
+              >
+                <LogOut className="size-4" aria-hidden="true" />
+              </button>
             </div>
           </div>
           <nav className="flex gap-1 overflow-x-auto px-3 pb-3 md:hidden" aria-label="Điều hướng chính">

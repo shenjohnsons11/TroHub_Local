@@ -131,7 +131,7 @@ export default function LoginScreen({ onLogin }: Props) {
           idCard: cleanId,
           password,
         });
-        notification.success("Đăng ký tài khoản Khách thuê thành công!");
+        notification.success("Đăng ký tài khoản Người thuê thành công!");
         setMode("login");
         setPassword("");
       } catch (error) {
@@ -185,12 +185,12 @@ export default function LoginScreen({ onLogin }: Props) {
             >
               <Text style={[styles.eyebrow, { color: theme.primary }]}>TRO HUB</Text>
               <Text style={[styles.title, { color: theme.text }]}>
-                {mode === "login" ? "Đăng nhập" : "Đăng ký Khách thuê"}
+                {mode === "login" ? "Đăng nhập" : "Đăng ký Người thuê"}
               </Text>
               <Text style={[styles.subtitle, { color: theme.muted }]}>
                 {mode === "login"
                   ? "Sử dụng số điện thoại hoặc Email để bắt đầu."
-                  : "Điền các thông tin để tự tạo tài khoản Khách thuê."}
+                  : "Điền các thông tin để tự tạo tài khoản Người thuê."}
               </Text>
 
               {mode === "register" && (
@@ -360,7 +360,7 @@ export default function LoginScreen({ onLogin }: Props) {
               <View style={styles.toggleContainer}>
                 {mode === "login" ? (
                   <Pressable onPress={() => { setMode("register"); setIdentifierError(""); setPasswordError(""); }}>
-                    <Text style={[styles.toggleText, { color: theme.primary }]}>Đăng ký tài khoản Khách thuê</Text>
+                    <Text style={[styles.toggleText, { color: theme.primary }]}>Đăng ký tài khoản Người thuê</Text>
                   </Pressable>
                 ) : (
                   <Pressable onPress={() => { setMode("login"); setIdentifierError(""); setPasswordError(""); }}>
@@ -377,8 +377,8 @@ export default function LoginScreen({ onLogin }: Props) {
               >
                 <Text style={[styles.accountNoticeText, { color: theme.text }]}>
                   {mode === "login" 
-                    ? "Chưa có tài khoản? Khách thuê có thể tự đăng ký ở trên, hoặc được tạo bởi Chủ trọ."
-                    : "Hệ thống bảo mật dữ liệu Khách thuê theo tiêu chuẩn mã hóa SSL/TLS."}
+                    ? "Chưa có tài khoản? Người thuê có thể tự đăng ký ở trên, hoặc được tạo bởi Chủ trọ."
+                    : "Hệ thống bảo mật dữ liệu Người thuê theo tiêu chuẩn mã hóa SSL/TLS."}
                 </Text>
               </View>
             </View>
