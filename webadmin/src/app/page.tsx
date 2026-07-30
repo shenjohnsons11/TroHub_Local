@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { TroHubLogo } from "@/components/trohub-logo";
 import { fetchAPI } from "@/lib/api";
+import { formatPhone, unformatDigits } from "@/lib/formatters";
 import { useNotification } from "@/hooks/use-notification";
 import { getNotificationMessage } from "@/lib/notification-messages";
 import {
@@ -127,7 +128,7 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const phoneClean = identifier.replace(/\D/g, "");
+      const phoneClean = unformatDigits(identifier);
       if (phoneClean.length !== 10) {
         setError("Số điện thoại phải gồm đúng 10 chữ số!");
         setLoading(false);
@@ -332,8 +333,8 @@ export default function LoginPage() {
                     id="phone"
                     name="phone"
                     value={identifier}
-                    onChange={(event) => setIdentifier(event.target.value)}
-                    placeholder="Ví dụ: 0901234567"
+                    onChange={(event) => setIdentifier(formatPhone(event.target.value))}
+                    placeholder="Ví dụ: 0901.234.567"
                     required
                     className="h-12 rounded-[16px] bg-background px-4 text-base placeholder:text-muted-foreground focus-visible:ring-primary"
                   />
