@@ -12,6 +12,11 @@ const accountSchema = new mongoose.Schema({
     linkedLandlords: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Account' }], // Mảng ID các chủ trọ liên kết
     pendingLandlords: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Account' }], // Mảng ID các chủ trọ gửi lời mời chưa được chấp nhận
     mustChangePassword: { type: Boolean, default: false }, // Yêu cầu đổi mật khẩu trong lần đăng nhập đầu tiên
+    passwordResetOtpHash: { type: String, select: false },
+    passwordResetOtpExpiresAt: { type: Date, select: false },
+    passwordResetOtpAttempts: { type: Number, default: 0, select: false },
+    passwordResetOtpSentAt: { type: Date, select: false },
+    passwordResetNonce: { type: String, select: false },
     bankId: { type: String, default: "" }, // Tên rút gọn ngân hàng (VD: VCB, MB, TCB)
     bankAccountNo: { type: String, default: "" }, // Số tài khoản
     bankAccountName: { type: String, default: "" } // Tên chủ tài khoản
