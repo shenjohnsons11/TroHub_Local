@@ -92,7 +92,7 @@ export default function LoginPage() {
     try {
       const data = await fetchAPI("/auth/login", {
         method: "POST",
-        body: JSON.stringify({ username: identifier.trim(), password }),
+        body: JSON.stringify({ identifier: identifier.trim(), password }),
       });
 
       if (data.success) {
@@ -112,7 +112,7 @@ export default function LoginPage() {
     } catch (caughtError: unknown) {
       const message = getNotificationMessage(
         caughtError,
-        "Số điện thoại, tên đăng nhập hoặc mật khẩu không đúng.",
+        "Số điện thoại, Email hoặc mật khẩu không đúng.",
       );
       setError(message);
       notification.error(message, { title: "Đăng nhập thất bại" });
@@ -234,7 +234,7 @@ export default function LoginPage() {
               <form onSubmit={handleLogin} className="space-y-5">
                 <div className="space-y-2">
                   <Label htmlFor="identifier" className="font-bold text-foreground">
-                    Số điện thoại hoặc tên đăng nhập
+                    Số điện thoại hoặc Email
                   </Label>
                   <Input
                     id="identifier"
@@ -244,12 +244,12 @@ export default function LoginPage() {
                     autoCorrect="off"
                     value={identifier}
                     onChange={(event) => setIdentifier(event.target.value)}
-                    placeholder="Ví dụ: 0901234567 hoặc nguyenvana"
+                    placeholder="Ví dụ: 0901234567 hoặc email@example.com"
                     required
                     className="h-12 rounded-[16px] bg-background px-4 text-base placeholder:text-muted-foreground focus-visible:ring-primary"
                   />
                   <p className="text-sm leading-relaxed text-muted-foreground">
-                    Tài khoản email cũ vẫn có thể đăng nhập bình thường.
+                    Nhập SĐT hoặc Email đã đăng ký.
                   </p>
                 </div>
 
