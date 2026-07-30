@@ -45,7 +45,7 @@ function getCategoryConfig(type: string) {
         icon: Users,
         colorClass: "text-blue-600 dark:text-blue-400",
         bgClass: "bg-blue-500/10 border border-blue-500/20",
-        badgeText: "Khách thuê",
+        badgeText: "Người thuê",
       };
     case "utility":
       return {
@@ -125,7 +125,7 @@ export function NotificationBell() {
               id,
               type: "contract",
               title,
-              content: `Phòng ${roomCode} - Khách thuê: ${tenantName}`,
+              content: `Phòng ${roomCode} - Người thuê: ${tenantName}`,
               isRead: readIds.includes(id),
               createdAt: con.createdAt || new Date().toISOString()
             });
@@ -161,7 +161,7 @@ export function NotificationBell() {
             dbNotifs.push({
               id,
               type: "tenant",
-              title: `Khách thuê chưa liên kết App: ${t.fullName}`,
+              title: `Người thuê chưa liên kết App: ${t.fullName}`,
               content: `SĐT: ${t.phone} - Cần gửi lời mời Zalo/SMS để tải ứng dụng.`,
               isRead: readIds.includes(id),
               createdAt: t.createdAt || new Date().toISOString()

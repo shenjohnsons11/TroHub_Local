@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, FlatList, Pressable, TextInput, Modal, KeyboardAvoidingView, Platform, ScrollView, Alert, Linking } from "react-native";
+import { View, Text, StyleSheet, FlatList, Pressable, TextInput, Modal, KeyboardAvoidingView, Platform, ScrollView, Linking } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { adminService, AdminTenant, AdminRoom } from "../services/adminService";
 import { useAppTheme } from "../contexts/ThemeContext";
@@ -36,37 +36,24 @@ export default function AdminTenantsScreen() {
   const [idCardError, setIdCardError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const handleSendInvite = (tenant: AdminTenant) => {
+  const handleSendInvite = async (tenant: AdminTenant) => {
     const rawPhone = tenant.phone ? String(tenant.phone).replace(/\D/g, "") : "";
-    Alert.alert(
-      "✈️ Gửi lời mời tải App",
-      `Chọn phương thức gửi lời mời tham gia TroHub cho ${tenant.fullName} (${rawPhone}):`,
-      [
-        {
-          text: "💬 Gửi qua Zalo",
-          onPress: async () => {
-            const url = `https://zalo.me/${rawPhone}`;
-            const supported = await Linking.canOpenURL(url);
-            if (supported) {
-              await Linking.openURL(url);
-            } else {
-              notification.info(`Mở Zalo tới SĐT: ${rawPhone}`);
-            }
-          },
-        },
-        {
-          text: "📱 Gửi qua SMS",
-          onPress: async () => {
-            const msg = encodeURIComponent(`Xin chao ${tenant.fullName}, Chu tro moi ban tai App TroHub de theo doi hop dong va hoa don: https://trohub.app/download`);
-            const url = `sms:${rawPhone}?body=${msg}`;
-            await Linking.openURL(url).catch(() => {
-              notification.info(`Mở SMS tới SĐT: ${rawPhone}`);
-            });
-          },
-        },
-        { text: "Hủy", style: "cancel" },
-      ]
-    );
+    const useZalo = await notification.confirm({
+      title: "Gửi lời mời tải App",
+      message: `Gửi lời mời TroHub cho ${tenant.fullName} (${rawPhone}) qua Zalo hoặc SMS?`,
+      confirmText: "Zalo",
+      cancelText: "SMS",
+    });
+    if (useZalo) {
+      const url = `https://zalo.me/${rawPhone}`;
+      if (await Linking.canOpenURL(url)) await Linking.openURL(url);
+      else notification.info(`Mở Zalo tới SĐT: ${rawPhone}`);
+      return;
+    }
+    const msg = encodeURIComponent(`Xin chao ${tenant.fullName}, Chu tro moi ban tai App TroHub de theo doi hop dong va hoa don: https://trohub.app/download`);
+    await Linking.openURL(`sms:${rawPhone}?body=${msg}`).catch(() => {
+      notification.info(`Mở SMS tới SĐT: ${rawPhone}`);
+    });
   };
 
   const loadData = async () => {
@@ -119,7 +106,7 @@ export default function AdminTenantsScreen() {
         setStep(1);
         notification.info("Khách hàng mới chưa có tài khoản. Hãy điền tiếp thông tin để tạo mới.");
       } else {
-        notification.error(msg || "Tra cứu khách thuê thất bại!");
+        notification.error(msg || "Tra cứu Người thuê thất bại!");
       }
     } finally {
       setSubmitting(false);
@@ -185,7 +172,7 @@ export default function AdminTenantsScreen() {
             <View style={styles.sectionRow}>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.sectionTitle, { color: theme.text }]}>Quản lý người thuê</Text>
-                <Text style={[styles.sectionSub, { color: theme.muted }]}>Danh sách khách thuê & liên kết ứng dụng</Text>
+                <Text style={[styles.sectionSub, { color: theme.muted }]}>Danh sách Người thuê & liên kết ứng dụng</Text>
               </View>
               <Pressable
                 accessibilityRole="button"
@@ -312,7 +299,7 @@ export default function AdminTenantsScreen() {
           
           {step === 0 ? (
             <Field 
-              label="Số điện thoại của Khách thuê" 
+              label="Số điện thoại của Người thuê"
               value={phone} 
               setValue={(text: string) => { 
                 let value = text.replace(/\D/g, "").slice(0, 10); 

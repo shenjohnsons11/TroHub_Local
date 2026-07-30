@@ -280,6 +280,23 @@
   content: "";
   background: linear-gradient(180deg, transparent 50%, rgb(4 16 14 / 38%));
 }
+.app-loading-frame {
+  animation: app-loading-pulse 1.4s ease-in-out infinite alternate;
+}
+
+.app-loading-track {
+  min-height: 3rem;
+}
+
+@keyframes app-loading-pulse {
+  from { opacity: 0.55; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-loading-frame { animation: none; }
+}
+
 .login-form-panel {
   box-shadow: var(--calm-shadow);
 }

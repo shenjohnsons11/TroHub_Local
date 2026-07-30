@@ -94,18 +94,29 @@ export default function HomeScreen({ refreshKey, onNavigate, onLogout }: Props) 
     >
       <View style={styles.brandRow}>
         <TroHubLogo compact />
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => onNavigate("notifications")}
-          style={styles.bellButton}
-        >
-          <Ionicons name="notifications-outline" size={24} color={theme.text} />
-          {unreadCount > 0 && (
-            <View style={styles.bellBadge}>
-              <Text style={styles.bellBadgeText}>{unreadCount}</Text>
-            </View>
-          )}
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Đăng xuất"
+            onPress={onLogout}
+            style={styles.logoutButton}
+          >
+            <Ionicons name="log-out-outline" size={20} color={theme.warningForeground} />
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Thông báo"
+            onPress={() => onNavigate("notifications")}
+            style={styles.bellButton}
+          >
+            <Ionicons name="notifications-outline" size={24} color={theme.text} />
+            {unreadCount > 0 && (
+              <View style={styles.bellBadge}>
+                <Text style={styles.bellBadgeText}>{unreadCount}</Text>
+              </View>
+            )}
+          </Pressable>
+        </View>
       </View>
 
       <View style={styles.homeHero}>
@@ -255,6 +266,11 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSh
     justifyContent: "space-between",
     marginBottom: 26,
     marginTop: 10,
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
   bellButton: {
     width: 44,
