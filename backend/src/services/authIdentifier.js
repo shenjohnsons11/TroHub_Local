@@ -8,6 +8,9 @@ function looksLikeFormattedPhone(identifier) {
 
 function normalizeLoginIdentifier(value) {
     const identifier = cleanIdentifier(value);
+    if (identifier.includes('@')) {
+        return identifier.toLowerCase();
+    }
     if (!identifier || !looksLikeFormattedPhone(identifier)) {
         return identifier;
     }
@@ -23,7 +26,7 @@ function buildLoginLookup(value) {
         $or: [
             { phone: normalizedIdentifier },
             { username: originalIdentifier },
-            { email: originalIdentifier },
+            { email: normalizedIdentifier },
         ],
     };
 }
