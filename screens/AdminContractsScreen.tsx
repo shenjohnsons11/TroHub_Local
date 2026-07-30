@@ -36,7 +36,12 @@ import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
 import ProgressStepper from "../components/ui/ProgressStepper";
 import { draftContractService, DraftContract } from "../services/draftContractService";
 import CheckoutModal from "../components/modals/CheckoutModal";
-import { formatPhone } from "../utils/formatters";
+import {
+  formatCurrency,
+  formatNumberInput,
+  formatPhone,
+  unformatNumber,
+} from "../utils/formatters";
 
 type Props = { params?: any };
 type IconName = React.ComponentProps<typeof Ionicons>["name"];
@@ -133,8 +138,8 @@ export default function AdminContractsScreen({ params }: Props) {
     setSelectedRoomId(roomId);
     const room = rooms.find((item) => item._id === roomId);
     if (room) {
-      setFixedRent(String(room.defaultRentPrice || 0));
-      setFixedDeposit(String(room.defaultDeposit || 0));
+      setFixedRent(formatNumberInput(room.defaultRentPrice));
+      setFixedDeposit(formatNumberInput(room.defaultDeposit));
     }
   };
 
@@ -156,10 +161,10 @@ export default function AdminContractsScreen({ params }: Props) {
       return;
     }
     const meterTerms = {
-      electricityPrice: Number(services.electricity.price),
-      waterPrice: Number(services.water.price),
-      initialElectricity: Number(initialElectricity),
-      initialWater: Number(initialWater),
+      electricityPrice: unformatNumber(services.electricity.price),
+      waterPrice: unformatNumber(services.water.price),
+      initialElectricity: unformatNumber(initialElectricity),
+      initialWater: unformatNumber(initialWater),
     };
     if (
       !initialElectricity.trim()
@@ -179,8 +184,8 @@ export default function AdminContractsScreen({ params }: Props) {
         tenantId: selectedTenantId,
         startDate: startDateIso,
         endDate: endDateIso,
-        fixedRentPrice: Number(fixedRent),
-        fixedDeposit: Number(fixedDeposit),
+        fixedRentPrice: unformatNumber(fixedRent),
+        fixedDeposit: unformatNumber(fixedDeposit),
         ...meterTerms,
       });
       notification.success("Tạo hợp đồng nháp thành công! Chờ người thuê ký xác nhận.");
@@ -381,8 +386,8 @@ export default function AdminContractsScreen({ params }: Props) {
                     </Text>
                   </View>
                 </View>
-                <Text style={styles.money}>{item.fixedRentPrice?.toLocaleString("vi-VN")}đ</Text>
-                <Text style={styles.moneyCaption}>Tiền thuê mỗi tháng · Cọc {item.fixedDeposit?.toLocaleString("vi-VN")}đ</Text>
+                <Text style={styles.money}>{formatCurrency(item.fixedRentPrice)}</Text>
+                <Text style={styles.moneyCaption}>Tiền thuê mỗi tháng · Cọc {formatCurrency(item.fixedDeposit)}</Text>
                 <View style={styles.metaRow}>
                   <Ionicons name="calendar-outline" size={16} color={theme.muted} />
                   <Text style={styles.contractDates}>
@@ -573,10 +578,10 @@ export default function AdminContractsScreen({ params }: Props) {
                   <View style={styles.card}>
                     <SectionTitle icon="document-text-outline" title="Điều khoản thuê" theme={theme} />
                     <Field label="Giá thuê (VNĐ/tháng)" required styles={styles}>
-                      <TextInput style={styles.input} value={fixedRent} onChangeText={setFixedRent} keyboardType="numeric" placeholder="VD: 3500000" placeholderTextColor={theme.muted} />
+                      <TextInput style={styles.input} value={fixedRent} onChangeText={(value) => setFixedRent(formatNumberInput(value))} keyboardType="numeric" placeholder="VD: 3.500.000" placeholderTextColor={theme.muted} />
                     </Field>
                     <Field label="Tiền cọc (VNĐ)" required styles={styles}>
-                      <TextInput style={styles.input} value={fixedDeposit} onChangeText={setFixedDeposit} keyboardType="numeric" placeholder="VD: 3500000" placeholderTextColor={theme.muted} />
+                      <TextInput style={styles.input} value={fixedDeposit} onChangeText={(value) => setFixedDeposit(formatNumberInput(value))} keyboardType="numeric" placeholder="VD: 3.500.000" placeholderTextColor={theme.muted} />
                     </Field>
                     <View style={styles.inputRow}>
                       <View style={styles.inputColumn}>
@@ -667,7 +672,7 @@ export default function AdminContractsScreen({ params }: Props) {
                           <TextInput
                             style={[styles.input, !service.enabled && styles.inputDisabled, styles.serviceInput]}
                             value={service.price}
-                            onChangeText={(price) => setServices({ ...services, [definition.key]: { ...service, price } })}
+                            onChangeText={(value) => setServices({ ...services, [definition.key]: { ...service, price: formatNumberInput(value) } })}
                             editable={service.enabled}
                             keyboardType="numeric"
                           />
@@ -675,13 +680,13 @@ export default function AdminContractsScreen({ params }: Props) {
                         </View>
                         {definition.key === "electricity" ? (
                           <View style={styles.serviceInputRow}>
-                            <TextInput style={[styles.input, styles.serviceInput]} value={initialElectricity} onChangeText={setInitialElectricity} keyboardType="numeric" placeholder="Chỉ số điện đầu" placeholderTextColor={theme.muted} />
+                            <TextInput style={[styles.input, styles.serviceInput]} value={initialElectricity} onChangeText={(value) => setInitialElectricity(formatNumberInput(value))} keyboardType="numeric" placeholder="Chỉ số điện đầu" placeholderTextColor={theme.muted} />
                             <Text style={styles.serviceUnit}>kWh đầu</Text>
                           </View>
                         ) : null}
                         {definition.key === "water" ? (
                           <View style={styles.serviceInputRow}>
-                            <TextInput style={[styles.input, styles.serviceInput]} value={initialWater} onChangeText={setInitialWater} keyboardType="numeric" placeholder="Chỉ số nước đầu" placeholderTextColor={theme.muted} />
+                            <TextInput style={[styles.input, styles.serviceInput]} value={initialWater} onChangeText={(value) => setInitialWater(formatNumberInput(value))} keyboardType="numeric" placeholder="Chỉ số nước đầu" placeholderTextColor={theme.muted} />
                             <Text style={styles.serviceUnit}>m³ đầu</Text>
                           </View>
                         ) : null}
@@ -697,8 +702,8 @@ export default function AdminContractsScreen({ params }: Props) {
                     <SectionTitle icon="create-outline" title="Ký & xác nhận" subtitle="Kiểm tra thông tin trước khi tạo bản nháp." theme={theme} />
                     <PreviewRow label="Người thuê" value={tenants.find((item) => item._id === selectedTenantId)?.fullName || "Chưa chọn"} styles={styles} />
                     <PreviewRow label="Phòng" value={rooms.find((item) => item._id === selectedRoomId)?.roomCode || "Chưa chọn"} styles={styles} />
-                    <PreviewRow label="Giá thuê" value={`${Number(fixedRent || 0).toLocaleString("vi-VN")}đ/tháng`} styles={styles} />
-                    <PreviewRow label="Tiền cọc" value={`${Number(fixedDeposit || 0).toLocaleString("vi-VN")}đ`} styles={styles} />
+                    <PreviewRow label="Giá thuê" value={`${formatCurrency(fixedRent)}/tháng`} styles={styles} />
+                    <PreviewRow label="Tiền cọc" value={formatCurrency(fixedDeposit)} styles={styles} />
                     <PreviewRow label="Thời hạn" value={`${startDate} → ${endDate}`} styles={styles} />
                   </View>
                   <Pressable

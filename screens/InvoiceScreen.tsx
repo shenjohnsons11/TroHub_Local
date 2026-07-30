@@ -19,6 +19,7 @@ import GradientHero from "../components/ui/GradientHero";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
 import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
 import { calculateUnpaidTotal } from "../utils/invoicePresentation";
+import { formatCurrency } from "../utils/formatters";
 
 type FilterType = "all" | "unpaid" | "paid";
 
@@ -117,7 +118,7 @@ export default function InvoiceScreen({ params }: Props) {
                   icon="receipt-outline"
                   label="TỔNG CẦN THANH TOÁN"
                   onAction={() => openPaymentModal(unpaidInvoices[0])}
-                  value={`${new Intl.NumberFormat("vi-VN").format(unpaidTotal)}đ`}
+                  value={formatCurrency(unpaidTotal)}
                 />
               </AnimatedEntry>
             ) : null}

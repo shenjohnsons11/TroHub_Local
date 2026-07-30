@@ -20,6 +20,7 @@ import AppButton from "../components/ui/AppButton";
 import GradientHero from "../components/ui/GradientHero";
 import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
 import ProgressStepper from "../components/ui/ProgressStepper";
+import { formatCurrency, formatNumberInput, unformatNumber } from "../utils/formatters";
 
 type IconName = React.ComponentProps<typeof Ionicons>["name"];
 
@@ -51,8 +52,8 @@ export default function BulkInvoiceScreen({ onNavigate }: { onNavigate: (tab: an
       setData((res || []).map((item) => ({
         ...item,
         selected: true,
-        electricityNew: item.electricityDraft !== undefined ? String(item.electricityDraft) : "",
-        waterNew: item.waterDraft !== undefined ? String(item.waterDraft) : "",
+        electricityNew: item.electricityDraft !== undefined ? formatNumberInput(item.electricityDraft) : "",
+        waterNew: item.waterDraft !== undefined ? formatNumberInput(item.waterDraft) : "",
       })));
     } catch (error) {
       notification.error(getNotificationMessage(error, "Không thể tải dữ liệu hóa đơn."));
@@ -63,7 +64,7 @@ export default function BulkInvoiceScreen({ onNavigate }: { onNavigate: (tab: an
 
   const handleInputChange = (index: number, field: string, value: string) => {
     const newData = [...data];
-    newData[index][field] = value ? Number(value) : "";
+    newData[index][field] = formatNumberInput(value);
     setData(newData);
   };
 
@@ -80,12 +81,12 @@ export default function BulkInvoiceScreen({ onNavigate }: { onNavigate: (tab: an
 
   const calculateTotal = (item: any) => {
     const eOld = item.electricityOld || 0;
-    const eNew = item.electricityNew || 0;
+    const eNew = unformatNumber(item.electricityNew);
     const wOld = item.waterOld || 0;
-    const wNew = item.waterNew || 0;
+    const wNew = unformatNumber(item.waterNew);
     const eAmount = Math.max(0, eNew - eOld) * (item.electricityPrice || 0);
     const wAmount = Math.max(0, wNew - wOld) * (item.waterPrice || 0);
-    return (item.roomAmount || 0) + (item.services || 0) + eAmount + wAmount;
+    return unformatNumber(item.roomAmount) + unformatNumber(item.services) + eAmount + wAmount;
   };
 
   const handleSubmit = async () => {
@@ -99,13 +100,13 @@ export default function BulkInvoiceScreen({ onNavigate }: { onNavigate: (tab: an
     for (const item of selectedData) {
       if (item.electricityPrice > 0) {
         if (item.electricityNew === undefined || item.electricityNew === "") hasError = true;
-        if (Number(item.electricityNew) < item.electricityOld) hasError = true;
+        if (unformatNumber(item.electricityNew) < item.electricityOld) hasError = true;
       } else {
         item.electricityNew = item.electricityOld;
       }
       if (item.waterPrice > 0) {
         if (item.waterNew === undefined || item.waterNew === "") hasError = true;
-        if (Number(item.waterNew) < item.waterOld) hasError = true;
+        if (unformatNumber(item.waterNew) < item.waterOld) hasError = true;
       } else {
         item.waterNew = item.waterOld;
       }
@@ -128,7 +129,14 @@ export default function BulkInvoiceScreen({ onNavigate }: { onNavigate: (tab: an
     setWorkflowStep(3);
     const closeLoading = notification.loading("Đang phát hành hóa đơn...");
     try {
-      await invoiceService.bulkCreate({ invoices: selectedData });
+      const invoices = selectedData.map((item) => ({
+        ...item,
+        roomAmount: unformatNumber(item.roomAmount),
+        services: unformatNumber(item.services),
+        electricityNew: unformatNumber(item.electricityNew),
+        waterNew: unformatNumber(item.waterNew),
+      }));
+      await invoiceService.bulkCreate({ invoices });
       notification.success("Đã tạo hóa đơn hàng loạt.");
       onNavigate("invoice");
     } catch (error) {
@@ -229,7 +237,7 @@ export default function BulkInvoiceScreen({ onNavigate }: { onNavigate: (tab: an
                   </Pressable>
                 </View>
 
-                <Text style={styles.totalValue}>{total.toLocaleString("vi-VN")}đ</Text>
+                <Text style={styles.totalValue}>{formatCurrency(total)}</Text>
                 <Text style={styles.totalLabel}>Tổng dự kiến</Text>
 
                 <View style={styles.tintedSection}>
@@ -240,7 +248,7 @@ export default function BulkInvoiceScreen({ onNavigate }: { onNavigate: (tab: an
                         placeholder="Tiền phòng"
                         placeholderTextColor={theme.muted}
                         keyboardType="numeric"
-                        value={item.roomAmount !== undefined ? String(item.roomAmount) : ""}
+                        value={item.roomAmount !== undefined ? formatNumberInput(item.roomAmount) : ""}
                         onChangeText={(value) => handleInputChange(index, "roomAmount", value)}
                       />
                     </InvoiceField>
@@ -250,34 +258,34 @@ export default function BulkInvoiceScreen({ onNavigate }: { onNavigate: (tab: an
                         placeholder="Dịch vụ"
                         placeholderTextColor={theme.muted}
                         keyboardType="numeric"
-                        value={item.services !== undefined ? String(item.services) : ""}
+                        value={item.services !== undefined ? formatNumberInput(item.services) : ""}
                         onChangeText={(value) => handleInputChange(index, "services", value)}
                       />
                     </InvoiceField>
                   </View>
                   <View style={styles.inputRow}>
-                    <InvoiceField label={`Điện cũ · ${item.electricityOld || 0}`} icon="flash-outline" iconColor={theme.primary} styles={styles}>
+                    <InvoiceField label={`Điện cũ · ${formatNumberInput(item.electricityOld) || "0"}`} icon="flash-outline" iconColor={theme.primary} styles={styles}>
                       {item.electricityPrice > 0 ? (
                         <TextInput
                           style={styles.input}
                           placeholder="Điện mới"
                           placeholderTextColor={theme.muted}
                           keyboardType="numeric"
-                          value={item.electricityNew !== undefined ? String(item.electricityNew) : ""}
+                          value={item.electricityNew !== undefined ? formatNumberInput(item.electricityNew) : ""}
                           onChangeText={(value) => handleInputChange(index, "electricityNew", value)}
                         />
                       ) : (
                         <Text style={styles.noMeterText}>Không tính theo khối</Text>
                       )}
                     </InvoiceField>
-                    <InvoiceField label={`Nước cũ · ${item.waterOld || 0}`} icon="water-outline" iconColor={theme.primary} styles={styles}>
+                    <InvoiceField label={`Nước cũ · ${formatNumberInput(item.waterOld) || "0"}`} icon="water-outline" iconColor={theme.primary} styles={styles}>
                       {item.waterPrice > 0 ? (
                         <TextInput
                           style={styles.input}
                           placeholder="Nước mới"
                           placeholderTextColor={theme.muted}
                           keyboardType="numeric"
-                          value={item.waterNew !== undefined ? String(item.waterNew) : ""}
+                          value={item.waterNew !== undefined ? formatNumberInput(item.waterNew) : ""}
                           onChangeText={(value) => handleInputChange(index, "waterNew", value)}
                         />
                       ) : (

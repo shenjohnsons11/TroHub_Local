@@ -1,6 +1,7 @@
 import { UtilityRecord } from "../types/UtilityRecord";
 import { apiClient } from "./apiClient";
 import { authService } from "./authService";
+import { formatCurrency } from "../utils/formatters";
 
 type ApiService = {
   _id: string;
@@ -31,11 +32,6 @@ type InvoiceListResponse = {
   success: boolean;
   data: ApiInvoice[];
   message?: string;
-};
-
-const formatMoney = (value?: number) => {
-  const amount = value || 0;
-  return `${amount.toLocaleString("vi-VN")}đ`;
 };
 
 const getServiceName = (detail: ApiInvoiceDetail) => {
@@ -74,8 +70,8 @@ const mapInvoiceToUtility = (invoice: ApiInvoice): UtilityRecord => {
     waterNew: waterDetail?.newIndex || 0,
     waterUsed: waterDetail?.quantity || 0,
 
-    electricMoney: formatMoney(electricDetail?.amount),
-    waterMoney: formatMoney(waterDetail?.amount),
+    electricMoney: formatCurrency(electricDetail?.amount),
+    waterMoney: formatCurrency(waterDetail?.amount),
   };
 };
 

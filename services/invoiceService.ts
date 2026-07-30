@@ -1,6 +1,7 @@
 import { Invoice } from "../types/Invoice";
 import { apiClient } from "./apiClient";
 import { authService } from "./authService";
+import { formatCurrency } from "../utils/formatters";
 
 type ApiService = {
   _id: string;
@@ -110,11 +111,6 @@ type PaymentStatusResponse = {
   };
 };
 
-const formatMoney = (value?: number) => {
-  const amount = value || 0;
-  return `${amount.toLocaleString("vi-VN")}đ`;
-};
-
 const formatDate = (value?: string) => {
   if (!value) return "Không có";
 
@@ -199,7 +195,7 @@ const mapApiInvoiceToInvoice = (apiInvoice: ApiInvoice): Invoice => {
     id: apiInvoice._id,
     month: apiInvoice.period,
     room: apiInvoice.contractId?.roomId?.roomCode || apiInvoice.room || "Chưa rõ",
-    amount: formatMoney(totalAmount),
+    amount: formatCurrency(totalAmount),
     numericAmount: totalAmount,
     status: apiInvoice.status === 2 ? "paid" : "unpaid",
     statusText: apiInvoice.status === 2 ? "Đã thanh toán" : "Chưa thanh toán",
@@ -208,21 +204,21 @@ const mapApiInvoiceToInvoice = (apiInvoice: ApiInvoice): Invoice => {
     bankAccountNo,
     bankAccountName,
     details: {
-      roomFee: formatMoney(roomFee),
+      roomFee: formatCurrency(roomFee),
       electric: {
-        amount: formatMoney(elecAmount),
+        amount: formatCurrency(elecAmount),
         oldIndex: elecOldIndex,
         newIndex: elecNewIndex,
       },
       water: {
-        amount: formatMoney(waterAmount),
+        amount: formatCurrency(waterAmount),
         oldIndex: waterOldIndex,
         newIndex: waterNewIndex,
       },
-      parking: formatMoney(pAmount),
-      internet: formatMoney(iAmount),
-      garbage: formatMoney(gAmount),
-      otherServices: formatMoney(servicesAmount),
+      parking: formatCurrency(pAmount),
+      internet: formatCurrency(iAmount),
+      garbage: formatCurrency(gAmount),
+      otherServices: formatCurrency(servicesAmount),
     },
   };
 };

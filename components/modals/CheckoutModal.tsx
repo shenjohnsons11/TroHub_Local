@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { View, Text, StyleSheet, Modal, TextInput, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import AppButton from "../ui/AppButton";
 import { useAppTheme } from "../../contexts/ThemeContext";
+import { formatNumberInput, unformatNumber } from "../../utils/formatters";
 
 type CheckoutModalProps = {
   visible: boolean;
@@ -18,7 +19,12 @@ export default function CheckoutModal({ visible, onClose, onConfirm, loading }: 
   const [note, setNote] = useState("");
 
   const handleConfirm = () => {
-    onConfirm({ electricityNew, waterNew, deduction, note });
+    onConfirm({
+      electricityNew: String(unformatNumber(electricityNew)),
+      waterNew: String(unformatNumber(waterNew)),
+      deduction: String(unformatNumber(deduction)),
+      note,
+    });
   };
 
   if (!visible) return null;
@@ -36,7 +42,7 @@ export default function CheckoutModal({ visible, onClose, onConfirm, loading }: 
               style={[styles.input, { borderColor: theme.border, color: theme.text }]}
               keyboardType="number-pad"
               value={electricityNew}
-              onChangeText={setElectricityNew}
+              onChangeText={(value) => setElectricityNew(formatNumberInput(value))}
               placeholder="VD: 1542"
               placeholderTextColor={theme.muted}
             />
@@ -46,7 +52,7 @@ export default function CheckoutModal({ visible, onClose, onConfirm, loading }: 
               style={[styles.input, { borderColor: theme.border, color: theme.text }]}
               keyboardType="number-pad"
               value={waterNew}
-              onChangeText={setWaterNew}
+              onChangeText={(value) => setWaterNew(formatNumberInput(value))}
               placeholder="VD: 341"
               placeholderTextColor={theme.muted}
             />
@@ -56,7 +62,7 @@ export default function CheckoutModal({ visible, onClose, onConfirm, loading }: 
               style={[styles.input, { borderColor: theme.border, color: theme.text }]}
               keyboardType="number-pad"
               value={deduction}
-              onChangeText={setDeduction}
+              onChangeText={(value) => setDeduction(formatNumberInput(value))}
               placeholder="0"
               placeholderTextColor={theme.muted}
             />
