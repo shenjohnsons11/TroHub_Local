@@ -11,6 +11,7 @@ import { useNotification } from "@/hooks/use-notification";
 import { fetchAPI } from "@/lib/api";
 import { getNotificationMessage } from "@/lib/notification-messages";
 import { PageHeader } from "@/components/calm-ops/page-header";
+import { formatCurrency, formatNumberInput, unformatNumber } from "@/lib/formatters";
 
 const steps = [
   { label: "Chọn kỳ", icon: CalendarRange },
@@ -38,8 +39,8 @@ export default function UtilitiesPage() {
         const stateInit: Record<string, { electricity: string; water: string }> = {};
         data.data.forEach((p: any) => {
           stateInit[p.contractId] = {
-            electricity: p.electricityDraft ? p.electricityDraft.toString() : "",
-            water: p.waterDraft ? p.waterDraft.toString() : "",
+            electricity: formatNumberInput(p.electricityDraft),
+            water: formatNumberInput(p.waterDraft),
           };
         });
         setUtilitiesState(stateInit);
@@ -58,7 +59,7 @@ export default function UtilitiesPage() {
   const handleUpdateInput = (contractId: string, field: "electricity" | "water", value: string) => {
     setUtilitiesState((prev) => ({
       ...prev,
-      [contractId]: { ...prev[contractId], [field]: value },
+      [contractId]: { ...prev[contractId], [field]: formatNumberInput(value) },
     }));
   };
 
@@ -70,8 +71,8 @@ export default function UtilitiesPage() {
           const inputState = utilitiesState[p.contractId];
           return {
             roomId: p.roomId,
-            draftElectricity: inputState?.electricity,
-            draftWater: inputState?.water,
+            draftElectricity: unformatNumber(inputState?.electricity),
+            draftWater: unformatNumber(inputState?.water),
           };
         })
         .filter((item) => item.draftElectricity || item.draftWater);
@@ -193,14 +194,14 @@ export default function UtilitiesPage() {
               filteredPreviews.map((p) => (
                 <TableRow key={p.contractId}>
                   <TableCell className="font-extrabold">{p.room}</TableCell>
-                  <TableCell className="font-bold">{p.roomAmount.toLocaleString("vi-VN")} đ</TableCell>
+                  <TableCell className="font-bold">{formatCurrency(p.roomAmount)}</TableCell>
                   <TableCell className="text-muted-foreground">{p.electricityOld}</TableCell>
                   <TableCell>
                     <Input
                       aria-label={`Số điện mới phòng ${p.room}`}
                       className="h-9 w-28 bg-accent/45"
                       placeholder="Số mới"
-                      type="number"
+                      inputMode="numeric"
                       value={utilitiesState[p.contractId]?.electricity || ""}
                       onChange={(event) => handleUpdateInput(p.contractId, "electricity", event.target.value)}
                     />
@@ -211,7 +212,7 @@ export default function UtilitiesPage() {
                       aria-label={`Số nước mới phòng ${p.room}`}
                       className="h-9 w-28 bg-accent/45"
                       placeholder="Số mới"
-                      type="number"
+                      inputMode="numeric"
                       value={utilitiesState[p.contractId]?.water || ""}
                       onChange={(event) => handleUpdateInput(p.contractId, "water", event.target.value)}
                     />

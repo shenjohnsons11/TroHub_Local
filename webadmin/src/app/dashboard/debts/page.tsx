@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { PageHeader } from "@/components/calm-ops/page-header";
 import { useNotification } from "@/hooks/use-notification";
 import { fetchAPI } from "@/lib/api";
+import { formatCurrency } from "@/lib/formatters";
 
 interface Debt {
   contractId: string;
@@ -76,7 +77,7 @@ export default function DebtsPage() {
       <div className="grid gap-4 sm:grid-cols-2">
         <Card className="bg-primary text-primary-foreground dark:ring-primary/20">
           <CardHeader><CardTitle className="flex items-center gap-2 text-sm opacity-80"><AlertCircle aria-hidden="true" className="size-4" /> Tổng công nợ hiện tại</CardTitle></CardHeader>
-          <CardContent><p className="text-3xl font-black tracking-[-.04em]">{totalSystemDebt.toLocaleString("vi-VN")} đ</p><p className="mt-2 text-xs font-semibold opacity-70">Từ {debts.length} phòng đang nợ</p></CardContent>
+          <CardContent><p className="text-3xl font-black tracking-[-.04em]">{formatCurrency(totalSystemDebt)}</p><p className="mt-2 text-xs font-semibold opacity-70">Từ {debts.length} phòng đang nợ</p></CardContent>
         </Card>
         <Card>
           <CardHeader><CardTitle className="flex items-center gap-2 text-sm text-muted-foreground"><WalletCards aria-hidden="true" className="size-4 text-primary" /> Hóa đơn chưa thanh toán</CardTitle></CardHeader>
@@ -109,7 +110,7 @@ export default function DebtsPage() {
                 <TableCell className="font-extrabold">{debt.room}</TableCell>
                 <TableCell>{debt.nguoiThue}</TableCell>
                 <TableCell className="text-center"><Badge variant="destructive">{debt.unpaidInvoiceCount} hóa đơn</Badge></TableCell>
-                <TableCell className="text-right text-base font-black text-destructive">{debt.totalDebt.toLocaleString("vi-VN")} đ</TableCell>
+                <TableCell className="text-right text-base font-black text-destructive">{formatCurrency(debt.totalDebt)}</TableCell>
                 <TableCell className="text-right">
                   <Button onClick={() => handleRemind(debt.contractId)} variant="ghost" size="icon" aria-label={`Gửi nhắc nợ phòng ${debt.room}`}>
                     <Bell aria-hidden="true" />

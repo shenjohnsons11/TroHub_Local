@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/calm-ops/page-header";
 import { useNotification } from "@/hooks/use-notification";
 import { fetchAPI } from "@/lib/api";
 import { getNotificationMessage } from "@/lib/notification-messages";
+import { formatCurrency } from "@/lib/formatters";
 
 export default function BillingPolicyPage() {
   const notification = useNotification();
@@ -25,7 +26,7 @@ export default function BillingPolicyPage() {
       .catch((error) => notification.error(getNotificationMessage(error)));
   }, [notification]);
 
-  const preview = useMemo(() => Math.round(3000000 * Number(lateFeeRate || 0) / 100).toLocaleString("vi-VN"), [lateFeeRate]);
+  const preview = useMemo(() => formatCurrency(Math.round(3000000 * Number(lateFeeRate || 0) / 100)), [lateFeeRate]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -59,7 +60,7 @@ export default function BillingPolicyPage() {
         </div>
         <div className="m-6 mt-0 rounded-[20px] bg-accent p-5 text-accent-foreground">
           <p className="flex items-center gap-2 text-sm font-extrabold"><ReceiptText aria-hidden="true" className="size-4 text-primary" /> Xem trước chính sách</p>
-          <p className="mt-3 text-lg font-black">Phạt {preview}đ</p>
+          <p className="mt-3 text-lg font-black">Phạt {preview}</p>
           <p className="mt-1 flex items-center gap-2 text-sm opacity-75"><CalendarClock aria-hidden="true" className="size-4" /> Hóa đơn 3.000.000đ sau {lateFeeGraceDays || 0} ngày ân hạn.</p>
         </div>
         <div className="flex justify-end bg-muted/45 p-5">

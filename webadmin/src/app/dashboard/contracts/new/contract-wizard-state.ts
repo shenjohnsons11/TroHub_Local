@@ -2,6 +2,7 @@ import {
   defaultContractDates,
   validateContractDateRange,
 } from "../../../../../../utils/contractDate";
+import { unformatNumber } from "@/lib/formatters";
 
 export const CONTRACT_STEPS = [
   { id: 1, label: "Chọn phòng" },
@@ -56,8 +57,8 @@ export function validateContractStep(step: number, draft: ContractDraft) {
       errors,
       validateContractDateRange(draft.startDate, draft.endDate),
     );
-    if (!(Number(draft.fixedRentPrice) > 0)) errors.fixedRentPrice = "Tiền thuê phải lớn hơn 0.";
-    if (!(Number(draft.fixedDeposit) >= 0)) errors.fixedDeposit = "Tiền cọc không hợp lệ.";
+    if (!(unformatNumber(draft.fixedRentPrice) > 0)) errors.fixedRentPrice = "Tiền thuê phải lớn hơn 0.";
+    if (!(unformatNumber(draft.fixedDeposit) >= 0)) errors.fixedDeposit = "Tiền cọc không hợp lệ.";
   }
   return errors;
 }

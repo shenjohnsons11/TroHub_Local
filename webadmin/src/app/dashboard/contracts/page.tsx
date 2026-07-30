@@ -11,10 +11,9 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Edit, FileSignature, Plus, Search, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { formatCurrencyInput, parseFormattedNumber } from "@/lib/utils";
 import { useNotification } from "@/hooks/use-notification";
 import { getNotificationMessage } from "@/lib/notification-messages";
-import { formatPhone } from "@/lib/formatters";
+import { formatCurrency, formatNumberInput, formatPhone, unformatNumber } from "@/lib/formatters";
 import { PageHeader } from "@/components/calm-ops/page-header";
 import { addWebNotification } from "@/components/notification-bell";
 
@@ -107,9 +106,9 @@ export default function ContractsPage() {
       await fetchAPI(`/contracts/${checkoutContractId}/checkout`, {
         method: "PUT",
         body: JSON.stringify({
-          finalElectricity: Number(finalElectricity),
-          finalWater: Number(finalWater),
-          deductionAmount: parseFormattedNumber(deductionAmount),
+          finalElectricity: unformatNumber(finalElectricity),
+          finalWater: unformatNumber(finalWater),
+          deductionAmount: unformatNumber(deductionAmount),
           note: checkoutNote
         })
       });
@@ -129,8 +128,8 @@ export default function ContractsPage() {
     setTenantId(contract.tenantId?._id || contract.tenantId?.id || contract.tenantId);
     setStartDate(contract.startDate ? new Date(contract.startDate).toISOString().split("T")[0] : "");
     setEndDate(contract.endDate ? new Date(contract.endDate).toISOString().split("T")[0] : "");
-    setRent(formatCurrencyInput(contract.fixedRentPrice?.toString() || "0"));
-    setDeposit(formatCurrencyInput(contract.fixedDeposit?.toString() || "0"));
+    setRent(formatNumberInput(contract.fixedRentPrice));
+    setDeposit(formatNumberInput(contract.fixedDeposit));
 
     const room = rooms.find(item => (item._id || item.id) === (contract.roomId?._id || contract.roomId?.id || contract.roomId));
     setInitialElectricity(room?.draftElectricity?.toString() || "");
@@ -138,7 +137,7 @@ export default function ContractsPage() {
 
     const preselectedServices = (contract.services || []).map((s: any) => ({
       serviceId: s.serviceId?._id || s.serviceId?.id || s.serviceId,
-      fixedPrice: formatCurrencyInput(s.fixedPrice?.toString() || "0")
+      fixedPrice: formatNumberInput(s.fixedPrice)
     }));
     setSelectedServices(preselectedServices);
     setIsAddOpen(true);
@@ -157,14 +156,14 @@ export default function ContractsPage() {
         tenantId: selectedTenant._id || selectedTenant.id, 
         startDate,
         endDate,
-        fixedRentPrice: parseFormattedNumber(rent),
-        fixedDeposit: parseFormattedNumber(deposit),
+        fixedRentPrice: unformatNumber(rent),
+        fixedDeposit: unformatNumber(deposit),
         services: selectedServices.map(s => ({
           serviceId: s.serviceId,
-          fixedPrice: parseFormattedNumber(s.fixedPrice)
+          fixedPrice: unformatNumber(s.fixedPrice)
         })),
-        initialElectricity: initialElectricity ? Number(initialElectricity) : undefined,
-        initialWater: initialWater ? Number(initialWater) : undefined,
+        initialElectricity: initialElectricity ? unformatNumber(initialElectricity) : undefined,
+        initialWater: initialWater ? unformatNumber(initialWater) : undefined,
         status: computedStatus === "Đang hiệu lực" ? 1 : 0 // 0 means waiting/pending
       };
       
@@ -281,8 +280,8 @@ export default function ContractsPage() {
                       setRoomId(e.target.value);
                       const r = rooms.find(x => (x._id || x.id) === e.target.value);
                       if (r) {
-                        setRent(formatCurrencyInput(r.defaultRentPrice?.toString() || "0"));
-                        setDeposit(formatCurrencyInput(r.defaultDeposit?.toString() || r.defaultRentPrice?.toString() || "0"));
+                        setRent(formatNumberInput(r.defaultRentPrice));
+                        setDeposit(formatNumberInput(r.defaultDeposit || r.defaultRentPrice));
                         setInitialElectricity(r.draftElectricity?.toString() || "");
                         setInitialWater(r.draftWater?.toString() || "");
                       }
@@ -341,7 +340,7 @@ export default function ContractsPage() {
                     id="rent" 
                     type="text" 
                     value={rent} 
-                    onChange={e => setRent(formatCurrencyInput(e.target.value))} 
+                    onChange={e => setRent(formatNumberInput(e.target.value))}
                     required 
                     placeholder="VD: 3.000.000" 
                   />
@@ -352,7 +351,7 @@ export default function ContractsPage() {
                     id="deposit" 
                     type="text" 
                     value={deposit} 
-                    onChange={e => setDeposit(formatCurrencyInput(e.target.value))} 
+                    onChange={e => setDeposit(formatNumberInput(e.target.value))}
                     required 
                     placeholder="VD: 3.000.000" 
                   />
@@ -364,9 +363,9 @@ export default function ContractsPage() {
                   <Label htmlFor="initialElectricity">Chỉ số điện đầu</Label>
                   <Input
                     id="initialElectricity"
-                    type="number"
+                    inputMode="numeric"
                     value={initialElectricity}
-                    onChange={e => setInitialElectricity(e.target.value)}
+                    onChange={e => setInitialElectricity(formatNumberInput(e.target.value))}
                     placeholder="VD: 100"
                   />
                 </div>
@@ -374,9 +373,9 @@ export default function ContractsPage() {
                   <Label htmlFor="initialWater">Chỉ số nước đầu</Label>
                   <Input
                     id="initialWater"
-                    type="number"
+                    inputMode="numeric"
                     value={initialWater}
-                    onChange={e => setInitialWater(e.target.value)}
+                    onChange={e => setInitialWater(formatNumberInput(e.target.value))}
                     placeholder="VD: 50"
                   />
                 </div>
@@ -400,7 +399,7 @@ export default function ContractsPage() {
                               checked={isSelected}
                               onChange={e => {
                                 if (e.target.checked) {
-                                  setSelectedServices([...selectedServices, { serviceId: srvId, fixedPrice: formatCurrencyInput(srv.defaultPrice?.toString() || "0") }]);
+                                  setSelectedServices([...selectedServices, { serviceId: srvId, fixedPrice: formatNumberInput(srv.defaultPrice) }]);
                                 } else {
                                   setSelectedServices(selectedServices.filter(s => s.serviceId !== srvId));
                                 }
@@ -414,7 +413,7 @@ export default function ContractsPage() {
                               className="h-10 bg-card text-sm"
                               value={svcData?.fixedPrice || ""}
                               onChange={e => {
-                                const updated = selectedServices.map(s => s.serviceId === srvId ? { ...s, fixedPrice: formatCurrencyInput(e.target.value) } : s);
+                                const updated = selectedServices.map(s => s.serviceId === srvId ? { ...s, fixedPrice: formatNumberInput(e.target.value) } : s);
                                 setSelectedServices(updated);
                               }}
                               placeholder="Đơn giá..."
@@ -446,7 +445,7 @@ export default function ContractsPage() {
                               checked={isSelected}
                               onChange={e => {
                                 if (e.target.checked) {
-                                  setSelectedServices([...selectedServices, { serviceId: srvId, fixedPrice: formatCurrencyInput(srv.defaultPrice?.toString() || "0") }]);
+                                  setSelectedServices([...selectedServices, { serviceId: srvId, fixedPrice: formatNumberInput(srv.defaultPrice) }]);
                                 } else {
                                   setSelectedServices(selectedServices.filter(s => s.serviceId !== srvId));
                                 }
@@ -461,7 +460,7 @@ export default function ContractsPage() {
                                 className="h-8 text-sm bg-card"
                                 value={svcData?.fixedPrice || ""}
                                 onChange={e => {
-                                  const updated = selectedServices.map(s => s.serviceId === srvId ? { ...s, fixedPrice: formatCurrencyInput(e.target.value) } : s);
+                                  const updated = selectedServices.map(s => s.serviceId === srvId ? { ...s, fixedPrice: formatNumberInput(e.target.value) } : s);
                                   setSelectedServices(updated);
                                 }}
                                 placeholder="Đơn giá..."
@@ -500,9 +499,9 @@ export default function ContractsPage() {
                 <Label htmlFor="finalElectricity">Chỉ số điện cuối cùng</Label>
                 <Input
                   id="finalElectricity"
-                  type="number"
+                  inputMode="numeric"
                   value={finalElectricity}
-                  onChange={e => setFinalElectricity(e.target.value)}
+                  onChange={e => setFinalElectricity(formatNumberInput(e.target.value))}
                   placeholder="VD: 120"
                 />
               </div>
@@ -510,9 +509,9 @@ export default function ContractsPage() {
                 <Label htmlFor="finalWater">Chỉ số nước cuối cùng</Label>
                 <Input
                   id="finalWater"
-                  type="number"
+                  inputMode="numeric"
                   value={finalWater}
-                  onChange={e => setFinalWater(e.target.value)}
+                  onChange={e => setFinalWater(formatNumberInput(e.target.value))}
                   placeholder="VD: 65"
                 />
               </div>
@@ -522,7 +521,7 @@ export default function ContractsPage() {
                   id="deductionAmount"
                   type="text"
                   value={deductionAmount}
-                  onChange={e => setDeductionAmount(formatCurrencyInput(e.target.value))}
+                  onChange={e => setDeductionAmount(formatNumberInput(e.target.value))}
                   placeholder="VD: 500.000"
                 />
               </div>
@@ -604,7 +603,7 @@ export default function ContractsPage() {
                   <TableCell className="font-medium text-foreground">{contract.roomId?.roomCode || "-"}</TableCell>
                   <TableCell>{contract.tenantId?.fullName || contract.tenantId?.name || "-"}</TableCell>
                   <TableCell>{contract.startDate ? new Date(contract.startDate).toLocaleDateString("vi-VN") : "-"}</TableCell>
-                  <TableCell>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(contract.fixedDeposit || contract.deposit || 0)}</TableCell>
+                  <TableCell>{formatCurrency(contract.fixedDeposit || contract.deposit)}</TableCell>
                   <TableCell>
                     {(() => {
                       const start = new Date(contract.startDate);
