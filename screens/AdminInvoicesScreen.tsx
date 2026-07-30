@@ -199,7 +199,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
       });
       notification.success("Tạo hóa đơn thành công!");
       
-      // Kích hoạt thông báo giả lập cho Khách thuê
+      // Kích hoạt thông báo giả lập cho Người thuê
       notificationService.addNotification(
         "invoice",
         "Hóa đơn mới được phát hành",
@@ -395,8 +395,8 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
                   <Text style={[styles.sectionBtnText, { color: theme.primary }]}>Hàng loạt</Text>
                 </Pressable>
                 <Pressable accessibilityRole="button" style={[styles.sectionBtn, { backgroundColor: theme.primary }]} onPress={() => setModalVisible(true)}>
-                  <Ionicons name="add" size={16} color="#fff" />
-                  <Text style={[styles.sectionBtnText, { color: '#fff' }]}>Tạo mới</Text>
+                  <Ionicons name="add" size={16} color={theme.background} />
+                  <Text style={[styles.sectionBtnText, { color: theme.background }]}>Tạo mới</Text>
                 </Pressable>
               </View>
             </View>

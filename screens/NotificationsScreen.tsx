@@ -92,7 +92,7 @@ export default function NotificationsScreen({ onBack, onNavigate }: Props) {
               id,
               type: "contract",
               title,
-              content: `Phòng ${roomCode} - Khách thuê: ${tenantName}`,
+              content: `Phòng ${roomCode} - Người thuê: ${tenantName}`,
               isRead: readIds.includes(id),
               createdAt: con.createdAt || new Date().toISOString()
             });
@@ -115,14 +115,14 @@ export default function NotificationsScreen({ onBack, onNavigate }: Props) {
           }
         });
 
-        // Map 👤 Khách thuê chưa liên kết App
+        // Map Người thuê chưa liên kết App
         tenants.forEach((t: any) => {
           if (!t.linkedAccountId) {
             const id = `tenant-${t._id || t.id}`;
             dbNotifs.push({
               id,
               type: "tenant",
-              title: `Khách thuê chưa cài App: ${t.fullName}`,
+              title: `Người thuê chưa cài App: ${t.fullName}`,
               content: `SĐT: ${t.phone} - Nhấn để gửi tin nhắn Zalo/SMS mời tải App.`,
               isRead: readIds.includes(id),
               createdAt: t.createdAt || new Date().toISOString()
@@ -312,7 +312,7 @@ export default function NotificationsScreen({ onBack, onNavigate }: Props) {
       case "contract":
         return { icon: "document-text-outline", color: "#6366f1", bg: "rgba(99, 102, 241, 0.12)", label: "Hợp đồng" };
       case "tenant":
-        return { icon: "people-outline", color: "#3b82f6", bg: "rgba(59, 130, 246, 0.12)", label: "Khách thuê" };
+        return { icon: "people-outline", color: "#3b82f6", bg: "rgba(59, 130, 246, 0.12)", label: "Người thuê" };
       case "utility":
         return { icon: "flash-outline", color: "#eab308", bg: "rgba(234, 179, 8, 0.12)", label: "Điện nước" };
       default:
