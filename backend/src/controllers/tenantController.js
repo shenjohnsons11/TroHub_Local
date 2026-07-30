@@ -112,13 +112,18 @@ exports.createTenant = async (req, res) => {
         const { fullName, name, phone, email, password, idCard, citizenId, roomCode, startDate } = req.body;
         const finalFullName = fullName || name;
         const finalIdCard = idCard || citizenId;
+        const normalizedPhone = typeof phone === 'string' ? phone.replace(/\D/g, '') : '';
+        const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
 
-        if (!email && !phone) {
+        if (!normalizedEmail && !normalizedPhone) {
             return res.status(400).json({ success: false, message: "Vui lòng nhập Email hoặc SĐT!" });
         }
 
         // Tìm xem khách đã có tài khoản chưa dựa trên Email hoặc SĐT
-        let existingAccount = await Account.findOne({ $or: [{ email }, { phone }], role: 2 });
+        const identityLookup = [];
+        if (normalizedEmail) identityLookup.push({ email: normalizedEmail });
+        if (normalizedPhone) identityLookup.push({ phone: normalizedPhone });
+        let existingAccount = await Account.findOne({ $or: identityLookup, role: 2 });
 
         if (existingAccount) {
             // NẾU LÀ LUỒNG GỬI LỜI MỜI: Phải kiểm tra CCCD (nếu có nhập) xem có bị trùng với MỘT NGƯỜI KHÁC không
@@ -152,7 +157,7 @@ exports.createTenant = async (req, res) => {
         }
 
         // Nếu khách chưa tồn tại trên hệ thống, yêu cầu phải có ĐỦ SĐT và CCCD để tạo tài khoản mới
-        if (!phone || phone.length !== 10) {
+        if (normalizedPhone.length !== 10) {
             return res.status(400).json({ success: false, message: "Khách mới chưa có tài khoản. Vui lòng nhập đúng SĐT gồm 10 chữ số!" });
         }
         if (!finalIdCard || finalIdCard.length !== 12) {
@@ -161,7 +166,7 @@ exports.createTenant = async (req, res) => {
 
         // Kiểm tra định dạng email bắt buộc phải hợp lệ (có @ và đuôi) vì hệ thống dùng email làm tên đăng nhập
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!email || !emailRegex.test(email)) {
+        if (!normalizedEmail || !emailRegex.test(normalizedEmail)) {
             return res.status(400).json({ success: false, message: "Vui lòng nhập Email đúng định dạng (ví dụ: nguyenvanA@gmail.com) để làm tên đăng nhập!" });
         }
 
@@ -179,11 +184,11 @@ exports.createTenant = async (req, res) => {
         const hashedPassword = await bcrypt.hash(defaultPassword, salt);
 
         const newTenant = new Account({
-            username: email || phone, // Ưu tiên email, nếu ko có thì dùng SĐT
+            username: normalizedEmail,
             password: hashedPassword,
             fullName: finalFullName,
-            phone,
-            email,
+            phone: normalizedPhone,
+            email: normalizedEmail,
             idCard: finalIdCard,
             role: 2, // Người thuê
             status: 1,
@@ -219,6 +224,9 @@ exports.createTenant = async (req, res) => {
             data: savedTenant
         });
     } catch (error) {
+        if (error && error.code === 11000) {
+            return res.status(409).json({ success: false, message: "Số điện thoại hoặc Email đã được sử dụng bởi tài khoản khác!" });
+        }
         res.status(500).json({ success: false, message: "Lỗi khi thêm người thuê: " + error.message });
     }
 };
