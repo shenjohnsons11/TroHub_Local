@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { useNotification } from "@/hooks/use-notification";
 import { fetchAPI } from "@/lib/api";
 import { getNotificationMessage } from "@/lib/notification-messages";
+import { formatCurrency } from "@/lib/formatters";
 
 export default function RepairsPage() {
   const notification = useNotification();
@@ -124,7 +125,7 @@ export default function RepairsPage() {
                   <TableCell className="font-medium">{repair.date || "Chưa cập nhật"}</TableCell>
                   <TableCell className="font-extrabold">{repair.roomCode}</TableCell>
                   <TableCell className="max-w-[260px] truncate">{repair.content}</TableCell>
-                  <TableCell className="font-bold">{new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(repair.cost || 0)}</TableCell>
+                  <TableCell className="font-bold">{formatCurrency(repair.cost)}</TableCell>
                   <TableCell>{repair.assignedTo || "—"}</TableCell>
                   <TableCell>{getStatusBadge(repair.status)}</TableCell>
                   <TableCell className="text-right">

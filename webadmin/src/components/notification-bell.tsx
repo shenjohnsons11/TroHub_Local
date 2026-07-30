@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, Check, Receipt, FileText, Wrench, Users, Zap, Info } from "lucide-react";
 import { fetchAPI } from "@/lib/api";
-import { formatPhone } from "@/lib/formatters";
+import { formatCurrency, formatPhone } from "@/lib/formatters";
 
 export type NotificationType = {
   id: string;
@@ -102,7 +102,7 @@ export function NotificationBell() {
               id,
               type: "invoice",
               title: inv.status === "Quá hạn" ? `Hóa đơn QUÁ HẠN - Phòng ${roomCode}` : `Hóa đơn chưa thu - Phòng ${roomCode}`,
-              content: `Kỳ ${inv.period}: ${(inv.totalAmount || 0).toLocaleString("vi-VN")}đ - Hạn đóng: ${inv.dueDate ? new Date(inv.dueDate).toLocaleDateString("vi-VN") : "N/A"}`,
+              content: `Kỳ ${inv.period}: ${formatCurrency(inv.totalAmount)} - Hạn đóng: ${inv.dueDate ? new Date(inv.dueDate).toLocaleDateString("vi-VN") : "N/A"}`,
               isRead: readIds.includes(id),
               createdAt: inv.createdAt || new Date().toISOString()
             });

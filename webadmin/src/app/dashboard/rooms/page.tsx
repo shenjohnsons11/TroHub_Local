@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { useNotification } from "@/hooks/use-notification";
 import { fetchAPI } from "@/lib/api";
 import { getNotificationMessage } from "@/lib/notification-messages";
-import { formatCurrencyInput, parseFormattedNumber } from "@/lib/utils";
+import { formatCurrency, formatNumberInput, unformatNumber } from "@/lib/formatters";
 
 export default function RoomsPage() {
   const notification = useNotification();
@@ -50,7 +50,7 @@ export default function RoomsPage() {
 
   const openEditModal = (room: any) => {
     setRoomCode(room.roomCode);
-    setPrice(room.defaultRentPrice?.toString() || "");
+    setPrice(formatNumberInput(room.defaultRentPrice));
     setArea(room.area?.toString() || "");
     setEditingRoomId(room._id || room.id);
     setIsEditOpen(true);
@@ -61,8 +61,8 @@ export default function RoomsPage() {
     try {
       const payload = {
         roomCode,
-        rent: parseFormattedNumber(price),
-        deposit: parseFormattedNumber(price),
+        rent: unformatNumber(price),
+        deposit: unformatNumber(price),
         area: parseInt(area),
         landlordId: JSON.parse(localStorage.getItem("trohub_user") || "{}").id,
       };
@@ -141,7 +141,7 @@ export default function RoomsPage() {
       </div>
       <div className="space-y-2">
         <Label htmlFor={edit ? "editPrice" : "price"}>Giá thuê (VNĐ)</Label>
-        <Input id={edit ? "editPrice" : "price"} value={price} onChange={(event) => setPrice(formatCurrencyInput(event.target.value))} required placeholder="VD: 3.000.000" />
+        <Input id={edit ? "editPrice" : "price"} inputMode="numeric" value={price} onChange={(event) => setPrice(formatNumberInput(event.target.value))} required placeholder="VD: 3.000.000" />
       </div>
       <div className="space-y-2">
         <Label htmlFor={edit ? "editArea" : "area"}>Diện tích (m²)</Label>
@@ -186,7 +186,7 @@ export default function RoomsPage() {
               </div>
               <div className="mt-6 rounded-[20px] bg-primary/8 p-4">
                 <p className="text-sm text-muted-foreground">Giá thuê mỗi tháng</p>
-                <p className="mt-1 text-2xl font-black tracking-[-.04em] text-primary">{Number(room.defaultRentPrice || 0).toLocaleString("vi-VN")}đ</p>
+                <p className="mt-1 text-2xl font-black tracking-[-.04em] text-primary">{formatCurrency(room.defaultRentPrice)}</p>
               </div>
               <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
                 <div><dt className="text-muted-foreground">Diện tích</dt><dd className="mt-1 font-bold">{room.area || "—"} m²</dd></div>

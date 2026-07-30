@@ -6,6 +6,7 @@ import { ArrowUpRight, Building2, CircleDollarSign, FileSignature, FileText, Rec
 import { useNotification } from "@/hooks/use-notification";
 import { fetchAPI } from "@/lib/api";
 import { getNotificationMessage } from "@/lib/notification-messages";
+import { formatCurrency } from "@/lib/formatters";
 import { PageHeader } from "@/components/calm-ops/page-header";
 import { PriorityPanel } from "@/components/calm-ops/priority-panel";
 import { StatCard } from "@/components/calm-ops/stat-card";
@@ -79,7 +80,7 @@ export default function DashboardPage() {
         <section className="calm-surface overflow-hidden bg-[linear-gradient(135deg,var(--primary),color-mix(in_srgb,var(--primary)_62%,#04100e))] p-6 text-primary-foreground sm:p-8">
           <div className="flex items-start justify-between gap-5"><span className="grid size-12 place-items-center rounded-[16px] bg-primary-foreground/12"><CircleDollarSign className="size-6" /></span><span className="rounded-full bg-primary-foreground/12 px-3 py-1 text-xs font-bold">Dữ liệu thực</span></div>
           <p className="mt-8 text-sm font-bold opacity-75">Doanh thu đã thu trong kỳ</p>
-          <p className="mt-1 text-4xl font-black tracking-[-.05em] sm:text-5xl">{stats.totalRevenue.toLocaleString("vi-VN")}đ</p>
+          <p className="mt-1 text-4xl font-black tracking-[-.05em] sm:text-5xl">{formatCurrency(stats.totalRevenue)}</p>
           <Link href="/dashboard/payments" className="mt-5 inline-flex items-center gap-2 text-sm font-bold">Đối chiếu giao dịch <ArrowUpRight className="size-4" /></Link>
         </section>
         <section className="calm-surface p-6">
