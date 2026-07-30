@@ -80,7 +80,7 @@ export default function TenantsPage() {
       const payload = {
         fullName,
         phone: parseFormattedString(phone),
-        email,
+        email: email.trim().toLowerCase(),
         idCard: parseFormattedString(idCard),
         roomCode,
       };
@@ -169,8 +169,8 @@ export default function TenantsPage() {
                 <div className="space-y-2"><Label htmlFor="idCard">CCCD</Label><Input id="idCard" value={idCard} onChange={(event) => setIdCard(formatIdCardInput(event.target.value))} placeholder="079.012.345.678" /></div>
               </div>}
               {tenantStep === 2 && <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2"><Label htmlFor="phone">Số điện thoại</Label><Input id="phone" autoFocus value={phone} onChange={(event) => setPhone(formatPhoneInput(event.target.value))} placeholder="090.123.4567" /></div>
-                <div className="space-y-2"><Label htmlFor="email">Email đăng nhập</Label><Input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="nguyenvana@gmail.com" /></div>
+                <div className="space-y-2"><Label htmlFor="phone">Số điện thoại</Label><Input id="phone" autoFocus value={phone} onChange={(event) => setPhone(formatPhoneInput(event.target.value))} placeholder="090.123.4567" required /></div>
+                <div className="space-y-2"><Label htmlFor="email">Email đăng nhập</Label><Input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="nguyenvana@gmail.com" required /></div>
               </div>}
               {tenantStep === 3 && <div className="space-y-4">
                 <div className="rounded-[20px] bg-primary/8 p-5"><p className="text-sm text-muted-foreground">Hồ sơ sắp tạo</p><p className="mt-1 text-xl font-black">{fullName}</p><p className="mt-1 text-sm">{phone || "Chưa có số điện thoại"} · {email || "Chưa có email"}</p></div>
