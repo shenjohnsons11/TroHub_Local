@@ -11,6 +11,7 @@ import AppButton from "../components/ui/AppButton";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
 import GradientHero from "../components/ui/GradientHero";
 import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
+import { formatCurrency, formatNumberInput, unformatNumber } from "../utils/formatters";
 
 type Props = { params?: any };
 
@@ -45,8 +46,8 @@ export default function AdminRoomsScreen({ params }: Props) {
         .filter(([, data]) => data.electricity.trim() !== "" || data.water.trim() !== "")
         .map(([roomId, data]) => ({
           roomId,
-          electricity: data.electricity ? Number(data.electricity) : undefined,
-          water: data.water ? Number(data.water) : undefined,
+          electricity: data.electricity ? unformatNumber(data.electricity) : undefined,
+          water: data.water ? unformatNumber(data.water) : undefined,
         }));
       if (payload.length === 0) { notification.error("Vui lòng nhập ít nhất một chỉ số"); return; }
       const token = await authService.getToken();
@@ -70,7 +71,7 @@ export default function AdminRoomsScreen({ params }: Props) {
     }
     try {
       setSubmitting(true);
-      await adminService.createRoom({ roomCode: roomCode.trim(), area: area.trim(), defaultRentPrice: Number(rentPrice), defaultDeposit: Number(deposit) });
+      await adminService.createRoom({ roomCode: roomCode.trim(), area: area.trim(), defaultRentPrice: unformatNumber(rentPrice), defaultDeposit: unformatNumber(deposit) });
       notification.success("Đã thêm phòng mới thành công!");
       setModalVisible(false);
       setRoomCode(""); setArea(""); setRentPrice(""); setDeposit("");
@@ -119,14 +120,14 @@ export default function AdminRoomsScreen({ params }: Props) {
         ListEmptyComponent={<IllustratedEmptyState kind="contract" title={rooms.length ? "Không có phòng phù hợp" : "Chưa có phòng trọ"} description={rooms.length ? "Hãy chọn bộ lọc khác." : "Thêm phòng đầu tiên để bắt đầu vận hành."} actionLabel={rooms.length ? undefined : "Thêm phòng"} actionIcon="add" onAction={rooms.length ? undefined : () => setModalVisible(true)} />}
         renderItem={({ item, index }) => {
           const [label, color, background] = statusMeta(item.status);
-          return <AnimatedEntry delay={Math.min(index, 6) * 45} style={{ flex: 1 }}><Pressable accessibilityRole="button" style={[styles.card, { backgroundColor: theme.surfaceElevated, shadowColor: theme.text }]} onPress={() => { setSelectedRoom(item); setDetailVisible(true); }}><View style={{ flexDirection: "row", justifyContent: "space-between", width: "100%" }}><View style={[styles.iconTile, { backgroundColor: theme.primarySoft }]}><Ionicons name="business-outline" size={22} color={theme.primary} /></View><View style={[styles.badge, { backgroundColor: background as string }]}><Text style={[styles.badgeText, { color: color as string }]}>{label}</Text></View></View><View style={styles.info}><Text style={[styles.roomCode, { color: theme.text }]}>{item.roomCode}</Text><Text style={[styles.sub, { color: theme.muted }]}>{item.area}</Text><Text style={[styles.sub, { color: theme.primary }]}>{item.defaultRentPrice.toLocaleString("vi-VN")}đ/th</Text></View></Pressable></AnimatedEntry>;
+          return <AnimatedEntry delay={Math.min(index, 6) * 45} style={{ flex: 1 }}><Pressable accessibilityRole="button" style={[styles.card, { backgroundColor: theme.surfaceElevated, shadowColor: theme.text }]} onPress={() => { setSelectedRoom(item); setDetailVisible(true); }}><View style={{ flexDirection: "row", justifyContent: "space-between", width: "100%" }}><View style={[styles.iconTile, { backgroundColor: theme.primarySoft }]}><Ionicons name="business-outline" size={22} color={theme.primary} /></View><View style={[styles.badge, { backgroundColor: background as string }]}><Text style={[styles.badgeText, { color: color as string }]}>{label}</Text></View></View><View style={styles.info}><Text style={[styles.roomCode, { color: theme.text }]}>{item.roomCode}</Text><Text style={[styles.sub, { color: theme.muted }]}>{item.area}</Text><Text style={[styles.sub, { color: theme.primary }]}>{formatCurrency(item.defaultRentPrice)}/th</Text></View></Pressable></AnimatedEntry>;
         }}
       />
 
       <Modal visible={detailVisible} transparent animationType="slide" onRequestClose={() => { if (!submitting) setDetailVisible(false); }}>
         <View style={[styles.overlay, { backgroundColor: theme.overlay }]}><View accessibilityViewIsModal style={[styles.sheet, { backgroundColor: theme.surfaceElevated }]}>
           <View style={styles.modalHeader}><Text accessibilityRole="header" style={[styles.modalTitle, { color: theme.text }]}>Chi tiết phòng {selectedRoom?.roomCode}</Text><Pressable accessibilityRole="button" accessibilityLabel="Đóng chi tiết phòng" onPress={() => setDetailVisible(false)}><Ionicons name="close" size={26} color={theme.text} /></Pressable></View>
-          {selectedRoom ? <View style={styles.detailBody}>{[["Diện tích", selectedRoom.area], ["Giá thuê mặc định", `${selectedRoom.defaultRentPrice.toLocaleString("vi-VN")}đ/tháng`], ["Tiền cọc mặc định", `${selectedRoom.defaultDeposit.toLocaleString("vi-VN")}đ`], ["Trạng thái", statusMeta(selectedRoom.status)[0]]].map(([label, value]) => <View key={label} style={[styles.detailRow, { backgroundColor: theme.background }]}><Text style={[styles.detailLabel, { color: theme.muted }]}>{label}</Text><Text style={[styles.detailValue, { color: theme.text }]}>{value}</Text></View>)}</View> : null}
+          {selectedRoom ? <View style={styles.detailBody}>{[["Diện tích", selectedRoom.area], ["Giá thuê mặc định", `${formatCurrency(selectedRoom.defaultRentPrice)}/tháng`], ["Tiền cọc mặc định", formatCurrency(selectedRoom.defaultDeposit)], ["Trạng thái", statusMeta(selectedRoom.status)[0]]].map(([label, value]) => <View key={label} style={[styles.detailRow, { backgroundColor: theme.background }]}><Text style={[styles.detailLabel, { color: theme.muted }]}>{label}</Text><Text style={[styles.detailValue, { color: theme.text }]}>{value}</Text></View>)}</View> : null}
         </View></View>
       </Modal>
 
@@ -135,7 +136,7 @@ export default function AdminRoomsScreen({ params }: Props) {
           <View style={styles.modalHeader}><Text accessibilityRole="header" style={[styles.modalTitle, { color: theme.text }]}>Thêm phòng trọ mới</Text><Pressable accessibilityRole="button" accessibilityLabel="Đóng thêm phòng" disabled={submitting} onPress={() => setModalVisible(false)}><Ionicons name="close" size={26} color={theme.text} /></Pressable></View>
           <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             <View style={styles.field}><Text style={[styles.label, { color: theme.text }]}>Mã phòng (ví dụ: P.101)</Text><TextInput style={inputStyle} value={roomCode} onChangeText={setRoomCode} placeholder="Nhập mã phòng" placeholderTextColor={theme.muted} autoCapitalize="characters" /></View>
-            {[["Diện tích (ví dụ: 25m2)", area, setArea, "Nhập diện tích", "default"], ["Giá thuê mặc định (VNĐ)", rentPrice, setRentPrice, "Nhập giá thuê", "numeric"], ["Tiền đặt cọc mặc định (VNĐ)", deposit, setDeposit, "Nhập tiền đặt cọc", "numeric"]].map(([label, value, setter, placeholder, keyboard]) => <View key={label as string} style={styles.field}><Text style={[styles.label, { color: theme.text }]}>{label as string}</Text><TextInput style={inputStyle} value={value as string} onChangeText={setter as (text: string) => void} placeholder={placeholder as string} placeholderTextColor={theme.muted} keyboardType={keyboard as any} /></View>)}
+            {[["Diện tích (ví dụ: 25m2)", area, setArea, "Nhập diện tích", "default"], ["Giá thuê mặc định (VNĐ)", rentPrice, (value: string) => setRentPrice(formatNumberInput(value)), "Nhập giá thuê", "numeric"], ["Tiền đặt cọc mặc định (VNĐ)", deposit, (value: string) => setDeposit(formatNumberInput(value)), "Nhập tiền đặt cọc", "numeric"]].map(([label, value, setter, placeholder, keyboard]) => <View key={label as string} style={styles.field}><Text style={[styles.label, { color: theme.text }]}>{label as string}</Text><TextInput style={inputStyle} value={value as string} onChangeText={setter as (text: string) => void} placeholder={placeholder as string} placeholderTextColor={theme.muted} keyboardType={keyboard as any} /></View>)}
             <AppButton icon="add-circle-outline" loading={submitting} onPress={handleAddRoom}>Thêm phòng</AppButton>
           </ScrollView>
         </View></KeyboardAvoidingView>
@@ -161,14 +162,14 @@ export default function AdminRoomsScreen({ params }: Props) {
                       <Text style={[styles.label, { color: theme.muted }]}>Điện mới (kWh)</Text>
                       <TextInput style={inputStyle} keyboardType="numeric" placeholder="Số điện" placeholderTextColor={theme.muted}
                         value={meterReadings[room._id]?.electricity || ""}
-                        onChangeText={(val) => setMeterReadings(prev => ({ ...prev, [room._id]: { ...prev[room._id], electricity: val, water: prev[room._id]?.water || "" } }))}
+                        onChangeText={(value) => setMeterReadings(prev => ({ ...prev, [room._id]: { ...prev[room._id], electricity: formatNumberInput(value), water: prev[room._id]?.water || "" } }))}
                       />
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.label, { color: theme.muted }]}>Nước mới (m³)</Text>
                       <TextInput style={inputStyle} keyboardType="numeric" placeholder="Số nước" placeholderTextColor={theme.muted}
                         value={meterReadings[room._id]?.water || ""}
-                        onChangeText={(val) => setMeterReadings(prev => ({ ...prev, [room._id]: { ...prev[room._id], water: val, electricity: prev[room._id]?.electricity || "" } }))}
+                        onChangeText={(value) => setMeterReadings(prev => ({ ...prev, [room._id]: { ...prev[room._id], water: formatNumberInput(value), electricity: prev[room._id]?.electricity || "" } }))}
                       />
                     </View>
                   </View>

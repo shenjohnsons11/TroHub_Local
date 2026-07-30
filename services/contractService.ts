@@ -1,6 +1,7 @@
 import { Contract, ContractStatus } from "../types/Contract";
 import { apiClient } from "./apiClient";
 import { authService } from "./authService";
+import { formatCurrency } from "../utils/formatters";
 
 type ApiRoom = {
   _id: string;
@@ -61,11 +62,6 @@ type ContractActionResponse = {
   depositRequired?: boolean;
   depositAmount?: number;
   idempotent?: boolean;
-};
-
-const formatMoney = (value?: number) => {
-  const amount = value || 0;
-  return `${amount.toLocaleString("vi-VN")}đ`;
 };
 
 const formatDate = (value?: string) => {
@@ -144,8 +140,8 @@ const mapApiContractToContract = (apiContract: ApiContract): Contract => {
     tenantName: apiContract.tenantId?.fullName || "Người thuê",
     startDate: formatDate(apiContract.startDate),
     endDate: formatDate(apiContract.endDate),
-    rentFee: `${formatMoney(apiContract.fixedRentPrice)} / tháng`,
-    deposit: formatMoney(apiContract.fixedDeposit),
+    rentFee: `${formatCurrency(apiContract.fixedRentPrice)} / tháng`,
+    deposit: formatCurrency(apiContract.fixedDeposit),
     depositPayment: apiContract.depositPayment,
     status: mapNumericStatus(apiContract.status),
     rawStatus: apiContract.status,
@@ -153,10 +149,10 @@ const mapApiContractToContract = (apiContract: ApiContract): Contract => {
     remainingMonths,
     progressPercent: `${progressNumber}%`,
     serviceFees: {
-      electric: `${formatMoney(electricPrice)} / kWh`,
-      water: `${formatMoney(waterPrice)} / m³`,
-      parking: `${formatMoney(parkingPrice)} / tháng`,
-      internet: `${formatMoney(internetPrice)} / tháng`,
+      electric: `${formatCurrency(electricPrice)} / kWh`,
+      water: `${formatCurrency(waterPrice)} / m³`,
+      parking: `${formatCurrency(parkingPrice)} / tháng`,
+      internet: `${formatCurrency(internetPrice)} / tháng`,
     },
     meterTerms: {
       electricityPrice: electricPrice,

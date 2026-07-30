@@ -22,6 +22,7 @@ import { Ionicons } from "@expo/vector-icons";
 import GradientHero from "../components/ui/GradientHero";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
 import AppButton from "../components/ui/AppButton";
+import { formatNumberInput, unformatNumber } from "../utils/formatters";
 
 type Props = {
   onBack: () => void;
@@ -59,7 +60,7 @@ export default function UtilityScreen({ onBack }: Props) {
       return;
     }
     try {
-      const res = await utilityService.reportUtility(Number(draftElec), Number(draftWater));
+      const res = await utilityService.reportUtility(unformatNumber(draftElec), unformatNumber(draftWater));
       if (!res.success) throw new Error(res.message || "Có lỗi xảy ra");
       notification.success("Đã gửi số liệu điện nước cho chủ trọ chờ duyệt.");
       setModalVisible(false);
@@ -108,11 +109,11 @@ export default function UtilityScreen({ onBack }: Props) {
               <View style={styles.meterRow}>
                 <View style={styles.meterItem}>
                   <Ionicons name="flash-outline" size={20} color="#8CF2C9" />
-                  <Text style={styles.meterValue}>{current.electricUsed} kWh</Text>
+                  <Text style={styles.meterValue}>{formatNumberInput(current.electricUsed)} kWh</Text>
                 </View>
                 <View style={styles.meterItem}>
                   <Ionicons name="water-outline" size={20} color="#8CF2C9" />
-                  <Text style={styles.meterValue}>{current.waterUsed} m³</Text>
+                  <Text style={styles.meterValue}>{formatNumberInput(current.waterUsed)} m³</Text>
                 </View>
               </View>
             </GradientHero>
@@ -120,13 +121,13 @@ export default function UtilityScreen({ onBack }: Props) {
           <View style={styles.summaryRow}>
             <Card style={styles.summaryCard}>
               <Text style={styles.summaryLabel}>Điện đã dùng</Text>
-              <Text style={styles.summaryNumber}>{current.electricUsed} kWh</Text>
+              <Text style={styles.summaryNumber}>{formatNumberInput(current.electricUsed)} kWh</Text>
               <Text style={styles.summaryMoney}>{current.electricMoney}</Text>
             </Card>
 
             <Card style={styles.summaryCard}>
               <Text style={styles.summaryLabel}>Nước đã dùng</Text>
-              <Text style={styles.summaryNumber}>{current.waterUsed} m³</Text>
+              <Text style={styles.summaryNumber}>{formatNumberInput(current.waterUsed)} m³</Text>
               <Text style={styles.summaryMoney}>{current.waterMoney}</Text>
             </Card>
           </View>
@@ -136,24 +137,24 @@ export default function UtilityScreen({ onBack }: Props) {
 
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Chỉ số điện cũ</Text>
-              <Text style={styles.infoValue}>{current.electricOld}</Text>
+              <Text style={styles.infoValue}>{formatNumberInput(current.electricOld)}</Text>
             </View>
 
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Chỉ số điện mới</Text>
-              <Text style={styles.infoValue}>{current.electricNew}</Text>
+              <Text style={styles.infoValue}>{formatNumberInput(current.electricNew)}</Text>
             </View>
 
             <View style={styles.divider} />
 
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Chỉ số nước cũ</Text>
-              <Text style={styles.infoValue}>{current.waterOld}</Text>
+              <Text style={styles.infoValue}>{formatNumberInput(current.waterOld)}</Text>
             </View>
 
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Chỉ số nước mới</Text>
-              <Text style={styles.infoValue}>{current.waterNew}</Text>
+              <Text style={styles.infoValue}>{formatNumberInput(current.waterNew)}</Text>
             </View>
 
             <View style={styles.priceNote}>
@@ -184,8 +185,8 @@ export default function UtilityScreen({ onBack }: Props) {
                 <Text style={styles.historyTotal}>{item.electricMoney} + {item.waterMoney}</Text>
               </View>
               <View style={styles.historyRow}>
-                <Text style={styles.historyText}>Điện: {item.electricUsed} kWh</Text>
-                <Text style={styles.historyText}>Nước: {item.waterUsed} m³</Text>
+                <Text style={styles.historyText}>Điện: {formatNumberInput(item.electricUsed)} kWh</Text>
+                <Text style={styles.historyText}>Nước: {formatNumberInput(item.waterUsed)} m³</Text>
               </View>
             </Card>
           </AnimatedEntry>
@@ -213,7 +214,7 @@ export default function UtilityScreen({ onBack }: Props) {
               style={styles.input} 
               keyboardType="numeric" 
               value={draftElec} 
-              onChangeText={setDraftElec} 
+              onChangeText={(value) => setDraftElec(formatNumberInput(value))}
               placeholder="Nhập số điện trên đồng hồ..." 
               placeholderTextColor={theme.muted}
             />
@@ -223,7 +224,7 @@ export default function UtilityScreen({ onBack }: Props) {
               style={styles.input} 
               keyboardType="numeric" 
               value={draftWater} 
-              onChangeText={setDraftWater} 
+              onChangeText={(value) => setDraftWater(formatNumberInput(value))}
               placeholder="Nhập số nước trên đồng hồ..." 
               placeholderTextColor={theme.muted}
             />
