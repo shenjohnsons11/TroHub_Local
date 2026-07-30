@@ -15,6 +15,7 @@ import { useNotification } from "@/hooks/use-notification";
 import { fetchAPI } from "@/lib/api";
 import { getNotificationMessage } from "@/lib/notification-messages";
 import { PageHeader } from "@/components/calm-ops/page-header";
+import { formatCurrency, formatNumberInput, unformatNumber } from "@/lib/formatters";
 
 type Service = {
   _id: string;
@@ -43,12 +44,6 @@ const EMPTY_FORM: ServiceForm = {
   defaultPrice: "",
   isActive: true,
 };
-
-const currencyFormatter = new Intl.NumberFormat("vi-VN", {
-  style: "currency",
-  currency: "VND",
-  maximumFractionDigits: 0,
-});
 
 export default function ServicesPage() {
   const notification = useNotification();
@@ -99,7 +94,7 @@ export default function ServicesPage() {
       code: service.code,
       type: String(service.type) as "1" | "2",
       unit: service.unit,
-      defaultPrice: String(service.defaultPrice),
+      defaultPrice: formatNumberInput(service.defaultPrice),
       isActive: service.isActive,
     });
     setDialogOpen(true);
@@ -107,7 +102,7 @@ export default function ServicesPage() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const price = Number(form.defaultPrice);
+    const price = unformatNumber(form.defaultPrice);
     if (!form.name.trim() || !form.code.trim() || !form.unit.trim()) {
       notification.warning("Vui lòng nhập đầy đủ tên, mã và đơn vị dịch vụ.");
       return;
@@ -216,7 +211,7 @@ export default function ServicesPage() {
                     <p className="mt-1 text-xs font-semibold tracking-wide text-muted-foreground">{service.code}</p>
                   </TableCell>
                   <TableCell>{service.type === 1 ? "Theo chỉ số" : "Tính khoán"} · {service.unit}</TableCell>
-                  <TableCell className="text-base font-black">{currencyFormatter.format(service.defaultPrice)}</TableCell>
+                  <TableCell className="text-base font-black">{formatCurrency(service.defaultPrice)}</TableCell>
                   <TableCell>
                     <Badge variant={service.isActive ? "default" : "secondary"}>
                       {service.isActive ? "Đang hoạt động" : "Ngừng hoạt động"}
@@ -268,7 +263,7 @@ export default function ServicesPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="service-price">Đơn giá mặc định</Label>
-              <Input id="service-price" type="number" min="0" step="1" value={form.defaultPrice} onChange={(event) => setForm({ ...form, defaultPrice: event.target.value })} placeholder="0" />
+              <Input id="service-price" inputMode="numeric" value={form.defaultPrice} onChange={(event) => setForm({ ...form, defaultPrice: formatNumberInput(event.target.value) })} placeholder="0" />
             </div>
             <label className="flex cursor-pointer items-center gap-3 rounded-[16px] bg-muted/55 p-3">
               <input type="checkbox" checked={form.isActive} onChange={(event) => setForm({ ...form, isActive: event.target.checked })} className="h-4 w-4 accent-primary" />

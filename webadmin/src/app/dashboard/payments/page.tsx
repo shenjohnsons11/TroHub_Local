@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/calm-ops/page-header";
 import { useNotification } from "@/hooks/use-notification";
 import { fetchAPI } from "@/lib/api";
 import { getNotificationMessage } from "@/lib/notification-messages";
+import { formatCurrency } from "@/lib/formatters";
 
 type PaymentRow = {
   _id: string;
@@ -61,7 +62,7 @@ export default function PaymentsPage() {
         <article className="rounded-[24px] bg-primary p-5 text-primary-foreground shadow-[var(--calm-shadow)]">
           <CircleDollarSign aria-hidden="true" className="size-6 opacity-75" />
           <p className="mt-6 text-xs font-bold uppercase tracking-[.14em] opacity-70">Đã thu thành công</p>
-          <p className="mt-1 text-3xl font-black tracking-[-.04em]">{collected.toLocaleString("vi-VN")}đ</p>
+          <p className="mt-1 text-3xl font-black tracking-[-.04em]">{formatCurrency(collected)}</p>
         </article>
         <article className="calm-surface p-5">
           <WalletCards aria-hidden="true" className="size-6 text-primary" />
@@ -95,7 +96,7 @@ export default function PaymentsPage() {
                 <TableCell>{row.nguoiThue}</TableCell>
                 <TableCell>{row.room}</TableCell>
                 <TableCell>{row.method}</TableCell>
-                <TableCell className="text-base font-black">{row.amount.toLocaleString("vi-VN")}đ</TableCell>
+                <TableCell className="text-base font-black">{formatCurrency(row.amount)}</TableCell>
                 <TableCell><Badge variant={row.status === 1 ? "default" : row.status === 2 ? "secondary" : "destructive"}>{row.status === 1 ? "Thành công" : row.status === 2 ? "Đang chờ" : "Thất bại"}</Badge></TableCell>
               </TableRow>
             ))}

@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { CalendarDays, Bell, CheckCircle, ChevronLeft, ChevronRight, Eye, FileText, Gauge, Plus, Printer, ScanSearch, Search, Send, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { parseFormattedNumber } from "@/lib/utils";
+import { formatCurrency, formatNumberInput, unformatNumber } from "@/lib/formatters";
 import { useNotification } from "@/hooks/use-notification";
 import { getNotificationMessage } from "@/lib/notification-messages";
 import { PageHeader } from "@/components/calm-ops/page-header";
@@ -54,10 +54,10 @@ export default function InvoicesPage() {
         if (res.success) {
           const mapped = res.data.map((p: any) => ({
             ...p,
-            electricityOldInput: p.electricityOld?.toString() || "0",
-            electricityNewInput: p.electricityDraft || p.electricityOld?.toString() || "0",
-            waterOldInput: p.waterOld?.toString() || "0",
-            waterNewInput: p.waterDraft || p.waterOld?.toString() || "0",
+            electricityOldInput: formatNumberInput(p.electricityOld),
+            electricityNewInput: formatNumberInput(p.electricityDraft || p.electricityOld),
+            waterOldInput: formatNumberInput(p.waterOld),
+            waterNewInput: formatNumberInput(p.waterDraft || p.waterOld),
             discountInput: "0",
             selected: true
           }));
@@ -100,18 +100,18 @@ export default function InvoicesPage() {
           contractId: item.contractId,
           room: item.room,
           tenant: item.tenant,
-          electricityOld: Number(item.electricityOldInput),
-          electricityNew: Number(item.electricityNewInput),
+          electricityOld: unformatNumber(item.electricityOldInput),
+          electricityNew: unformatNumber(item.electricityNewInput),
           electricityPrice: item.electricityPrice,
-          waterOld: Number(item.waterOldInput),
-          waterNew: Number(item.waterNewInput),
+          waterOld: unformatNumber(item.waterOldInput),
+          waterNew: unformatNumber(item.waterNewInput),
           waterPrice: item.waterPrice,
           roomAmount: item.roomAmount,
           services: item.services,
           parking: item.parking,
           internet: item.internet,
           garbage: item.garbage,
-          discount: parseFormattedNumber(item.discountInput)
+          discount: unformatNumber(item.discountInput)
         })),
         period: title,
         issuedAt,
@@ -303,13 +303,13 @@ export default function InvoicesPage() {
                       <TableRow><TableCell colSpan={7} className="text-center py-4">Không có hợp đồng nào đang hiệu lực để tạo hóa đơn.</TableCell></TableRow>
                     ) : (
                       bulkData.map((item, index) => {
-                        const eOld = Number(item.electricityOldInput) || 0;
-                        const eNew = Number(item.electricityNewInput) || 0;
+                        const eOld = unformatNumber(item.electricityOldInput);
+                        const eNew = unformatNumber(item.electricityNewInput);
                         const eAmt = Math.max(0, eNew - eOld) * (item.electricityPrice || 0);
-                        const wOld = Number(item.waterOldInput) || 0;
-                        const wNew = Number(item.waterNewInput) || 0;
+                        const wOld = unformatNumber(item.waterOldInput);
+                        const wNew = unformatNumber(item.waterNewInput);
                         const wAmt = Math.max(0, wNew - wOld) * (item.waterPrice || 0);
-                        const dsc = parseFormattedNumber(item.discountInput) || 0;
+                        const dsc = unformatNumber(item.discountInput);
                         const total = (item.roomAmount || 0) + eAmt + wAmt + (item.services || 0) + (item.parking || 0) + (item.internet || 0) + (item.garbage || 0) - dsc;
                         return (
                           <TableRow key={item.contractId} className={!item.selected ? "opacity-50" : ""}>
@@ -327,17 +327,17 @@ export default function InvoicesPage() {
                               />
                             </TableCell>
                             <TableCell className="font-medium">{item.room}</TableCell>
-                            <TableCell><Input className="w-20 h-8 px-2 text-sm bg-card" type="number" value={item.electricityOldInput} onChange={e => { const u=[...bulkData]; u[index].electricityOldInput=e.target.value; setBulkData(u); }} /></TableCell>
+                            <TableCell><Input className="w-20 h-8 px-2 text-sm bg-card" inputMode="numeric" value={item.electricityOldInput} onChange={e => { const u=[...bulkData]; u[index].electricityOldInput=formatNumberInput(e.target.value); setBulkData(u); }} /></TableCell>
                             <TableCell>
-                              <Input className="w-20 h-8 px-2 text-sm bg-card" type="number" value={item.electricityNewInput} onChange={e => { const u=[...bulkData]; u[index].electricityNewInput=e.target.value; setBulkData(u); }} />
+                              <Input className="w-20 h-8 px-2 text-sm bg-card" inputMode="numeric" value={item.electricityNewInput} onChange={e => { const u=[...bulkData]; u[index].electricityNewInput=formatNumberInput(e.target.value); setBulkData(u); }} />
                               {!item.electricityPrice && <span className="block text-[10px] text-destructive">Thiếu giá Điện</span>}
                             </TableCell>
-                            <TableCell><Input className="w-20 h-8 px-2 text-sm bg-card" type="number" value={item.waterOldInput} onChange={e => { const u=[...bulkData]; u[index].waterOldInput=e.target.value; setBulkData(u); }} /></TableCell>
+                            <TableCell><Input className="w-20 h-8 px-2 text-sm bg-card" inputMode="numeric" value={item.waterOldInput} onChange={e => { const u=[...bulkData]; u[index].waterOldInput=formatNumberInput(e.target.value); setBulkData(u); }} /></TableCell>
                             <TableCell>
-                              <Input className="w-20 h-8 px-2 text-sm bg-card" type="number" value={item.waterNewInput} onChange={e => { const u=[...bulkData]; u[index].waterNewInput=e.target.value; setBulkData(u); }} />
+                              <Input className="w-20 h-8 px-2 text-sm bg-card" inputMode="numeric" value={item.waterNewInput} onChange={e => { const u=[...bulkData]; u[index].waterNewInput=formatNumberInput(e.target.value); setBulkData(u); }} />
                               {!item.waterPrice && <span className="block text-[10px] text-destructive">Thiếu giá Nước</span>}
                             </TableCell>
-                            <TableCell className="text-right font-medium text-foreground">{total.toLocaleString("vi-VN")} đ</TableCell>
+                            <TableCell className="text-right font-medium text-foreground">{formatCurrency(total)}</TableCell>
                           </TableRow>
                         );
                       })
@@ -392,7 +392,7 @@ export default function InvoicesPage() {
                   </TableCell>
                   <TableCell>{invoice.period}</TableCell>
                   <TableCell>{invoice.room || invoice.contractId?.roomId?.roomCode || "N/A"}</TableCell>
-                  <TableCell>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(invoice.totalAmount || 0)}</TableCell>
+                  <TableCell>{formatCurrency(invoice.totalAmount)}</TableCell>
                   <TableCell>{getStatusBadge(invoice.status)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1" onClick={e => e.stopPropagation()}>
@@ -440,14 +440,14 @@ export default function InvoicesPage() {
                 <div className="grid grid-cols-2 gap-3 rounded-[16px] bg-muted p-4 text-sm">
                   <div><p className="text-muted-foreground">Phòng</p><p className="font-bold">{detailInvoice.room || detailInvoice.contractId?.roomId?.roomCode || "N/A"}</p></div>
                   <div><p className="text-muted-foreground">Kỳ thanh toán</p><p className="font-bold">{detailInvoice.period || "-"}</p></div>
-                  <div><p className="text-muted-foreground">Tiền thuê</p><p className="font-bold">{new Intl.NumberFormat('vi-VN').format(detailInvoice.rent || 0)}đ</p></div>
-                  <div><p className="text-muted-foreground">Điện</p><p className="font-bold">{new Intl.NumberFormat('vi-VN').format(detailInvoice.electricity || 0)}đ</p></div>
-                  <div><p className="text-muted-foreground">Nước</p><p className="font-bold">{new Intl.NumberFormat('vi-VN').format(detailInvoice.water || 0)}đ</p></div>
-                  <div><p className="text-muted-foreground">Dịch vụ khác</p><p className="font-bold">{new Intl.NumberFormat('vi-VN').format(detailInvoice.services || 0)}đ</p></div>
+                  <div><p className="text-muted-foreground">Tiền thuê</p><p className="font-bold">{formatCurrency(detailInvoice.rent)}</p></div>
+                  <div><p className="text-muted-foreground">Điện</p><p className="font-bold">{formatCurrency(detailInvoice.electricity)}</p></div>
+                  <div><p className="text-muted-foreground">Nước</p><p className="font-bold">{formatCurrency(detailInvoice.water)}</p></div>
+                  <div><p className="text-muted-foreground">Dịch vụ khác</p><p className="font-bold">{formatCurrency(detailInvoice.services)}</p></div>
                 </div>
                 <div className="flex items-center justify-between rounded-[16px] bg-primary/10 px-5 py-4">
                   <p className="font-black text-foreground">Tổng cộng</p>
-                  <p className="text-2xl font-black text-primary">{new Intl.NumberFormat('vi-VN').format(detailInvoice.totalAmount || 0)}đ</p>
+                  <p className="text-2xl font-black text-primary">{formatCurrency(detailInvoice.totalAmount)}</p>
                 </div>
                 <button onClick={() => window.print()} className="flex w-full items-center justify-center gap-2 rounded-[16px] border border-border bg-card py-2.5 text-sm font-bold transition hover:bg-accent">
                   <Printer className="size-4" /> In hóa đơn
