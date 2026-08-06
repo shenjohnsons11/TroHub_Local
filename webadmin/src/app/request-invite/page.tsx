@@ -115,7 +115,7 @@ export default function RequestInvitePage() {
 
         <div className="flex gap-3 rounded-[16px] bg-accent/40 px-4 py-3 text-xs font-medium leading-relaxed text-muted-foreground">
           <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" />
-          <span>Thông tin của bạn chỉ dùng để định danh khi cấp mã mời kiểm thử hệ thống TroHub.</span>
+          <span>Thông tin của bạn chỉ dùng để định danh khi cấp mã mời sử dụng hệ thống TroHub.</span>
         </div>
       </div>
     </main>
