@@ -6,9 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "test:web-core-ui": "node test_web_core_pages_ui.mjs",
-    "test:web-support-ui": "node test_web_support_pages_ui.mjs"
+    "lint": "eslint"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

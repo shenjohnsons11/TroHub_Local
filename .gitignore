@@ -68,6 +68,14 @@ scratch_clone/
 reports/
 demo/
 
+# Production-only repository
+test_*
+tests/
+__tests__/
+*.test.*
+*.spec.*
+coverage/
+
 # Keep documentation tracked
 !README.md
 !CHANGELOG.md

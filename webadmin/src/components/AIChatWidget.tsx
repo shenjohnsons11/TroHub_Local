@@ -10,8 +10,6 @@ import {
   Trash2, 
   Copy, 
   Check, 
-  MessageSquare,
-  ChevronDown,
   Minimize2,
   Maximize2,
   Mic,
@@ -67,15 +65,12 @@ export default function AIChatWidget() {
     const query = (textToSend || inputMessage).trim();
     if (!query || loading) return;
 
-    const userMsgId = Date.now().toString();
-    const userMsg: Message = {
-      id: userMsgId,
+    setMessages((prev) => [...prev, {
+      id: `user-${prev.length}`,
       sender: "user",
       text: query,
       timestamp: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
-    };
-
-    setMessages((prev) => [...prev, userMsg]);
+    }]);
     if (!textToSend) setInputMessage("");
     setLoading(true);
 
@@ -85,25 +80,22 @@ export default function AIChatWidget() {
         body: JSON.stringify({ message: query }),
       });
 
-      const aiMsg: Message = {
-        id: (Date.now() + 1).toString(),
+      setMessages((prev) => [...prev, {
+        id: `ai-${prev.length}`,
         sender: "ai",
         text: data.reply || "Xin lỗi, tôi không thể phản hồi câu hỏi này lúc này.",
         timestamp: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
-      };
-
-      setMessages((prev) => [...prev, aiMsg]);
+      }]);
       if (dispatchAIAction(data.action)) {
         window.location.assign(data.action.type === "FILL_CONTRACT_FORM" ? "/dashboard/contracts/new" : "/dashboard/utilities");
       }
     } catch (err: any) {
-      const errorMsg: Message = {
-        id: (Date.now() + 1).toString(),
+      setMessages((prev) => [...prev, {
+        id: `error-${prev.length}`,
         sender: "ai",
         text: `⚠️ **Lỗi kết nối:** ${err.message || "Không thể phản hồi. Vui lòng thử lại sau."}`,
         timestamp: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
-      };
-      setMessages((prev) => [...prev, errorMsg]);
+      }]);
     } finally {
       setLoading(false);
     }
