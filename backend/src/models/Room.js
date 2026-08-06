@@ -5,6 +5,15 @@ const roomSchema = new mongoose.Schema({
     area: { type: String },                                   // dien_tich
     defaultRentPrice: { type: Number, required: true },       // gia_thue_mac_dinh
     defaultDeposit: { type: Number, required: true },         // gia_coc_mac_dinh
+    floor: {
+        type: Number,
+        min: 1,
+        default: 1,
+        validate: {
+            validator: Number.isInteger,
+            message: 'Tầng phải là số nguyên dương.'
+        }
+    },
     status: { type: Number, enum: [0, 1, 2], default: 0 },    // 0: Trống, 1: Đang thuê, 2: Đang sửa
     landlordId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account', required: true }, // ma_chu_tro
     draftElectricity: { type: Number }, // Khách tự điền số điện nháp
