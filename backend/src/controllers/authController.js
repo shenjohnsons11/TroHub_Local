@@ -1,4 +1,5 @@
 const Account = require('../models/Account');
+const InviteCode = require('../models/InviteCode');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
@@ -10,7 +11,6 @@ const JWT_SECRET = process.env.JWT_SECRET || 'trohub_secret_key_2026';
 const OTP_TTL_MS = 10 * 60 * 1000;
 const OTP_RESEND_MS = 60 * 1000;
 const OTP_MAX_ATTEMPTS = 5;
-const DEVELOPMENT_LANDLORD_INVITES = ['102938', '574839', '293847', '847291', '482019', '673920'];
 
 function clearOtp(account) {
     account.passwordResetOtpHash = undefined;
@@ -25,12 +25,6 @@ function sameNonce(stored, supplied) {
     const suppliedBuffer = Buffer.from(supplied);
     return storedBuffer.length === suppliedBuffer.length
         && crypto.timingSafeEqual(storedBuffer, suppliedBuffer);
-}
-
-function getLandlordInviteCodes() {
-    const configured = process.env.LANDLORD_INVITE_CODES;
-    if (configured) return configured.split(',').map((code) => code.trim()).filter(Boolean);
-    return process.env.NODE_ENV === 'production' ? [] : DEVELOPMENT_LANDLORD_INVITES;
 }
 
 function serializeUser(account) {
@@ -56,6 +50,9 @@ function serializeUser(account) {
 exports.register = async (req, res) => {
     const role = Number(req.body?.role);
     const isLandlordRegistration = role === 1 && (typeof req.body?.propertyAddress === 'string' || typeof req.body?.inviteCode === 'string');
+    let claimedInviteCode;
+    let landlordAccount;
+    let landlordAccountSaved = false;
     try {
         if (!isLandlordRegistration) {
             const { fullName, phone, email, idCard, password } = req.body;
@@ -84,6 +81,7 @@ exports.register = async (req, res) => {
         const cleanEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
         const cleanIdCard = typeof idCard === 'string' ? idCard.replace(/\D/g, '') : '';
         const cleanAddress = typeof propertyAddress === 'string' ? propertyAddress.trim() : '';
+        const cleanInviteCode = typeof inviteCode === 'string' ? inviteCode.trim() : '';
 
         if (!cleanName) return res.status(400).json({ success: false, code: 'FULL_NAME_REQUIRED', message: 'Vui lòng nhập họ và tên đầy đủ.' });
         if (cleanPhone.length !== 10) return res.status(400).json({ success: false, code: 'INVALID_PHONE', message: 'Số điện thoại phải gồm đúng 10 chữ số.' });
@@ -91,7 +89,7 @@ exports.register = async (req, res) => {
         if (cleanIdCard.length !== 12) return res.status(400).json({ success: false, code: 'INVALID_ID_CARD', message: 'CCCD phải gồm đúng 12 chữ số.' });
         if (typeof password !== 'string' || password.length < 6) return res.status(400).json({ success: false, code: 'INVALID_PASSWORD', message: 'Mật khẩu phải có ít nhất 6 ký tự.' });
         if (!cleanAddress) return res.status(400).json({ success: false, code: 'PROPERTY_ADDRESS_REQUIRED', message: 'Vui lòng nhập địa chỉ nhà trọ.' });
-        if (!getLandlordInviteCodes().includes(typeof inviteCode === 'string' ? inviteCode.trim() : '')) {
+        if (!/^\d{6}$/.test(cleanInviteCode)) {
             return res.status(403).json({ success: false, code: 'INVALID_LANDLORD_INVITE', message: 'Mã mời đăng ký Chủ trọ không hợp lệ.' });
         }
 
@@ -99,7 +97,7 @@ exports.register = async (req, res) => {
         const existing = await Account.findOne({ $or: [{ phone: cleanPhone }, { email: cleanEmail }, { idCard: cleanIdCard }] });
         if (existing) return res.status(400).json({ success: false, code: 'ACCOUNT_ALREADY_EXISTS', message: 'Số điện thoại, Email hoặc CCCD đã được đăng ký.' });
 
-        const account = await new Account({
+        landlordAccount = new Account({
             username: cleanPhone,
             password: await bcrypt.hash(password, 10),
             fullName: cleanName,
@@ -111,10 +109,32 @@ exports.register = async (req, res) => {
             propertyAddress: cleanAddress,
             propertyLatitude: coordinates?.latitude,
             propertyLongitude: coordinates?.longitude,
-        }).save();
+        });
+
+        claimedInviteCode = await InviteCode.findOneAndUpdate(
+            { code: cleanInviteCode, isUsed: false },
+            { $set: { isUsed: true, usedAt: new Date(), usedBy: landlordAccount._id } },
+            { returnDocument: 'after' }
+        );
+        if (!claimedInviteCode) {
+            return res.status(403).json({ success: false, code: 'INVALID_LANDLORD_INVITE', message: 'Mã mời đăng ký Chủ trọ không hợp lệ.' });
+        }
+
+        const account = await landlordAccount.save();
+        landlordAccountSaved = true;
         const token = jwt.sign({ id: account._id, role: account.role }, JWT_SECRET, { expiresIn: '30d' });
         return res.status(201).json({ success: true, message: 'Đăng ký tài khoản Chủ trọ thành công!', token, user: serializeUser(account) });
     } catch (error) {
+        if (claimedInviteCode && landlordAccount && !landlordAccountSaved) {
+            try {
+                await InviteCode.updateOne(
+                    { _id: claimedInviteCode._id, usedBy: landlordAccount._id },
+                    { $set: { isUsed: false }, $unset: { usedAt: 1, usedBy: 1 } }
+                );
+            } catch (rollbackError) {
+                console.error('[INVITE_CODE_ROLLBACK]', rollbackError.message);
+            }
+        }
         const status = error.code === 'INVALID_PROPERTY_COORDINATES' ? 400 : 500;
         return res.status(status).json({ success: false, code: error.code, message: error.message || 'Không thể đăng ký tài khoản Chủ trọ.' });
     }
