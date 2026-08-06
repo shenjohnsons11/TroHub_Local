@@ -15,6 +15,8 @@ import { useNotification } from "@/hooks/use-notification";
 import { getNotificationMessage } from "@/lib/notification-messages";
 import { LanguageToggle } from "@/components/language-toggle";
 import { useLanguage } from "@/components/language-provider";
+
+// Vietnamese identifier label: Số điện thoại hoặc Email.
 import {
   Dialog,
   DialogContent,
@@ -111,9 +113,9 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const phone = unformatDigits(identifier);
+      const phoneClean = unformatDigits(identifier);
       if (!fullName.trim()) throw new Error(t("requiredFullName"));
-      if (phone.length !== 10) throw new Error(t("invalidPhone"));
+      if (phoneClean.length !== 10) throw new Error(t("invalidPhone"));
       if (!/^\S+@\S+\.\S+$/.test(email.trim())) throw new Error(t("invalidEmail"));
       if (idCard.replace(/\D/g, "").length !== 12) throw new Error("CCCD phải gồm đúng 12 chữ số.");
       if (password.length < 6) throw new Error(t("invalidPassword"));
@@ -125,7 +127,7 @@ export default function LoginPage() {
         body: JSON.stringify({
           role: 1,
           fullName: fullName.trim(),
-          phone,
+          phone: phoneClean,
           email: email.trim(),
           idCard: idCard.replace(/\D/g, ""),
           password,
@@ -139,7 +141,7 @@ export default function LoginPage() {
       localStorage.setItem("trohub_user", JSON.stringify(data.user));
       notification.success(t("registerSuccess"));
       setMode("login");
-      setIdentifier(phone);
+      setIdentifier(phoneClean);
       setPassword("");
       setInviteCode("");
     } catch (err) {
