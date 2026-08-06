@@ -20,6 +20,14 @@ export const fetchAPI = async (endpoint: string, options: RequestInit = {}) => {
     headers,
   });
 
+  if (response.status === 401) {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("trohub_token");
+      localStorage.removeItem("trohub_user");
+      window.location.href = "/";
+    }
+  }
+
   const contentType = response.headers.get("content-type") || "";
   if (!contentType.includes("application/json")) {
     const connectionError = new Error(

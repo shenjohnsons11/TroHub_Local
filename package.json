@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "scripts": {
     "start": "expo start",
-    "test:ui": "node --test test_formatters.js test_identity_formatting_contracts.js test_mobile_numeric_formatting_contracts.js test_web_numeric_formatting_contracts.js test_auth_recovery_ui.js test_contract_date.js test_contract_deposit_ui.js test_contract_meter_ui.js test_ui_contracts.js test_tenant_dual_theme.js test_tenant_modal_dual_theme.js test_admin_workflows_dual_theme.js test_admin_operations_dual_theme.js test_notification_contracts.js test_webadmin_api_proxy.js test_unified_webadmin_contracts.js test_payment_history_ui.js test_nguoi_thue_notifications_ui.js test_invoice_semantic_ui.js test_password_reset_ui.js",
+    "test:ui": "node --test test_formatters.js test_identity_formatting_contracts.js test_mobile_phone_auth.js test_mobile_numeric_formatting_contracts.js test_web_numeric_formatting_contracts.js test_auth_recovery_ui.js test_contract_date.js test_contract_deposit_ui.js test_contract_meter_ui.js test_invoice_detail_population.js test_product_terminology.js test_smart_tenant_form.js test_checkout_flow_contracts.js test_ui_contracts.js test_tenant_dual_theme.js test_tenant_modal_dual_theme.js test_admin_workflows_dual_theme.js test_admin_operations_dual_theme.js test_notification_contracts.js test_webadmin_api_proxy.js test_unified_webadmin_contracts.js test_notification_pipeline_ui.js && node --experimental-strip-types --test test_cccd_qr_scanner.mjs",
     "test:admin-operations-ui": "node --test test_admin_operations_dual_theme.js",
     "test:admin-workflows-ui": "node --test test_admin_workflows_dual_theme.js",
     "test:tenant-ui": "node --test test_tenant_dual_theme.js",
@@ -15,7 +15,9 @@
     "lint": "expo lint"
   },
   "dependencies": {
+    "@bacons/apple-targets": "^5.0.0",
     "@expo/vector-icons": "^15.0.3",
+    "@lottiefiles/dotlottie-react": "^0.13.5",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "8.4.4",
     "@react-navigation/bottom-tabs": "^7.4.0",
@@ -23,6 +25,7 @@
     "@react-navigation/native": "^7.1.8",
     "expo": "~54.0.33",
     "expo-blur": "~15.0.8",
+    "expo-camera": "~17.0.10",
     "expo-constants": "~18.0.13",
     "expo-device": "~8.0.10",
     "expo-font": "~14.0.11",
@@ -33,6 +36,8 @@
     "expo-linking": "~8.0.11",
     "expo-notifications": "~0.32.17",
     "expo-router": "~6.0.23",
+    "expo-speech": "~14.0.8",
+    "expo-speech-recognition": "^3.1.3",
     "expo-splash-screen": "~31.0.13",
     "expo-status-bar": "~3.0.9",
     "expo-symbols": "~1.0.8",
@@ -42,6 +47,7 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-native": "0.81.5",
+    "react-native-android-widget": "^0.21.0",
     "react-native-gesture-handler": "~2.28.0",
     "react-native-reanimated": "~4.1.1",
     "react-native-safe-area-context": "~5.6.0",
@@ -49,7 +55,8 @@
     "react-native-toast-message": "^2.3.3",
     "react-native-web": "~0.21.0",
     "react-native-webview": "13.15.0",
-    "react-native-worklets": "0.5.1"
+    "react-native-worklets": "0.5.1",
+    "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
     "@expo/ngrok": "^4.1.3",

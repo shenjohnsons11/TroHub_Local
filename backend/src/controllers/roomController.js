@@ -55,9 +55,21 @@ exports.createRoom = async (req, res) => {
     try {
         let { roomCode, area, defaultRentPrice, defaultDeposit, landlordId, rent, deposit, floor } = req.body;
         
+        if (!roomCode || typeof roomCode !== 'string' || !roomCode.trim()) {
+            return res.status(400).json({ success: false, message: "Mã phòng không được để trống!" });
+        }
+
         // Hỗ trợ map field từ frontend gửi lên (rent, deposit)
         if (rent !== undefined) defaultRentPrice = rent;
         if (deposit !== undefined) defaultDeposit = deposit;
+
+        if (defaultRentPrice === undefined || defaultRentPrice === null) {
+            return res.status(400).json({ success: false, message: "Giá thuê phòng không được để trống!" });
+        }
+
+        if (!landlordId && req.auth?.id) {
+            landlordId = req.auth.id;
+        }
 
         // Kiểm tra xem mã phòng đã tồn tại chưa
         const existingRoom = await Room.findOne({ roomCode });

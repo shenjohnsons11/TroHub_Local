@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "../../contexts/ThemeContext";
 import { WidgetDataSnapshot } from "../../types/WidgetData";
 import { formatCurrency } from "../../utils/formatters";
+import LandlordHomeWidget from "./LandlordHomeWidget";
 
 type WidgetSize = "small" | "medium" | "large";
 
@@ -54,50 +55,7 @@ export default function TroHubWidgetView({ size, data, onNavigate, onScanCamera 
   }
 
   if (size === "medium") {
-    // Medium Widget (4x2)
-    return (
-      <View style={[styles.cardMedium, { backgroundColor: cardBg, borderColor }]}>
-        <View style={styles.topMedium}>
-          <View style={styles.brandRow}>
-            <Ionicons name="home" size={16} color={theme.primary} />
-            <Text style={[styles.brandTitle, { color: textColor }]}>TROHUB ADMIN</Text>
-          </View>
-          {onScanCamera && (
-            <Pressable
-              accessibilityRole="button"
-              onPress={onScanCamera}
-              style={[styles.scanBtnMini, { backgroundColor: theme.primarySoft }]}
-            >
-              <Ionicons name="camera-outline" size={14} color={theme.primary} />
-              <Text style={[styles.scanBtnMiniText, { color: theme.primary }]}>Quét Camera</Text>
-            </Pressable>
-          )}
-        </View>
-
-        <View style={styles.grid3Cols}>
-          <View style={styles.metricCol}>
-            <Text style={[styles.metricLabel, { color: subTextColor }]}>Công nợ chưa thu</Text>
-            <Text style={[styles.metricValue, { color: "#ef4444" }]} numberOfLines={1}>
-              {formattedDebt}
-            </Text>
-          </View>
-
-          <View style={[styles.metricCol, styles.colBorder, { borderColor }]}>
-            <Text style={[styles.metricLabel, { color: subTextColor }]}>Chốt Điện Nước</Text>
-            <Text style={[styles.metricValue, { color: "#f59e0b" }]} numberOfLines={1}>
-              {data.utilityReadingProgress}
-            </Text>
-          </View>
-
-          <View style={styles.metricCol}>
-            <Text style={[styles.metricLabel, { color: subTextColor }]}>Sự cố đang mở</Text>
-            <Text style={[styles.metricValue, { color: "#6366f1" }]} numberOfLines={1}>
-              {data.openRepairsCount} sự cố
-            </Text>
-          </View>
-        </View>
-      </View>
-    );
+    return <LandlordHomeWidget data={data} onScanCamera={onScanCamera} />;
   }
 
   // Large Widget (4x4)

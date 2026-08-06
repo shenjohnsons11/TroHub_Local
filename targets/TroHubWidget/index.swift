@@ -137,12 +137,12 @@ struct MediumWidgetView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "building.2.fill")
                         .foregroundColor(Color(red: 0.06, green: 0.72, blue: 0.51))
-                    Text("TROHUB ADMIN")
+                    Text("TroHub Chủ trọ")
                         .font(.caption)
                         .fontWeight(.black)
                 }
                 Spacer()
-                Link(destination: URL(string: "trohub://scan-meter")!) {
+                Link(destination: URL(string: "trohub://scan-camera")!) {
                     HStack(spacing: 4) {
                         Image(systemName: "camera.fill")
                             .font(.system(size: 11))
@@ -214,7 +214,7 @@ struct LargeWidgetView: View {
                         .foregroundColor(.secondary)
                 }
                 Spacer()
-                Link(destination: URL(string: "trohub://scan-meter")!) {
+                Link(destination: URL(string: "trohub://scan-camera")!) {
                     HStack(spacing: 4) {
                         Image(systemName: "camera.fill")
                             .font(.system(size: 11))
@@ -353,7 +353,7 @@ struct TroHubWidget: Widget {
         StaticConfiguration(kind: kind, provider: Provider()) { entry in
             TroHubWidgetEntryView(entry: entry)
         }
-        .configurationDisplayName("TroHub Admin Widget")
+        .configurationDisplayName("Tiện ích Chủ trọ TroHub")
         .description("Theo dõi doanh thu, công nợ, chỉ số điện nước và sự cố nhà trọ.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }

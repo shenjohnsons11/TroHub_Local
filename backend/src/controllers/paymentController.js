@@ -90,7 +90,7 @@ exports.createVietQRPayment = async (req, res) => {
             });
         }
 
-        if (invoice.status === 2) {
+        if ([2, 4].includes(invoice.status)) {
             return res.status(400).json({
                 success: false,
                 message: "Hóa đơn này đã được thanh toán"
@@ -424,7 +424,7 @@ exports.createVNPayUrl = async (req, res) => {
         if (!invoice) {
             return res.status(404).json({ success: false, message: "Không tìm thấy hóa đơn" });
         }
-        if (invoice.status === 2) {
+        if ([2, 4].includes(invoice.status)) {
             return res.status(400).json({ success: false, message: "Hóa đơn này đã được thanh toán" });
         }
 

@@ -361,7 +361,7 @@ export default function ContractScreen({ onNavigate, params }: Props) {
                           {contract.deposit}
                         </Text>
                         <Text style={styles.depositPaymentHint}>
-                          Hoàn tất tiền cọc để Admin có thể duyệt hợp đồng.
+                          Hoàn tất tiền cọc để Chủ trọ có thể duyệt hợp đồng.
                         </Text>
                       </View>
                       <Pressable

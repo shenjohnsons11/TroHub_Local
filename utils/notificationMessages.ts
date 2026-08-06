@@ -8,7 +8,7 @@ const FRIENDLY_MESSAGES: Record<string, string> = {
     "Chỉ số mới không được thấp hơn chỉ số cũ. Vui lòng kiểm tra lại điện và nước.",
   INVALID_CALCULATION_INPUT:
     "Số liệu điện, nước hoặc đơn giá chưa hợp lệ. Vui lòng kiểm tra lại.",
-  ADMIN_REQUIRED: "Tính năng này chỉ dành cho Admin.",
+  ADMIN_REQUIRED: "Tính năng này chỉ dành cho Chủ trọ.",
   AUTH_REQUIRED: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
 };
 

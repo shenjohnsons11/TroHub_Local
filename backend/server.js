@@ -17,12 +17,10 @@ const paymentRoute = require('./src/routes/paymentRoute');
 const serviceRoutes = require('./src/routes/serviceRoutes');
 const dashboardRoutes = require('./src/routes/dashboardRoutes');
 const billingPolicyRoutes = require('./src/routes/billingPolicyRoutes');
-const notificationRoutes = require('./src/routes/notificationRoutes');
-const passwordResetRoutes = require('./src/routes/passwordResetRoutes');
-const adminAccountRoutes = require('./src/routes/adminAccountRoutes');
+const utilityRoutes = require('./src/routes/utilityRoutes');
+const ocrRoutes = require('./src/routes/ocrRoutes');
 const paymentController = require('./src/controllers/paymentController');
 const { applyAllOverduePenalties } = require('./src/services/overdueInvoice');
-const { runAutomaticInvoiceReminders } = require('./src/services/invoiceReminderScheduler');
 
 const app = express();
 
@@ -50,14 +48,8 @@ const overdueTimer = setInterval(() => {
 }, 15 * 60 * 1000);
 overdueTimer.unref();
 
-const reminderTimer = setInterval(() => {
-    runAutomaticInvoiceReminders().then((summary) => {
-        console.log('[INVOICE_REMINDER_JOB]', summary);
-    }).catch((error) => {
-        console.error('[INVOICE_REMINDER_JOB] Không thể gửi lịch nhắc:', error.message);
-    });
-}, 15 * 60 * 1000);
-reminderTimer.unref();
+const notificationRoutes = require('./src/routes/notificationRoutes');
+const aiRoutes = require('./src/routes/aiRoutes');
 
 // 4. Đăng ký các Routes
 app.use('/api/rooms', roomRoutes);
@@ -65,9 +57,8 @@ app.use('/api/tenants', tenantRoutes);
 app.use('/api/contracts', contractRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/repairs', repairRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use('/api/auth', authRoutes);
-app.use('/api/auth/password-reset', passwordResetRoutes);
-app.use('/api/admin/accounts', adminAccountRoutes);
 app.use('/api/seed', seedRoute);
 app.use('/api/settings', settingsRoute);
 app.use('/api/me', meRoute);
@@ -75,9 +66,12 @@ app.use('/api/payments', paymentRoute);
 app.get('/api/vnpay/ipn', paymentController.vnpayIpn);
 app.use('/api/services', serviceRoutes);
 app.use('/api/settings/billing-policy', billingPolicyRoutes);
-app.use('/api/notifications', notificationRoutes);
+app.use('/api/utilities', utilityRoutes);
+app.use('/api/ocr', ocrRoutes);
 app.use("/vqr", require("./src/routes/vietqrDirectRoutes"));
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/landlord', dashboardRoutes);
+app.use('/api/ai', aiRoutes);
 
 // 5. Global Error Handling (Trả về JSON thay vì HTML)
 app.use((req, res, next) => {
@@ -92,8 +86,14 @@ app.use((err, req, res, next) => {
     });
 });
 
+const http = require('http');
+const { initSocket } = require('./src/services/socketService');
+
+const server = http.createServer(app);
+initSocket(server);
+
 // 6. Khởi động Server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server đang chạy tại http://0.0.0.0:${PORT}`);
 });

@@ -2,7 +2,7 @@ const Account = require('../models/Account');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const { buildLoginLookup } = require('../services/authIdentifier');
+const { buildLoginLookup, normalizeEmail, normalizePhone } = require('../services/authIdentifier');
 const { normalizeCoordinates, reverseGeocode } = require('../services/propertyLocation');
 
 // Chuỗi bí mật mã hóa phiên đăng nhập
@@ -55,15 +55,29 @@ function serializeUser(account) {
 
 exports.register = async (req, res) => {
     const role = Number(req.body?.role);
-    if (role !== 1) {
-        return res.status(403).json({
-            success: false,
-            code: 'PUBLIC_REGISTRATION_DISABLED',
-            message: 'Tài khoản mới chỉ được tạo bởi Admin.',
-        });
-    }
-
+    const isLandlordRegistration = role === 1 && (typeof req.body?.propertyAddress === 'string' || typeof req.body?.inviteCode === 'string');
     try {
+        if (!isLandlordRegistration) {
+            const { fullName, phone, email, idCard, password } = req.body;
+            const cleanName = typeof fullName === 'string' ? fullName.trim() : '';
+            const cleanPhone = normalizePhone(phone);
+            const cleanEmail = normalizeEmail(email);
+            const cleanIdCard = typeof idCard === 'string' ? idCard.replace(/\D/g, '') : '';
+
+            if (!cleanName) return res.status(400).json({ success: false, code: 'FULL_NAME_REQUIRED', message: 'Vui lòng nhập họ và tên đầy đủ.' });
+            if (!cleanPhone || cleanPhone.length !== 10) return res.status(400).json({ success: false, code: 'INVALID_PHONE', message: 'Số điện thoại phải gồm đúng 10 chữ số hợp lệ.' });
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) return res.status(400).json({ success: false, code: 'INVALID_EMAIL', message: 'Địa chỉ Email không hợp lệ.' });
+            if (cleanIdCard.length !== 12) return res.status(400).json({ success: false, code: 'INVALID_ID_CARD', message: 'CCCD phải gồm đúng 12 chữ số.' });
+            if (typeof password !== 'string' || password.length < 6) return res.status(400).json({ success: false, code: 'INVALID_PASSWORD', message: 'Mật khẩu phải có ít nhất 6 ký tự.' });
+
+            const existing = await Account.findOne({ $or: [{ phone: cleanPhone }, { email: cleanEmail }, { username: cleanPhone }, { username: cleanEmail }, { idCard: cleanIdCard }] });
+            if (existing) return res.status(400).json({ success: false, code: 'ACCOUNT_ALREADY_EXISTS', message: 'Số điện thoại hoặc Email này đã được đăng ký trên hệ thống!' });
+
+            const account = await new Account({ username: cleanPhone, password: await bcrypt.hash(password, 10), fullName: cleanName, phone: cleanPhone, email: cleanEmail, idCard: cleanIdCard, role: 2, status: 1 }).save();
+            const token = jwt.sign({ id: account._id, role: account.role }, JWT_SECRET, { expiresIn: '30d' });
+            return res.status(201).json({ success: true, message: 'Đăng ký tài khoản mới thành công!', token, user: serializeUser(account) });
+        }
+
         const { fullName, phone, email, idCard, password, inviteCode, propertyAddress, propertyLatitude, propertyLongitude } = req.body;
         const cleanName = typeof fullName === 'string' ? fullName.trim() : '';
         const cleanPhone = typeof phone === 'string' ? phone.replace(/\D/g, '') : '';

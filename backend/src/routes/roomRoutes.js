@@ -1,18 +1,19 @@
 const express = require('express');
 const router = express.Router();
 const roomController = require('../controllers/roomController');
+const { requireAdmin } = require('../middleware/requireAdmin');
 
 // Quản lý danh sách và tạo mới
-router.get('/', roomController.getAllRooms);
-router.post('/', roomController.createRoom);
+router.get('/', requireAdmin, roomController.getAllRooms);
+router.post('/', requireAdmin, roomController.createRoom);
 
 // Xem chi tiết và cập nhật từng phòng cụ thể
-router.get('/:id', roomController.getRoomById);
-router.put('/:id', roomController.updateRoom);
-router.delete('/:id', roomController.deleteRoom);
+router.get('/:id', requireAdmin, roomController.getRoomById);
+router.put('/:id', requireAdmin, roomController.updateRoom);
+router.delete('/:id', requireAdmin, roomController.deleteRoom);
 
 // Cập nhật sổ điện nước hàng loạt
-router.post('/bulk-report-utility', roomController.reportBulkUtilities);
+router.post('/bulk-report-utility', requireAdmin, roomController.reportBulkUtilities);
 
 // Khách báo cáo điện nước
 router.post('/:id/report-utility', roomController.reportUtility);

@@ -20,7 +20,9 @@ import AppButton from "../components/ui/AppButton";
 import GradientHero from "../components/ui/GradientHero";
 import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
 import ProgressStepper from "../components/ui/ProgressStepper";
+import MeterCameraModal from "../components/MeterCameraModal";
 import { formatCurrency, formatNumberInput, unformatNumber } from "../utils/formatters";
+import type { MeterType } from "../utils/meterReadingTarget";
 
 type IconName = React.ComponentProps<typeof Ionicons>["name"];
 
@@ -31,13 +33,14 @@ const bulkSteps: { label: string; icon: IconName }[] = [
   { label: "Phát hành", icon: "paper-plane-outline" },
 ];
 
-export default function BulkInvoiceScreen({ onNavigate }: { onNavigate: (tab: any) => void }) {
+export default function BulkInvoiceScreen({ onNavigate, params }: { onNavigate: (tab: any) => void; params?: any }) {
   const { theme } = useAppTheme();
   const notification = useNotification();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [workflowStep, setWorkflowStep] = useState(1);
   const [data, setData] = useState<any[]>([]);
+  const [scanTarget, setScanTarget] = useState<{ index: number; roomCode: string; meterType: MeterType } | null>(null);
 
   useEffect(() => {
     void loadData();
@@ -61,6 +64,12 @@ export default function BulkInvoiceScreen({ onNavigate }: { onNavigate: (tab: an
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const action = params?.aiAction;
+    if (action?.type !== "FILL_UTILITY_READING" || !data.length) return;
+    setData((current) => current.map((item) => item.room?.trim().toLowerCase() === action.roomCode?.trim().toLowerCase() ? { ...item, electricityNew: formatNumberInput(action.newElec), waterNew: formatNumberInput(action.newWater), aiAction: true } : item));
+  }, [params?.aiAction, data.length]);
 
   const handleInputChange = (index: number, field: string, value: string) => {
     const newData = [...data];
@@ -264,7 +273,7 @@ export default function BulkInvoiceScreen({ onNavigate }: { onNavigate: (tab: an
                     </InvoiceField>
                   </View>
                   <View style={styles.inputRow}>
-                    <InvoiceField label={`Điện cũ · ${formatNumberInput(item.electricityOld) || "0"}`} icon="flash-outline" iconColor={theme.primary} styles={styles}>
+                    <InvoiceField label={`Điện cũ · ${formatNumberInput(item.electricityOld) || "0"}`} icon="flash-outline" iconColor={theme.primary} styles={styles} accessory={<Pressable accessibilityRole="button" accessibilityLabel={`Quét đồng hồ điện phòng ${item.room}`} disabled={!item.selected || submitting || item.electricityPrice <= 0} onPress={() => setScanTarget({ index, roomCode: item.room, meterType: "electricity" })} style={styles.scanInline}><Ionicons name="camera-outline" size={14} color={theme.primary} /><Text style={styles.scanInlineText}>Quét</Text></Pressable>}>
                       {item.electricityPrice > 0 ? (
                         <TextInput
                           style={styles.input}
@@ -278,7 +287,7 @@ export default function BulkInvoiceScreen({ onNavigate }: { onNavigate: (tab: an
                         <Text style={styles.noMeterText}>Không tính theo khối</Text>
                       )}
                     </InvoiceField>
-                    <InvoiceField label={`Nước cũ · ${formatNumberInput(item.waterOld) || "0"}`} icon="water-outline" iconColor={theme.primary} styles={styles}>
+                    <InvoiceField label={`Nước cũ · ${formatNumberInput(item.waterOld) || "0"}`} icon="water-outline" iconColor={theme.primary} styles={styles} accessory={<Pressable accessibilityRole="button" accessibilityLabel={`Quét đồng hồ nước phòng ${item.room}`} disabled={!item.selected || submitting || item.waterPrice <= 0} onPress={() => setScanTarget({ index, roomCode: item.room, meterType: "water" })} style={styles.scanInline}><Ionicons name="camera-outline" size={14} color={theme.primary} /><Text style={styles.scanInlineText}>Quét</Text></Pressable>}>
                       {item.waterPrice > 0 ? (
                         <TextInput
                           style={styles.input}
@@ -311,16 +320,28 @@ export default function BulkInvoiceScreen({ onNavigate }: { onNavigate: (tab: an
           {`Phát hành ${selectedCount} hóa đơn`}
         </AppButton>
       </View>
+      <MeterCameraModal
+        visible={Boolean(scanTarget)}
+        roomCode={scanTarget?.roomCode || ""}
+        initialMeterType={scanTarget?.meterType || "electricity"}
+        onClose={() => setScanTarget(null)}
+        onRead={(meterType, digits) => {
+          if (!scanTarget) return;
+          setData((current) => current.map((item, index) => index === scanTarget.index ? { ...item, [meterType === "electricity" ? "electricityNew" : "waterNew"]: formatNumberInput(digits) } : item));
+          notification.success(`Đã điền chỉ số ${meterType === "electricity" ? "điện" : "nước"} phòng ${scanTarget.roomCode}.`);
+        }}
+      />
     </KeyboardAvoidingView>
   );
 }
 
-function InvoiceField({ label, icon, iconColor, children, styles }: { label: string; icon?: IconName; iconColor: string; children: React.ReactNode; styles: any }) {
+function InvoiceField({ label, icon, iconColor, children, styles, accessory }: { label: string; icon?: IconName; iconColor: string; children: React.ReactNode; styles: any; accessory?: React.ReactNode }) {
   return (
     <View style={styles.inputGroup}>
       <View style={styles.inputLabelRow}>
         {icon ? <Ionicons name={icon} size={15} color={iconColor} /> : null}
         <Text style={styles.inputLabel}>{label}</Text>
+        {accessory}
       </View>
       {children}
     </View>
@@ -358,6 +379,8 @@ function createStyles(theme: any) {
     inputLabel: { color: theme.muted, fontSize: 11, fontWeight: "800" },
     input: { minHeight: 46, borderRadius: 15, paddingHorizontal: 12, backgroundColor: theme.surfaceElevated, color: theme.text, fontSize: 14 },
     noMeterText: { minHeight: 46, color: theme.muted, fontSize: 11, paddingTop: 14 },
+    scanInline: { marginLeft: "auto", minHeight: 44, flexDirection: "row", alignItems: "center", gap: 3, borderRadius: 8, paddingHorizontal: 8, backgroundColor: theme.surfaceElevated },
+    scanInlineText: { color: theme.primary, fontSize: 10, fontWeight: "900" },
     footer: { padding: 14, paddingBottom: Platform.OS === "ios" ? 28 : 14, backgroundColor: theme.surface, shadowColor: theme.text, shadowOpacity: 0.1, shadowOffset: { width: 0, height: -5 }, shadowRadius: 14, elevation: 8 },
   });
 }

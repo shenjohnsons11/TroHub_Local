@@ -18,7 +18,7 @@
     
     <div class="card">
         <h2>Tình Trạng Hiện Tại</h2>
-        <p>Repo này (<code>TroHub_Local</code>) hiện tại <strong>chỉ chứa Frontend</strong> (Giao diện App). Khi bạn chạy Docker ở đây, nó sẽ mở ra giao diện Web Admin.</p>
+        <p>Repo này (<code>TroHub_Local</code>) hiện tại <strong>chỉ chứa Frontend</strong> (Giao diện App). Khi bạn chạy Docker ở đây, nó sẽ mở ra giao diện quản lý Chủ trọ.</p>
         <div class="warning">
             <strong>⚠️ Lưu ý quan trọng:</strong> Để đồng nghiệp của bạn có thể đăng nhập và lấy "data local", thao tác đóng Docker phải bao gồm cả <strong>Backend (API)</strong> và <strong>Database (MySQL/MongoDB...)</strong>. Nếu họ chỉ chạy cái Frontend này, gọi API sẽ báo lỗi mạng do máy họ không có cục Database của bạn!
         </div>
@@ -28,13 +28,13 @@
         <h2>Cấu trúc Dự Án Mới (Monorepo)</h2>
         <ul>
             <li><strong>Thư mục gốc:</strong> Chứa mã nguồn App Mobile dành cho Người thuê.</li>
-            <li><strong>Thư mục <code>webadmin/</code>:</strong> Chứa mã nguồn App Expo phiên bản Web dành cho Quản trị viên.</li>
+            <li><strong>Thư mục <code>webadmin/</code>:</strong> Chứa mã nguồn App Expo phiên bản Web dành cho Chủ trọ.</li>
         </ul>
         <p>Nếu bạn và đồng nghiệp ngồi chung một WiFi, bạn không cần cài Docker. Làm như sau:</p>
         <ol>
             <li>Bật Backend và Database trên máy tính của bạn.</li>
             <li>Mở file <code>constants/api.ts</code> ở <strong>CẢ 2 NƠI</strong> (thư mục gốc và thư mục webadmin), đổi từ <code>localhost</code> thành địa chỉ IP máy bạn (ví dụ: <code>192.168.1.12</code>).</li>
-            <li>Tại thư mục <code>webadmin</code>, chạy <code>npm run web</code>. Sau đó gửi đường link cho đồng nghiệp vào web admin.</li>
+            <li>Tại thư mục <code>webadmin</code>, chạy <code>npm run web</code>. Sau đó gửi đường link trang quản lý Chủ trọ cho đồng nghiệp.</li>
             <li>Tại thư mục gốc, chạy lệnh start Expo để họ quét mã QR test App Mobile.</li>
         </ol>
     </div>
@@ -50,7 +50,7 @@
         <p>Mở file <code>docker-compose.yml</code> lên. Bạn sẽ thấy tôi đã comment (ẩn đi) phần cấu hình Backend và Database. Hãy bỏ comment và sửa lại thông số cho đúng với mã nguồn backend của bạn.</p>
         
         <h3>Bước 3: Tạo Data Mẫu (Seed Data)</h3>
-        <p>Để máy bạn và đồng nghiệp có chung data, bạn hãy export Database trên máy bạn ra một file <code>init.sql</code> (nếu dùng MySQL/Postgres), hoặc code sẵn một logic tự động tạo User/Admin khi Backend khởi động lần đầu.</p>
+        <p>Để máy bạn và đồng nghiệp có chung data, bạn hãy export Database trên máy bạn ra một file <code>init.sql</code> (nếu dùng MySQL/Postgres), hoặc code sẵn một logic tự động tạo tài khoản Người thuê/Chủ trọ khi Backend khởi động lần đầu.</p>
 
         <h3>Bước 4: Chạy Lệnh Khởi Động</h3>
         <p>Gửi toàn bộ thư mục (Frontend + Backend + file docker-compose) cho đồng nghiệp. Họ chỉ cần cài đặt phần mềm Docker Desktop và chạy lệnh sau trong Terminal:</p>

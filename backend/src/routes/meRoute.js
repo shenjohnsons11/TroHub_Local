@@ -19,7 +19,7 @@ router.post('/repairs', meController.createRepair);
 router.delete('/repairs/:id', meController.deleteRepair);
 
 // Người thuê yêu cầu trả phòng
-router.put('/request-terminate/:contractId', meController.requestTerminateContract);
+router.put('/request-terminate/:contractId', requireTenant, meController.requestTerminateContract);
 
 // Người thuê báo cáo điện nước
 router.post('/report-utility', meController.reportUtility);

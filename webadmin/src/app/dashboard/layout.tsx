@@ -25,6 +25,7 @@ import { NotificationBell } from "@/components/notification-bell";
 import { MiniCalendarPopover } from "@/components/mini-calendar-popover";
 import { LanguageToggle } from "@/components/language-toggle";
 import { fetchAPI } from "@/lib/api";
+import AIChatWidget from "@/components/AIChatWidget";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -49,7 +50,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const handleLogout = () => {
     localStorage.removeItem("trohub_token");
     localStorage.removeItem("trohub_user");
-    window.location.href = "/";
+    window.location.replace("/");
   };
 
   const navGroups = [
@@ -121,7 +122,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               {user.fullName ? user.fullName[0].toUpperCase() : "A"}
             </div>
             <div className="flex-1 overflow-hidden">
-              <p className="truncate text-sm font-extrabold text-foreground">{user.fullName || "Admin"}</p>
+              <p className="truncate text-sm font-extrabold text-foreground">{user.fullName || "Chủ trọ"}</p>
               <p className="truncate text-xs text-muted-foreground">Chủ trọ</p>
             </div>
           </div>
@@ -196,6 +197,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {children}
         </div>
       </main>
+      <AIChatWidget />
     </div>
   );
 }

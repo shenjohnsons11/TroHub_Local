@@ -11,6 +11,10 @@ export type AdminRoom = {
   floor: number;
   status: number; // 0: Trống, 1: Đang thuê, 2: Đang sửa
   landlordId?: string;
+  lastElectricityReading?: number;
+  lastWaterReading?: number;
+  draftElectricity?: number;
+  draftWater?: number;
   createdAt?: string;
 };
 
@@ -27,6 +31,11 @@ export type AdminTenant = {
   createdAt?: string;
 };
 
+export type TenantLookupResult = {
+  found: boolean;
+  data: Pick<AdminTenant, "_id" | "fullName" | "phone" | "email" | "idCard"> | null;
+};
+
 export type AdminContract = {
   _id: string;
   roomId: string | { _id: string; roomCode: string; defaultRentPrice: number };
@@ -39,38 +48,40 @@ export type AdminContract = {
   waterPrice?: number;
   initialElectricity?: number;
   initialWater?: number;
-  status: number; // 0: Chờ xác nhận, 1: Hiệu lực, 2: Hết hạn, 3: Hủy
-  services?: {
-    serviceId: string | {
-      _id: string;
-      name?: string;
-      code?: string;
-      billingMode?: "FIXED" | "QUANTITY" | "METER";
-      unit?: string;
-      defaultPrice?: number;
-    };
-    serviceName?: string;
-    serviceCode?: string;
-    billingMode?: "FIXED" | "QUANTITY" | "METER";
-    unit?: string;
-    fixedPrice: number;
-    defaultQuantity?: number;
-  }[];
+  status: number; // 0: Chờ ký, 1: Hiệu lực, 2: Đã kết thúc, 3: Hủy, 4: Chờ chủ duyệt, 5: Chờ trả phòng
+  services?: { serviceId: string; fixedPrice: number }[];
   createdAt?: string;
+};
+
+export type CheckoutPreview = {
+  roomCode: string;
+  depositAmount: number;
+  unpaidAmount: number;
+  electricityOld: number;
+  waterOld: number;
+  electricityPrice: number;
+  waterPrice: number;
+};
+
+export type CheckoutSettlement = CheckoutPreview & {
+  electricityNew: number;
+  electricityAmount: number;
+  waterNew: number;
+  waterAmount: number;
+  utilitiesAmount: number;
+  damageAmount: number;
+  totalDebt: number;
+  refundAmount: number;
+  amountDue: number;
+  finalInvoiceId?: string | null;
 };
 
 export type AdminInvoice = {
   _id: string;
-  id?: string;
-  invoiceCode?: string;
-  roomCode?: string;
-  nguoiThue?: string;
-  statusCode?: number;
-  statusLabel?: string;
   contractId: {
     _id: string;
-    roomId: { _id: string; roomCode: string };
-    tenantId: { _id: string; fullName: string };
+    roomId: { _id: string; roomCode: string; defaultRentPrice?: number };
+    tenantId: { _id: string; fullName: string; phone?: string };
   } | null;
   period: string;
   dueDate: string;
@@ -81,6 +92,12 @@ export type AdminInvoice = {
   fromDate?: string;
   toDate?: string;
   roomAmount?: number;
+  rent?: number;
+  type?: "deposit" | "monthly";
+  depositAmount?: number;
+  tenantName?: string;
+  tenantPhone?: string;
+  roomName?: string;
   electricityOld?: number;
   electricityNew?: number;
   electricity?: number;
@@ -99,10 +116,6 @@ export type AdminInvoice = {
   transactionCode?: string;
   details?: {
     serviceId: { _id: string; name: string; unit: string };
-    serviceName?: string;
-    serviceCode?: string;
-    billingMode?: "FIXED" | "QUANTITY" | "METER";
-    unit?: string;
     oldIndex?: number;
     newIndex?: number;
     quantity: number;
@@ -134,6 +147,8 @@ export type AdminDashboardStats = {
   totalTenants: number;
   pendingRepairs: number;
   totalRevenue: number;
+  outstandingDebt?: number;
+  utilityReadingProgress?: string;
 };
 
 export const adminService = {
@@ -160,7 +175,12 @@ export const adminService = {
     return response.success ? response.data : [];
   },
 
-  async createTenant(tenantData: { fullName: string; phone: string; email: string; idCard: string }): Promise<AdminTenant> {
+  async lookupTenant(identifier: string): Promise<TenantLookupResult> {
+    const token = await authService.getToken();
+    return apiClient.get<TenantLookupResult>(`/tenants/lookup?identifier=${encodeURIComponent(identifier)}`, token);
+  },
+
+  async createTenant(tenantData: { fullName: string; phone: string; email: string; idCard: string; roomCode: string }): Promise<AdminTenant> {
     const token = await authService.getToken();
     const response = await apiClient.post<{ success: boolean; data: AdminTenant }>("/tenants", tenantData, token);
     return response.data;
@@ -236,12 +256,7 @@ export const adminService = {
 
     const contractServices = defaultServices.map(s => ({
       serviceId: s._id,
-      serviceName: s.name,
-      serviceCode: s.code,
-      billingMode: s.billingMode || (s.type === 1 ? "METER" : "FIXED"),
-      unit: s.unit,
-      fixedPrice: s.defaultPrice,
-      defaultQuantity: s.defaultQuantity ?? 1,
+      fixedPrice: s.defaultPrice
     }));
 
     const response = await apiClient.post<{ success: boolean; data: AdminContract }>("/contracts", {
@@ -255,6 +270,29 @@ export const adminService = {
     const token = await authService.getToken();
     const response = await apiClient.put<{ success: boolean }>((`/contracts/${contractId}/confirm`), {}, token);
     return response.success;
+  },
+
+  async checkoutContract(contractId: string, data: {
+    finalElectricity: number;
+    finalWater: number;
+    damageAmount: number;
+    note: string;
+  }): Promise<CheckoutSettlement> {
+    const token = await authService.getToken();
+    const response = await apiClient.put<{
+      success: boolean;
+      settlement: CheckoutSettlement;
+    }>(`/contracts/${contractId}/checkout`, data, token);
+    return response.settlement;
+  },
+
+  async getCheckoutPreview(contractId: string): Promise<CheckoutPreview> {
+    const token = await authService.getToken();
+    const response = await apiClient.get<{ success: boolean; data: CheckoutPreview }>(
+      `/contracts/${contractId}/checkout-preview`,
+      token
+    );
+    return response.data;
   },
 
   async getRepairs(): Promise<AdminRepair[]> {
@@ -277,7 +315,8 @@ export const adminService = {
 
   async getDashboardStats(): Promise<AdminDashboardStats> {
     try {
-      const data = await apiClient.get<AdminDashboardStats>("/dashboard/stats");
+      const response = await apiClient.get<{ success: boolean; data: AdminDashboardStats }>("/landlord/stats");
+      const data = response.data || (response as unknown as AdminDashboardStats);
       void widgetSyncService.syncWidgetData(data);
       return data;
     } catch (error) {

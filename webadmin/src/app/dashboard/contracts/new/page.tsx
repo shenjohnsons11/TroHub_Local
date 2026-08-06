@@ -25,8 +25,25 @@ import {
   resolveEndDateAfterStartChange,
   validateContractDateRange,
 } from "../../../../../../utils/contractDate";
+import { consumePendingAIAction } from "@/lib/ai-actions";
 
-type Option = { _id?: string; id?: string; roomCode?: string; fullName?: string; name?: string; phone?: string; defaultRentPrice?: number; defaultDeposit?: number; type?: number; unit?: string; defaultPrice?: number };
+type Option = {
+  _id?: string;
+  id?: string;
+  roomCode?: string;
+  fullName?: string;
+  name?: string;
+  phone?: string;
+  defaultRentPrice?: number;
+  defaultDeposit?: number;
+  lastElectricityReading?: number;
+  lastWaterReading?: number;
+  draftElectricity?: number;
+  draftWater?: number;
+  type?: number;
+  unit?: string;
+  defaultPrice?: number;
+};
 const STEP_ICONS = [Building2, UserRound, Gauge, PenLine];
 
 export default function NewContractPage() {
@@ -61,6 +78,8 @@ export default function NewContractPage() {
           ...savedDraft,
           fixedRentPrice: formatNumberInput(savedDraft.fixedRentPrice),
           fixedDeposit: formatNumberInput(savedDraft.fixedDeposit),
+          electricityPrice: formatNumberInput(savedDraft.electricityPrice ?? 3500),
+          waterPrice: formatNumberInput(savedDraft.waterPrice ?? 15000),
           initialElectricity: formatNumberInput(savedDraft.initialElectricity),
           initialWater: formatNumberInput(savedDraft.initialWater),
           services: (savedDraft.services || []).map((item) => ({
@@ -85,6 +104,17 @@ export default function NewContractPage() {
   }, [draftKey, notification]);
 
   useEffect(() => { localStorage.setItem(draftKey, JSON.stringify(draft)); }, [draft, draftKey]);
+  useEffect(() => {
+    if (!rooms.length) return;
+    const action = consumePendingAIAction("FILL_CONTRACT_FORM");
+    if (!action) return;
+    const room = rooms.find((item) => item.roomCode?.trim().toLowerCase() === action.roomCode.trim().toLowerCase());
+    if (!room) { notification.warning(`Không tìm thấy phòng ${action.roomCode}.`); return; }
+    const tenant = nguoiThueList.find((item) => (item.fullName || item.name)?.trim().toLowerCase() === action.tenantName.trim().toLowerCase());
+    setStep(1);
+    setDraft((current) => ({ ...current, roomId: room._id || room.id || "", tenantId: tenant?._id || tenant?.id || "", fixedRentPrice: formatNumberInput(action.rentPrice), fixedDeposit: formatNumberInput(room.defaultDeposit || room.defaultRentPrice), initialElectricity: formatNumberInput(room.lastElectricityReading ?? room.draftElectricity), initialWater: formatNumberInput(room.lastWaterReading ?? room.draftWater), startDate: formatIsoToDisplay(action.startDate) }));
+    if (!tenant) notification.info(`Chưa có người thuê “${action.tenantName}”. Hãy chọn hoặc tạo hồ sơ.`);
+  }, [rooms, nguoiThueList, notification]);
   const update = <K extends keyof ContractDraft>(key: K, value: ContractDraft[K]) => { setDraft((current) => ({ ...current, [key]: value })); setErrors((current) => ({ ...current, [key]: "" })); };
   const next = () => { const nextErrors = validateContractStep(step, draft); setErrors(nextErrors); if (Object.keys(nextErrors).length) { notification.warning("Vui lòng hoàn tất thông tin ở bước hiện tại."); return; } setStep((value) => Math.min(4, value + 1)); };
   const selectedRoom = rooms.find((item) => (item._id || item.id) === draft.roomId);
@@ -102,15 +132,15 @@ export default function NewContractPage() {
         setStep(2);
         return;
       }
-      await fetchAPI("/contracts", { method: "POST", body: JSON.stringify({ ...draft, startDate: startDateIso, endDate: endDateIso, fixedRentPrice: unformatNumber(draft.fixedRentPrice), fixedDeposit: unformatNumber(draft.fixedDeposit), initialElectricity: draft.initialElectricity ? unformatNumber(draft.initialElectricity) : undefined, initialWater: draft.initialWater ? unformatNumber(draft.initialWater) : undefined, services: draft.services.map((item) => ({ ...item, fixedPrice: unformatNumber(item.fixedPrice) })) }) });
+      await fetchAPI("/contracts", { method: "POST", body: JSON.stringify({ ...draft, startDate: startDateIso, endDate: endDateIso, fixedRentPrice: unformatNumber(draft.fixedRentPrice), fixedDeposit: unformatNumber(draft.fixedDeposit), electricityPrice: unformatNumber(draft.electricityPrice || formatNumberInput(3500)), waterPrice: unformatNumber(draft.waterPrice || formatNumberInput(15000)), initialElectricity: draft.initialElectricity ? unformatNumber(draft.initialElectricity) : undefined, initialWater: draft.initialWater ? unformatNumber(draft.initialWater) : undefined, services: draft.services.map((item) => ({ ...item, fixedPrice: unformatNumber(item.fixedPrice) })) }) });
       localStorage.removeItem(draftKey);
       notification.success("Tạo hợp đồng thành công.");
       router.push("/dashboard/contracts");
     } catch (error) { notification.error(getNotificationMessage(error, "Không thể tạo hợp đồng.")); } finally { setSubmitting(false); }
   };
 
-  return <div className="mx-auto max-w-5xl space-y-6"><header className="calm-surface overflow-hidden bg-[linear-gradient(135deg,var(--primary),color-mix(in_srgb,var(--primary)_68%,#04100e))] p-6 text-primary-foreground sm:p-8"><p className="text-sm font-bold uppercase tracking-[.16em] opacity-80">Hợp đồng mới</p><h1 className="mt-2 text-3xl font-black tracking-[-.04em] sm:text-4xl">Tạo hợp đồng thuê</h1><p className="mt-2 max-w-xl opacity-80">Bản nháp được tự động lưu riêng cho tài khoản Admin.</p></header><ol aria-label="Tiến trình tạo hợp đồng" className="grid grid-cols-4 gap-2">{CONTRACT_STEPS.map((item, index) => { const Icon = STEP_ICONS[index]; return <li key={item.id} aria-current={item.id === step ? "step" : undefined} className={`relative rounded-[16px] p-3 text-center text-sm transition sm:p-4 ${item.id === step ? "bg-primary text-primary-foreground shadow-[var(--calm-shadow)]" : item.id < step ? "bg-primary/10 text-primary" : "bg-card text-muted-foreground shadow-[var(--calm-shadow)]"}`}><span className="flex flex-col items-center gap-1 font-bold sm:flex-row sm:justify-center sm:gap-2">{item.id < step ? <Check className="size-5" /> : <Icon className="size-5" />}<span className="text-[11px] leading-tight sm:text-sm">{item.label}</span></span></li>; })}</ol><section className="calm-surface min-h-[420px] p-6 sm:p-8">
-    {step === 1 && <div className="grid gap-5 md:grid-cols-2"><Field label="Phòng" error={errors.roomId}><select className="h-11 w-full rounded-[16px] border border-input bg-background px-3" value={draft.roomId} onChange={(e) => { update("roomId", e.target.value); const room = rooms.find((item) => (item._id || item.id) === e.target.value); if (room) setDraft((value) => ({ ...value, roomId: e.target.value, fixedRentPrice: formatNumberInput(room.defaultRentPrice), fixedDeposit: formatNumberInput(room.defaultDeposit || room.defaultRentPrice) })); }}><option value="">Chọn Phòng</option>{rooms.map((room) => <option key={room._id || room.id} value={room._id || room.id}>{room.roomCode}</option>)}</select></Field><Field label="Người thuê" error={errors.tenantId}><select className="h-11 w-full rounded-[16px] border border-input bg-background px-3" value={draft.tenantId} onChange={(e) => update("tenantId", e.target.value)}><option value="">Chọn Người thuê</option>{nguoiThueList.map((item) => <option key={item._id || item.id} value={item._id || item.id}>{item.fullName || item.name} · {formatPhone(item.phone)}</option>)}</select></Field></div>}
+  return <div className="mx-auto max-w-5xl space-y-6"><header className="calm-surface overflow-hidden bg-[linear-gradient(135deg,var(--primary),color-mix(in_srgb,var(--primary)_68%,#04100e))] p-6 text-primary-foreground sm:p-8"><p className="text-sm font-bold uppercase tracking-[.16em] opacity-80">Hợp đồng mới</p><h1 className="mt-2 text-3xl font-black tracking-[-.04em] sm:text-4xl">Tạo hợp đồng thuê</h1><p className="mt-2 max-w-xl opacity-80">Bản nháp được tự động lưu riêng cho tài khoản Chủ trọ.</p></header><ol aria-label="Tiến trình tạo hợp đồng" className="grid grid-cols-4 gap-2">{CONTRACT_STEPS.map((item, index) => { const Icon = STEP_ICONS[index]; return <li key={item.id} aria-current={item.id === step ? "step" : undefined} className={`relative rounded-[16px] p-3 text-center text-sm transition sm:p-4 ${item.id === step ? "bg-primary text-primary-foreground shadow-[var(--calm-shadow)]" : item.id < step ? "bg-primary/10 text-primary" : "bg-card text-muted-foreground shadow-[var(--calm-shadow)]"}`}><span className="flex flex-col items-center gap-1 font-bold sm:flex-row sm:justify-center sm:gap-2">{item.id < step ? <Check className="size-5" /> : <Icon className="size-5" />}<span className="text-[11px] leading-tight sm:text-sm">{item.label}</span></span></li>; })}</ol><section className="calm-surface min-h-[420px] p-6 sm:p-8">
+    {step === 1 && <div className="grid gap-5 md:grid-cols-2"><Field label="Phòng" error={errors.roomId}><select className="h-11 w-full rounded-[16px] border border-input bg-background px-3" value={draft.roomId} onChange={(e) => { update("roomId", e.target.value); const room = rooms.find((item) => (item._id || item.id) === e.target.value); if (room) setDraft((value) => ({ ...value, roomId: e.target.value, fixedRentPrice: formatNumberInput(room.defaultRentPrice), fixedDeposit: formatNumberInput(room.defaultDeposit || room.defaultRentPrice), initialElectricity: formatNumberInput(room.lastElectricityReading ?? room.draftElectricity), initialWater: formatNumberInput(room.lastWaterReading ?? room.draftWater) })); }}><option value="">Chọn Phòng</option>{rooms.map((room) => <option key={room._id || room.id} value={room._id || room.id}>{room.roomCode}</option>)}</select></Field><Field label="Người thuê" error={errors.tenantId}><select className="h-11 w-full rounded-[16px] border border-input bg-background px-3" value={draft.tenantId} onChange={(e) => update("tenantId", e.target.value)}><option value="">Chọn Người thuê</option>{nguoiThueList.map((item) => <option key={item._id || item.id} value={item._id || item.id}>{item.fullName || item.name} · {formatPhone(item.phone)}</option>)}</select></Field></div>}
     {step === 2 && <div className="grid gap-5 md:grid-cols-2">
       <Field label="Ngày bắt đầu" error={errors.startDate}>
         <DateField
@@ -139,8 +169,8 @@ export default function NewContractPage() {
       </Field>
       {[["fixedRentPrice","Tiền thuê / tháng"],["fixedDeposit","Tiền cọc"]].map(([key,label]) => <Field key={key} label={label} error={errors[key]}><Input inputMode="numeric" value={draft[key as keyof ContractDraft] as string} onChange={(e) => update(key as keyof ContractDraft, formatNumberInput(e.target.value) as never)} /></Field>)}
     </div>}
-    {step === 3 && <div className="space-y-6"><div className="grid gap-4 sm:grid-cols-2">{services.map((service) => { const id = service._id || service.id || ""; const chosen = draft.services.find((item) => item.serviceId === id); return <label key={id} className={`rounded-[20px] p-4 shadow-[var(--calm-shadow)] ${chosen ? "bg-primary/10 text-foreground" : "bg-background"}`}><span className="flex items-center gap-3 font-bold"><input type="checkbox" checked={Boolean(chosen)} onChange={() => toggleService(service)} />{service.name} · {service.unit}</span>{chosen && <Input className="mt-3" inputMode="numeric" value={chosen.fixedPrice} onChange={(e) => update("services", draft.services.map((item) => item.serviceId === id ? { ...item, fixedPrice: formatNumberInput(e.target.value) } : item))} />}</label>; })}</div><div className="grid gap-5 md:grid-cols-2"><Field label="Chỉ số điện ban đầu"><Input inputMode="numeric" value={draft.initialElectricity} onChange={(e) => update("initialElectricity", formatNumberInput(e.target.value))} /></Field><Field label="Chỉ số nước ban đầu"><Input inputMode="numeric" value={draft.initialWater} onChange={(e) => update("initialWater", formatNumberInput(e.target.value))} /></Field></div></div>}
-    {step === 4 && <div className="grid gap-4 sm:grid-cols-2"><Summary label="Phòng" value={selectedRoom?.roomCode || "—"} /><Summary label="Người thuê" value={selectedNguoiThue?.fullName || selectedNguoiThue?.name || "—"} /><Summary label="Thời hạn" value={`${draft.startDate} → ${draft.endDate}`} /><Summary label="Tiền thuê" value={formatCurrency(draft.fixedRentPrice)} /><Summary label="Tiền cọc" value={formatCurrency(draft.fixedDeposit)} /><Summary label="Dịch vụ" value={`${draft.services.length} dịch vụ`} /></div>}
+    {step === 3 && <div className="space-y-6"><div className="grid gap-4 sm:grid-cols-2">{services.map((service) => { const id = service._id || service.id || ""; const chosen = draft.services.find((item) => item.serviceId === id); return <label key={id} className={`rounded-[20px] p-4 shadow-[var(--calm-shadow)] ${chosen ? "bg-primary/10 text-foreground" : "bg-background"}`}><span className="flex items-center gap-3 font-bold"><input type="checkbox" checked={Boolean(chosen)} onChange={() => toggleService(service)} />{service.name} · {service.unit}</span>{chosen && <Input className="mt-3" inputMode="numeric" value={chosen.fixedPrice} onChange={(e) => update("services", draft.services.map((item) => item.serviceId === id ? { ...item, fixedPrice: formatNumberInput(e.target.value) } : item))} />}</label>; })}</div><div className="grid gap-5 md:grid-cols-2"><Field label="Giá tiền điện (đ/kWh)" error={errors.electricityPrice}><Input inputMode="numeric" value={draft.electricityPrice} onChange={(e) => update("electricityPrice", formatNumberInput(e.target.value))} placeholder="VD: 3.500" /></Field><Field label="Giá tiền nước (đ/m³)" error={errors.waterPrice}><Input inputMode="numeric" value={draft.waterPrice} onChange={(e) => update("waterPrice", formatNumberInput(e.target.value))} placeholder="VD: 15.000" /></Field><Field label="Chỉ số điện ban đầu"><Input inputMode="numeric" value={draft.initialElectricity} onChange={(e) => update("initialElectricity", formatNumberInput(e.target.value))} placeholder="VD: 100" /></Field><Field label="Chỉ số nước ban đầu"><Input inputMode="numeric" value={draft.initialWater} onChange={(e) => update("initialWater", formatNumberInput(e.target.value))} placeholder="VD: 50" /></Field></div></div>}
+    {step === 4 && <div className="grid gap-4 sm:grid-cols-2"><Summary label="Phòng" value={selectedRoom?.roomCode || "—"} /><Summary label="Người thuê" value={selectedNguoiThue?.fullName || selectedNguoiThue?.name || "—"} /><Summary label="Thời hạn" value={`${draft.startDate} → ${draft.endDate}`} /><Summary label="Tiền thuê" value={formatCurrency(draft.fixedRentPrice)} /><Summary label="Tiền cọc" value={formatCurrency(draft.fixedDeposit)} /><Summary label="Giá điện" value={`${draft.electricityPrice || "3.500"}đ / kWh`} /><Summary label="Giá nước" value={`${draft.waterPrice || "15.000"}đ / m³`} /><Summary label="Dịch vụ" value={`${draft.services.length} dịch vụ`} /></div>}
   </section><footer className="flex justify-between gap-3"><Button variant="outline" disabled={step === 1} onClick={() => setStep((value) => Math.max(1, value - 1))}><ChevronLeft className="size-4" />Quay lại</Button>{step < 4 ? <Button onClick={next}>Tiếp tục<ChevronRight className="size-4" /></Button> : <Button disabled={submitting} onClick={() => void submit()}><PenLine className="size-4" />{submitting ? "Đang tạo..." : "Ký & tạo hợp đồng"}</Button>}</footer></div>;
 }
 

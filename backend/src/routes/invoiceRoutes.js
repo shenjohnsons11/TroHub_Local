@@ -2,15 +2,16 @@ const express = require('express');
 const router = express.Router();
 const invoiceController = require('../controllers/invoiceController');
 const { requireAdmin } = require('../middleware/requireAdmin');
+const { requireAuth } = require('../middleware/requireAuth');
 
 // Lấy danh sách hóa đơn (Web)
-router.get('/', invoiceController.getAllInvoices);
+router.get('/', requireAuth, invoiceController.getAllInvoices);
 
 // Lấy danh sách xem trước lập hóa đơn hàng loạt
-router.get('/bulk-preview', invoiceController.getBulkPreview);
+router.get('/bulk-preview', requireAdmin, invoiceController.getBulkPreview);
 
 // Lấy danh sách công nợ
-router.get('/debts', invoiceController.getDebts);
+router.get('/debts', requireAdmin, invoiceController.getDebts);
 router.post('/debts/:contractId/remind', requireAdmin, invoiceController.remindDebt);
 
 // Tạo hóa đơn hàng loạt
@@ -29,6 +30,6 @@ router.put('/:id/pay', invoiceController.payInvoice);
 router.put('/:id/remind', requireAdmin, invoiceController.remindInvoice);
 
 // Cập nhật hóa đơn
-router.put('/:id', invoiceController.updateInvoice);
+router.put('/:id', requireAdmin, invoiceController.updateInvoice);
 
 module.exports = router;

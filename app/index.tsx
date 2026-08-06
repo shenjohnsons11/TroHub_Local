@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { View, StyleSheet, SafeAreaView } from "react-native";
 import Toast from "react-native-toast-message";
+import * as Notifications from "expo-notifications";
+import { io } from "socket.io-client";
 
 import BottomNav from "../components/BottomNav";
 import LoginScreen from "../screens/LoginScreen";
@@ -20,18 +22,30 @@ import AdminTenantsScreen from "../screens/AdminTenantsScreen";
 import BulkInvoiceScreen from "../screens/BulkInvoiceScreen";
 import ChangePasswordScreen from "../screens/ChangePasswordScreen";
 import AdminSettingsScreen from "../screens/AdminSettingsScreen";
+import NotificationsScreen from "../screens/NotificationsScreen";
 import MeterScannerScreen from "../screens/MeterScannerScreen";
+import CCCDScannerScreen from "../screens/CCCDScannerScreen";
+import AIChatScreen from "../screens/AIChatScreen";
+
 import AppLoadingScreen from "../components/AppLoadingScreen";
 import { useAppTheme } from "../contexts/ThemeContext";
 
 import { UserProfile } from "../types/UserProfile";
 import { authService } from "../services/authService";
 import { userService } from "../services/userService";
-import NotificationsScreen from "../screens/NotificationsScreen";
-import { useInboxNotifications } from "../hooks/useInboxNotifications";
-import { useNotification } from "../hooks/useNotification";
-import { listenForNotificationResponses, registerDeviceForPush } from "../services/push-notifications";
-import { InboxNotification } from "../services/notification-api";
+import { notificationService } from "../services/notificationService";
+import { getExpoPushToken, isPushEnabled, notificationPlatform } from "../services/pushNotificationService";
+import { resolveNotificationTarget } from "../utils/notificationNavigation";
+import { API_BASE_URL } from "../constants/api";
+import * as Linking from "expo-linking";
+import { resolveAppDeepLink } from "../utils/deepLinks";
+import { registerAndroidLandlordWidgetTasks } from "../components/widgets/androidLandlordWidget";
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({ shouldShowAlert: true, shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: true }),
+});
+
+registerAndroidLandlordWidgetTasks();
 
 type Tab =
   | "home"
@@ -47,55 +61,24 @@ type Tab =
   | "change_password"
   | "settings"
   | "notifications"
-  | "scan_meter";
+  | "scan_meter"
+  | "cccd_scan"
+  | "ai_chat";
 
 export default function App() {
   const { theme } = useAppTheme();
-  const notification = useNotification();
-  const {
-    refresh: refreshInbox,
-    reset: resetInbox,
-    unreadCount: notificationUnreadCount,
-  } = useInboxNotifications();
   const [isChecking, setIsChecking] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("home");
   const [actionParams, setActionParams] = useState<any>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [homeRefreshKey, setHomeRefreshKey] = useState(0);
+  const [notificationRefreshKey, setNotificationRefreshKey] = useState(0);
+  const pushTokenRef = useRef<string | null>(null);
 
   useEffect(() => {
     loadAppData();
   }, []);
-
-  useEffect(() => listenForNotificationResponses((data) => {
-    if (data.entityType === "CONTRACT" && data.entityId) {
-      handleChangeTab("contract", { contractId: String(data.entityId) });
-    }
-    if (data.entityType === "INVOICE" && data.entityId) {
-      handleChangeTab("invoice", { paymentInvoiceId: String(data.entityId) });
-    }
-  }), []);
-
-  useEffect(() => {
-    if (isLoggedIn && profile?.role === 2) {
-      void refreshInbox();
-      void notification.confirm({
-        title: "Nhận thông báo quan trọng",
-        message: "Cho phép TroHub thông báo khi có hợp đồng mới hoặc hóa đơn sắp đến hạn?",
-        confirmText: "Cho phép",
-        cancelText: "Để sau",
-      }).then((accepted) => {
-        if (accepted) {
-          void registerDeviceForPush().then((result) => {
-            if (result.status === "missing-project-id") {
-              notification.warning("Push notification cần EAS Project ID; hộp thư trong ứng dụng vẫn hoạt động.");
-            }
-          });
-        }
-      });
-    }
-  }, [isLoggedIn, notification, profile?.role, refreshInbox]);
 
   const loadAppData = async () => {
     try {
@@ -132,11 +115,12 @@ export default function App() {
 
   const handleLogout = async () => {
     try {
+      if (pushTokenRef.current) await notificationService.deactivateDevice(pushTokenRef.current).catch(() => undefined);
+      pushTokenRef.current = null;
       await authService.logout();
 
       setIsLoggedIn(false);
       setProfile(null);
-      resetInbox();
       setActiveTab("home");
       setHomeRefreshKey(0);
     } catch (error) {
@@ -161,6 +145,56 @@ export default function App() {
     setActionParams(params || null);
     setActiveTab(tab);
   };
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    const openDeepLink = (url: string | null | undefined) => {
+      if (resolveAppDeepLink(url) === "cccd_scan") handleChangeTab("cccd_scan");
+    };
+    const subscription = Linking.addEventListener("url", ({ url }) => openDeepLink(url));
+    void Linking.getInitialURL().then(openDeepLink);
+    return () => subscription.remove();
+  }, [isLoggedIn]);
+  const handleAIAction = (action: any) => {
+    if (profile?.role !== 1 || !action?.type) return;
+    handleChangeTab(action.type === "FILL_CONTRACT_FORM" ? "contract" : "invoice_bulk", action.type === "FILL_CONTRACT_FORM" ? { action: "create", aiAction: action } : { aiAction: action });
+  };
+
+  useEffect(() => {
+    if (!isLoggedIn || profile?.role !== 2) return;
+    let socket: ReturnType<typeof io> | null = null;
+    let responseSubscription: Notifications.EventSubscription | null = null;
+    let receivedSubscription: Notifications.EventSubscription | null = null;
+    const refresh = () => setNotificationRefreshKey((value) => value + 1);
+    const openPush = (data: any) => {
+      const target = resolveNotificationTarget({ type: data?.category || "system", deepLink: data?.deepLink, metadata: data?.metadata });
+      handleChangeTab(target.tab as Tab, target.params);
+    };
+
+    void (async () => {
+      const token = await authService.getToken();
+      if (!token) return;
+      if (await isPushEnabled(profile.id)) {
+        const expoPushToken = await getExpoPushToken();
+        if (expoPushToken) {
+          pushTokenRef.current = expoPushToken;
+          await notificationService.registerDevice(expoPushToken, notificationPlatform());
+        }
+      }
+      socket = io(API_BASE_URL.replace(/\/api$/, ""), { auth: { token }, transports: ["websocket"] });
+      socket.on("new_notification", refresh);
+      const lastResponse = await Notifications.getLastNotificationResponseAsync();
+      if (lastResponse) openPush(lastResponse.notification.request.content.data);
+    })().catch((error) => console.log("Lỗi khởi tạo thông báo:", error));
+
+    receivedSubscription = Notifications.addNotificationReceivedListener(refresh);
+    responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => openPush(response.notification.request.content.data));
+    return () => {
+      socket?.disconnect();
+      receivedSubscription?.remove();
+      responseSubscription?.remove();
+    };
+  }, [isLoggedIn, profile?.role]);
 
   if (isChecking) {
     return <AppLoadingScreen />;
@@ -195,7 +229,7 @@ export default function App() {
 
               {activeTab === "invoice" && <AdminInvoicesScreen params={actionParams} onNavigate={handleChangeTab} />}
 
-              {activeTab === "invoice_bulk" && <BulkInvoiceScreen onNavigate={handleChangeTab} />}
+              {activeTab === "invoice_bulk" && <BulkInvoiceScreen onNavigate={handleChangeTab} params={actionParams} />}
 
               {activeTab === "repair" && <AdminRepairsScreen />}
 
@@ -210,47 +244,26 @@ export default function App() {
                 />
               )}
 
-              {activeTab === "notifications" && (
-                <NotificationsScreen
-                  onBack={() => setActiveTab("home")}
-                  onOpen={(item: InboxNotification) => handleChangeTab(item.entityType === "CONTRACT" ? "contract" : "invoice", { [item.entityType === "CONTRACT" ? "contractId" : "paymentInvoiceId"]: item.entityId })}
-                />
-              )}
+              {activeTab === "notifications" && <NotificationsScreen onBack={() => setActiveTab("home")} />}
+
+              {activeTab === "ai_chat" && <AIChatScreen onBack={() => setActiveTab("home")} onAction={handleAIAction} />}
             </>
           ) : (
             <>
               {activeTab === "home" && (
                 <HomeScreen
-                  refreshKey={homeRefreshKey}
-                  onNavigate={(screen) => setActiveTab(screen)}
+                  profile={profile}
+                  refreshKey={homeRefreshKey + notificationRefreshKey}
+                  onNavigate={(screen) => setActiveTab(screen as any)}
                   onLogout={handleLogout}
-                  onOpenNotifications={() => setActiveTab("notifications")}
-                  notificationUnreadCount={notificationUnreadCount}
                 />
-              )}
-
-              {activeTab === "notifications" && (
-                <NotificationsScreen
-                  onBack={() => setActiveTab("home")}
-                  onOpen={(item: InboxNotification) => {
-                    if (item.entityType === "CONTRACT") {
-                      handleChangeTab("contract", { contractId: item.entityId });
-                    } else {
-                      handleChangeTab("invoice", { paymentInvoiceId: item.entityId });
-                    }
-                  }}
-                />
-              )}
-
-              {activeTab === "scan_meter" && (
-                <MeterScannerScreen onBack={() => setActiveTab("home")} onSuccess={() => setActiveTab("utility")} />
               )}
 
               {activeTab === "invoice" && <InvoiceScreen params={actionParams} />}
 
               {activeTab === "repair" && <RepairScreen />}
 
-              {activeTab === "contract" && <ContractScreen params={actionParams} onNavigate={handleChangeTab as any} />}
+              {activeTab === "contract" && <ContractScreen onNavigate={handleChangeTab as any} />}
 
               {activeTab === "utility" && (
                 <UtilityScreen onBack={() => setActiveTab("home")} />
@@ -269,14 +282,27 @@ export default function App() {
                 <AccountScreen
                   profile={profile}
                   onLogout={handleLogout}
-                  onNavigate={(screen) => setActiveTab(screen)}
+                  onNavigate={(screen) => setActiveTab(screen as any)}
+                  onPushTokenChange={(token) => { pushTokenRef.current = token; }}
                 />
               )}
+
+              {activeTab === "notifications" && (
+                <NotificationsScreen onBack={() => handleChangeTab("home")} onNavigate={handleChangeTab} refreshKey={notificationRefreshKey} onUnreadChanged={() => setNotificationRefreshKey((value) => value + 1)} />
+              )}
+
+              {activeTab === "scan_meter" && (
+                <MeterScannerScreen onBack={() => setActiveTab("home")} onSuccess={() => setActiveTab("utility")} />
+              )}
+
+              {activeTab === "cccd_scan" && <CCCDScannerScreen onBack={() => setActiveTab("home")} />}
+
+              {activeTab === "ai_chat" && <AIChatScreen onBack={() => setActiveTab("home")} />}
             </>
           )}
         </View>
 
-        {activeTab !== "change_password" && activeTab !== "notifications" && (
+        {activeTab !== "change_password" && (
           <BottomNav activeTab={activeTab} onChangeTab={handleChangeTab} role={profile.role} />
         )}
         <Toast />
@@ -288,14 +314,14 @@ export default function App() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: "#F4F5F7",
+    backgroundColor: "#FAF8F4",
   },
   phone: {
     flex: 1, 
     width: "100%",
     maxWidth: 430,
     alignSelf: "center",
-    backgroundColor: "#F4F5F7",
+    backgroundColor: "#FAF8F4",
   },
   content: {
     flex: 1,
