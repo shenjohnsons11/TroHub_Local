@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { DoorOpen, Edit, Plus, Search, Trash2, Settings } from "lucide-react";
 import { PageHeader } from "@/components/calm-ops/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -13,9 +13,11 @@ import { useNotification } from "@/hooks/use-notification";
 import { fetchAPI } from "@/lib/api";
 import { getNotificationMessage } from "@/lib/notification-messages";
 import { formatCurrency, formatNumberInput, unformatNumber } from "@/lib/formatters";
+import { useLanguage } from "@/components/language-provider";
 
 export default function RoomsPage() {
   const notification = useNotification();
+  const { t } = useLanguage();
   const [rooms, setRooms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -26,6 +28,8 @@ export default function RoomsPage() {
   const [roomCode, setRoomCode] = useState("");
   const [price, setPrice] = useState("");
   const [area, setArea] = useState("");
+  const [floor, setFloor] = useState("1");
+  const [selectedFloor, setSelectedFloor] = useState<number | "all">("all");
 
   const loadRooms = async () => {
     try {
@@ -44,6 +48,7 @@ export default function RoomsPage() {
     setRoomCode("");
     setPrice("");
     setArea("");
+    setFloor("1");
     setEditingRoomId(null);
     setIsAddOpen(true);
   };
@@ -52,6 +57,7 @@ export default function RoomsPage() {
     setRoomCode(room.roomCode);
     setPrice(formatNumberInput(room.defaultRentPrice));
     setArea(room.area?.toString() || "");
+    setFloor(String(room.floor || 1));
     setEditingRoomId(room._id || room.id);
     setIsEditOpen(true);
   };
@@ -64,6 +70,7 @@ export default function RoomsPage() {
         rent: unformatNumber(price),
         deposit: unformatNumber(price),
         area: parseInt(area),
+        floor: Number(floor),
         landlordId: JSON.parse(localStorage.getItem("trohub_user") || "{}").id,
       };
       if (editingRoomId) {
@@ -97,7 +104,16 @@ export default function RoomsPage() {
     }
   };
 
-  const filteredRooms = rooms.filter((room) => room.roomCode?.toLowerCase().includes(searchTerm.toLowerCase()));
+  const floorOptions = useMemo(() => Array.from(new Set(rooms.map((room) => Number(room.floor) || 1))).sort((a, b) => a - b), [rooms]);
+  const filteredRooms = useMemo(() => rooms
+    .filter((room) => room.roomCode?.toLowerCase().includes(searchTerm.toLowerCase()))
+    .filter((room) => selectedFloor === "all" || (Number(room.floor) || 1) === selectedFloor)
+    .sort((a, b) => (Number(a.floor) || 1) - (Number(b.floor) || 1) || String(a.roomCode).localeCompare(String(b.roomCode))), [rooms, searchTerm, selectedFloor]);
+  const roomsByFloor = useMemo(() => filteredRooms.reduce<Record<number, any[]>>((groups, room) => {
+    const roomFloor = Number(room.floor) || 1;
+    (groups[roomFloor] ||= []).push(room);
+    return groups;
+  }, {}), [filteredRooms]);
 
   const handleStatusChange = async (id: string, status: number) => {
     try {
@@ -147,6 +163,10 @@ export default function RoomsPage() {
         <Label htmlFor={edit ? "editArea" : "area"}>Diện tích (m²)</Label>
         <Input id={edit ? "editArea" : "area"} type="number" value={area} onChange={(event) => setArea(event.target.value)} required placeholder="VD: 25" />
       </div>
+      <div className="space-y-2">
+        <Label htmlFor={edit ? "editFloor" : "floor"}>{t("floor")}</Label>
+        <Input id={edit ? "editFloor" : "floor"} type="number" min="1" step="1" value={floor} onChange={(event) => setFloor(event.target.value)} required />
+      </div>
       <Button type="submit" className="w-full"><DoorOpen className="size-4" />{edit ? "Cập nhật phòng" : "Lưu phòng mới"}</Button>
     </form>
   );
@@ -170,6 +190,11 @@ export default function RoomsPage() {
         </Dialog>
       </section>
 
+      <div className="flex flex-wrap gap-2" aria-label={t("floor")}>
+        <Button type="button" variant={selectedFloor === "all" ? "default" : "outline"} onClick={() => setSelectedFloor("all")}>{t("all")}</Button>
+        {floorOptions.map((option) => <Button type="button" key={option} variant={selectedFloor === option ? "default" : "outline"} onClick={() => setSelectedFloor(option)}>{t("floor")} {option}</Button>)}
+      </div>
+
       {loading ? (
         <div className="calm-surface grid min-h-64 place-items-center p-8 text-center"><div><DoorOpen className="mx-auto size-9 animate-pulse text-primary" /><p className="mt-3 font-bold">Đang mở danh mục phòng…</p></div></div>
       ) : filteredRooms.length === 0 ? (
@@ -177,8 +202,11 @@ export default function RoomsPage() {
           <div><Image src="/trohub-empty-states.png" alt="" width={190} height={120} className="mx-auto h-28 w-44 rounded-[20px] object-cover object-left" /><h2 className="mt-4 text-xl font-black">Không tìm thấy phòng nào</h2><p className="mt-1 text-sm text-muted-foreground">Thử từ khóa khác hoặc thêm phòng đầu tiên.</p></div>
         </div>
       ) : (
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {filteredRooms.map((room) => (
+        <div className="space-y-8">
+          {Object.entries(roomsByFloor).map(([floorNumber, floorRooms]) => <section key={floorNumber} className="space-y-4">
+            <div className="flex items-center justify-between"><h2 className="text-lg font-black">{t("floor").toUpperCase()} {floorNumber}</h2><span className="text-sm font-bold text-muted-foreground">{floorRooms.length} {t("rooms")}</span></div>
+            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {floorRooms.map((room) => (
             <article key={room._id || room.id} className="calm-surface group overflow-hidden p-5 transition duration-200 hover:-translate-y-0.5 hover:shadow-lg">
               <div className="flex items-start justify-between gap-4">
                 <div><p className="text-xs font-bold uppercase tracking-[.16em] text-muted-foreground">Căn hộ</p><h2 className="mt-1 text-2xl font-black">{room.roomCode}</h2></div>
@@ -189,7 +217,7 @@ export default function RoomsPage() {
                 <p className="mt-1 text-2xl font-black tracking-[-.04em] text-primary">{formatCurrency(room.defaultRentPrice)}</p>
               </div>
               <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
-                <div><dt className="text-muted-foreground">Diện tích</dt><dd className="mt-1 font-bold">{room.area || "—"} m²</dd></div>
+                <div><dt className="text-muted-foreground">{t("floor")}</dt><dd className="mt-1 font-bold">{t("floor")} {room.floor || 1}</dd></div>
                 <div><dt className="text-muted-foreground">Người thuê</dt><dd className="mt-1 truncate font-bold">{room.tenant || "Chưa có"}</dd></div>
               </dl>
               <div className="mt-5 flex flex-wrap justify-end gap-2">
@@ -198,6 +226,8 @@ export default function RoomsPage() {
               </div>
             </article>
           ))}
+            </div>
+          </section>)}
         </div>
       )}
     </div>
