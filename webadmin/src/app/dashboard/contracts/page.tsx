@@ -15,7 +15,6 @@ import { useNotification } from "@/hooks/use-notification";
 import { getNotificationMessage } from "@/lib/notification-messages";
 import { formatCurrency, formatNumberInput, formatPhone, unformatNumber } from "@/lib/formatters";
 import { PageHeader } from "@/components/calm-ops/page-header";
-import { addWebNotification } from "@/components/notification-bell";
 
 type CheckoutPreview = {
   roomCode: string;
@@ -219,7 +218,6 @@ export default function ContractsPage() {
       });
       setIsAddOpen(false);
       notification.success("Đã cập nhật hợp đồng.");
-      addWebNotification("contract", "Hợp đồng mới", "Vừa tạo hoặc cập nhật 1 hợp đồng.");
       loadData();
     } catch (err: unknown) {
       notification.error(getNotificationMessage(err, "Không thể lưu hợp đồng."));
