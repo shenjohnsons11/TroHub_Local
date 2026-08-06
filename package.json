@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "scripts": {
     "start": "expo start",
-    "test:ui": "node --test test_formatters.js test_identity_formatting_contracts.js test_mobile_numeric_formatting_contracts.js test_web_numeric_formatting_contracts.js test_auth_recovery_ui.js test_contract_date.js test_contract_deposit_ui.js test_contract_meter_ui.js test_ui_contracts.js test_tenant_dual_theme.js test_tenant_modal_dual_theme.js test_admin_workflows_dual_theme.js test_admin_operations_dual_theme.js test_notification_contracts.js test_webadmin_api_proxy.js test_unified_webadmin_contracts.js",
+    "test:ui": "node --test test_formatters.js test_identity_formatting_contracts.js test_mobile_numeric_formatting_contracts.js test_web_numeric_formatting_contracts.js test_auth_recovery_ui.js test_contract_date.js test_contract_deposit_ui.js test_contract_meter_ui.js test_ui_contracts.js test_tenant_dual_theme.js test_tenant_modal_dual_theme.js test_admin_workflows_dual_theme.js test_admin_operations_dual_theme.js test_notification_contracts.js test_webadmin_api_proxy.js test_unified_webadmin_contracts.js test_payment_history_ui.js",
     "test:admin-operations-ui": "node --test test_admin_operations_dual_theme.js",
     "test:admin-workflows-ui": "node --test test_admin_workflows_dual_theme.js",
     "test:tenant-ui": "node --test test_tenant_dual_theme.js",
