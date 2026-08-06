@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/calm-ops/page-header";
-import { addWebNotification } from "@/components/notification-bell";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useNotification } from "@/hooks/use-notification";
@@ -57,7 +56,6 @@ export default function RepairsPage() {
         body: JSON.stringify({ status: newStatus, assignedTo }),
       });
       notification.success("Đã cập nhật trạng thái sửa chữa.");
-      addWebNotification("repair", "Cập nhật sửa chữa", `Yêu cầu phòng ${selectedRepair.roomCode || "N/A"} -> ${newStatus}`);
       setUpdateModalOpen(false);
       void loadRepairs();
     } catch (err: unknown) {

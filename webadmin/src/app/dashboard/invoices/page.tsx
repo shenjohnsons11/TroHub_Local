@@ -14,7 +14,6 @@ import { formatCurrency, formatNumberInput, unformatNumber } from "@/lib/formatt
 import { useNotification } from "@/hooks/use-notification";
 import { getNotificationMessage } from "@/lib/notification-messages";
 import { PageHeader } from "@/components/calm-ops/page-header";
-import { addWebNotification } from "@/components/notification-bell";
 import { useLanguage } from "@/components/language-provider";
 
 const INVOICE_STEPS = [
@@ -136,7 +135,6 @@ export default function InvoicesPage() {
         body: JSON.stringify(payload),
       });
       notification.success("Tạo hóa đơn thành công.");
-      addWebNotification("invoice", "Phát hành hóa đơn", `Đã tạo ${selectedItems.length} hóa đơn cho kỳ ${title}`);
       setIsAddOpen(false);
       loadInvoices();
     } catch (err: unknown) {
@@ -183,7 +181,6 @@ export default function InvoicesPage() {
     try {
       await fetchAPI("/invoices", { method: "POST", body: JSON.stringify({ roomId: singleRoomId, period: singlePeriod, dueDate: singleDueDate, status: 1 }) });
       notification.success("Tạo hóa đơn lẻ thành công!");
-      addWebNotification("invoice", "Tạo hóa đơn", `Đã tạo hóa đơn lẻ cho kỳ ${singlePeriod}`);
       setIsSingleOpen(false);
       loadInvoices();
     } catch (err) {
