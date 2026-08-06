@@ -359,6 +359,12 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
     }
   };
 
+  useEffect(() => {
+    if (loading || !params?.invoiceId) return;
+    const invoice = invoices.find((item) => item._id === params.invoiceId);
+    if (invoice) handleOpenDetail(invoice);
+  }, [loading, params?.invoiceId]);
+
   const filteredInvoices = invoices.filter(invoice => {
     const status = invoice.status as any;
     const isUnpaid = status === 1 || status === 0 || status === 3 || status === "UNPAID" || status === "DRAFT" || status === "OVERDUE" || status === "Chưa thanh toán" || status === "Nháp" || status === "Quá hạn";

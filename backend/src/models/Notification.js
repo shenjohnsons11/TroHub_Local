@@ -22,6 +22,7 @@ const notificationSchema = new mongoose.Schema({
             'UTILITY',
             'INVOICE',
             'CONTRACT',
+            'CHECKOUT',
         ],
         required: true,
     },

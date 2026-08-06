@@ -14,9 +14,9 @@ import TroHubWidgetView from "../components/widgets/TroHubWidgetView";
 import { notificationService } from "../services/notificationService";
 import { formatCurrency } from "../utils/formatters";
 
-type Props = { profile?: UserProfile; onNavigate: (tab: any, params?: any) => void; onLogout: () => void };
+type Props = { profile?: UserProfile; refreshKey?: number; onNavigate: (tab: any, params?: any) => void; onLogout: () => void };
 
-export default function AdminDashboardScreen({ profile, onNavigate }: Props) {
+export default function AdminDashboardScreen({ profile, refreshKey = 0, onNavigate }: Props) {
   const { theme } = useAppTheme();
   const [stats, setStats] = useState<AdminDashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -32,7 +32,7 @@ export default function AdminDashboardScreen({ profile, onNavigate }: Props) {
     catch (error) { console.log("Lỗi tải thống kê:", error); }
     finally { setLoading(false); setRefreshing(false); }
   };
-  useEffect(() => { void loadStats(); }, []);
+  useEffect(() => { void loadStats(); }, [refreshKey]);
   if (loading) return <AppLoadingScreen />;
 
   const name = profile?.fullName || (profile as any)?.name || "Chủ trọ";
