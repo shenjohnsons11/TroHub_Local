@@ -8,6 +8,8 @@ const jwt = require('jsonwebtoken');
 const {
     signContractAndEnsureDeposit,
 } = require('../services/contractSigningService');
+const { sendNotification } = require('../services/notificationService');
+const { getOutstandingDebt } = require('../services/contractCheckoutService');
 
 const JWT_SECRET = process.env.JWT_SECRET || '***REMOVED***';
 
@@ -218,7 +220,7 @@ exports.payInvoice = async (req, res) => {
 
         const invoice = await Invoice.findById(req.params.invoiceId);
         if (!invoice) return res.status(404).json({ success: false, message: 'Không tìm thấy hóa đơn!' });
-        if (invoice.status === 2) return res.status(400).json({ success: false, message: 'Hóa đơn đã được thanh toán!' });
+        if ([2, 4].includes(invoice.status)) return res.status(400).json({ success: false, message: 'Hóa đơn đã được thanh toán hoặc gộp quyết toán!' });
 
         invoice.status = 2;
         invoice.paymentMethod = req.body.paymentMethod || 'QR ngân hàng';
@@ -289,8 +291,7 @@ exports.createRepair = async (req, res) => {
 // PUT /api/me/request-terminate/:contractId - Người thuê yêu cầu trả phòng
 exports.requestTerminateContract = async (req, res) => {
     try {
-        const tenantId = getTenantIdFromToken(req);
-        if (!tenantId) return res.status(401).json({ success: false, message: 'Chưa đăng nhập' });
+        const tenantId = req.auth.id;
 
         const contract = await Contract.findById(req.params.contractId);
         if (!contract) return res.status(404).json({ success: false, message: 'Không tìm thấy hợp đồng!' });
@@ -301,18 +302,25 @@ exports.requestTerminateContract = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Hợp đồng không ở trạng thái Đang thuê để trả phòng!' });
         }
 
-        // Kiểm tra nợ
-        const unpaidInvoice = await Invoice.findOne({ contractId: contract._id, status: { $in: [1, 3] } });
-        if (unpaidInvoice) {
-            return res.status(400).json({ 
-                success: false, 
-                message: "Bạn cần thanh toán toàn bộ hóa đơn trước khi yêu cầu trả phòng." 
-            });
-        }
+        const debt = await getOutstandingDebt(Invoice, contract._id);
+
+        const room = await Room.findById(contract.roomId).select('roomCode landlordId');
+        if (!room) return res.status(404).json({ success: false, message: 'Không tìm thấy phòng của hợp đồng!' });
 
         // Đổi trạng thái sang Chờ duyệt trả phòng (5)
+        contract.unpaidAmount = debt.totalAmount;
+        contract.checkoutRequestedAt = new Date();
         contract.status = 5;
         await contract.save();
+
+        await sendNotification({
+            userId: room?.landlordId,
+            title: 'Yêu cầu trả phòng mới',
+            content: `Người thuê phòng ${room?.roomCode || ''} vừa gửi yêu cầu trả phòng.`,
+            category: 'contract',
+            deepLink: '/contracts',
+            metadata: { contractId: contract._id, roomId: contract.roomId, unpaidAmount: debt.totalAmount },
+        });
 
         res.status(200).json({ success: true, message: 'Đã gửi yêu cầu trả phòng thành công. Vui lòng chờ chủ trọ xác nhận!' });
     } catch (error) {

@@ -9,7 +9,6 @@ import GradientHero from "../components/ui/GradientHero";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
 import AppButton from "../components/ui/AppButton";
 import { adminService, AdminRepair, AdminRoom, AdminContract } from "../services/adminService";
-import { notificationService } from "../services/notificationService";
 
 export default function AdminRepairsScreen() {
   const { theme } = useAppTheme();
@@ -64,13 +63,6 @@ export default function AdminRepairsScreen() {
         landlordNote: landlordNote.trim(),
       });
       notification.success("Đã cập nhật yêu cầu sửa chữa!");
-
-      // Kích hoạt thông báo
-      notificationService.addNotification(
-        "repair",
-        "Cập nhật sửa chữa",
-        `Yêu cầu sửa chữa "${selectedRepair.title}" đã được cập nhật trạng thái mới.`
-      );
 
       setModalVisible(false);
       loadRepairs();

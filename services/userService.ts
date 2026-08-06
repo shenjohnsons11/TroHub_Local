@@ -93,7 +93,21 @@ export const userService = {
         return JSON.parse(savedProfile);
       }
 
-      return defaultProfile;
+      const authUser = await authService.getAuthUser();
+      if (authUser) {
+        return {
+          id: authUser.id,
+          fullName: authUser.fullName || authUser.username || "Người dùng",
+          phone: authUser.username || "",
+          email: "",
+          cccd: "",
+          room: "",
+          startDate: "",
+          role: authUser.role || 2,
+        };
+      }
+
+      throw error;
     }
   },
 

@@ -1,28 +1,49 @@
-import React, { useState } from "react";
-import { View, Text, StyleSheet, Modal, TextInput, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, View, Text, StyleSheet, Modal, TextInput, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import AppButton from "../ui/AppButton";
 import { useAppTheme } from "../../contexts/ThemeContext";
-import { formatNumberInput, unformatNumber } from "../../utils/formatters";
+import { formatCurrency, formatNumberInput, unformatNumber } from "../../utils/formatters";
+import type { CheckoutPreview } from "../../services/adminService";
 
 type CheckoutModalProps = {
   visible: boolean;
   onClose: () => void;
-  onConfirm: (data: { electricityNew: string; waterNew: string; deduction: string; note: string }) => void;
+  onConfirm: (data: { electricityNew: string; waterNew: string; damage: string; note: string }) => void;
   loading?: boolean;
+  preview?: CheckoutPreview | null;
+  previewLoading?: boolean;
 };
 
-export default function CheckoutModal({ visible, onClose, onConfirm, loading }: CheckoutModalProps) {
+export default function CheckoutModal({ visible, onClose, onConfirm, loading, preview, previewLoading }: CheckoutModalProps) {
   const { theme } = useAppTheme();
   const [electricityNew, setElectricityNew] = useState("");
   const [waterNew, setWaterNew] = useState("");
-  const [deduction, setDeduction] = useState("0");
+  const [damage, setDamage] = useState("0");
   const [note, setNote] = useState("");
+
+  useEffect(() => {
+    if (!visible || !preview) return;
+    setElectricityNew(formatNumberInput(preview.electricityOld));
+    setWaterNew(formatNumberInput(preview.waterOld));
+    setDamage("0");
+    setNote("");
+  }, [preview, visible]);
+
+  const electricityAmount = preview
+    ? Math.max(0, unformatNumber(electricityNew) - preview.electricityOld) * preview.electricityPrice
+    : 0;
+  const waterAmount = preview
+    ? Math.max(0, unformatNumber(waterNew) - preview.waterOld) * preview.waterPrice
+    : 0;
+  const utilitiesAmount = electricityAmount + waterAmount;
+  const totalDebt = (preview?.unpaidAmount || 0) + utilitiesAmount + unformatNumber(damage);
+  const balance = (preview?.depositAmount || 0) - totalDebt;
 
   const handleConfirm = () => {
     onConfirm({
-      electricityNew: String(unformatNumber(electricityNew)),
-      waterNew: String(unformatNumber(waterNew)),
-      deduction: String(unformatNumber(deduction)),
+      electricityNew: electricityNew.trim() ? String(unformatNumber(electricityNew)) : "",
+      waterNew: waterNew.trim() ? String(unformatNumber(waterNew)) : "",
+      damage: String(unformatNumber(damage)),
       note,
     });
   };
@@ -36,6 +57,23 @@ export default function CheckoutModal({ visible, onClose, onConfirm, loading }: 
         <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
           <ScrollView>
             <Text style={[styles.title, { color: theme.text }]}>Quyết toán Trả phòng</Text>
+
+            {previewLoading ? (
+              <ActivityIndicator color={theme.primary} />
+            ) : preview ? (
+              <View style={[styles.summary, { backgroundColor: theme.surfaceElevated }]}>
+                <SummaryRow label="Tiền cọc ban đầu" value={formatCurrency(preview.depositAmount)} color={theme.text} />
+                <SummaryRow label="(−) Hóa đơn nợ cũ" value={formatCurrency(preview.unpaidAmount)} color={theme.text} />
+                <SummaryRow label="(−) Điện nước cuối kỳ" value={formatCurrency(utilitiesAmount)} color={theme.text} />
+                <SummaryRow label="(−) Tiền bồi thường hư hại" value={formatCurrency(unformatNumber(damage))} color={theme.text} />
+                <SummaryRow label="Tổng nợ" value={formatCurrency(totalDebt)} color={theme.text} strong />
+                <Text style={[styles.result, { color: balance < 0 ? theme.danger : theme.positive }]}>
+                  {balance < 0
+                    ? `KHÁCH CÒN NỢ THÊM: ${formatCurrency(-balance)}`
+                    : `CẦN HOÀN LẠI CHO KHÁCH: ${formatCurrency(balance)}`}
+                </Text>
+              </View>
+            ) : null}
             
             <Text style={[styles.label, { color: theme.text }]}>Chỉ số điện cuối cùng</Text>
             <TextInput
@@ -57,12 +95,12 @@ export default function CheckoutModal({ visible, onClose, onConfirm, loading }: 
               placeholderTextColor={theme.muted}
             />
 
-            <Text style={[styles.label, { color: theme.text }]}>Khấu trừ tiền cọc (nếu có)</Text>
+            <Text style={[styles.label, { color: theme.text }]}>Tiền bồi thường hư hại (nếu có)</Text>
             <TextInput
               style={[styles.input, { borderColor: theme.border, color: theme.text }]}
               keyboardType="number-pad"
-              value={deduction}
-              onChangeText={(value) => setDeduction(formatNumberInput(value))}
+              value={damage}
+              onChangeText={(value) => setDamage(formatNumberInput(value))}
               placeholder="0"
               placeholderTextColor={theme.muted}
             />
@@ -79,7 +117,7 @@ export default function CheckoutModal({ visible, onClose, onConfirm, loading }: 
 
             <View style={styles.actions}>
               <AppButton variant="secondary" onPress={onClose} style={styles.btn}>Hủy</AppButton>
-              <AppButton loading={loading} onPress={handleConfirm} style={styles.btn}>Duyệt trả phòng</AppButton>
+              <AppButton loading={loading || previewLoading} disabled={!preview} onPress={handleConfirm} style={styles.btn}>Duyệt trả phòng</AppButton>
             </View>
           </ScrollView>
         </View>
@@ -88,11 +126,25 @@ export default function CheckoutModal({ visible, onClose, onConfirm, loading }: 
   );
 }
 
+function SummaryRow({ label, value, color, strong = false }: { label: string; value: string; color: string; strong?: boolean }) {
+  return (
+    <View style={styles.summaryRow}>
+      <Text style={[styles.summaryText, strong && styles.strong, { color }]}>{label}</Text>
+      <Text style={[styles.summaryText, strong && styles.strong, { color }]}>{value}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: "flex-end" },
   backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.5)" },
   modalContent: { padding: 24, borderTopLeftRadius: 24, borderTopRightRadius: 24, minHeight: 400 },
   title: { fontSize: 20, fontWeight: "900", marginBottom: 20 },
+  summary: { padding: 16, borderRadius: 16, gap: 9 },
+  summaryRow: { flexDirection: "row", justifyContent: "space-between", gap: 12 },
+  summaryText: { flexShrink: 1, fontSize: 13 },
+  strong: { fontWeight: "900" },
+  result: { marginTop: 4, textAlign: "center", fontSize: 14, fontWeight: "900" },
   label: { fontSize: 13, fontWeight: "700", marginBottom: 8, marginTop: 16 },
   input: { borderWidth: 1, borderRadius: 12, padding: 14, fontSize: 15 },
   actions: { flexDirection: "row", gap: 12, marginTop: 30, marginBottom: 20 },

@@ -11,8 +11,10 @@ import AppButton from "../components/ui/AppButton";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
 import GradientHero from "../components/ui/GradientHero";
 import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
+import MeterCameraModal from "../components/MeterCameraModal";
 import { formatCurrency, formatNumberInput, unformatNumber } from "../utils/formatters";
 import { useLanguage } from "../contexts/LanguageContext";
+import { applyMeterReading, type MeterType } from "../utils/meterReadingTarget";
 
 type Props = { params?: any };
 
@@ -35,6 +37,7 @@ export default function AdminRoomsScreen({ params }: Props) {
   const [detailVisible, setDetailVisible] = useState(false);
   const [meterModalVisible, setMeterModalVisible] = useState(false);
   const [meterReadings, setMeterReadings] = useState<Record<string, { electricity: string; water: string }>>({}); 
+  const [scanTarget, setScanTarget] = useState<{ roomId: string; roomCode: string; meterType: MeterType } | null>(null);
 
   const loadRooms = async () => {
     try { setRooms(await adminService.getRooms()); }
@@ -180,7 +183,7 @@ export default function AdminRoomsScreen({ params }: Props) {
               )}
               {rooms.filter(r => r.status === 1).map(room => (
                 <View key={room._id} style={{ marginBottom: 14, padding: 12, backgroundColor: theme.background, borderRadius: 12 }}>
-                  <Text style={{ fontWeight: "800", color: theme.text, marginBottom: 10 }}>Phòng: {room.roomCode}</Text>
+                  <View style={styles.meterCardHeader}><Text style={{ fontWeight: "800", color: theme.text }}>Phòng: {room.roomCode}</Text><Pressable accessibilityRole="button" accessibilityLabel={`Quét số đồng hồ phòng ${room.roomCode}`} disabled={submitting} onPress={() => setScanTarget({ roomId: room._id, roomCode: room.roomCode, meterType: "electricity" })} style={[styles.scanMeterButton, { backgroundColor: theme.primarySoft }]}><Ionicons name="camera-outline" size={15} color={theme.primary} /><Text style={[styles.scanMeterText, { color: theme.primary }]}>Quét số</Text></Pressable></View>
                   <View style={{ flexDirection: "row", gap: 10 }}>
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.label, { color: theme.muted }]}>Điện mới (kWh)</Text>
@@ -204,6 +207,17 @@ export default function AdminRoomsScreen({ params }: Props) {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+      <MeterCameraModal
+        visible={Boolean(scanTarget)}
+        roomCode={scanTarget?.roomCode || ""}
+        initialMeterType={scanTarget?.meterType || "electricity"}
+        onClose={() => setScanTarget(null)}
+        onRead={(meterType, digits) => {
+          if (!scanTarget) return;
+          setMeterReadings((current) => applyMeterReading(current, scanTarget.roomId, meterType, formatNumberInput(digits)));
+          notification.success(`Đã điền chỉ số ${meterType === "electricity" ? "điện" : "nước"} phòng ${scanTarget.roomCode}.`);
+        }}
+      />
     </View>
   );
 }
@@ -242,4 +256,7 @@ const styles = StyleSheet.create({
   sectionSub: { fontSize: 11, fontWeight: "600", marginTop: 2 },
   sectionBtn: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, gap: 5 },
   sectionBtnText: { fontSize: 12, fontWeight: "800", color: "#fff" },
+  meterCardHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
+  scanMeterButton: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: 5, borderRadius: 10, paddingHorizontal: 10 },
+  scanMeterText: { fontSize: 11, fontWeight: "900" },
 });

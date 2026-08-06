@@ -156,7 +156,7 @@ export default function InvoiceScreen({ params }: Props) {
           )
         }
         renderItem={({ item: invoice, index }) => {
-          const isPaid = invoice.status === "paid";
+          const isClosed = invoice.status === "paid" || invoice.status === "settled";
           return (
             <AnimatedEntry delay={Math.min(index, 5) * 35}>
               <Card style={styles.invoiceCard}>
@@ -167,15 +167,15 @@ export default function InvoiceScreen({ params }: Props) {
                     <Text style={styles.cardTitle}>Hóa đơn tháng {invoice.month}</Text>
                     <Text style={styles.room}>Phòng {invoice.room}</Text>
                   </View>
-                  <View style={[styles.statusBadge, isPaid ? styles.paidBadge : styles.unpaidBadge]}>
-                    <Text style={[styles.statusText, isPaid ? styles.paidText : styles.unpaidText]}>
+                  <View style={[styles.statusBadge, isClosed ? styles.paidBadge : styles.unpaidBadge]}>
+                    <Text style={[styles.statusText, isClosed ? styles.paidText : styles.unpaidText]}>
                       {invoice.statusText}
                     </Text>
                   </View>
                 </View>
                 <Text style={styles.dueDate}>Hạn thanh toán: {invoice.dueDate}</Text>
                 <View style={styles.actionRow}>
-                  {!isPaid ? (
+                  {!isClosed ? (
                     <Pressable style={styles.payButton} onPress={() => openPaymentModal(invoice)}>
                       <Ionicons name="card-outline" size={18} color={theme.background} />
                       <Text style={styles.payText}>{t("pay")}</Text>

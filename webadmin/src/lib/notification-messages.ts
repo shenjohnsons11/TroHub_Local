@@ -9,7 +9,7 @@ const FRIENDLY_MESSAGES: Record<string, string> = {
   INVALID_CALCULATION_INPUT:
     "Số liệu điện, nước hoặc đơn giá chưa hợp lệ. Vui lòng kiểm tra lại.",
   SERVICE_CODE_EXISTS: "Mã dịch vụ đã tồn tại. Vui lòng chọn mã khác.",
-  ADMIN_REQUIRED: "Tính năng này chỉ dành cho Admin.",
+  ADMIN_REQUIRED: "Tính năng này chỉ dành cho Chủ trọ.",
   AUTH_REQUIRED: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
 };
 

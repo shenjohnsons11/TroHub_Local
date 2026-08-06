@@ -1,8 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
-import { BadgeCheck, ChevronLeft, ChevronRight, Contact, Edit, KeyRound, Plus, Search, Trash2, UserRound, Send } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Edit, Link2, Plus, Search, Trash2, UserRound, Send } from "lucide-react";
 import { PageHeader } from "@/components/calm-ops/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,18 +14,9 @@ import { useNotification } from "@/hooks/use-notification";
 import { fetchAPI } from "@/lib/api";
 import { getNotificationMessage } from "@/lib/notification-messages";
 import { formatCCCD, formatPhone, unformatDigits } from "@/lib/formatters";
-import { TemporaryPasswordDialog } from "@/components/temporary-password-dialog";
-import { issueTemporaryPassword } from "@/lib/password-reset";
-
-const TENANT_STEPS = [
-  { label: "Thông tin", icon: UserRound },
-  { label: "Liên hệ", icon: Contact },
-  { label: "Xác nhận", icon: BadgeCheck },
-];
 
 export default function TenantsPage() {
   const notification = useNotification();
-  const addFormRef = useRef<HTMLFormElement>(null);
   const [tenants, setTenants] = useState<any[]>([]);
   const [rooms, setRooms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,14 +27,15 @@ export default function TenantsPage() {
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [invitePhone, setInvitePhone] = useState("");
   const [inviteTenantName, setInviteTenantName] = useState("");
-  const [tenantStep, setTenantStep] = useState(1);
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [idCard, setIdCard] = useState("");
   const [roomCode, setRoomCode] = useState("");
-  const [temporaryPassword, setTemporaryPassword] = useState("");
-  const [temporaryPasswordName, setTemporaryPasswordName] = useState("");
+  const [lookupIdentifier, setLookupIdentifier] = useState("");
+  const [lookupStatus, setLookupStatus] = useState<"idle" | "loading" | "found" | "new" | "error">("idle");
+  const [existingTenantId, setExistingTenantId] = useState<string | null>(null);
+  const [savingTenant, setSavingTenant] = useState(false);
 
   const loadData = async () => {
     try {
@@ -66,7 +58,9 @@ export default function TenantsPage() {
     setIdCard("");
     setRoomCode("");
     setEditingTenantId(null);
-    setTenantStep(1);
+    setLookupIdentifier("");
+    setLookupStatus("idle");
+    setExistingTenantId(null);
     setIsAddOpen(true);
   };
 
@@ -81,26 +75,49 @@ export default function TenantsPage() {
   const handleSaveTenant = async (event: React.FormEvent) => {
     event.preventDefault();
     try {
-      const payload = {
-        fullName,
-        phone: unformatDigits(phone),
-        email: email.trim().toLowerCase(),
-        idCard: unformatDigits(idCard),
-        roomCode,
-      };
+      setSavingTenant(true);
       if (editingTenantId) {
-        await fetchAPI(`/tenants/${editingTenantId}`, { method: "PUT", body: JSON.stringify(payload) });
+        await fetchAPI(`/tenants/${editingTenantId}`, { method: "PUT", body: JSON.stringify({ fullName, phone: unformatDigits(phone), idCard: unformatDigits(idCard) }) });
         setIsEditOpen(false);
       } else {
+        const payload = { fullName, phone: unformatDigits(phone), email: email.trim().toLowerCase(), idCard: unformatDigits(idCard), roomCode };
         await fetchAPI("/tenants", { method: "POST", body: JSON.stringify(payload) });
         setIsAddOpen(false);
       }
-      notification.success(editingTenantId ? "Đã cập nhật người thuê." : "Đã thêm người thuê.");
+      notification.success(editingTenantId ? "Đã cập nhật người thuê." : existingTenantId ? "Đã liên kết Người thuê vào danh bạ." : "Đã thêm mới Người thuê vào danh bạ.");
       await loadData();
     } catch (error) {
       notification.error(getNotificationMessage(error, "Không thể lưu người thuê."));
+    } finally {
+      setSavingTenant(false);
     }
   };
+
+  useEffect(() => {
+    if (!isAddOpen || !lookupIdentifier) return;
+    const digits = unformatDigits(lookupIdentifier);
+    const ready = digits.length === 10 || digits.length === 12 || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(lookupIdentifier.trim());
+    if (!ready) { setLookupStatus("idle"); return; }
+    let active = true;
+    setLookupStatus("loading");
+    const timer = setTimeout(() => {
+      fetchAPI(`/tenants/lookup?identifier=${encodeURIComponent(lookupIdentifier)}`).then((result) => {
+        if (!active) return;
+        if (result.found && result.data) {
+          setExistingTenantId(result.data._id);
+          setFullName(result.data.fullName || "");
+          setPhone(formatPhone(result.data.phone));
+          setEmail(result.data.email || "");
+          setIdCard(formatCCCD(result.data.idCard));
+          setLookupStatus("found");
+        } else {
+          setExistingTenantId(null);
+          setLookupStatus("new");
+        }
+      }).catch(() => { if (active) setLookupStatus("error"); });
+    }, 450);
+    return () => { active = false; clearTimeout(timer); };
+  }, [isAddOpen, lookupIdentifier]);
 
   const handleDelete = async (id: string) => {
     const confirmed = await notification.confirm({
@@ -117,21 +134,6 @@ export default function TenantsPage() {
     } catch (error) {
       notification.error(getNotificationMessage(error, "Không thể xóa người thuê."));
     }
-  };
-
-  const handleTemporaryPassword = async (tenant: any) => {
-    try {
-      const result = await issueTemporaryPassword(tenant._id || tenant.id);
-      setTemporaryPasswordName(tenant.fullName || tenant.name || "Người thuê");
-      setTemporaryPassword(result.temporaryPassword);
-    } catch (error) {
-      notification.error(getNotificationMessage(error, "Không thể tạo mật khẩu tạm."));
-    }
-  };
-
-  const continueAdd = () => {
-    if (!addFormRef.current?.reportValidity()) return;
-    setTenantStep((current) => Math.min(3, current + 1));
   };
 
   const openInviteModal = (tenant: any) => {
@@ -171,29 +173,17 @@ export default function TenantsPage() {
           </DialogTrigger>
           <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-[600px]">
             <DialogHeader><DialogTitle>Thêm người thuê</DialogTitle></DialogHeader>
-            <ol aria-label="Tiến trình thêm người thuê" className="grid grid-cols-3 gap-2">
-              {TENANT_STEPS.map(({ label, icon: Icon }, index) => {
-                const itemStep = index + 1;
-                return <li key={label} aria-current={itemStep === tenantStep ? "step" : undefined} className={`rounded-[16px] p-3 text-center transition ${itemStep === tenantStep ? "bg-primary text-primary-foreground shadow-[var(--calm-shadow)]" : itemStep < tenantStep ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}><Icon className="mx-auto size-5" /><span className="mt-1 block text-xs font-bold sm:text-sm">{label}</span></li>;
-              })}
-            </ol>
-            <form ref={addFormRef} onSubmit={handleSaveTenant} className="mt-2 space-y-5">
-              {tenantStep === 1 && <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2"><Label htmlFor="fullName">Họ và tên</Label><Input id="fullName" autoFocus value={fullName} onChange={(event) => setFullName(event.target.value)} required placeholder="Nguyễn Văn A" /></div>
-                <div className="space-y-2"><Label htmlFor="idCard">CCCD</Label><Input id="idCard" value={idCard} onChange={(event) => setIdCard(formatCCCD(event.target.value))} placeholder="0123.4567.8901" /></div>
-              </div>}
-              {tenantStep === 2 && <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2"><Label htmlFor="phone">Số điện thoại</Label><Input id="phone" autoFocus value={phone} onChange={(event) => setPhone(formatPhone(event.target.value))} placeholder="0901.234.567" required /></div>
-                <div className="space-y-2"><Label htmlFor="email">Email đăng nhập</Label><Input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="nguyenvana@gmail.com" required /></div>
-              </div>}
-              {tenantStep === 3 && <div className="space-y-4">
-                <div className="rounded-[20px] bg-primary/8 p-5"><p className="text-sm text-muted-foreground">Hồ sơ sắp tạo</p><p className="mt-1 text-xl font-black">{fullName}</p><p className="mt-1 text-sm">{phone || "Chưa có số điện thoại"} · {email || "Chưa có email"}</p></div>
-                <div className="space-y-2"><Label htmlFor="roomCode">Gán phòng (Tạo hợp đồng nháp)</Label><select id="roomCode" value={roomCode} onChange={(event) => setRoomCode(event.target.value)} className="flex h-10 w-full rounded-[16px] border border-input bg-card px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"><option value="">-- Chưa gán phòng --</option>{rooms.map((room) => <option key={room._id || room.id} value={room.roomCode}>{room.roomCode}</option>)}</select></div>
-              </div>}
-              <div className="flex justify-between gap-3">
-                <Button type="button" variant="outline" disabled={tenantStep === 1} onClick={() => setTenantStep((current) => Math.max(1, current - 1))}><ChevronLeft className="size-4" />Quay lại</Button>
-                {tenantStep < 3 ? <Button type="button" onClick={continueAdd}>Tiếp tục<ChevronRight className="size-4" /></Button> : <Button type="submit"><BadgeCheck className="size-4" />Lưu người thuê</Button>}
+            <form onSubmit={handleSaveTenant} className="mt-2 space-y-5">
+              <p className="text-sm leading-6 text-muted-foreground">Nhập SĐT, CCCD hoặc Email để tra cứu hoặc tạo mới hồ sơ Người thuê vào danh bạ của bạn.</p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2"><Label htmlFor="phone">Số điện thoại</Label><Input id="phone" autoFocus value={phone} onChange={(event) => { const value = formatPhone(event.target.value); setPhone(value); setLookupIdentifier(value); }} placeholder="0901.234.567" required readOnly={Boolean(existingTenantId)} /></div>
+                <div className="space-y-2"><Label htmlFor="idCard">CCCD</Label><Input id="idCard" value={idCard} onChange={(event) => { const value = formatCCCD(event.target.value); setIdCard(value); setLookupIdentifier(value); }} placeholder="0790.1234.5678" required readOnly={Boolean(existingTenantId)} /></div>
+                <div className="space-y-2"><Label htmlFor="email">Email đăng nhập</Label><Input id="email" type="email" value={email} onChange={(event) => { setEmail(event.target.value); setLookupIdentifier(event.target.value); }} placeholder="nguyenvana@gmail.com" required readOnly={Boolean(existingTenantId)} /></div>
+                <div className="space-y-2"><Label htmlFor="fullName">Họ và tên</Label><Input id="fullName" value={fullName} onChange={(event) => setFullName(event.target.value)} required placeholder="Nguyễn Văn A" readOnly={Boolean(existingTenantId)} /></div>
               </div>
+              <div className="space-y-2"><Label htmlFor="roomCode">Phòng xếp</Label><select id="roomCode" value={roomCode} onChange={(event) => setRoomCode(event.target.value)} className="flex h-10 w-full rounded-[16px] border border-input bg-card px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"><option value="">Chưa xếp phòng</option>{rooms.map((room) => <option key={room._id || room.id} value={room.roomCode}>{room.roomCode}</option>)}</select></div>
+              {lookupStatus !== "idle" && <div aria-live="polite" className="flex items-center gap-3 rounded-[16px] bg-primary/10 p-3 text-sm"><Search className={`size-4 shrink-0 text-primary ${lookupStatus === "loading" ? "animate-pulse" : ""}`} /><p className="flex-1">{lookupStatus === "loading" ? "Đang tra cứu…" : lookupStatus === "found" ? "Đã tìm thấy tài khoản. Hồ sơ được khóa để liên kết an toàn." : lookupStatus === "error" ? "Không thể tra cứu lúc này. Vui lòng thử lại." : "Chưa có tài khoản. Hệ thống sẽ tạo mới với mật khẩu 123456."}</p>{existingTenantId && <Button type="button" variant="link" className="h-auto p-0" onClick={openAddModal}>Đổi người</Button>}</div>}
+              <Button type="submit" className="w-full" disabled={savingTenant || lookupStatus === "loading"}><UserRound className="size-4" />{existingTenantId ? "Liên kết Người thuê vào phòng" : "Tạo mới & Liên kết"}</Button>
             </form>
           </DialogContent>
         </Dialog>
@@ -236,12 +226,11 @@ export default function TenantsPage() {
                   <TableCell>{formatPhone(tenant.phone)}</TableCell>
                   <TableCell>{tenant.roomCode || "Chưa xếp phòng"}</TableCell>
                   <TableCell>{tenant.linkedAccountId ? <Badge className="border-0 bg-primary/10 text-primary">Đã liên kết</Badge> : <div className="flex flex-col items-start gap-1"><Badge variant="secondary">Chưa liên kết App</Badge><Button variant="link" size="sm" className="h-auto p-0 text-xs text-primary" onClick={() => openInviteModal(tenant)}><Send className="mr-1 size-3" /> Gửi lời mời</Button></div>}</TableCell>
-                  <TableCell><div className="flex justify-end gap-2"><Button aria-label={`Tạo mật khẩu tạm cho ${tenant.fullName || tenant.name}`} onClick={() => void handleTemporaryPassword(tenant)} variant="ghost" size="icon"><KeyRound className="size-4" /></Button><Button aria-label={`Sửa ${tenant.fullName || tenant.name}`} onClick={() => openEditModal(tenant)} variant="ghost" size="icon"><Edit className="size-4" /></Button><Button aria-label={`Xóa ${tenant.fullName || tenant.name}`} onClick={() => void handleDelete(tenant._id || tenant.id)} variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive"><Trash2 className="size-4" /></Button></div></TableCell>
+                  <TableCell><div className="flex justify-end gap-2"><Button aria-label={`Sửa ${tenant.fullName || tenant.name}`} onClick={() => openEditModal(tenant)} variant="ghost" size="icon"><Edit className="size-4" /></Button><Button aria-label={`Xóa ${tenant.fullName || tenant.name}`} onClick={() => void handleDelete(tenant._id || tenant.id)} variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive"><Trash2 className="size-4" /></Button></div></TableCell>
                 </TableRow>)}
           </TableBody>
         </Table>
       </div>
-      <TemporaryPasswordDialog open={Boolean(temporaryPassword)} nguoiThueName={temporaryPasswordName} temporaryPassword={temporaryPassword} onOpenChange={(open) => { if (!open) setTemporaryPassword(""); }} />
     </div>
   );
 }

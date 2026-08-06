@@ -38,10 +38,11 @@ export default function AdminDashboardScreen({ profile, onNavigate }: Props) {
   const name = profile?.fullName || (profile as any)?.name || "Chủ trọ";
   const occupancyRate = stats?.totalRooms ? Math.round((stats.occupiedRooms / stats.totalRooms) * 100) : 0;
   const quickActions = [
+    ["Trợ lý AI 🤖", "sparkles-outline", () => onNavigate("ai_chat")],
     ["Thêm phòng", "add-circle-outline", () => onNavigate("rooms", { action: "create" })],
+    ["Người thuê", "people-outline", () => onNavigate("tenants")],
     ["Tạo hợp đồng", "document-text-outline", () => onNavigate("contract", { action: "create" })],
     ["Xử lý sự cố", "construct-outline", () => onNavigate("repair")],
-    ["Quét Camera AI", "camera-outline", () => onNavigate("scan_meter")],
   ] as const;
 
   return (
@@ -57,6 +58,16 @@ export default function AdminDashboardScreen({ profile, onNavigate }: Props) {
         </View>
 
         <View style={styles.headerActions}>
+          {/* Trợ lý AI */}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Trợ lý AI"
+            style={[styles.headerBtn, { backgroundColor: "#064E3B" }]}
+            onPress={() => onNavigate("ai_chat")}
+          >
+            <Ionicons name="sparkles" size={20} color="#34D399" />
+          </Pressable>
+
           {/* Quả chuông Thông báo */}
           <Pressable
             accessibilityRole="button"

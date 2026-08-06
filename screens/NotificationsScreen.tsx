@@ -1,116 +1,146 @@
+import React, { useEffect, useMemo, useState } from "react";
+import { RefreshControl, ScrollView, View, Text, StyleSheet, SectionList, Pressable, TextInput } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useMemo } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { COLORS } from "../constants/theme";
-import { useInboxNotifications } from "../hooks/useInboxNotifications";
-import { InboxNotification } from "../services/notification-api";
-import { formatCurrency, formatPhone } from "../utils/formatters";
+import { useAppTheme } from "../contexts/ThemeContext";
+import { AppNotification } from "../types/Notification";
+import AnimatedEntry from "../components/ui/AnimatedEntry";
+import { notificationService } from "../services/notificationService";
+import { resolveNotificationTarget } from "../utils/notificationNavigation";
+
+interface SectionData { title: string; data: AppNotification[]; }
+type FilterCategory = "all" | "contract" | "invoice" | "utility" | "repair";
+const FILTERS: Array<{ key: FilterCategory; label: string }> = [
+  { key: "all", label: "Tất cả" },
+  { key: "contract", label: "Hợp đồng" },
+  { key: "invoice", label: "Hóa đơn" },
+  { key: "utility", label: "Điện nước" },
+  { key: "repair", label: "Sửa chữa" },
+];
 
 type Props = {
-  onBack: () => void;
-  onOpen: (notification: InboxNotification) => void;
+  onBack?: () => void;
+  onNavigate?: (tab: any, params?: any) => void;
+  refreshKey?: number;
+  onUnreadChanged?: () => void;
 };
 
-const formatTime = (value: string) => new Intl.DateTimeFormat("vi-VN", {
-  dateStyle: "short",
-  timeStyle: "short",
-  timeZone: "Asia/Ho_Chi_Minh",
-}).format(new Date(value));
+export default function NotificationsScreen({ onBack, onNavigate, refreshKey = 0, onUnreadChanged }: Props) {
+  const { theme } = useAppTheme();
+  const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<FilterCategory>("all");
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
 
-export default function NotificationsScreen({ onBack, onOpen }: Props) {
-  const { notifications, loading, refresh, markRead, markAllRead } = useInboxNotifications();
-  useEffect(() => { void refresh(); }, [refresh]);
-  const groups = useMemo(() => ({
-    unread: notifications.filter((item) => !item.isRead),
-    read: notifications.filter((item) => item.isRead),
-  }), [notifications]);
+  const loadNotifications = async () => {
+    try {
+      setNotifications(await notificationService.getNotifications());
+    } catch (error) {
+      console.log("Lỗi lấy thông báo:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
-  const open = async (item: InboxNotification) => {
-    await markRead(item);
-    onOpen(item);
+  useEffect(() => { void loadNotifications(); }, [refreshKey]);
+
+  const handleMarkAsRead = async (item: AppNotification) => {
+    if (item.isRead) return true;
+    const previous = notifications;
+    setNotifications((items) => items.map((current) => current.id === item.id ? { ...current, isRead: true } : current));
+    try {
+      await notificationService.markAsRead(item.id);
+      onUnreadChanged?.();
+      return true;
+    } catch (error) {
+      setNotifications(previous);
+      console.log("Lỗi đánh dấu đã đọc:", error);
+      return false;
+    }
+  };
+
+  const handleMarkAll = async () => {
+    const previous = notifications;
+    setNotifications((items) => items.map((item) => ({ ...item, isRead: true })));
+    try {
+      await notificationService.markAllAsRead();
+      onUnreadChanged?.();
+    } catch (error) {
+      setNotifications(previous);
+      console.log("Lỗi đánh dấu tất cả đã đọc:", error);
+    }
+  };
+
+  const handleItemPress = async (item: AppNotification) => {
+    if (!await handleMarkAsRead(item) || !onNavigate) return;
+    const target = resolveNotificationTarget(item);
+    onNavigate(target.tab, target.params);
+  };
+
+  const sections = useMemo(() => {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const filtered = notifications.filter((item) =>
+      (selectedCategory === "all" || item.type === selectedCategory) &&
+      (item.title.toLowerCase().includes(search.toLowerCase()) || item.content.toLowerCase().includes(search.toLowerCase()))
+    );
+    const today = filtered.filter((item) => new Date(item.createdAt) >= startOfToday);
+    const older = filtered.filter((item) => new Date(item.createdAt) < startOfToday);
+    return ([
+      ...(today.length ? [{ title: "Hôm nay", data: today }] : []),
+      ...(older.length ? [{ title: "Cũ hơn", data: older }] : []),
+    ] as SectionData[]);
+  }, [notifications, search, selectedCategory]);
+
+  const getCategoryTheme = (type: string) => {
+    switch (type) {
+      case "invoice": return { icon: "card-outline", color: "#0F9AB5", bg: "rgba(15, 154, 181, 0.12)", label: "Hóa đơn" };
+      case "repair": return { icon: "construct-outline", color: "#E65A35", bg: "rgba(230, 90, 53, 0.12)", label: "Sửa chữa" };
+      case "contract": return { icon: "document-text-outline", color: "#059669", bg: "rgba(5, 150, 105, 0.12)", label: "Hợp đồng" };
+      case "tenant": return { icon: "people-outline", color: "#3b82f6", bg: "rgba(59, 130, 246, 0.12)", label: "Phòng" };
+      case "utility": return { icon: "flash-outline", color: "#D4A017", bg: "rgba(212, 160, 23, 0.14)", label: "Điện nước" };
+      default: return { icon: "notifications-outline", color: "#64748b", bg: "rgba(100, 116, 139, 0.12)", label: "Hệ thống" };
+    }
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Pressable accessibilityLabel="Quay lại" style={styles.iconButton} onPress={onBack}>
-          <Ionicons name="arrow-back" size={21} color={COLORS.text} />
-        </Pressable>
-        <View style={styles.headerCopy}>
-          <Text style={styles.title}>Thông báo</Text>
-          <Text style={styles.subtitle}>Hợp đồng và nhắc thanh toán của bạn</Text>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={[styles.header, { backgroundColor: theme.surface }]}>
+        <View style={styles.headerTop}>
+          {onBack && <Pressable accessibilityRole="button" accessibilityLabel="Quay lại" onPress={onBack} style={styles.backBtn}><Ionicons name="arrow-back" size={24} color={theme.text} /></Pressable>}
+          <Text style={[styles.title, { color: theme.text }]}>Thông báo</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel="Đánh dấu tất cả đã đọc" onPress={handleMarkAll} style={styles.markAllBtn}><Ionicons name="checkmark-done" size={20} color={theme.primary} /></Pressable>
         </View>
-        <Pressable accessibilityRole="button" onPress={() => void markAllRead()}>
-          <Text style={styles.markAll}>Đánh dấu tất cả đã đọc</Text>
-        </Pressable>
-      </View>
-      {loading && notifications.length === 0 ? (
-        <View style={styles.center}><ActivityIndicator color={COLORS.orange} /></View>
-      ) : notifications.length === 0 ? (
-        <View style={styles.center}>
-          <View style={styles.emptyIcon}><Ionicons name="notifications-outline" size={26} color={COLORS.orange} /></View>
-          <Text style={styles.emptyTitle}>Chưa có thông báo</Text>
-          <Text style={styles.emptyText}>Hợp đồng và hóa đơn cần xử lý sẽ xuất hiện tại đây.</Text>
+        <View style={[styles.searchBox, { backgroundColor: theme.surfaceElevated }]}>
+          <Ionicons name="search" size={20} color={theme.muted} />
+          <TextInput style={[styles.searchInput, { color: theme.text }]} placeholder="Tìm kiếm thông báo..." placeholderTextColor={theme.muted} value={search} onChangeText={setSearch} />
         </View>
-      ) : (
-        <ScrollView contentContainerStyle={styles.list}>
-          {groups.unread.length > 0 && <Text style={styles.section}>Mới</Text>}
-          {groups.unread.map((item) => <NotificationRow key={item._id} item={item} onPress={() => void open(item)} />)}
-          {groups.read.length > 0 && <Text style={styles.section}>Đã đọc</Text>}
-          {groups.read.map((item) => <NotificationRow key={item._id} item={item} onPress={() => void open(item)} />)}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+          {FILTERS.map((filter) => {
+            const active = selectedCategory === filter.key;
+            return <Pressable key={filter.key} accessibilityRole="button" accessibilityState={{ selected: active }} onPress={() => setSelectedCategory(filter.key)} style={[styles.filterTab, { backgroundColor: active ? theme.primary : theme.surfaceElevated }]}><Text style={[styles.filterText, { color: active ? theme.background : theme.muted }]}>{filter.label}</Text></Pressable>;
+          })}
         </ScrollView>
-      )}
+      </View>
+      <SectionList
+        sections={sections}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void loadNotifications(); }} tintColor={theme.primary} />}
+        renderSectionHeader={({ section: { title } }) => <Text style={[styles.sectionTitle, { color: theme.muted }]}>{title}</Text>}
+        renderItem={({ item, index }) => {
+          const config = getCategoryTheme(item.type);
+          return <AnimatedEntry delay={Math.min(index, 6) * 40}><Pressable accessibilityRole="button" accessibilityLabel={item.title} style={[styles.card, { backgroundColor: item.isRead ? theme.surface : theme.surfaceElevated }]} onPress={() => void handleItemPress(item)}>
+            <View style={[styles.iconBox, { backgroundColor: config.bg }]}><Ionicons name={config.icon as any} size={22} color={config.color} /></View>
+            <View style={styles.content}><View style={styles.contentTop}><Text style={[styles.cardTitle, { color: theme.text, fontWeight: item.isRead ? "600" : "800" }]} numberOfLines={1}>{item.title}</Text><View style={[styles.badgePill, { backgroundColor: config.bg }]}><Text style={[styles.badgeText, { color: config.color }]}>{config.label}</Text></View></View><Text style={[styles.body, { color: theme.muted }]} numberOfLines={2}>{item.content}</Text><Text style={[styles.time, { color: theme.muted }]}>{new Date(item.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}</Text></View>
+            {!item.isRead && <View style={[styles.unreadDot, { backgroundColor: theme.danger }]} />}
+          </Pressable></AnimatedEntry>;
+        }}
+        ListEmptyComponent={<View style={styles.emptyBox}><Ionicons name="notifications-off-outline" size={60} color={theme.muted} /><Text style={[styles.emptyText, { color: theme.text }]}>Không có thông báo nào</Text></View>}
+      />
     </View>
   );
 }
 
-function NotificationRow({ item, onPress }: { item: InboxNotification; onPress: () => void }) {
-  const contract = item.entityType === "CONTRACT";
-  const t = item as InboxNotification & { phone?: string; amount?: number };
-  return (
-    <Pressable
-      accessibilityRole="button"
-      style={({ pressed }) => [styles.row, !item.isRead && styles.unreadRow, pressed && styles.pressed]}
-      onPress={onPress}
-    >
-      <View style={[styles.typeIcon, contract ? styles.contractIcon : styles.invoiceIcon]}>
-        <Ionicons name={contract ? "document-text-outline" : "receipt-outline"} size={20} color={contract ? "#176B87" : COLORS.orange} />
-      </View>
-      <View style={styles.rowCopy}>
-        <Text style={styles.rowTitle}>{item.title}</Text>
-        <Text style={styles.message}>{item.message}</Text>
-        {t.phone ? <Text style={styles.message}>{formatPhone(t.phone)}</Text> : null}
-        {Number.isFinite(t.amount) ? <Text style={styles.message}>{formatCurrency(t.amount || 0)}</Text> : null}
-        <Text style={styles.time}>{formatTime(item.createdAt)}</Text>
-      </View>
-      {!item.isRead && <View accessibilityLabel="Chưa đọc" style={styles.dot} />}
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F4F5F7" },
-  header: { paddingHorizontal: 20, paddingTop: 22, paddingBottom: 16, backgroundColor: "#FFFFFF", borderBottomWidth: 1, borderBottomColor: "#E1E4E7" },
-  headerCopy: { marginTop: 14, marginBottom: 12 },
-  title: { color: COLORS.text, fontSize: 25, lineHeight: 31, fontWeight: "900" },
-  subtitle: { color: "#697178", fontSize: 13, marginTop: 3 },
-  iconButton: { width: 44, height: 44, alignItems: "center", justifyContent: "center", borderRadius: 10, backgroundColor: "#F1F3F4" },
-  markAll: { color: COLORS.orange, fontSize: 13, fontWeight: "800" },
-  list: { paddingHorizontal: 18, paddingVertical: 18, paddingBottom: 36 },
-  section: { color: "#697178", fontSize: 12, fontWeight: "800", marginTop: 12, marginBottom: 8 },
-  row: { minHeight: 92, flexDirection: "row", alignItems: "flex-start", gap: 12, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "#E1E4E7" },
-  unreadRow: { backgroundColor: "#FFF7F1", marginHorizontal: -10, paddingHorizontal: 10, borderRadius: 12, borderBottomWidth: 0, marginBottom: 6 },
-  pressed: { opacity: 0.72, transform: [{ scale: 0.99 }] },
-  typeIcon: { width: 40, height: 40, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  contractIcon: { backgroundColor: "#E7F3F7" },
-  invoiceIcon: { backgroundColor: "#FFF0E7" },
-  rowCopy: { flex: 1 },
-  rowTitle: { color: COLORS.text, fontSize: 14, lineHeight: 19, fontWeight: "900" },
-  message: { color: "#545C63", fontSize: 13, lineHeight: 19, marginTop: 3 },
-  time: { color: "#7A8289", fontSize: 11, marginTop: 7 },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.orange, marginTop: 5 },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 42 },
-  emptyIcon: { width: 52, height: 52, borderRadius: 14, backgroundColor: "#FFF0E7", alignItems: "center", justifyContent: "center" },
-  emptyTitle: { color: COLORS.text, fontSize: 17, fontWeight: "900", marginTop: 16 },
-  emptyText: { color: "#697178", fontSize: 13, lineHeight: 20, textAlign: "center", marginTop: 6 },
+  container: { flex: 1 }, header: { paddingTop: 60, paddingHorizontal: 20, paddingBottom: 16, borderBottomLeftRadius: 16, borderBottomRightRadius: 16 }, headerTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }, title: { fontSize: 24, fontWeight: "900", flex: 1 }, backBtn: { minWidth: 44, minHeight: 44, justifyContent: "center" }, markAllBtn: { minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" }, searchBox: { flexDirection: "row", alignItems: "center", height: 48, borderRadius: 16, paddingHorizontal: 14, gap: 10 }, searchInput: { flex: 1, fontSize: 15, fontWeight: "500", height: "100%" }, filterRow: { gap: 8, paddingTop: 12 }, filterTab: { minHeight: 44, justifyContent: "center", paddingHorizontal: 14, borderRadius: 14 }, filterText: { fontSize: 13, fontWeight: "800" }, listContent: { padding: 20, paddingBottom: 40, flexGrow: 1 }, sectionTitle: { fontSize: 12, fontWeight: "800", textTransform: "uppercase", letterSpacing: 1.2, marginTop: 20, marginBottom: 8 }, card: { flexDirection: "row", alignItems: "center", padding: 14, borderRadius: 16, marginBottom: 10, elevation: 2, shadowOpacity: 0.06, shadowOffset: { width: 0, height: 4 }, shadowRadius: 8 }, iconBox: { width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center", marginRight: 12 }, content: { flex: 1 }, contentTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }, cardTitle: { fontSize: 14, flex: 1, paddingRight: 8 }, badgePill: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 }, badgeText: { fontSize: 10, fontWeight: "800" }, time: { fontSize: 10, fontWeight: "600", marginTop: 4 }, body: { fontSize: 12, lineHeight: 18 }, unreadDot: { width: 8, height: 8, borderRadius: 4, marginLeft: 8 }, emptyBox: { alignItems: "center", justifyContent: "center", paddingTop: 80 }, emptyText: { fontSize: 15, fontWeight: "700", marginTop: 12 },
 });

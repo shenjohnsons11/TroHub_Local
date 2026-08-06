@@ -153,7 +153,7 @@ export function NotificationBell() {
         });
       }
 
-      // 4. KHÁCH THUÊ (Tenant)
+      // 4. NGƯỜI THUÊ (Tenant)
       if (tenantsRes.status === "fulfilled" && tenantsRes.value?.success) {
         const tenants = tenantsRes.value.data || [];
         tenants.forEach((t: any) => {

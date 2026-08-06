@@ -1,4 +1,4 @@
-export type InvoiceStatus = "unpaid" | "paid";
+export type InvoiceStatus = "unpaid" | "paid" | "settled";
 
 export type Invoice = {
   id: string;
@@ -29,4 +29,8 @@ export type Invoice = {
   bankAccountNo?: string;
   bankAccountName?: string;
   numericAmount?: number;
+  type?: "deposit" | "monthly";
+  depositAmount?: number;
+  tenantName?: string;
+  tenantPhone?: string;
 };

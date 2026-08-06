@@ -5,6 +5,11 @@ const FIELDS = {
     initialWater: 'Chỉ số nước đầu',
 };
 
+function readFiniteNumber(value) {
+    const number = Number(value);
+    return Number.isFinite(number) ? number : undefined;
+}
+
 class ContractTermsError extends Error {
     constructor(code, message, field) {
         super(message);
@@ -50,7 +55,23 @@ function normalizeContractMeterTerms(input, { partial = false } = {}) {
     return result;
 }
 
-function resolveContractMeterSnapshot(contract, previousInvoice) {
+function resolveLatestMeterValue({
+    previousInvoice,
+    roomSnapshot,
+    previousContract,
+    invoiceField,
+    roomField,
+    contractField,
+    checkoutField,
+}) {
+    return readFiniteNumber(previousInvoice?.[invoiceField])
+        ?? readFiniteNumber(roomSnapshot?.[roomField])
+        ?? readFiniteNumber(previousContract?.checkoutSettlement?.[checkoutField])
+        ?? readFiniteNumber(previousContract?.[contractField])
+        ?? 0;
+}
+
+function resolveContractMeterSnapshot(contract, previousInvoice, roomSnapshot = {}) {
     let electricityPrice = contract.electricityPrice;
     let waterPrice = contract.waterPrice;
 
@@ -76,12 +97,47 @@ function resolveContractMeterSnapshot(contract, previousInvoice) {
     return {
         electricityPrice: electricityPrice ?? 0,
         waterPrice: waterPrice ?? 0,
-        electricityOld: previousInvoice?.electricityNew
-            ?? contract.initialElectricity
-            ?? 0,
-        waterOld: previousInvoice?.waterNew
-            ?? contract.initialWater
-            ?? 0,
+        electricityOld: resolveLatestMeterValue({
+            previousInvoice,
+            roomSnapshot,
+            previousContract: contract,
+            invoiceField: 'electricityNew',
+            roomField: 'lastElectricityReading',
+            contractField: 'initialElectricity',
+            checkoutField: 'electricityNew',
+        }),
+        waterOld: resolveLatestMeterValue({
+            previousInvoice,
+            roomSnapshot,
+            previousContract: contract,
+            invoiceField: 'waterNew',
+            roomField: 'lastWaterReading',
+            contractField: 'initialWater',
+            checkoutField: 'waterNew',
+        }),
+    };
+}
+
+function resolveInitialContractMeterTerms({ room, previousInvoice, previousContract } = {}) {
+    return {
+        initialElectricity: resolveLatestMeterValue({
+            previousInvoice,
+            roomSnapshot: room,
+            previousContract,
+            invoiceField: 'electricityNew',
+            roomField: 'lastElectricityReading',
+            contractField: 'initialElectricity',
+            checkoutField: 'electricityNew',
+        }),
+        initialWater: resolveLatestMeterValue({
+            previousInvoice,
+            roomSnapshot: room,
+            previousContract,
+            invoiceField: 'waterNew',
+            roomField: 'lastWaterReading',
+            contractField: 'initialWater',
+            checkoutField: 'waterNew',
+        }),
     };
 }
 
@@ -89,4 +145,5 @@ module.exports = {
     ContractTermsError,
     normalizeContractMeterTerms,
     resolveContractMeterSnapshot,
+    resolveInitialContractMeterTerms,
 };

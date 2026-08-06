@@ -1,68 +1,37 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { apiClient } from "./apiClient";
+import { authService } from "./authService";
 import { AppNotification } from "../types/Notification";
 
-const STORAGE_KEY = "@trohub_notifications";
+type NotificationResponse = { success: boolean; data: AppNotification[] };
+
+async function token() {
+  return authService.getToken();
+}
 
 export const notificationService = {
-  getNotifications: async (): Promise<AppNotification[]> => {
-    try {
-      const data = await AsyncStorage.getItem(STORAGE_KEY);
-      if (data) {
-        return JSON.parse(data) as AppNotification[];
-      }
-      return [];
-    } catch (error) {
-      console.error("Lỗi lấy thông báo:", error);
-      return [];
-    }
+  async getNotifications(): Promise<AppNotification[]> {
+    const response = await apiClient.get<NotificationResponse>("/notifications", await token());
+    return response.data || [];
   },
 
-  getUnreadCount: async (): Promise<number> => {
-    try {
-      const notifs = await notificationService.getNotifications();
-      return notifs.filter(n => !n.isRead).length;
-    } catch (error) {
-      return 0;
-    }
+  async getUnreadCount(): Promise<number> {
+    const response = await apiClient.get<{ success: boolean; data: { count: number } }>("/notifications/unread-count", await token());
+    return response.data?.count || 0;
   },
 
-  addNotification: async (type: AppNotification["type"], title: string, content: string): Promise<AppNotification | null> => {
-    try {
-      const notifs = await notificationService.getNotifications();
-      const newNotif: AppNotification = {
-        id: Math.random().toString(36).substring(2, 11),
-        type,
-        title,
-        content,
-        isRead: false,
-        createdAt: new Date().toISOString(),
-      };
-      const updated = [newNotif, ...notifs];
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      return newNotif;
-    } catch (error) {
-      console.error("Lỗi thêm thông báo:", error);
-      return null;
-    }
+  async markAsRead(id: string): Promise<void> {
+    await apiClient.put(`/notifications/${id}/read`, {}, await token());
   },
 
-  markAsRead: async (id: string): Promise<void> => {
-    try {
-      const notifs = await notificationService.getNotifications();
-      const updated = notifs.map(n => n.id === id ? { ...n, isRead: true } : n);
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    } catch (error) {
-      console.error("Lỗi đánh dấu đã đọc:", error);
-    }
+  async markAllAsRead(): Promise<void> {
+    await apiClient.put("/notifications/read-all", {}, await token());
   },
 
-  markAllAsRead: async (): Promise<void> => {
-    try {
-      const notifs = await notificationService.getNotifications();
-      const updated = notifs.map(n => ({ ...n, isRead: true }));
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    } catch (error) {
-      console.error("Lỗi đánh dấu đã đọc tất cả:", error);
-    }
-  }
+  async registerDevice(expoPushToken: string, platform: "ios" | "android"): Promise<void> {
+    await apiClient.post("/notifications/devices", { expoPushToken, platform }, await token());
+  },
+
+  async deactivateDevice(expoPushToken: string): Promise<void> {
+    await apiClient.post("/notifications/devices/deactivate", { expoPushToken }, await token());
+  },
 };

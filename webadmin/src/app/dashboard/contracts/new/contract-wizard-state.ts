@@ -2,7 +2,7 @@ import {
   defaultContractDates,
   validateContractDateRange,
 } from "../../../../../../utils/contractDate";
-import { unformatNumber } from "@/lib/formatters";
+import { formatNumberInput, unformatNumber } from "@/lib/formatters";
 
 export const CONTRACT_STEPS = [
   { id: 1, label: "Chọn phòng" },
@@ -18,6 +18,8 @@ export type ContractDraft = {
   endDate: string;
   fixedRentPrice: string;
   fixedDeposit: string;
+  electricityPrice: string;
+  waterPrice: string;
   initialElectricity: string;
   initialWater: string;
   services: Array<{ serviceId: string; fixedPrice: string }>;
@@ -30,6 +32,8 @@ export const EMPTY_CONTRACT_DRAFT: ContractDraft = {
   endDate: "",
   fixedRentPrice: "",
   fixedDeposit: "",
+  electricityPrice: formatNumberInput(3500),
+  waterPrice: formatNumberInput(15000),
   initialElectricity: "",
   initialWater: "",
   services: [],
@@ -39,6 +43,8 @@ export function createContractDraft(now = new Date()): ContractDraft {
   return {
     ...EMPTY_CONTRACT_DRAFT,
     ...defaultContractDates(now),
+    electricityPrice: formatNumberInput(3500),
+    waterPrice: formatNumberInput(15000),
     services: [],
   };
 }
@@ -60,5 +66,14 @@ export function validateContractStep(step: number, draft: ContractDraft) {
     if (!(unformatNumber(draft.fixedRentPrice) > 0)) errors.fixedRentPrice = "Tiền thuê phải lớn hơn 0.";
     if (!(unformatNumber(draft.fixedDeposit) >= 0)) errors.fixedDeposit = "Tiền cọc không hợp lệ.";
   }
+  if (step === 3) {
+    if (draft.electricityPrice !== undefined && draft.electricityPrice !== "" && !(unformatNumber(draft.electricityPrice) >= 0)) {
+      errors.electricityPrice = "Giá tiền điện không hợp lệ.";
+    }
+    if (draft.waterPrice !== undefined && draft.waterPrice !== "" && !(unformatNumber(draft.waterPrice) >= 0)) {
+      errors.waterPrice = "Giá tiền nước không hợp lệ.";
+    }
+  }
   return errors;
 }
+

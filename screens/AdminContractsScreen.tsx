@@ -17,7 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
-import { adminService, AdminContract, AdminRoom, AdminTenant } from "../services/adminService";
+import { adminService, AdminContract, AdminRoom, AdminTenant, CheckoutPreview } from "../services/adminService";
 import {
   defaultContractDates,
   displayDateToLocalDate,
@@ -29,7 +29,6 @@ import {
 import { useAppTheme } from "../contexts/ThemeContext";
 import { useNotification } from "../hooks/useNotification";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
-import { notificationService } from "../services/notificationService";
 import AppButton from "../components/ui/AppButton";
 import GradientHero from "../components/ui/GradientHero";
 import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
@@ -66,6 +65,8 @@ export default function AdminContractsScreen({ params }: Props) {
   const [checkoutModalVisible, setCheckoutModalVisible] = useState(false);
   const [checkoutContractId, setCheckoutContractId] = useState("");
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutPreviewLoading, setCheckoutPreviewLoading] = useState(false);
+  const [checkoutPreview, setCheckoutPreview] = useState<CheckoutPreview | null>(null);
   const [modalVisible, setModalVisible] = useState(params?.action === "create");
   const [selectedRoomId, setSelectedRoomId] = useState("");
   const [selectedTenantId, setSelectedTenantId] = useState("");
@@ -81,11 +82,11 @@ export default function AdminContractsScreen({ params }: Props) {
   const [currentStep, setCurrentStep] = useState(1);
   const [confirmed, setConfirmed] = useState(false);
   const [services, setServices] = useState({
-    electricity: { enabled: true, price: "3500" },
-    water: { enabled: true, price: "25000" },
-    trash: { enabled: true, price: "20000" },
-    internet: { enabled: true, price: "100000" },
-    management: { enabled: false, price: "50000" },
+    electricity: { enabled: true, price: formatNumberInput(3500) },
+    water: { enabled: true, price: formatNumberInput(15000) },
+    trash: { enabled: true, price: "20.000" },
+    internet: { enabled: true, price: "100.000" },
+    management: { enabled: false, price: "50.000" },
   });
 
   const loadData = async () => {
@@ -111,6 +112,22 @@ export default function AdminContractsScreen({ params }: Props) {
     // Keep the original mount-only fetch contract.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const action = params?.aiAction;
+    if (action?.type !== "FILL_CONTRACT_FORM" || !rooms.length) return;
+    const room = rooms.find((item) => item.roomCode?.trim().toLowerCase() === action.roomCode?.trim().toLowerCase());
+    if (!room) return notification.warning(`Không tìm thấy phòng ${action.roomCode}.`);
+    const tenant = tenants.find((item) => item.fullName?.trim().toLowerCase() === action.tenantName?.trim().toLowerCase());
+    setModalVisible(true);
+    setCurrentStep(1);
+    handleSelectRoom(room._id);
+    setFixedRent(formatNumberInput(action.rentPrice));
+    const [year, month, day] = action.startDate.split("-");
+    if (year && month && day) setStartDate(`${day}/${month}/${year}`);
+    if (tenant) setSelectedTenantId(tenant._id);
+    else notification.info(`Chưa có người thuê “${action.tenantName}”. Hãy chọn hoặc tạo hồ sơ.`);
+  }, [params?.aiAction, rooms, tenants]);
 
   const closeWizard = async () => {
     if (selectedRoomId || selectedTenantId) {
@@ -140,6 +157,8 @@ export default function AdminContractsScreen({ params }: Props) {
     if (room) {
       setFixedRent(formatNumberInput(room.defaultRentPrice));
       setFixedDeposit(formatNumberInput(room.defaultDeposit));
+      setInitialElectricity(formatNumberInput(room.lastElectricityReading ?? room.draftElectricity));
+      setInitialWater(formatNumberInput(room.lastWaterReading ?? room.draftWater));
     }
   };
 
@@ -166,11 +185,7 @@ export default function AdminContractsScreen({ params }: Props) {
       initialElectricity: unformatNumber(initialElectricity),
       initialWater: unformatNumber(initialWater),
     };
-    if (
-      !initialElectricity.trim()
-      || !initialWater.trim()
-      || Object.values(meterTerms).some((value) => !Number.isFinite(value) || value < 0)
-    ) {
+    if (Object.values(meterTerms).some((value) => !Number.isFinite(value) || value < 0)) {
       notification.error("Giá và chỉ số đầu điện nước phải là số không âm.", { title: "Lỗi" });
       setCurrentStep(3);
       return;
@@ -190,13 +205,6 @@ export default function AdminContractsScreen({ params }: Props) {
       });
       notification.success("Tạo hợp đồng nháp thành công! Chờ người thuê ký xác nhận.");
       
-      // Kích hoạt thông báo
-      notificationService.addNotification(
-        "contract",
-        "Hợp đồng mới cần ký",
-        "Một hợp đồng thuê nhà mới đã được soạn thảo. Vui lòng xem và ký xác nhận để hoàn tất."
-      );
-
       setModalVisible(false);
       setSelectedRoomId("");
       setSelectedTenantId("");
@@ -257,6 +265,21 @@ export default function AdminContractsScreen({ params }: Props) {
     }
   };
 
+  const openCheckoutModal = async (contractId: string) => {
+    setCheckoutContractId(contractId);
+    setCheckoutPreview(null);
+    setCheckoutModalVisible(true);
+    setCheckoutPreviewLoading(true);
+    try {
+      setCheckoutPreview(await adminService.getCheckoutPreview(contractId));
+    } catch (error) {
+      setCheckoutModalVisible(false);
+      notification.error(error instanceof Error ? error.message : "Không thể tải bảng quyết toán.");
+    } finally {
+      setCheckoutPreviewLoading(false);
+    }
+  };
+
   const getStatusText = (contract: AdminContract) => {
     if (contract.status === 1 && new Date(contract.startDate).getTime() > Date.now()) {
       return "Cọc trước - Chờ nhận phòng";
@@ -264,7 +287,7 @@ export default function AdminContractsScreen({ params }: Props) {
     switch (contract.status) {
       case 0: return "Chờ khách ký";
       case 1: return "Đang hiệu lực";
-      case 2: return "Hết hạn";
+      case 2: return "Đã trả phòng";
       case 3: return "Đã hủy";
       case 4: return "Chờ chủ duyệt";
       case 5: return "Chờ duyệt trả phòng";
@@ -403,14 +426,11 @@ export default function AdminContractsScreen({ params }: Props) {
                     Duyệt hợp đồng
                   </AppButton>
                 ) : null}
-                {item.status === 5 || item.status === 1 || item.status === 2 ? (
+                {item.status === 5 ? (
                   <AppButton
                     variant="danger"
                     icon="log-out-outline"
-                    onPress={() => {
-                      setCheckoutContractId(item._id);
-                      setCheckoutModalVisible(true);
-                    }}
+                    onPress={() => void openCheckoutModal(item._id)}
                     style={styles.approveButton}
                   >
                     Duyệt trả phòng
@@ -471,15 +491,33 @@ export default function AdminContractsScreen({ params }: Props) {
         visible={checkoutModalVisible}
         onClose={() => setCheckoutModalVisible(false)}
         loading={checkoutLoading}
+        preview={checkoutPreview}
+        previewLoading={checkoutPreviewLoading}
         onConfirm={async (data) => {
-          setCheckoutLoading(true);
-          // Giả lập API trả phòng
-          setTimeout(() => {
-            setCheckoutLoading(false);
+          if (!data.electricityNew || !data.waterNew) {
+            notification.error("Vui lòng nhập đủ chỉ số điện và nước cuối cùng.");
+            return;
+          }
+          try {
+            setCheckoutLoading(true);
+            const settlement = await adminService.checkoutContract(checkoutContractId, {
+              finalElectricity: Number(data.electricityNew),
+              finalWater: Number(data.waterNew),
+              damageAmount: Number(data.damage),
+              note: data.note,
+            });
             setCheckoutModalVisible(false);
-            notification.success("Đã hoàn tất trả phòng và cập nhật chỉ số!");
-            loadData();
-          }, 1000);
+            notification.success(
+              settlement.amountDue > 0
+                ? `Đã trả phòng. Khách cần thanh toán thêm ${formatCurrency(settlement.amountDue)}.`
+                : `Đã trả phòng. Hoàn cọc ${formatCurrency(settlement.refundAmount)}.`
+            );
+            await loadData();
+          } catch (error) {
+            notification.error(error instanceof Error ? error.message : "Không thể duyệt trả phòng.");
+          } finally {
+            setCheckoutLoading(false);
+          }
         }}
       />
 
@@ -644,8 +682,8 @@ export default function AdminContractsScreen({ params }: Props) {
                 <View style={styles.card}>
                   <SectionTitle icon="flash-outline" title="Điện & nước" subtitle="Thiết lập đơn giá, chỉ số đầu và dịch vụ đi kèm." theme={theme} />
                   {[
-                    { key: "electricity", label: "Điện", desc: "Tính theo số điện", unit: "VNĐ/kWh", icon: "flash-outline" },
-                    { key: "water", label: "Nước", desc: "Tính theo người/khối", unit: "VNĐ", icon: "water-outline" },
+                    { key: "electricity", label: "Giá tiền điện", desc: "Tính theo số kWh", unit: "VNĐ/kWh", icon: "flash-outline" },
+                    { key: "water", label: "Giá tiền nước", desc: "Tính theo khối/tháng", unit: "VNĐ/m³", icon: "water-outline" },
                     { key: "trash", label: "Rác", desc: "Phí thu gom", unit: "VNĐ/tháng", icon: "trash-outline" },
                     { key: "internet", label: "Internet", desc: "Wi-Fi", unit: "VNĐ/tháng", icon: "wifi-outline" },
                     { key: "management", label: "Phí quản lý", desc: "Vệ sinh chung", unit: "VNĐ/tháng", icon: "business-outline" },

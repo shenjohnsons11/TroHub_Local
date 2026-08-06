@@ -84,7 +84,7 @@ router.get('/', async (req, res) => {
 router.get('/rooms', async (req, res) => {
   try {
     const admin = await Account.findOne({ role: 1 });
-    if (!admin) return res.send("<h1>❌ LỖI:</h1><p>Không tìm thấy admin</p>");
+    if (!admin) return res.send("<h1>❌ LỖI:</h1><p>Không tìm thấy Chủ trọ</p>");
     
     await Room.create([
       { roomCode: 'A104', area: '20', defaultRentPrice: 2000000, defaultDeposit: 2000000, status: 0, landlordId: admin._id },

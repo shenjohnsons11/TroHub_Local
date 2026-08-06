@@ -41,7 +41,7 @@ export default function AdminSettingsScreen({ profile, onSave, onBack, onLogout 
       <Section title="Thông tin cá nhân" icon="person-outline" theme={theme}>
         <Field label="Họ và tên" value={fullName} setValue={setFullName} placeholder="Nguyễn Văn A" style={inputStyle} muted={theme.muted} />
         <Field label="Số điện thoại" value={phone} setValue={(value: string) => setPhone(formatPhone(value))} placeholder="0901.234.567" keyboardType="number-pad" style={inputStyle} muted={theme.muted} />
-        <Field label="Email" value={email} setValue={setEmail} placeholder="admin@email.com" keyboardType="email-address" style={inputStyle} muted={theme.muted} autoCapitalize="none" />
+        <Field label="Email" value={email} setValue={setEmail} placeholder="chutro@email.com" keyboardType="email-address" style={inputStyle} muted={theme.muted} autoCapitalize="none" />
       </Section>
       <Section title="Tài khoản ngân hàng (Mã QR)" icon="card-outline" theme={theme}>
         <View style={[styles.note, { backgroundColor: theme.primarySoft }]}><Ionicons name="information-circle-outline" size={20} color={theme.primary} /><Text style={[styles.noteText, { color: theme.text }]}>Dùng để tạo mã QR thanh toán. Nhập đúng tên viết tắt (VD: VCB, MB) hoặc mã BIN.</Text></View>
