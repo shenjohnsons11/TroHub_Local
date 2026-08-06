@@ -11,7 +11,7 @@ router.get('/bulk-preview', invoiceController.getBulkPreview);
 
 // Lấy danh sách công nợ
 router.get('/debts', invoiceController.getDebts);
-router.post('/debts/:contractId/remind', invoiceController.remindDebt);
+router.post('/debts/:contractId/remind', requireAdmin, invoiceController.remindDebt);
 
 // Tạo hóa đơn hàng loạt
 router.post('/bulk', requireAdmin, invoiceController.createBulkInvoices);
@@ -26,7 +26,7 @@ router.get('/:id', invoiceController.getInvoiceById);
 router.put('/:id/pay', invoiceController.payInvoice);
 
 // Gửi nhắc nhở thanh toán (Tự chuyển quá hạn)
-router.put('/:id/remind', invoiceController.remindInvoice);
+router.put('/:id/remind', requireAdmin, invoiceController.remindInvoice);
 
 // Cập nhật hóa đơn
 router.put('/:id', invoiceController.updateInvoice);

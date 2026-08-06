@@ -20,7 +20,6 @@ import AdminTenantsScreen from "../screens/AdminTenantsScreen";
 import BulkInvoiceScreen from "../screens/BulkInvoiceScreen";
 import ChangePasswordScreen from "../screens/ChangePasswordScreen";
 import AdminSettingsScreen from "../screens/AdminSettingsScreen";
-import NotificationsScreen from "../screens/NotificationsScreen";
 import MeterScannerScreen from "../screens/MeterScannerScreen";
 import AppLoadingScreen from "../components/AppLoadingScreen";
 import { useAppTheme } from "../contexts/ThemeContext";
@@ -28,6 +27,11 @@ import { useAppTheme } from "../contexts/ThemeContext";
 import { UserProfile } from "../types/UserProfile";
 import { authService } from "../services/authService";
 import { userService } from "../services/userService";
+import NotificationsScreen from "../screens/NotificationsScreen";
+import { useInboxNotifications } from "../hooks/useInboxNotifications";
+import { useNotification } from "../hooks/useNotification";
+import { listenForNotificationResponses, registerDeviceForPush } from "../services/push-notifications";
+import { InboxNotification } from "../services/notification-api";
 
 type Tab =
   | "home"
@@ -47,6 +51,12 @@ type Tab =
 
 export default function App() {
   const { theme } = useAppTheme();
+  const notification = useNotification();
+  const {
+    refresh: refreshInbox,
+    reset: resetInbox,
+    unreadCount: notificationUnreadCount,
+  } = useInboxNotifications();
   const [isChecking, setIsChecking] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("home");
@@ -57,6 +67,35 @@ export default function App() {
   useEffect(() => {
     loadAppData();
   }, []);
+
+  useEffect(() => listenForNotificationResponses((data) => {
+    if (data.entityType === "CONTRACT" && data.entityId) {
+      handleChangeTab("contract", { contractId: String(data.entityId) });
+    }
+    if (data.entityType === "INVOICE" && data.entityId) {
+      handleChangeTab("invoice", { paymentInvoiceId: String(data.entityId) });
+    }
+  }), []);
+
+  useEffect(() => {
+    if (isLoggedIn && profile?.role === 2) {
+      void refreshInbox();
+      void notification.confirm({
+        title: "Nhận thông báo quan trọng",
+        message: "Cho phép TroHub thông báo khi có hợp đồng mới hoặc hóa đơn sắp đến hạn?",
+        confirmText: "Cho phép",
+        cancelText: "Để sau",
+      }).then((accepted) => {
+        if (accepted) {
+          void registerDeviceForPush().then((result) => {
+            if (result.status === "missing-project-id") {
+              notification.warning("Push notification cần EAS Project ID; hộp thư trong ứng dụng vẫn hoạt động.");
+            }
+          });
+        }
+      });
+    }
+  }, [isLoggedIn, notification, profile?.role, refreshInbox]);
 
   const loadAppData = async () => {
     try {
@@ -97,6 +136,7 @@ export default function App() {
 
       setIsLoggedIn(false);
       setProfile(null);
+      resetInbox();
       setActiveTab("home");
       setHomeRefreshKey(0);
     } catch (error) {
@@ -170,7 +210,12 @@ export default function App() {
                 />
               )}
 
-              {activeTab === "notifications" && <NotificationsScreen onBack={() => setActiveTab("home")} />}
+              {activeTab === "notifications" && (
+                <NotificationsScreen
+                  onBack={() => setActiveTab("home")}
+                  onOpen={(item: InboxNotification) => handleChangeTab(item.entityType === "CONTRACT" ? "contract" : "invoice", { [item.entityType === "CONTRACT" ? "contractId" : "paymentInvoiceId"]: item.entityId })}
+                />
+              )}
             </>
           ) : (
             <>
@@ -179,14 +224,33 @@ export default function App() {
                   refreshKey={homeRefreshKey}
                   onNavigate={(screen) => setActiveTab(screen)}
                   onLogout={handleLogout}
+                  onOpenNotifications={() => setActiveTab("notifications")}
+                  notificationUnreadCount={notificationUnreadCount}
                 />
+              )}
+
+              {activeTab === "notifications" && (
+                <NotificationsScreen
+                  onBack={() => setActiveTab("home")}
+                  onOpen={(item: InboxNotification) => {
+                    if (item.entityType === "CONTRACT") {
+                      handleChangeTab("contract", { contractId: item.entityId });
+                    } else {
+                      handleChangeTab("invoice", { paymentInvoiceId: item.entityId });
+                    }
+                  }}
+                />
+              )}
+
+              {activeTab === "scan_meter" && (
+                <MeterScannerScreen onBack={() => setActiveTab("home")} onSuccess={() => setActiveTab("utility")} />
               )}
 
               {activeTab === "invoice" && <InvoiceScreen params={actionParams} />}
 
               {activeTab === "repair" && <RepairScreen />}
 
-              {activeTab === "contract" && <ContractScreen onNavigate={handleChangeTab as any} />}
+              {activeTab === "contract" && <ContractScreen params={actionParams} onNavigate={handleChangeTab as any} />}
 
               {activeTab === "utility" && (
                 <UtilityScreen onBack={() => setActiveTab("home")} />
@@ -208,19 +272,11 @@ export default function App() {
                   onNavigate={(screen) => setActiveTab(screen)}
                 />
               )}
-
-              {activeTab === "notifications" && (
-                <NotificationsScreen onBack={() => setActiveTab("home")} onNavigate={handleChangeTab} />
-              )}
-
-              {activeTab === "scan_meter" && (
-                <MeterScannerScreen onBack={() => setActiveTab("home")} onSuccess={() => setActiveTab("utility")} />
-              )}
             </>
           )}
         </View>
 
-        {activeTab !== "change_password" && (
+        {activeTab !== "change_password" && activeTab !== "notifications" && (
           <BottomNav activeTab={activeTab} onChangeTab={handleChangeTab} role={profile.role} />
         )}
         <Toast />
@@ -232,14 +288,14 @@ export default function App() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: "#FAF8F4",
+    backgroundColor: "#F4F5F7",
   },
   phone: {
     flex: 1, 
     width: "100%",
     maxWidth: 430,
     alignSelf: "center",
-    backgroundColor: "#FAF8F4",
+    backgroundColor: "#F4F5F7",
   },
   content: {
     flex: 1,

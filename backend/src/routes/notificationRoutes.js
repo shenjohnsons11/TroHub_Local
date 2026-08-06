@@ -1,0 +1,15 @@
+const express = require('express');
+const { requireTenant } = require('../middleware/requireTenant');
+const notificationController = require('../controllers/notificationController');
+
+const router = express.Router();
+router.use(requireTenant);
+
+router.post('/devices', notificationController.registerDevice);
+router.delete('/devices/:deviceId', notificationController.unregisterDevice);
+router.get('/unread-count', notificationController.getUnreadCount);
+router.patch('/read-all', notificationController.markAllRead);
+router.patch('/:id/read', notificationController.markRead);
+router.get('/', notificationController.listNotifications);
+
+module.exports = router;
