@@ -19,7 +19,7 @@ export const translations = {
     loggingIn: "Đang đăng nhập...",
     registering: "Đang đăng ký...",
     welcomeBack: "Chào mừng trở lại",
-    loginDescription: "Đăng nhập bằng tài khoản Chủ trọ hoặc Admin.",
+    loginDescription: "Đăng nhập bằng tài khoản Chủ trọ.",
     registerDescription: "Tự tạo tài khoản quản trị dãy trọ của bạn.",
     requiredFullName: "Vui lòng nhập họ và tên đầy đủ.",
     invalidPhone: "Số điện thoại phải gồm đúng 10 chữ số.",

@@ -61,7 +61,7 @@ function selectReading({ initialValue, previousInvoice, roomInvoice, field }) {
     return {
         value: 0,
         type: 'NO_HISTORY',
-        warning: 'Phòng chưa có lịch sử chỉ số; giá trị khởi tạo là 0 và cần được Admin kiểm tra.',
+        warning: 'Phòng chưa có lịch sử chỉ số; giá trị khởi tạo là 0 và cần được Chủ trọ kiểm tra.',
     };
 }
 

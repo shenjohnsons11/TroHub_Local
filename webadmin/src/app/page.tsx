@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { TroHubLogo } from "@/components/trohub-logo";
 import { fetchAPI } from "@/lib/api";
-import { formatPhone, unformatDigits } from "@/lib/formatters";
+import { formatCCCD, formatPhone, unformatDigits } from "@/lib/formatters";
 import { useNotification } from "@/hooks/use-notification";
 import { getNotificationMessage } from "@/lib/notification-messages";
 import { LanguageToggle } from "@/components/language-toggle";
@@ -114,10 +114,11 @@ export default function LoginPage() {
 
     try {
       const phoneClean = unformatDigits(identifier);
+      const idCardClean = unformatDigits(idCard);
       if (!fullName.trim()) throw new Error(t("requiredFullName"));
       if (phoneClean.length !== 10) throw new Error(t("invalidPhone"));
       if (!/^\S+@\S+\.\S+$/.test(email.trim())) throw new Error(t("invalidEmail"));
-      if (idCard.replace(/\D/g, "").length !== 12) throw new Error("CCCD phải gồm đúng 12 chữ số.");
+      if (idCardClean.length !== 12) throw new Error("CCCD phải gồm đúng 12 chữ số.");
       if (password.length < 6) throw new Error(t("invalidPassword"));
       if (!propertyAddress.trim()) throw new Error(t("propertyAddress"));
       if (!inviteCode.trim()) throw new Error(t("invalidInvite"));
@@ -129,7 +130,7 @@ export default function LoginPage() {
           fullName: fullName.trim(),
           phone: phoneClean,
           email: email.trim(),
-          idCard: idCard.replace(/\D/g, ""),
+          idCard: idCardClean,
           password,
           inviteCode: inviteCode.trim(),
           propertyAddress: propertyAddress.trim(),
@@ -357,16 +358,16 @@ export default function LoginPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="idCard" className="font-bold text-foreground">CCCD *</Label>
+                  <Label htmlFor="idCard" className="font-bold text-foreground">Số CMND / CCCD *</Label>
                   <Input
                     id="idCard"
                     name="idCard"
                     inputMode="numeric"
                     value={idCard}
-                    onChange={(event) => setIdCard(unformatDigits(event.target.value))}
+                    onChange={(event) => setIdCard(formatCCCD(event.target.value))}
                     placeholder="Nhập CCCD 12 số"
                     required
-                    maxLength={12}
+                    maxLength={14}
                     className="h-12 rounded-[16px] bg-background px-4 text-base placeholder:text-muted-foreground focus-visible:ring-primary"
                   />
                 </div>
