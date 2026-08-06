@@ -3,12 +3,14 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { buildLoginLookup } = require('../services/authIdentifier');
+const { normalizeCoordinates, reverseGeocode } = require('../services/propertyLocation');
 
 // Chuỗi bí mật mã hóa phiên đăng nhập
 const JWT_SECRET = process.env.JWT_SECRET || 'trohub_secret_key_2026';
 const OTP_TTL_MS = 10 * 60 * 1000;
 const OTP_RESEND_MS = 60 * 1000;
 const OTP_MAX_ATTEMPTS = 5;
+const DEVELOPMENT_LANDLORD_INVITES = ['102938', '574839', '293847', '847291', '482019', '673920'];
 
 function clearOtp(account) {
     account.passwordResetOtpHash = undefined;
@@ -25,13 +27,97 @@ function sameNonce(stored, supplied) {
         && crypto.timingSafeEqual(storedBuffer, suppliedBuffer);
 }
 
-// Tài khoản chỉ được cấp qua luồng quản trị; không mở đăng ký công khai.
-exports.register = async (_req, res) => {
-    return res.status(403).json({
-        success: false,
-        code: 'PUBLIC_REGISTRATION_DISABLED',
-        message: 'Tài khoản mới chỉ được tạo bởi Admin.',
-    });
+function getLandlordInviteCodes() {
+    const configured = process.env.LANDLORD_INVITE_CODES;
+    if (configured) return configured.split(',').map((code) => code.trim()).filter(Boolean);
+    return process.env.NODE_ENV === 'production' ? [] : DEVELOPMENT_LANDLORD_INVITES;
+}
+
+function serializeUser(account) {
+    return {
+        id: account._id,
+        username: account.username,
+        fullName: account.fullName,
+        phone: account.phone,
+        email: account.email,
+        idCard: account.idCard,
+        role: account.role,
+        status: account.status,
+        mustChangePassword: account.mustChangePassword,
+        bankId: account.bankId,
+        bankAccountNo: account.bankAccountNo,
+        bankAccountName: account.bankAccountName,
+        propertyAddress: account.propertyAddress || '',
+        propertyLatitude: account.propertyLatitude,
+        propertyLongitude: account.propertyLongitude,
+    };
+}
+
+exports.register = async (req, res) => {
+    const role = Number(req.body?.role);
+    if (role !== 1) {
+        return res.status(403).json({
+            success: false,
+            code: 'PUBLIC_REGISTRATION_DISABLED',
+            message: 'Tài khoản mới chỉ được tạo bởi Admin.',
+        });
+    }
+
+    try {
+        const { fullName, phone, email, idCard, password, inviteCode, propertyAddress, propertyLatitude, propertyLongitude } = req.body;
+        const cleanName = typeof fullName === 'string' ? fullName.trim() : '';
+        const cleanPhone = typeof phone === 'string' ? phone.replace(/\D/g, '') : '';
+        const cleanEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+        const cleanIdCard = typeof idCard === 'string' ? idCard.replace(/\D/g, '') : '';
+        const cleanAddress = typeof propertyAddress === 'string' ? propertyAddress.trim() : '';
+
+        if (!cleanName) return res.status(400).json({ success: false, code: 'FULL_NAME_REQUIRED', message: 'Vui lòng nhập họ và tên đầy đủ.' });
+        if (cleanPhone.length !== 10) return res.status(400).json({ success: false, code: 'INVALID_PHONE', message: 'Số điện thoại phải gồm đúng 10 chữ số.' });
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) return res.status(400).json({ success: false, code: 'INVALID_EMAIL', message: 'Địa chỉ Email không hợp lệ.' });
+        if (cleanIdCard.length !== 12) return res.status(400).json({ success: false, code: 'INVALID_ID_CARD', message: 'CCCD phải gồm đúng 12 chữ số.' });
+        if (typeof password !== 'string' || password.length < 6) return res.status(400).json({ success: false, code: 'INVALID_PASSWORD', message: 'Mật khẩu phải có ít nhất 6 ký tự.' });
+        if (!cleanAddress) return res.status(400).json({ success: false, code: 'PROPERTY_ADDRESS_REQUIRED', message: 'Vui lòng nhập địa chỉ nhà trọ.' });
+        if (!getLandlordInviteCodes().includes(typeof inviteCode === 'string' ? inviteCode.trim() : '')) {
+            return res.status(403).json({ success: false, code: 'INVALID_LANDLORD_INVITE', message: 'Mã mời đăng ký Chủ trọ không hợp lệ.' });
+        }
+
+        const coordinates = normalizeCoordinates(propertyLatitude, propertyLongitude);
+        const existing = await Account.findOne({ $or: [{ phone: cleanPhone }, { email: cleanEmail }, { idCard: cleanIdCard }] });
+        if (existing) return res.status(400).json({ success: false, code: 'ACCOUNT_ALREADY_EXISTS', message: 'Số điện thoại, Email hoặc CCCD đã được đăng ký.' });
+
+        const account = await new Account({
+            username: cleanPhone,
+            password: await bcrypt.hash(password, 10),
+            fullName: cleanName,
+            phone: cleanPhone,
+            email: cleanEmail,
+            idCard: cleanIdCard,
+            role: 1,
+            status: 1,
+            propertyAddress: cleanAddress,
+            propertyLatitude: coordinates?.latitude,
+            propertyLongitude: coordinates?.longitude,
+        }).save();
+        const token = jwt.sign({ id: account._id, role: account.role }, JWT_SECRET, { expiresIn: '30d' });
+        return res.status(201).json({ success: true, message: 'Đăng ký tài khoản Chủ trọ thành công!', token, user: serializeUser(account) });
+    } catch (error) {
+        const status = error.code === 'INVALID_PROPERTY_COORDINATES' ? 400 : 500;
+        return res.status(status).json({ success: false, code: error.code, message: error.message || 'Không thể đăng ký tài khoản Chủ trọ.' });
+    }
+};
+
+exports.reverseGeocode = async (req, res) => {
+    try {
+        const coordinates = normalizeCoordinates(req.query.lat, req.query.lng);
+        if (!coordinates) throw Object.assign(new Error('Tọa độ nhà trọ không hợp lệ.'), { code: 'INVALID_PROPERTY_COORDINATES' });
+        const address = await reverseGeocode(coordinates);
+        return res.status(200).json({ success: true, data: { address } });
+    } catch (error) {
+        const status = error.code === 'INVALID_PROPERTY_COORDINATES' ? 400
+            : error.code === 'LOCATION_RATE_LIMITED' ? 429
+                : 502;
+        return res.status(status).json({ success: false, code: error.code || 'LOCATION_LOOKUP_FAILED', message: error.message || 'Không thể lấy địa chỉ từ vị trí hiện tại.' });
+    }
 };
 
 // 2. Đăng nhập hệ thống tổng hợp (Dùng chung cho cả Web và Mobile App)
@@ -78,13 +164,7 @@ exports.login = async (req, res) => {
             success: true,
             message: "Đăng nhập hệ thống thành công!",
             token,
-            user: {
-                id: account._id,
-                username: account.username,
-                fullName: account.fullName,
-                role: account.role, // 1: Giao diện Web chủ trọ, 2: Giao diện Mobile người thuê
-                mustChangePassword: account.mustChangePassword
-            }
+            user: serializeUser(account)
         });
     } catch (error) {
         res.status(500).json({ success: false, message: "Lỗi Server khi đăng nhập: " + error.message });
@@ -108,19 +188,7 @@ exports.getMe = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            user: {
-                id: account._id,
-                username: account.username,
-                fullName: account.fullName,
-                phone: account.phone,
-                email: account.email,
-                idCard: account.idCard,
-                role: account.role,
-                status: account.status,
-                bankId: account.bankId,
-                bankAccountNo: account.bankAccountNo,
-                bankAccountName: account.bankAccountName
-            }
+            user: serializeUser(account)
         });
     } catch (error) {
         res.status(401).json({ success: false, message: 'Token không hợp lệ hoặc đã hết hạn: ' + error.message });
@@ -137,7 +205,7 @@ exports.updateMe = async (req, res) => {
         const token = authHeader.split(' ')[1];
         const decoded = jwt.verify(token, JWT_SECRET);
 
-        const { fullName, phone, email, idCard, bankId, bankAccountNo, bankAccountName } = req.body;
+        const { fullName, phone, email, idCard, bankId, bankAccountNo, bankAccountName, propertyAddress, propertyLatitude, propertyLongitude } = req.body;
 
         const account = await Account.findById(decoded.id);
         if (!account) {
@@ -151,25 +219,26 @@ exports.updateMe = async (req, res) => {
         if (bankId !== undefined) account.bankId = bankId;
         if (bankAccountNo !== undefined) account.bankAccountNo = bankAccountNo;
         if (bankAccountName !== undefined) account.bankAccountName = bankAccountName;
+        if (account.role === 1 && propertyAddress !== undefined) {
+            const cleanAddress = typeof propertyAddress === 'string' ? propertyAddress.trim() : '';
+            if (!cleanAddress) return res.status(400).json({ success: false, code: 'PROPERTY_ADDRESS_REQUIRED', message: 'Vui lòng nhập địa chỉ nhà trọ.' });
+            account.propertyAddress = cleanAddress;
+        }
+        if (account.role === 1 && (propertyLatitude !== undefined || propertyLongitude !== undefined)) {
+            const coordinates = normalizeCoordinates(
+                propertyLatitude === undefined ? account.propertyLatitude : propertyLatitude,
+                propertyLongitude === undefined ? account.propertyLongitude : propertyLongitude,
+            );
+            account.propertyLatitude = coordinates?.latitude;
+            account.propertyLongitude = coordinates?.longitude;
+        }
 
         await account.save();
 
         res.status(200).json({
             success: true,
             message: 'Cập nhật thông tin tài khoản thành công!',
-            user: {
-                id: account._id,
-                username: account.username,
-                fullName: account.fullName,
-                phone: account.phone,
-                email: account.email,
-                idCard: account.idCard,
-                role: account.role,
-                status: account.status,
-                bankId: account.bankId,
-                bankAccountNo: account.bankAccountNo,
-                bankAccountName: account.bankAccountName
-            }
+            user: serializeUser(account)
         });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Lỗi Server khi cập nhật thông tin: ' + error.message });

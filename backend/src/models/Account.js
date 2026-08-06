@@ -19,7 +19,10 @@ const accountSchema = new mongoose.Schema({
     passwordResetNonce: { type: String, select: false },
     bankId: { type: String, default: "" }, // Tên rút gọn ngân hàng (VD: VCB, MB, TCB)
     bankAccountNo: { type: String, default: "" }, // Số tài khoản
-    bankAccountName: { type: String, default: "" } // Tên chủ tài khoản
+    bankAccountName: { type: String, default: "" }, // Tên chủ tài khoản
+    propertyAddress: { type: String, trim: true, default: "" },
+    propertyLatitude: { type: Number },
+    propertyLongitude: { type: Number }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Account', accountSchema);
