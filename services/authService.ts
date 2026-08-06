@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiClient } from "./apiClient";
+import { unformatDigits } from "../utils/formatters";
 
 const LOGIN_KEY = "TROHUB_IS_LOGGED_IN";
 const TOKEN_KEY = "TROHUB_ACCESS_TOKEN";
@@ -34,61 +35,17 @@ export const authService = {
   },
 
   async registerTenant(tenantData: { fullName: string; phone: string; email: string; idCard: string; password: string }): Promise<void> {
-    try {
-      const mockStr = await AsyncStorage.getItem("@mock_tenants");
-      const mockTenants = mockStr ? JSON.parse(mockStr) : [];
-      
-      if (mockTenants.some((u: any) => u.phone === tenantData.phone || u.email === tenantData.email)) {
-        throw new Error("Số điện thoại hoặc Email đã được đăng ký!");
-      }
-
-      const newTenant = {
-        id: "mock_tenant_" + Math.random().toString(36).substring(2, 9),
-        username: tenantData.phone,
-        fullName: tenantData.fullName,
-        phone: tenantData.phone,
-        email: tenantData.email,
-        idCard: tenantData.idCard,
-        password: tenantData.password,
-        role: 2,
-      };
-
-      mockTenants.push(newTenant);
-      await AsyncStorage.setItem("@mock_tenants", JSON.stringify(mockTenants));
-    } catch (error) {
-      console.log("Lỗi đăng ký tenant:", error);
-      throw error;
-    }
+    await apiClient.post<LoginResponse>("/auth/register", tenantData);
   },
 
   async login(identifier: string, password: string): Promise<boolean> {
     try {
-      // Check mock tenants first
-      const mockStr = await AsyncStorage.getItem("@mock_tenants");
-      if (mockStr) {
-        const mockTenants = JSON.parse(mockStr);
-        const matched = mockTenants.find(
-          (u: any) =>
-            (u.phone === identifier || u.email === identifier || u.username === identifier) &&
-            u.password === password
-        );
-        if (matched) {
-          const user = {
-            id: matched.id,
-            username: matched.username,
-            fullName: matched.fullName,
-            role: 2,
-            mustChangePassword: false,
-          };
-          await AsyncStorage.setItem(TOKEN_KEY, "mock-token-" + matched.id);
-          await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
-          await AsyncStorage.setItem(LOGIN_KEY, "true");
-          return false;
-        }
-      }
+      const cleanIdentifier = identifier.includes("@")
+        ? identifier.trim().toLowerCase()
+        : unformatDigits(identifier);
 
       const response = await apiClient.post<LoginResponse>("/auth/login", {
-        identifier,
+        identifier: cleanIdentifier,
         password,
       });
 
@@ -116,6 +73,7 @@ export const authService = {
       await AsyncStorage.removeItem(LOGIN_KEY);
       await AsyncStorage.removeItem(TOKEN_KEY);
       await AsyncStorage.removeItem(USER_KEY);
+      await AsyncStorage.removeItem("TROHUB_USER_PROFILE");
     } catch (error) {
       console.log("Lỗi đăng xuất:", error);
       throw error;

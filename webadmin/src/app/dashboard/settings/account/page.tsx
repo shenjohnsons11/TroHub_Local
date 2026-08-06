@@ -48,7 +48,7 @@ export default function AccountSettingsPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <PageHeader eyebrow="Hồ sơ quản trị" title="Cài đặt tài khoản" description="Thông tin Chủ trọ/Admin dùng trong hệ thống." />
+      <PageHeader eyebrow="Hồ sơ quản trị" title="Cài đặt tài khoản" description="Thông tin Chủ trọ dùng trong hệ thống." />
       <div className="grid gap-4 sm:grid-cols-[180px_1fr]">
         <aside className="calm-surface flex flex-col items-center justify-center bg-accent/45 p-5 text-center">
           <span className="grid size-16 place-items-center rounded-[20px] bg-primary text-primary-foreground">

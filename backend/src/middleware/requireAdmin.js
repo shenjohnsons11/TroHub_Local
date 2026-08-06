@@ -16,7 +16,7 @@ async function requireAdmin(req, res, next) {
             return res.status(403).json({
                 success: false,
                 code: 'ADMIN_REQUIRED',
-                message: 'Chức năng này chỉ dành cho Admin.',
+                message: 'Chức năng này chỉ dành cho Chủ trọ.',
             });
         }
 

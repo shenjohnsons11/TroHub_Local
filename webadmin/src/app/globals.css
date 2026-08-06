@@ -185,12 +185,17 @@
     box-shadow: var(--calm-shadow);
   }
   .calm-workbench table { min-width: 760px; }
-  .calm-workbench th:first-child,
+  .calm-workbench th:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--background);
+  }
   .calm-workbench td:first-child {
     position: sticky;
     left: 0;
     z-index: 1;
-    background: inherit;
+    background: var(--card);
   }
   .calm-admin main > div > div {
     animation: calm-page-in 240ms cubic-bezier(.16, 1, .3, 1);

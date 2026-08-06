@@ -10,41 +10,11 @@ export const ocrService = {
    * Process image and extract numeric meter reading sequence
    */
   async recognizeMeterReading(imageUri?: string, meterType: "electricity" | "water" = "electricity"): Promise<OCRRecognitionResult> {
-    try {
-      // Simulate OCR delay for realistic ML processing
-      await new Promise((resolve) => setTimeout(resolve, 800));
-
-      // Mock MLKit / Vision OCR extraction logic
-      // In production, MLKit or Vision API returns raw text string
-      let rawText = "NO_IMAGE_CAPTURED";
-      let digits = "04521";
-
-      if (imageUri) {
-        // Generate pseudo-deterministic numbers derived from imageUri or random range for demo
-        const seed = imageUri.length;
-        const baseNum = meterType === "electricity" ? (40000 + (seed * 13) % 9000) : (120 + (seed * 7) % 300);
-        digits = String(baseNum).padStart(5, "0");
-        rawText = `METER_READING_OK kWh ${digits}`;
-      }
-
-      // Filter: Clean string, extract pure digits
-      const cleanedDigits = this.cleanMeterDigits(digits);
-
-      return {
-        rawText,
-        digits: cleanedDigits,
-        confidence: 0.96,
-        meterType,
-      };
-    } catch (error) {
-      console.error("Lỗi nhận diện OCR:", error);
-      return {
-        rawText: "ERROR",
-        digits: "04521",
-        confidence: 0.8,
-        meterType,
-      };
-    }
+    if (!imageUri) throw new Error("Không có ảnh đồng hồ để nhận diện.");
+    const token = await authService.getToken();
+    const response = await apiClient.post<{ success: boolean; data?: { digits: string; rawText: string; confidence: number }; message?: string }>("/ocr/meter", { imageData: await toDataUrl(imageUri) }, token);
+    if (!response.success || !response.data?.digits) throw new Error(response.message || "Không đọc được chỉ số đồng hồ.");
+    return { ...response.data, digits: this.cleanMeterDigits(response.data.digits), meterType };
   },
 
   /**
@@ -58,3 +28,17 @@ export const ocrService = {
     return digitsOnly.slice(0, 6);
   },
 };
+
+async function toDataUrl(uri: string): Promise<string> {
+  if (uri.startsWith("data:image/")) return uri;
+  const response = await fetch(uri);
+  const blob = await response.blob();
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Không thể đọc ảnh đồng hồ."));
+    reader.onloadend = () => resolve(String(reader.result || ""));
+    reader.readAsDataURL(blob);
+  });
+}
+import { apiClient } from "./apiClient";
+import { authService } from "./authService";

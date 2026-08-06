@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { fetchAPI } from "@/lib/api";
@@ -7,21 +8,45 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Send, Trash2 } from "lucide-react";
+import { CheckCircle2, Edit, FileSignature, Plus, Search, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { formatCurrency, formatNumberInput, formatPhone, unformatNumber } from "@/lib/formatters";
 import { useNotification } from "@/hooks/use-notification";
 import { getNotificationMessage } from "@/lib/notification-messages";
+import { formatCurrency, formatNumberInput, formatPhone, unformatNumber } from "@/lib/formatters";
+import { PageHeader } from "@/components/calm-ops/page-header";
+import { addWebNotification } from "@/components/notification-bell";
+
+type CheckoutPreview = {
+  roomCode: string;
+  depositAmount: number;
+  unpaidAmount: number;
+  electricityOld: number;
+  waterOld: number;
+  electricityPrice: number;
+  waterPrice: number;
+};
 
 export default function ContractsPage() {
   const notification = useNotification();
   const [contracts, setContracts] = useState<any[]>([]);
+  const [draftContracts, setDraftContracts] = useState<any[]>([]);
+  const [activeFilter, setActiveFilter] = useState("all");
   const [rooms, setRooms] = useState<any[]>([]);
   const [tenants, setTenants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
+  const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
+  const [checkoutContractId, setCheckoutContractId] = useState("");
+  const [finalElectricity, setFinalElectricity] = useState("");
+  const [finalWater, setFinalWater] = useState("");
+  const [damageAmount, setDamageAmount] = useState("");
+  const [checkoutNote, setCheckoutNote] = useState("");
+  const [checkoutSubmitting, setCheckoutSubmitting] = useState(false);
+  const [checkoutPreviewLoading, setCheckoutPreviewLoading] = useState(false);
+  const [checkoutPreview, setCheckoutPreview] = useState<CheckoutPreview | null>(null);
+  
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editContractId, setEditContractId] = useState("");
   const [roomId, setRoomId] = useState("");
@@ -32,6 +57,8 @@ export default function ContractsPage() {
   const [deposit, setDeposit] = useState("");
   const [initialElectricity, setInitialElectricity] = useState("");
   const [initialWater, setInitialWater] = useState("");
+  const [electricityPrice, setElectricityPrice] = useState(formatNumberInput(3500));
+  const [waterPrice, setWaterPrice] = useState(formatNumberInput(15000));
   const [availableServices, setAvailableServices] = useState<any[]>([]);
   const [selectedServices, setSelectedServices] = useState<{serviceId: string, fixedPrice: string}[]>([]);
 
@@ -51,7 +78,7 @@ export default function ContractsPage() {
         fetchAPI("/tenants"),
         fetchAPI("/services")
       ]);
-
+      
       if (contractsData.success) setContracts(contractsData.data);
       if (roomsData.success) setRooms(roomsData.data);
       if (tenantsData.success) setTenants(tenantsData.data);
@@ -65,7 +92,66 @@ export default function ContractsPage() {
 
   useEffect(() => {
     loadData();
+    try {
+      const drafts = JSON.parse(localStorage.getItem("@trohub_draft_contracts") || "[]");
+      setDraftContracts(Array.isArray(drafts) ? drafts : []);
+    } catch (e) {
+      console.error("Failed to load drafts", e);
+    }
   }, []);
+
+  const handleDeleteDraft = (id: string) => {
+    const newDrafts = draftContracts.filter(d => d.id !== id);
+    setDraftContracts(newDrafts);
+    localStorage.setItem("@trohub_draft_contracts", JSON.stringify(newDrafts));
+  };
+
+  const openCheckoutModal = async (id: string) => {
+    setCheckoutContractId(id);
+    setFinalElectricity("");
+    setFinalWater("");
+    setDamageAmount("");
+    setCheckoutNote("");
+    setCheckoutPreview(null);
+    setCheckoutModalOpen(true);
+    setCheckoutPreviewLoading(true);
+    try {
+      const response = await fetchAPI(`/contracts/${id}/checkout-preview`);
+      setCheckoutPreview(response.data);
+      setFinalElectricity(formatNumberInput(response.data.electricityOld));
+      setFinalWater(formatNumberInput(response.data.waterOld));
+    } catch (error) {
+      notification.error(getNotificationMessage(error, "Không thể tải bảng quyết toán."));
+      setCheckoutModalOpen(false);
+    } finally {
+      setCheckoutPreviewLoading(false);
+    }
+  };
+
+  const handleCheckout = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setCheckoutSubmitting(true);
+      const response = await fetchAPI(`/contracts/${checkoutContractId}/checkout`, {
+        method: "PUT",
+        body: JSON.stringify({
+          finalElectricity: unformatNumber(finalElectricity),
+          finalWater: unformatNumber(finalWater),
+          damageAmount: unformatNumber(damageAmount),
+          note: checkoutNote
+        })
+      });
+      notification.success(response.settlement.amountDue > 0
+        ? `Khách còn nợ thêm ${formatCurrency(response.settlement.amountDue)}.`
+        : `Cần hoàn lại cho khách ${formatCurrency(response.settlement.refundAmount)}.`);
+      setCheckoutModalOpen(false);
+      await loadData();
+    } catch (err: unknown) {
+      notification.error(getNotificationMessage(err, "Không thể duyệt trả phòng."));
+    } finally {
+      setCheckoutSubmitting(false);
+    }
+  };
 
   const openEditModal = (contract: any) => {
     setEditContractId(contract._id || contract.id);
@@ -73,16 +159,26 @@ export default function ContractsPage() {
     setTenantId(contract.tenantId?._id || contract.tenantId?.id || contract.tenantId);
     setStartDate(contract.startDate ? new Date(contract.startDate).toISOString().split("T")[0] : "");
     setEndDate(contract.endDate ? new Date(contract.endDate).toISOString().split("T")[0] : "");
-    setRent(formatNumberInput(contract.fixedRentPrice || 0));
-    setDeposit(formatNumberInput(contract.fixedDeposit || 0));
+    setRent(formatNumberInput(contract.fixedRentPrice));
+    setDeposit(formatNumberInput(contract.fixedDeposit));
+    setElectricityPrice(formatNumberInput(contract.electricityPrice ?? 3500));
+    setWaterPrice(formatNumberInput(contract.waterPrice ?? 15000));
 
-    const r = rooms.find(x => (x._id || x.id) === (contract.roomId?._id || contract.roomId?.id || contract.roomId));
-    setInitialElectricity(r?.draftElectricity?.toString() || "");
-    setInitialWater(r?.draftWater?.toString() || "");
+    const room = rooms.find(item => (item._id || item.id) === (contract.roomId?._id || contract.roomId?.id || contract.roomId));
+    setInitialElectricity(
+      formatNumberInput(
+        contract.initialElectricity ?? room?.lastElectricityReading ?? room?.draftElectricity,
+      )
+    );
+    setInitialWater(
+      formatNumberInput(
+        contract.initialWater ?? room?.lastWaterReading ?? room?.draftWater,
+      )
+    );
 
     const preselectedServices = (contract.services || []).map((s: any) => ({
       serviceId: s.serviceId?._id || s.serviceId?.id || s.serviceId,
-      fixedPrice: formatNumberInput(s.fixedPrice || 0)
+      fixedPrice: formatNumberInput(s.fixedPrice)
     }));
     setSelectedServices(preselectedServices);
     setIsAddOpen(true);
@@ -93,26 +189,27 @@ export default function ContractsPage() {
     try {
       const selectedRoom = rooms.find(r => (r._id || r.id) === roomId);
       const selectedTenant = tenants.find(t => (t._id || t.id) === tenantId);
-
+      
       if (!selectedRoom) throw new Error("Vui lòng chọn phòng");
       if (!selectedTenant) throw new Error("Vui lòng chọn người thuê");
-
-      const payload = {
-        roomId: selectedRoom._id || selectedRoom.id,
-        tenantId: selectedTenant._id || selectedTenant.id,
+      const payload = { 
+        roomId: selectedRoom._id || selectedRoom.id, 
+        tenantId: selectedTenant._id || selectedTenant.id, 
         startDate,
         endDate,
         fixedRentPrice: unformatNumber(rent),
         fixedDeposit: unformatNumber(deposit),
+        electricityPrice: unformatNumber(electricityPrice || "3500"),
+        waterPrice: unformatNumber(waterPrice || "15000"),
         services: selectedServices.map(s => ({
           serviceId: s.serviceId,
           fixedPrice: unformatNumber(s.fixedPrice)
         })),
-        initialElectricity: initialElectricity ? Number(initialElectricity) : undefined,
-        initialWater: initialWater ? Number(initialWater) : undefined,
+        initialElectricity: initialElectricity ? unformatNumber(initialElectricity) : undefined,
+        initialWater: initialWater ? unformatNumber(initialWater) : undefined,
         status: computedStatus === "Đang hiệu lực" ? 1 : 0 // 0 means waiting/pending
       };
-
+      
       const endpoint = editContractId ? `/contracts/${editContractId}` : "/contracts";
       const method = editContractId ? "PUT" : "POST";
 
@@ -122,7 +219,8 @@ export default function ContractsPage() {
       });
       setIsAddOpen(false);
       notification.success("Đã cập nhật hợp đồng.");
-      await loadData();
+      addWebNotification("contract", "Hợp đồng mới", "Vừa tạo hoặc cập nhật 1 hợp đồng.");
+      loadData();
     } catch (err: unknown) {
       notification.error(getNotificationMessage(err, "Không thể lưu hợp đồng."));
     }
@@ -158,48 +256,77 @@ export default function ContractsPage() {
     }
   };
 
-  const handleSendContract = async (contract: any) => {
-    const id = contract._id || contract.id;
-    if (contract.lastSentAt) {
-      const confirmed = await notification.confirm({
-        title: "Gửi lại hợp đồng",
-        message: "Gửi lại thông báo hợp đồng này cho Người thuê?",
-        confirmText: "Gửi lại",
-      });
-      if (!confirmed) return;
-    }
-    try {
-      const response = await fetchAPI(`/contracts/${id}/send`, { method: "POST" });
-      const sent = response.data?.delivery?.sent || 0;
-      notification.success(`Đã lưu thông báo và gửi push tới ${sent} thiết bị.`);
-      await loadData();
-    } catch (error) {
-      notification.error(getNotificationMessage(error, "Không thể gửi hợp đồng."));
-    }
-  };
-
   const filteredContracts = contracts.filter(c => {
     const roomCode = c.roomId?.roomCode || "";
     const tenantName = c.tenantId?.fullName || c.tenantId?.name || "";
-    return roomCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           tenantName.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = roomCode.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          tenantName.toLowerCase().includes(searchTerm.toLowerCase());
+    if (!matchesSearch) return false;
+    if (activeFilter === "pending") return c.status === 0 || c.status === 4;
+    if (activeFilter === "active") return c.status === 1;
+    if (activeFilter === "checkout") return c.status === 2 || c.status === 5;
+    return true;
   });
+
+  const checkoutCalculation = (() => {
+    if (!checkoutPreview) return null;
+    const electricityAmount = Math.max(
+      0,
+      unformatNumber(finalElectricity) - checkoutPreview.electricityOld
+    ) * checkoutPreview.electricityPrice;
+    const waterAmount = Math.max(
+      0,
+      unformatNumber(finalWater) - checkoutPreview.waterOld
+    ) * checkoutPreview.waterPrice;
+    const utilitiesAmount = electricityAmount + waterAmount;
+    const damage = unformatNumber(damageAmount);
+    const totalDebt = checkoutPreview.unpaidAmount + utilitiesAmount + damage;
+    const balance = checkoutPreview.depositAmount - totalDebt;
+    return {
+      utilitiesAmount,
+      totalDebt,
+      refundAmount: Math.max(0, balance),
+      amountDue: Math.max(0, -balance),
+    };
+  })();
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div className="relative w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <Input
-            placeholder="Tìm theo mã phòng, tên Người thuê..."
-            className="pl-9 h-10 bg-white"
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-          />
+      <PageHeader eyebrow="Vận hành" title="Hợp đồng" description="Theo dõi vòng đời hợp đồng từ khởi tạo, chờ ký đến hết hiệu lực." />
+      <section className="calm-surface flex flex-col gap-4 p-4">
+        <div className="flex flex-wrap gap-2">
+          {[
+            { id: "all", label: "Tất cả" },
+            { id: "pending", label: "Chờ duyệt/ký" },
+            { id: "active", label: "Hiệu lực" },
+            { id: "checkout", label: "Trả phòng" },
+            { id: "draft", label: "Bản nháp" },
+          ].map(tab => (
+            <Button 
+              key={tab.id}
+              variant={activeFilter === tab.id ? "default" : "outline"}
+              onClick={() => setActiveFilter(tab.id)}
+              size="sm"
+              className="rounded-full"
+            >
+              {tab.label}
+            </Button>
+          ))}
         </div>
+        
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full sm:max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input 
+              placeholder="Tìm theo mã phòng, tên Người thuê..."
+              className="pl-9"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+          </div>
 
         <div className="flex gap-2">
-          <Link href="/dashboard/contracts/new" className="bg-[#f37021] hover:bg-[#e85f12] text-white flex items-center h-10 px-4 rounded-md font-medium text-sm">
+          <Link href="/dashboard/contracts/new" className="flex h-10 items-center rounded-[16px] bg-primary px-4 text-sm font-bold text-primary-foreground shadow-[var(--calm-shadow)] transition hover:opacity-90">
             <Plus className="w-4 h-4 mr-2" /> Tạo hợp đồng mới
           </Link>
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
@@ -211,21 +338,21 @@ export default function ContractsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="roomSelect">Chọn phòng *</Label>
-                  <select
-                    id="roomSelect"
-                    value={roomId}
+                  <select 
+                    id="roomSelect" 
+                    value={roomId} 
                     onChange={e => {
                       setRoomId(e.target.value);
                       const r = rooms.find(x => (x._id || x.id) === e.target.value);
                       if (r) {
-                        setRent(formatNumberInput(r.defaultRentPrice || 0));
-                        setDeposit(formatNumberInput(r.defaultDeposit || r.defaultRentPrice || 0));
-                        setInitialElectricity(r.draftElectricity?.toString() || "");
-                        setInitialWater(r.draftWater?.toString() || "");
+                        setRent(formatNumberInput(r.defaultRentPrice));
+                        setDeposit(formatNumberInput(r.defaultDeposit || r.defaultRentPrice));
+                        setInitialElectricity(formatNumberInput(r.lastElectricityReading ?? r.draftElectricity));
+                        setInitialWater(formatNumberInput(r.lastWaterReading ?? r.draftWater));
                       }
                     }}
                     required
-                    className="flex h-10 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f37021]"
+                    className="flex h-10 w-full items-center justify-between rounded-[16px] border border-border bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     <option value="" disabled>-- Chọn phòng --</option>
                     {rooms.map(r => <option key={r._id || r.id} value={r._id || r.id}>{r.roomCode}</option>)}
@@ -233,12 +360,12 @@ export default function ContractsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="tenantSelect">Người thuê *</Label>
-                  <select
-                    id="tenantSelect"
-                    value={tenantId}
+                  <select 
+                    id="tenantSelect" 
+                    value={tenantId} 
                     onChange={e => setTenantId(e.target.value)}
                     required
-                    className="flex h-10 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f37021]"
+                    className="flex h-10 w-full items-center justify-between rounded-[16px] border border-border bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     <option value="" disabled>-- Chọn Người thuê --</option>
                     {tenants.map(t => <option key={t._id || t.id} value={t._id || t.id}>{t.fullName || t.name} ({formatPhone(t.phone)})</option>)}
@@ -249,10 +376,10 @@ export default function ContractsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="startDate">Ngày bắt đầu *</Label>
-                  <Input
-                    id="startDate"
-                    type="date"
-                    value={startDate}
+                  <Input 
+                    id="startDate" 
+                    type="date" 
+                    value={startDate} 
                     onChange={e => {
                       const newDateStr = e.target.value;
                       setStartDate(newDateStr);
@@ -261,8 +388,8 @@ export default function ContractsPage() {
                         dateObj.setFullYear(dateObj.getFullYear() + 1);
                         setEndDate(dateObj.toISOString().split("T")[0]);
                       }
-                    }}
-                    required
+                    }} 
+                    required 
                   />
                 </div>
                 <div className="space-y-2">
@@ -274,24 +401,49 @@ export default function ContractsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="rent">Tiền thuê / tháng *</Label>
-                  <Input
-                    id="rent"
-                    type="text"
-                    value={rent}
+                  <Input 
+                    id="rent" 
+                    type="text" 
+                    value={rent} 
                     onChange={e => setRent(formatNumberInput(e.target.value))}
-                    required
-                    placeholder="VD: 3.000.000"
+                    required 
+                    placeholder="VD: 3.000.000" 
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="deposit">Tiền cọc *</Label>
-                  <Input
-                    id="deposit"
-                    type="text"
-                    value={deposit}
+                  <Input 
+                    id="deposit" 
+                    type="text" 
+                    value={deposit} 
                     onChange={e => setDeposit(formatNumberInput(e.target.value))}
+                    required 
+                    placeholder="VD: 3.000.000" 
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="electricityPrice">Giá tiền điện (đ/kWh) *</Label>
+                  <Input
+                    id="electricityPrice"
+                    inputMode="numeric"
+                    value={electricityPrice}
+                    onChange={e => setElectricityPrice(formatNumberInput(e.target.value))}
+                    placeholder="VD: 3.500"
                     required
-                    placeholder="VD: 3.000.000"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="waterPrice">Giá tiền nước (đ/m³) *</Label>
+                  <Input
+                    id="waterPrice"
+                    inputMode="numeric"
+                    value={waterPrice}
+                    onChange={e => setWaterPrice(formatNumberInput(e.target.value))}
+                    placeholder="VD: 15.000"
+                    required
                   />
                 </div>
               </div>
@@ -301,9 +453,9 @@ export default function ContractsPage() {
                   <Label htmlFor="initialElectricity">Chỉ số điện đầu</Label>
                   <Input
                     id="initialElectricity"
-                    type="number"
+                    inputMode="numeric"
                     value={initialElectricity}
-                    onChange={e => setInitialElectricity(e.target.value)}
+                    onChange={e => setInitialElectricity(formatNumberInput(e.target.value))}
                     placeholder="VD: 100"
                   />
                 </div>
@@ -311,18 +463,18 @@ export default function ContractsPage() {
                   <Label htmlFor="initialWater">Chỉ số nước đầu</Label>
                   <Input
                     id="initialWater"
-                    type="number"
+                    inputMode="numeric"
                     value={initialWater}
-                    onChange={e => setInitialWater(e.target.value)}
+                    onChange={e => setInitialWater(formatNumberInput(e.target.value))}
                     placeholder="VD: 50"
                   />
                 </div>
               </div>
 
-              <div className="space-y-4 mt-4 pt-4 border-t border-slate-200">
-                <Label className="text-base font-semibold text-slate-800">Giá Điện, Nước</Label>
+              <div className="mt-4 space-y-4 border-t border-border pt-4">
+                <Label className="text-base font-semibold text-foreground">Giá Điện, Nước</Label>
                 {availableServices.filter(s => s.type === 1).length === 0 ? (
-                  <p className="text-sm text-slate-500">Chưa cài đặt dịch vụ Điện, Nước trong phần Quản lý Dịch vụ.</p>
+                  <p className="text-sm text-muted-foreground">Chưa cài đặt dịch vụ Điện, Nước trong phần Quản lý Dịch vụ.</p>
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
                     {availableServices.filter(s => s.type === 1).map(srv => {
@@ -330,25 +482,25 @@ export default function ContractsPage() {
                       const isSelected = selectedServices.some(s => s.serviceId === srvId);
                       const svcData = selectedServices.find(s => s.serviceId === srvId);
                       return (
-                        <div key={srvId} className="space-y-2">
-                          <label className="flex items-center gap-2 cursor-pointer font-medium text-sm text-slate-800">
+                        <div key={srvId} className="space-y-2 rounded-[16px] bg-background p-3 shadow-[var(--calm-shadow)]">
+                          <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-foreground">
                             <input
                               type="checkbox"
                               checked={isSelected}
                               onChange={e => {
                                 if (e.target.checked) {
-                                  setSelectedServices([...selectedServices, { serviceId: srvId, fixedPrice: formatNumberInput(srv.defaultPrice || 0) }]);
+                                  setSelectedServices([...selectedServices, { serviceId: srvId, fixedPrice: formatNumberInput(srv.defaultPrice) }]);
                                 } else {
                                   setSelectedServices(selectedServices.filter(s => s.serviceId !== srvId));
                                 }
                               }}
-                              className="rounded border-slate-300 text-[#f37021] focus:ring-[#f37021]"
+                              className="rounded border-border text-primary focus:ring-primary"
                             />
-                            {srv.name} <span className="text-slate-500 font-normal">({srv.unit})</span>
+                            {srv.name} <span className="font-normal text-muted-foreground">({srv.unit})</span>
                           </label>
                           {isSelected && (
                             <Input
-                              className="h-10 text-sm bg-white"
+                              className="h-10 bg-card text-sm"
                               value={svcData?.fixedPrice || ""}
                               onChange={e => {
                                 const updated = selectedServices.map(s => s.serviceId === srvId ? { ...s, fixedPrice: formatNumberInput(e.target.value) } : s);
@@ -365,10 +517,10 @@ export default function ContractsPage() {
                 )}
               </div>
 
-              <div className="space-y-3 mt-4 pt-4 border-t border-slate-200">
-                <Label className="text-base font-semibold text-slate-800">Dịch vụ khác</Label>
+              <div className="space-y-3 mt-4 pt-4 border-t border-border">
+                <Label className="text-base font-semibold text-foreground">Dịch vụ khác</Label>
                 {availableServices.filter(s => s.type !== 1).length === 0 ? (
-                  <p className="text-sm text-slate-500">Không có dịch vụ khác.</p>
+                  <p className="text-sm text-muted-foreground">Không có dịch vụ khác.</p>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {availableServices.filter(s => s.type !== 1).map(srv => {
@@ -376,26 +528,26 @@ export default function ContractsPage() {
                       const isSelected = selectedServices.some(s => s.serviceId === srvId);
                       const svcData = selectedServices.find(s => s.serviceId === srvId);
                       return (
-                        <div key={srvId} className={`flex flex-col gap-2 p-3 border rounded-md transition-colors ${isSelected ? 'border-[#f37021] bg-orange-50/30' : 'border-slate-200 bg-slate-50'}`}>
-                          <label className="flex items-center gap-2 cursor-pointer font-medium text-sm text-slate-800">
-                            <input
-                              type="checkbox"
+                        <div key={srvId} className={`flex flex-col gap-2 rounded-[16px] p-3 shadow-[var(--calm-shadow)] transition-colors ${isSelected ? 'bg-primary/10' : 'bg-background'}`}>
+                          <label className="flex items-center gap-2 cursor-pointer font-medium text-sm text-foreground">
+                            <input 
+                              type="checkbox" 
                               checked={isSelected}
                               onChange={e => {
                                 if (e.target.checked) {
-                                  setSelectedServices([...selectedServices, { serviceId: srvId, fixedPrice: formatNumberInput(srv.defaultPrice || 0) }]);
+                                  setSelectedServices([...selectedServices, { serviceId: srvId, fixedPrice: formatNumberInput(srv.defaultPrice) }]);
                                 } else {
                                   setSelectedServices(selectedServices.filter(s => s.serviceId !== srvId));
                                 }
                               }}
-                              className="rounded border-slate-300 text-[#f37021] focus:ring-[#f37021]"
+                              className="rounded border-border text-primary focus:ring-primary"
                             />
-                            {srv.name} <span className="text-slate-500 font-normal">({srv.unit})</span>
+                            {srv.name} <span className="text-muted-foreground font-normal">({srv.unit})</span>
                           </label>
                           {isSelected && (
                             <div className="pl-6">
-                              <Input
-                                className="h-8 text-sm bg-white"
+                              <Input 
+                                className="h-8 text-sm bg-card"
                                 value={svcData?.fixedPrice || ""}
                                 onChange={e => {
                                   const updated = selectedServices.map(s => s.serviceId === srvId ? { ...s, fixedPrice: formatNumberInput(e.target.value) } : s);
@@ -412,62 +564,168 @@ export default function ContractsPage() {
                 )}
               </div>
 
-              <div className="space-y-2 mt-4 pt-4 border-t border-slate-200">
+              <div className="space-y-2 mt-4 pt-4 border-t border-border">
                   <Label htmlFor="status">Trạng thái</Label>
-                  <Input
-                    id="status"
-                    value={computedStatus}
-                    disabled
-                    className={`font-semibold cursor-not-allowed ${computedStatus === 'Chờ hiệu lực' ? 'text-yellow-600 bg-yellow-50 border-yellow-200' : 'text-green-600 bg-green-50 border-green-200'}`}
+                  <Input 
+                    id="status" 
+                    value={computedStatus} 
+                    disabled 
+                    className={`cursor-not-allowed font-semibold ${computedStatus === 'Chờ hiệu lực' ? 'bg-[var(--warning-soft)] text-warning-foreground' : 'bg-primary/10 text-primary'}`}
                   />
               </div>
 
-              <Button type="submit" className="w-full bg-[#f37021] hover:bg-[#e85f12] mt-4">{editContractId ? "Lưu thay đổi" : "Tạo hợp đồng"}</Button>
+              <Button type="submit" className="mt-4 w-full"><FileSignature className="size-4" />{editContractId ? "Lưu thay đổi" : "Tạo hợp đồng"}</Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={checkoutModalOpen} onOpenChange={setCheckoutModalOpen}>
+          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Quyết toán Trả phòng</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleCheckout} className="space-y-4 mt-4">
+              {checkoutPreviewLoading ? (
+                <div className="rounded-2xl bg-muted p-4 text-sm text-muted-foreground">Đang tải công nợ hiện tại…</div>
+              ) : checkoutPreview && checkoutCalculation ? (
+                <div className="space-y-2 rounded-2xl bg-muted p-4 text-sm">
+                  <div className="flex justify-between"><span>Tiền cọc ban đầu</span><strong>{formatCurrency(checkoutPreview.depositAmount)}</strong></div>
+                  <div className="flex justify-between"><span>(−) Hóa đơn nợ cũ</span><strong>{formatCurrency(checkoutPreview.unpaidAmount)}</strong></div>
+                  <div className="flex justify-between"><span>(−) Điện nước cuối kỳ</span><strong>{formatCurrency(checkoutCalculation.utilitiesAmount)}</strong></div>
+                  <div className="flex justify-between"><span>(−) Tiền bồi thường hư hại</span><strong>{formatCurrency(unformatNumber(damageAmount))}</strong></div>
+                  <div className="flex justify-between border-t border-border pt-2"><span>Tổng nợ</span><strong>{formatCurrency(checkoutCalculation.totalDebt)}</strong></div>
+                  <div className={`rounded-xl p-3 text-center font-black ${checkoutCalculation.amountDue > 0 ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"}`}>
+                    {checkoutCalculation.amountDue > 0
+                      ? `KHÁCH CÒN NỢ THÊM: ${formatCurrency(checkoutCalculation.amountDue)}`
+                      : `CẦN HOÀN LẠI CHO KHÁCH: ${formatCurrency(checkoutCalculation.refundAmount)}`}
+                  </div>
+                </div>
+              ) : null}
+              <div className="space-y-2">
+                <Label htmlFor="finalElectricity">Chỉ số điện cuối cùng {checkoutPreview ? `(cũ: ${formatNumberInput(checkoutPreview.electricityOld)})` : ""}</Label>
+                <Input
+                  id="finalElectricity"
+                  inputMode="numeric"
+                  value={finalElectricity}
+                  onChange={e => setFinalElectricity(formatNumberInput(e.target.value))}
+                  placeholder="VD: 120"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="finalWater">Chỉ số nước cuối cùng {checkoutPreview ? `(cũ: ${formatNumberInput(checkoutPreview.waterOld)})` : ""}</Label>
+                <Input
+                  id="finalWater"
+                  inputMode="numeric"
+                  value={finalWater}
+                  onChange={e => setFinalWater(formatNumberInput(e.target.value))}
+                  placeholder="VD: 65"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="damageAmount">Tiền bồi thường hư hại (VNĐ)</Label>
+                <Input
+                  id="damageAmount"
+                  type="text"
+                  value={damageAmount}
+                  onChange={e => setDamageAmount(formatNumberInput(e.target.value))}
+                  placeholder="VD: 500.000"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="checkoutNote">Ghi chú</Label>
+                <textarea
+                  id="checkoutNote"
+                  className="flex min-h-[80px] w-full rounded-[16px] border border-border bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  value={checkoutNote}
+                  onChange={e => setCheckoutNote(e.target.value)}
+                  placeholder="Nhập ghi chú (nếu có)..."
+                />
+              </div>
+              <Button type="submit" disabled={checkoutSubmitting || checkoutPreviewLoading || !checkoutPreview} className="w-full bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                {checkoutSubmitting ? "Đang duyệt…" : "Duyệt trả phòng"}
+              </Button>
             </form>
           </DialogContent>
         </Dialog>
         </div>
-      </div>
+        </div>
+      </section>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      {activeFilter === "draft" ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {draftContracts.length === 0 ? (
+            <div className="col-span-full py-12 text-center text-muted-foreground calm-surface rounded-xl border border-border">
+               Không có bản nháp nào.
+            </div>
+          ) : (
+            draftContracts.map((draft, i) => (
+              <div key={draft.id || i} className="calm-surface p-4 rounded-[20px] border border-border shadow-[var(--calm-shadow)] flex flex-col gap-3">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-bold text-foreground">Bản nháp #{draft.id || i+1}</h3>
+                    <p className="text-sm text-muted-foreground mt-1">Đã dừng ở Bước {draft.step || 1}</p>
+                    {draft.lastSaved && <p className="text-xs text-muted-foreground mt-1">Lưu lúc: {new Date(draft.lastSaved).toLocaleString("vi-VN")}</p>}
+                  </div>
+                  <Button onClick={() => handleDeleteDraft(draft.id)} variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0">
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+                <div className="mt-auto pt-4 border-t border-border">
+                  <Link href={`/dashboard/contracts/new`} className="w-full flex items-center justify-center">
+                    <Button className="w-full font-bold shadow-[var(--calm-shadow)]" variant="secondary">
+                      📋 Tiếp tục tạo
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      ) : (
+      <div className="calm-workbench">
         <Table>
-          <TableHeader className="bg-slate-50">
+          <TableHeader className="bg-background">
             <TableRow>
-              <TableHead className="font-semibold text-slate-800">Phòng</TableHead>
-              <TableHead className="font-semibold text-slate-800">Người thuê</TableHead>
-              <TableHead className="font-semibold text-slate-800">Ngày bắt đầu</TableHead>
-              <TableHead className="font-semibold text-slate-800">Tiền cọc</TableHead>
-              <TableHead className="font-semibold text-slate-800">Trạng thái</TableHead>
-              <TableHead className="text-right font-semibold text-slate-800">Thao tác</TableHead>
+              <TableHead className="min-w-48 font-semibold text-foreground">Phòng / Người thuê</TableHead>
+              <TableHead className="font-semibold text-foreground">Ngày bắt đầu</TableHead>
+              <TableHead className="font-semibold text-foreground">Tiền cọc</TableHead>
+              <TableHead className="font-semibold text-foreground">Trạng thái</TableHead>
+              <TableHead className="text-right font-semibold text-foreground">Thao tác</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-slate-500">Đang tải dữ liệu...</TableCell>
+                <TableCell colSpan={5} className="h-40 text-center text-muted-foreground"><FileSignature className="mx-auto mb-2 size-8 animate-pulse text-primary" />Đang tải hợp đồng…</TableCell>
               </TableRow>
             ) : filteredContracts.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-slate-500">Không tìm thấy hợp đồng nào</TableCell>
+                <TableCell colSpan={5} className="h-64 text-center"><Image src="/trohub-empty-states.png" alt="" width={170} height={100} className="mx-auto h-24 w-40 rounded-[20px] object-cover object-center" /><p className="mt-3 font-black">Không tìm thấy hợp đồng nào</p></TableCell>
               </TableRow>
             ) : (
               filteredContracts.map(contract => (
                 <TableRow key={contract._id || contract.id}>
-                  <TableCell className="font-medium text-slate-900">{contract.roomId?.roomCode || "-"}</TableCell>
-                  <TableCell>{contract.tenantId?.fullName || contract.tenantId?.name || "-"}</TableCell>
+                  <TableCell className="min-w-48 whitespace-normal">
+                    <div className="flex flex-col gap-1">
+                      <span className="font-semibold text-foreground">{contract.roomId?.roomCode || "-"}</span>
+                      <span className="text-xs text-muted-foreground">{contract.tenantId?.fullName || contract.tenantId?.name || "-"}</span>
+                    </div>
+                  </TableCell>
                   <TableCell>{contract.startDate ? new Date(contract.startDate).toLocaleDateString("vi-VN") : "-"}</TableCell>
-                  <TableCell>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(contract.fixedDeposit || contract.deposit || 0)}</TableCell>
+                  <TableCell>{formatCurrency(contract.fixedDeposit || contract.deposit)}</TableCell>
                   <TableCell>
                     {(() => {
                       const start = new Date(contract.startDate);
                       const today = new Date();
                       today.setHours(0, 0, 0, 0);
-                      const displayStatus = contract.status === 4 ? "Chờ duyệt" : (contract.status === 1 && start > today) ? "Chờ hiệu lực" : contract.status === 1 ? "Đang hiệu lực" : contract.status === 0 ? "Chờ ký" : "Đã hủy";
+                      const displayStatus = contract.status === 5 ? "Chờ duyệt trả phòng" : contract.status === 4 ? "Chờ duyệt" : contract.status === 2 ? "Đã trả phòng" : contract.status === 3 ? "Đã hủy" : (contract.status === 1 && start > today) ? "Chờ hiệu lực" : contract.status === 1 ? "Đang hiệu lực" : "Chờ ký";
                       return (
-                        <Badge variant="outline" className={
-                          displayStatus === "Đang hiệu lực" ? "bg-green-50 text-green-700 border-green-200" :
-                          (displayStatus === "Chờ hiệu lực" || displayStatus === "Chờ duyệt") ? "bg-yellow-50 text-yellow-700 border-yellow-200" :
-                          "bg-slate-50 text-slate-700 border-slate-200"
+                        <Badge className={
+                          displayStatus === "Đang hiệu lực" ? "border-0 bg-primary/10 text-primary" :
+                          (displayStatus === "Chờ hiệu lực" || displayStatus === "Chờ duyệt" || displayStatus === "Chờ duyệt trả phòng") ? "border-0 bg-[var(--warning-soft)] text-warning-foreground" :
+                          "border-0 bg-muted text-muted-foreground"
                         }>
                           {displayStatus}
                         </Badge>
@@ -475,19 +733,20 @@ export default function ContractsPage() {
                     })()}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button onClick={() => handleSendContract(contract)} variant="outline" size="sm" className="mr-2 h-8">
-                      <Send className="mr-1.5 h-3.5 w-3.5" />
-                      {contract.lastSentAt ? "Gửi lại" : "Gửi cho Người thuê"}
-                    </Button>
                     {contract.status === 4 && (
-                      <Button onClick={() => handleConfirmContract(contract._id || contract.id)} variant="outline" size="sm" className="mr-2 h-8 text-green-600 border-green-200 hover:bg-green-50">
-                        Duyệt
+                      <Button onClick={() => handleConfirmContract(contract._id || contract.id)} variant="secondary" size="sm" className="mr-2 text-primary">
+                        <CheckCircle2 className="size-4" />Duyệt
                       </Button>
                     )}
-                    <Button onClick={() => openEditModal(contract)} variant="ghost" size="sm" className="h-8 text-blue-600 hover:text-blue-800 hover:bg-blue-50 mr-2">
-                      Sửa
+                    {contract.status === 5 && (
+                      <Button onClick={() => void openCheckoutModal(contract._id || contract.id)} variant="outline" size="sm" className="mr-2 border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive">
+                        Duyệt trả phòng
+                      </Button>
+                    )}
+                    <Button onClick={() => openEditModal(contract)} variant="ghost" size="sm" className="mr-2">
+                      <Edit className="size-4" />Sửa
                     </Button>
-                    <Button onClick={() => handleDelete(contract._id || contract.id)} variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50">
+                    <Button aria-label="Xóa hợp đồng" onClick={() => handleDelete(contract._id || contract.id)} variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive">
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </TableCell>
@@ -497,6 +756,7 @@ export default function ContractsPage() {
           </TableBody>
         </Table>
       </div>
+      )}
     </div>
   );
 }

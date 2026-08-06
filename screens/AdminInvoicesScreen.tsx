@@ -7,7 +7,6 @@ import AppLoadingScreen from "../components/AppLoadingScreen";
 import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
 import GradientHero from "../components/ui/GradientHero";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
-import { notificationService } from "../services/notificationService";
 import AppButton from "../components/ui/AppButton";
 import { adminService, AdminInvoice, AdminRoom, AdminContract } from "../services/adminService";
 import InvoiceDetailModal from "../components/InvoiceDetailModal";
@@ -49,6 +48,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
     const roomContract = contracts.find(
       c => c.status === 1 && (typeof c.roomId === "string" ? c.roomId === roomId : c.roomId._id === roomId)
     );
+    const room = rooms.find((item) => item._id === roomId);
     
     if (roomContract) {
       // Find last invoice for this contract
@@ -66,21 +66,21 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
         const lastInv = sortedInvoices[0];
         
         // Auto fill indexes
-        setElecOld(formatNumberInput(lastInv.electricityNew));
-        setWaterOld(formatNumberInput(lastInv.waterNew));
-        setElecNew(formatNumberInput(lastInv.electricityNew));
-        setWaterNew(formatNumberInput(lastInv.waterNew));
+        setElecOld(formatNumberInput(room?.lastElectricityReading ?? lastInv.electricityNew));
+        setWaterOld(formatNumberInput(room?.lastWaterReading ?? lastInv.waterNew));
+        setElecNew(formatNumberInput(room?.lastElectricityReading ?? lastInv.electricityNew));
+        setWaterNew(formatNumberInput(room?.lastWaterReading ?? lastInv.waterNew));
       } else {
-        setElecOld("0");
-        setWaterOld("0");
-        setElecNew("0");
-        setWaterNew("0");
+        setElecOld(formatNumberInput(room?.lastElectricityReading));
+        setWaterOld(formatNumberInput(room?.lastWaterReading));
+        setElecNew(formatNumberInput(room?.lastElectricityReading));
+        setWaterNew(formatNumberInput(room?.lastWaterReading));
       }
     } else {
-      setElecOld("0");
-      setWaterOld("0");
-      setElecNew("0");
-      setWaterNew("0");
+      setElecOld(formatNumberInput(room?.lastElectricityReading));
+      setWaterOld(formatNumberInput(room?.lastWaterReading));
+      setElecNew(formatNumberInput(room?.lastElectricityReading));
+      setWaterNew(formatNumberInput(room?.lastWaterReading));
     }
   };
 
@@ -200,13 +200,6 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
       });
       notification.success("Tạo hóa đơn thành công!");
       
-      // Kích hoạt thông báo giả lập cho Người thuê
-      notificationService.addNotification(
-        "invoice",
-        "Hóa đơn mới được phát hành",
-        `Hóa đơn kỳ ${period} của phòng ${roomCode} đã được tạo với tổng tiền ${formatCurrency(rentPrice)}.`
-      );
-
       setModalVisible(false);
       loadData();
     } catch (error) {
@@ -221,6 +214,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
     if (status === 1 || status === "UNPAID" || status === "Chưa thanh toán") return "Chưa thanh toán";
     if (status === 2 || status === "PAID" || status === "Đã thanh toán") return "Đã thanh toán";
     if (status === 3 || status === "OVERDUE" || status === "Quá hạn") return "Quá hạn";
+    if (status === 4 || status === "SETTLED" || status === "Đã gộp quyết toán") return "Đã gộp quyết toán";
     return "Chưa thanh toán";
   };
 
@@ -229,6 +223,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
     if (status === 1 || status === "UNPAID" || status === "Chưa thanh toán") return theme.danger;
     if (status === 2 || status === "PAID" || status === "Đã thanh toán") return theme.positive;
     if (status === 3 || status === "OVERDUE" || status === "Quá hạn") return theme.muted;
+    if (status === 4 || status === "SETTLED" || status === "Đã gộp quyết toán") return theme.primary;
     return theme.danger;
   };
 
@@ -237,6 +232,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
     if (status === 1 || status === "UNPAID" || status === "Chưa thanh toán") return theme.warningSoft;
     if (status === 2 || status === "PAID" || status === "Đã thanh toán") return theme.positiveSoft;
     if (status === 3 || status === "OVERDUE" || status === "Quá hạn") return theme.surface;
+    if (status === 4 || status === "SETTLED" || status === "Đã gộp quyết toán") return theme.primarySoft;
     return theme.warningSoft;
   };
 
@@ -253,6 +249,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
   const handleOpenDetail = (item: AdminInvoice) => {
     const statusVal = item.status as any;
     const isPaid = statusVal === 2 || statusVal === "PAID" || statusVal === "Đã thanh toán";
+    const isSettled = statusVal === 4 || statusVal === "SETTLED" || statusVal === "Đã gộp quyết toán";
     
     const detailsArr = item.details || [];
     
@@ -269,7 +266,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
     let garbageAmount = item.garbage || 0;
     let otherServicesAmount = item.services || 0;
     
-    let roomFee = item.roomAmount || 0;
+    let roomFee = item.rent ?? item.roomAmount ?? 0;
 
     if (detailsArr.length > 0) {
       const elecDetail = detailsArr.find(d => {
@@ -309,20 +306,26 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
 
       otherServicesAmount = 0;
       
-      const totalServices = elecAmount + waterAmount + parkingAmount + internetAmount + garbageAmount;
-      roomFee = Math.max((item.totalAmount || 0) - totalServices, 0);
+      if (item.type !== "deposit" && !roomFee) {
+        const totalServices = elecAmount + waterAmount + parkingAmount + internetAmount + garbageAmount;
+        roomFee = Math.max((item.totalAmount || 0) - totalServices, 0);
+      }
     } else {
-      if (roomFee === 0) {
+      if (item.type !== "deposit" && roomFee === 0) {
         roomFee = Math.max((item.totalAmount || 0) - elecAmount - waterAmount - parkingAmount - internetAmount - garbageAmount - otherServicesAmount, 0);
       }
     }
 
     setSelectedInvoice({
       id: item._id,
+      type: item.type || (item.period === "Tiền cọc" ? "deposit" : "monthly"),
+      depositAmount: item.depositAmount || 0,
+      tenantName: item.tenantName || item.contractId?.tenantId?.fullName || item.tenant || "",
+      tenantPhone: item.tenantPhone || item.contractId?.tenantId?.phone || "",
       month: item.period || "",
-      room: item.room || item.contractId?.roomId?.roomCode || "",
+      room: item.roomName || item.room || item.contractId?.roomId?.roomCode || "",
       amount: formatCurrency(item.totalAmount),
-      status: isPaid ? "paid" : "unpaid",
+      status: isPaid ? "paid" : isSettled ? "settled" : "unpaid",
       statusText: getStatusText(item.status),
       dueDate: item.dueDate || "",
       details: {
@@ -359,7 +362,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
   const filteredInvoices = invoices.filter(invoice => {
     const status = invoice.status as any;
     const isUnpaid = status === 1 || status === 0 || status === 3 || status === "UNPAID" || status === "DRAFT" || status === "OVERDUE" || status === "Chưa thanh toán" || status === "Nháp" || status === "Quá hạn";
-    const isPaid = status === 2 || status === "PAID" || status === "Đã thanh toán";
+    const isPaid = status === 2 || status === 4 || status === "PAID" || status === "SETTLED" || status === "Đã thanh toán" || status === "Đã gộp quyết toán";
     if (filter === "unpaid") return isUnpaid;
     if (filter === "paid") return isPaid;
     return true;

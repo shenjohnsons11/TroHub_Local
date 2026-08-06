@@ -22,7 +22,7 @@ async function seed() {
     await accounts.insertOne({
       username: "admin@trohub.vn",
       password: hashedPassword,
-      fullName: "Admin Chủ Trọ",
+      fullName: "Chủ trọ TroHub",
       phone: "0901234567",
       email: "admin@trohub.vn",
       role: 1, // 1 là Chủ trọ theo Backend đồng nghiệp
@@ -33,7 +33,7 @@ async function seed() {
     await accounts.insertOne({
       username: "tenant@trohub.vn",
       password: hashedPassword,
-      fullName: "Khách Thuê Demo",
+      fullName: "Người thuê Demo",
       phone: "0987654321",
       email: "tenant@trohub.vn",
       role: 2, // 2 là Người thuê

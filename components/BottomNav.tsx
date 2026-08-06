@@ -18,7 +18,10 @@ type Tab =
   | "invoice_bulk"
   | "settings"
   | "notifications"
-  | "scan_meter";
+  | "scan_meter"
+  | "cccd_scan"
+  | "ai_chat";
+
 
 type Props = {
   activeTab: Tab;

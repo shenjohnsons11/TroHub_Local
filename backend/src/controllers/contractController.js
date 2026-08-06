@@ -1,8 +1,6 @@
 const Contract = require('../models/Contract');
 const Room = require('../models/Room');
 const Invoice = require('../models/Invoice');
-const Service = require('../models/Service');
-const { buildContractServiceSnapshot } = require('../services/serviceBilling');
 const {
     buildDepositPayment,
     signContractAndEnsureDeposit,
@@ -10,8 +8,16 @@ const {
 const {
     ContractTermsError,
     normalizeContractMeterTerms,
+    resolveInitialContractMeterTerms,
 } = require('../services/contractTerms');
-const { sendContractToNguoiThue } = require('../services/contractNotificationService');
+const {
+    CheckoutError,
+    checkoutContract: completeContractCheckout,
+    getCheckoutPreview: loadCheckoutPreview,
+} = require('../services/contractCheckoutService');
+const { CalculationError } = require('../services/invoiceCalculator');
+
+const { sendNotification } = require('../services/notificationService');
 
 function sendContractError(res, error, fallbackMessage) {
     if (error instanceof ContractTermsError) {
@@ -22,28 +28,12 @@ function sendContractError(res, error, fallbackMessage) {
             message: error.message,
         });
     }
-    return res.status(500).json({ success: false, message: `${fallbackMessage}: ${error.message}` });
-}
 
-exports.sendContract = async (req, res) => {
-    try {
-        const result = await sendContractToNguoiThue({
-            contractId: req.params.id,
-            adminId: req.auth.id,
-        });
-        return res.json({
-            success: true,
-            message: 'Đã gửi hợp đồng cho Người thuê.',
-            data: result,
-        });
-    } catch (error) {
-        return res.status(error.status || 500).json({
-            success: false,
-            code: error.code || 'CONTRACT_SEND_FAILED',
-            message: error.message || 'Không thể gửi hợp đồng.',
-        });
-    }
-};
+    return res.status(500).json({
+        success: false,
+        message: `${fallbackMessage}: ${error.message}`,
+    });
+}
 
 // 1. Lấy danh sách toàn bộ hợp đồng (Chủ trọ xem trên Web)
 exports.getAllContracts = async (req, res) => {
@@ -71,7 +61,7 @@ exports.getAllContracts = async (req, res) => {
         const contracts = await Contract.find(query)
             .populate('roomId', 'roomCode area')
             .populate('tenantId', 'fullName phone')
-            .populate('services.serviceId', 'name code unit type billingMode defaultPrice defaultQuantity')
+            .populate('services.serviceId', 'name unit type defaultPrice')
             .sort({ createdAt: -1 });
 
         const responseContracts = nguoiThueId
@@ -108,7 +98,7 @@ exports.getContractHistory = async (req, res) => {
         const contracts = await Contract.find(query)
             .populate('roomId', 'roomCode area')
             .populate('tenantId', 'fullName phone')
-            .populate('services.serviceId', 'name code unit type billingMode defaultPrice defaultQuantity')
+            .populate('services.serviceId', 'name unit type defaultPrice')
             .sort({ createdAt: -1 });
 
         res.status(200).json({ success: true, data: contracts });
@@ -120,15 +110,50 @@ exports.getContractHistory = async (req, res) => {
 // 2. Chủ trọ tạo dự thảo hợp đồng (Giao diện Tạo hợp đồng trên Figma)
 exports.createContract = async (req, res) => {
     try {
-        // Dữ liệu truyền lên bao gồm thông tin cơ bản và mảng các dịch vụ đã chốt giá
-        // Mảng services có dạng: [{ serviceId: "...", fixedPrice: 4000 }]
-        const { roomId, tenantId, startDate, endDate, fixedRentPrice, fixedDeposit, services } = req.body;
-        const meterTerms = normalizeContractMeterTerms(req.body);
+        const { roomId, tenantId, startDate, endDate, services } = req.body;
+
+        if (!roomId || !tenantId || !startDate || !endDate) {
+            return res.status(400).json({
+                success: false,
+                message: "Vui lòng cung cấp đầy đủ roomId, tenantId, startDate và endDate!",
+            });
+        }
+
+        let fixedRentPrice = req.body.fixedRentPrice ?? req.body.rentPrice ?? req.body.rent;
+        let fixedDeposit = req.body.fixedDeposit ?? req.body.depositAmount ?? req.body.deposit;
+
+        if (fixedRentPrice === undefined || fixedRentPrice === null || fixedDeposit === undefined || fixedDeposit === null) {
+            return res.status(400).json({
+                success: false,
+                message: "Vui lòng nhập đầy đủ giá thuê và tiền cọc hợp đồng!",
+            });
+        }
 
         // 1. Ràng buộc Phòng: Kiểm tra phòng có đang trống không
         const room = await Room.findById(roomId);
         if (!room) return res.status(404).json({ success: false, message: "Không tìm thấy phòng!" });
-        // Đã gỡ bỏ check (room.status === 1) để cho phép Đặt cọc giữ chỗ đối với phòng Đang thuê
+
+        const previousContract = await Contract.findOne({ roomId })
+            .sort({ createdAt: -1 })
+            .select('initialElectricity initialWater checkoutSettlement')
+            .lean();
+        const latestInvoice = await Invoice.findOne({
+            room: room.roomCode,
+            period: { $nin: ['Tiền cọc', 'final_invoice'] },
+            status: { $in: [1, 2, 3, 4] },
+        })
+            .sort({ createdAt: -1 })
+            .select('electricityNew waterNew')
+            .lean();
+
+        const meterTerms = normalizeContractMeterTerms({
+            ...resolveInitialContractMeterTerms({
+                room,
+                previousInvoice: latestInvoice,
+                previousContract,
+            }),
+            ...req.body,
+        });
 
         // Chống spam: Kiểm tra xem Phòng hoặc Người thuê đã có hợp đồng chờ xử lý chưa
         const existingPending = await Contract.findOne({
@@ -145,31 +170,10 @@ exports.createContract = async (req, res) => {
             });
         }
 
-        // Cập nhật chỉ số đầu cho phòng (nếu có truyền)
-        room.draftElectricity = meterTerms.initialElectricity;
-        room.draftWater = meterTerms.initialWater;
+        // Xóa các số điện/nước nháp cũ của phòng để ô số điện mới trên màn hình chốt điện nước để trống
+        room.draftElectricity = undefined;
+        room.draftWater = undefined;
         await room.save();
-
-        const requestedServices = Array.isArray(services) ? services : [];
-        const serviceDocuments = await Service.find({
-            _id: { $in: requestedServices.map((item) => item.serviceId) },
-            landlordId: room.landlordId,
-            isActive: true,
-        });
-        if (serviceDocuments.length !== requestedServices.length) {
-            return res.status(400).json({
-                success: false,
-                code: 'INVALID_CONTRACT_SERVICE',
-                message: 'Danh sách dịch vụ có mục không thuộc phạm vi quản lý.',
-            });
-        }
-        const serviceById = new Map(serviceDocuments.map((item) => [String(item._id), item]));
-        const serviceSnapshots = requestedServices.map((item) =>
-            buildContractServiceSnapshot(serviceById.get(String(item.serviceId)), {
-                fixedPrice: item.fixedPrice,
-                defaultQuantity: item.defaultQuantity,
-            })
-        );
 
         const newContract = new Contract({
             roomId,
@@ -179,11 +183,24 @@ exports.createContract = async (req, res) => {
             fixedRentPrice,
             fixedDeposit,
             ...meterTerms,
-            services: serviceSnapshots,
+            services: services || [], // Nhúng thẳng mảng dịch vụ vào đây
             status: 0 // Trạng thái mặc định: 0 - Chờ Người thuê xác nhận
         });
 
         await newContract.save();
+
+        // Tự động bắn thông báo cho Người thuê khi tạo Hợp đồng mới
+        const roomCode = room?.roomCode || '';
+        await sendNotification({
+            userId: tenantId,
+            title: "Hợp đồng thuê mới cần ký xác nhận",
+            content: `Chủ trọ vừa gửi hợp đồng thuê phòng ${roomCode}. Vui lòng kiểm tra và ký xác nhận.`,
+            category: "contract",
+            deepLink: "contract",
+            metadata: { contractId: newContract._id, roomId, action: 'review' },
+            eventKey: `contract:${newContract._id}:created`,
+        });
+
         res.status(201).json({
             success: true,
             message: "Tạo dự thảo hợp đồng thành công! Chờ người thuê ký xác nhận.",
@@ -200,7 +217,7 @@ exports.getContractById = async (req, res) => {
         const contract = await Contract.findById(req.params.id)
             .populate('roomId')
             .populate('tenantId', 'fullName phone idCard email')
-            .populate('services.serviceId', 'name code unit type billingMode defaultPrice defaultQuantity'); // Kéo chi tiết dịch vụ ra
+            .populate('services.serviceId', 'name unit type defaultPrice'); // Kéo chi tiết dịch vụ ra
 
         if (!contract) {
             return res.status(404).json({ success: false, message: "Không tìm thấy hợp đồng!" });
@@ -269,6 +286,16 @@ exports.confirmContract = async (req, res) => {
         // 2. Chuyển trạng thái Phòng thành Đang thuê (1)
         const room = await Room.findByIdAndUpdate(contract.roomId, { status: 1 });
 
+        await sendNotification({
+            userId: contract.tenantId,
+            title: 'Hợp đồng đã được kích hoạt',
+            content: `Hợp đồng phòng ${room?.roomCode || ''} đã có hiệu lực.`,
+            category: 'contract',
+            deepLink: 'contract',
+            metadata: { contractId: contract._id, roomId: contract.roomId, action: 'view' },
+            eventKey: `contract:${contract._id}:activated`,
+        });
+
         // (Hóa đơn tiền cọc đã được tạo lúc người thuê ký, không tạo lại ở đây)
         res.status(200).json({
             success: true,
@@ -277,6 +304,70 @@ exports.confirmContract = async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ success: false, message: "Lỗi khi xác nhận hợp đồng: " + error.message });
+    }
+};
+
+// 4.2. Chủ trọ quyết toán và duyệt trả phòng
+exports.getCheckoutPreview = async (req, res) => {
+    try {
+        const preview = await loadCheckoutPreview({
+            contractId: req.params.id,
+            adminId: req.auth.id,
+        });
+        res.status(200).json({ success: true, data: preview });
+    } catch (error) {
+        res.status(error.status || 500).json({
+            success: false,
+            code: error.code || 'CHECKOUT_PREVIEW_FAILED',
+            message: error.message || 'Không thể tải bảng quyết toán.',
+        });
+    }
+};
+
+exports.checkoutContract = async (req, res) => {
+    try {
+        const result = await completeContractCheckout({
+            contractId: req.params.id,
+            adminId: req.auth.id,
+            input: req.body,
+        });
+        const money = new Intl.NumberFormat('vi-VN');
+        const content = result.settlement.amountDue > 0
+            ? `Quyết toán phòng ${result.roomCode}: cọc ${money.format(result.settlement.depositAmount)}đ, tổng nợ ${money.format(result.settlement.totalDebt)}đ; bạn cần thanh toán thêm ${money.format(result.settlement.amountDue)}đ.`
+            : `Quyết toán phòng ${result.roomCode}: cọc ${money.format(result.settlement.depositAmount)}đ, tổng nợ ${money.format(result.settlement.totalDebt)}đ; tiền cọc được hoàn ${money.format(result.settlement.refundAmount)}đ.`;
+
+        await sendNotification({
+            userId: result.tenantId,
+            title: 'Đã duyệt trả phòng',
+            content,
+            category: 'contract',
+            deepLink: result.settlement.amountDue > 0 ? '/invoices' : '/contracts',
+            metadata: {
+                contractId: result.contract._id,
+                roomId: result.room._id,
+                refundAmount: result.settlement.refundAmount,
+                amountDue: result.settlement.amountDue,
+                unpaidAmount: result.settlement.unpaidAmount,
+                totalDebt: result.settlement.totalDebt,
+                finalInvoiceId: result.settlement.finalInvoiceId,
+            },
+            eventKey: `contract:${result.contract._id}:checkout`,
+        });
+
+        res.status(200).json({
+            success: true,
+            message: 'Đã duyệt trả phòng và chuyển phòng về trạng thái còn trống.',
+            data: result.contract,
+            settlement: result.settlement,
+        });
+    } catch (error) {
+        const isValidationError = error instanceof CheckoutError || error instanceof CalculationError;
+        res.status(error.status || (isValidationError ? 400 : 500)).json({
+            success: false,
+            code: error.code || 'CHECKOUT_FAILED',
+            field: error.field,
+            message: error.message || 'Không thể duyệt trả phòng.',
+        });
     }
 };
 
@@ -291,7 +382,7 @@ exports.updateContract = async (req, res) => {
 
         // Admin tạo hợp đồng phải thông qua người thuê ký (status = 4), nếu không thì không tự xác nhận thành Đang hiệu lực (1) được.
         if (status !== undefined && Number(status) === 1 && existing.status !== 1 && existing.status !== 4) {
-            return res.status(400).json({ success: false, message: "Người thuê chưa ký hợp đồng này, Admin không thể xác nhận!" });
+            return res.status(400).json({ success: false, message: "Người thuê chưa ký hợp đồng này, Chủ trọ không thể xác nhận!" });
         }
 
         const updateData = {};
@@ -323,13 +414,7 @@ exports.updateContract = async (req, res) => {
             await Room.findByIdAndUpdate(targetRoomId, { status: 1 });
         }
 
-        // Nếu admin cập nhật số điện/nước đầu
-        if (targetRoomId && (meterTerms.initialElectricity !== undefined || meterTerms.initialWater !== undefined)) {
-            const roomUpdates = {};
-            if (meterTerms.initialElectricity !== undefined) roomUpdates.draftElectricity = meterTerms.initialElectricity;
-            if (meterTerms.initialWater !== undefined) roomUpdates.draftWater = meterTerms.initialWater;
-            await Room.findByIdAndUpdate(targetRoomId, roomUpdates);
-        }
+        // Cập nhật hợp đồng thành công
 
         res.status(200).json({ success: true, message: "Cập nhật hợp đồng thành công!", data: updated });
     } catch (error) {

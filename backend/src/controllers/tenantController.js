@@ -4,6 +4,7 @@ const Contract = require('../models/Contract');
 const Invoice = require('../models/Invoice');
 const RepairRequest = require('../models/RepairRequest');
 const bcrypt = require('bcryptjs');
+const { createOrLinkTenant, lookupTenantAccount } = require('../services/tenantLinkService');
 
 // =========================================================================
 // PHẦN 1: DÀNH CHO GIAO DIỆN WEB (CHỦ TRỌ QUẢN LÝ)
@@ -95,10 +96,19 @@ exports.checkDuplicate = async (req, res) => {
     }
 };
 
-// 2. Thêm người thuê mới (Chỉ thêm vào Danh bạ - linkedLandlords)
+exports.lookupTenant = async (req, res) => {
+    try {
+        const tenant = await lookupTenantAccount(req.query.identifier);
+        res.status(200).json({ success: true, found: Boolean(tenant), data: tenant });
+    } catch (error) {
+        res.status(error.status || 500).json({ success: false, code: error.code, message: error.message });
+    }
+};
+
+// 2. Tạo hoặc liên kết người thuê vào một hợp đồng nháp
 exports.createTenant = async (req, res) => {
     try {
-        let landlordId = null;
+        let landlordId = req.auth?.id || null;
         const authHeader = req.headers['authorization'];
         if (authHeader && authHeader.startsWith('Bearer ')) {
             const token = authHeader.split(' ')[1];
@@ -109,125 +119,18 @@ exports.createTenant = async (req, res) => {
         }
         if (!landlordId) return res.status(401).json({ success: false, message: "Không tìm thấy thông tin chủ trọ!" });
 
-        const { fullName, name, phone, email, password, idCard, citizenId, roomCode, startDate } = req.body;
-        const finalFullName = fullName || name;
-        const finalIdCard = idCard || citizenId;
-        const normalizedPhone = typeof phone === 'string' ? phone.replace(/\D/g, '') : '';
-        const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
-
-        if (!normalizedEmail && !normalizedPhone) {
-            return res.status(400).json({ success: false, message: "Vui lòng nhập Email hoặc SĐT!" });
-        }
-
-        // Tìm xem khách đã có tài khoản chưa dựa trên Email hoặc SĐT
-        const identityLookup = [];
-        if (normalizedEmail) identityLookup.push({ email: normalizedEmail });
-        if (normalizedPhone) identityLookup.push({ phone: normalizedPhone });
-        let existingAccount = await Account.findOne({ $or: identityLookup, role: 2 });
-
-        if (existingAccount) {
-            // NẾU LÀ LUỒNG GỬI LỜI MỜI: Phải kiểm tra CCCD (nếu có nhập) xem có bị trùng với MỘT NGƯỜI KHÁC không
-            if (finalIdCard) {
-                const conflictIdCard = await Account.findOne({ idCard: finalIdCard, _id: { $ne: existingAccount._id }, role: 2 });
-                if (conflictIdCard) {
-                    return res.status(400).json({ success: false, message: "Chỉ cần trùng 1 thông tin trong 3 thông tin sdt, cccd, email thì tuyệt đối không được đăng ký tài khoản hoặc thêm khách!" });
-                }
-            }
-
-            // Kiểm tra xem khách này đã nằm trong danh sách quản lý hoặc danh sách chờ của chủ trọ chưa
-            const isLinked = existingAccount.linkedLandlords.some(id => id.toString() === landlordId.toString());
-            const isPending = existingAccount.pendingLandlords && existingAccount.pendingLandlords.some(id => id.toString() === landlordId.toString());
-
-            if (isLinked || isPending) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Chỉ cần trùng 1 thông tin trong 3 thông tin sdt, cccd, email thì tuyệt đối không được đăng ký tài khoản hoặc thêm khách!"
-                });
-            }
-
-            // Gửi lời mời (thêm vào pendingLandlords)
-            existingAccount.pendingLandlords.push(landlordId);
-            await existingAccount.save();
-
-            return res.status(200).json({
-                success: true,
-                message: "Đã gửi lời mời gia nhập nhà trọ đến người thuê này!",
-                data: existingAccount
-            });
-        }
-
-        // Nếu khách chưa tồn tại trên hệ thống, yêu cầu phải có ĐỦ SĐT và CCCD để tạo tài khoản mới
-        if (normalizedPhone.length !== 10) {
-            return res.status(400).json({ success: false, message: "Khách mới chưa có tài khoản. Vui lòng nhập đúng SĐT gồm 10 chữ số!" });
-        }
-        if (!finalIdCard || finalIdCard.length !== 12) {
-            return res.status(400).json({ success: false, message: "Khách mới chưa có tài khoản. Vui lòng nhập đúng CCCD gồm 12 chữ số!" });
-        }
-
-        // Kiểm tra định dạng email bắt buộc phải hợp lệ (có @ và đuôi) vì hệ thống dùng email làm tên đăng nhập
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!normalizedEmail || !emailRegex.test(normalizedEmail)) {
-            return res.status(400).json({ success: false, message: "Vui lòng nhập Email đúng định dạng (ví dụ: nguyenvanA@gmail.com) để làm tên đăng nhập!" });
-        }
-
-        // NẾU LÀ LUỒNG TẠO MỚI (chưa tồn tại Email/SĐT): Bắt lỗi chặn tuyệt đối nếu vô tình trùng CCCD
-        const existingIdCard = await Account.findOne({ idCard: finalIdCard, role: 2 });
-        if (existingIdCard) {
-            return res.status(400).json({ success: false, message: "Chỉ cần trùng 1 thông tin trong 3 thông tin sdt, cccd, email thì tuyệt đối không được đăng ký tài khoản hoặc thêm khách!" });
-        }
-
-        // Sử dụng mật khẩu được truyền lên từ Frontend, nếu không có thì mặc định là "123456"
-        const defaultPassword = password || "123456";
-
-        // Tạo tài khoản người thuê mới
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(defaultPassword, salt);
-
-        const newTenant = new Account({
-            username: normalizedEmail,
-            password: hashedPassword,
-            fullName: finalFullName,
-            phone: normalizedPhone,
-            email: normalizedEmail,
-            idCard: finalIdCard,
-            role: 2, // Người thuê
-            status: 1,
-            linkedLandlords: [],
-            pendingLandlords: [landlordId], // Thay vì linked ngay, thêm vào pending để khách bấm chấp nhận
-            mustChangePassword: true
-        });
-        const savedTenant = await newTenant.save();
-
-        let contractMsg = "";
-        // 3. Tạo hợp đồng nháp nếu có chọn phòng
-        if (roomCode) {
-            const room = await Room.findOne({ roomCode, landlordId });
-            if (room && room.status === 0) { // Chỉ tạo nếu phòng trống
-                const newContract = new Contract({
-                    roomId: room._id,
-                    tenantId: savedTenant._id,
-                    startDate: startDate || new Date(),
-                    endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)), // Mặc định 1 năm
-                    fixedRentPrice: room.defaultRentPrice || 0,
-                    fixedDeposit: room.defaultDeposit || 0,
-                    services: [],
-                    status: 0 // Hợp đồng nháp / Chờ ký
-                });
-                await newContract.save();
-                contractMsg = " và đã tạo hợp đồng nháp";
-            }
-        }
-
-        res.status(201).json({
+        const result = await createOrLinkTenant({ ...req.body, landlordId });
+        res.status(result.created ? 201 : 200).json({
             success: true,
-            message: `Đã tạo tài khoản${contractMsg} thành công!`,
-            data: savedTenant
+            message: result.created ? "Đã tạo mới và liên kết Người thuê vào phòng!" : "Đã liên kết Người thuê vào phòng!",
+            data: result.tenant,
+            contract: result.contract
         });
     } catch (error) {
         if (error && error.code === 11000) {
             return res.status(409).json({ success: false, message: "Số điện thoại hoặc Email đã được sử dụng bởi tài khoản khác!" });
         }
-        res.status(500).json({ success: false, message: "Lỗi khi thêm người thuê: " + error.message });
+        res.status(error.status || 500).json({ success: false, code: error.code, message: error.message || "Lỗi khi thêm người thuê!" });
     }
 };
 

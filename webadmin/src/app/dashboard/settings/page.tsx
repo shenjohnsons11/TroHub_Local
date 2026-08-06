@@ -5,7 +5,7 @@ import { ArrowUpRight, Landmark, ReceiptText, Settings2, UserRound, LogOut } fro
 import { PageHeader } from "@/components/calm-ops/page-header";
 
 const items = [
-  { href: "/dashboard/settings/account", title: "Tài khoản", description: "Thông tin Chủ trọ/Admin và mật khẩu.", icon: UserRound },
+  { href: "/dashboard/settings/account", title: "Tài khoản", description: "Thông tin Chủ trọ và mật khẩu.", icon: UserRound },
   { href: "/dashboard/settings/banking", title: "Ngân hàng", description: "Thông tin nhận tiền và VietQR.", icon: Landmark },
   { href: "/dashboard/settings/billing", title: "Chính sách hóa đơn", description: "Ngày ân hạn và tỷ lệ phạt một lần.", icon: ReceiptText },
 ];

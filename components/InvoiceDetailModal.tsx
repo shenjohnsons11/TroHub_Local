@@ -13,6 +13,7 @@ import { Invoice } from "../types/Invoice";
 import { useAppTheme } from "../contexts/ThemeContext";
 import AppButton from "./ui/AppButton";
 import { Ionicons } from "@expo/vector-icons";
+import { formatCurrency } from "../utils/formatters";
 
 type Props = {
   visible: boolean;
@@ -83,7 +84,19 @@ export default function InvoiceDetailModal({
                 <Text style={styles.amountHeroLabel}>Tổng thanh toán</Text>
                 <Text style={styles.amountHeroValue}>{invoice.amount}</Text>
               </View>
+              <View style={styles.identityBlock}>
+                <Text style={styles.identityText}>Người thuê: {invoice.tenantName || "Chưa cập nhật"}</Text>
+                <Text style={styles.identityText}>Số điện thoại: {invoice.tenantPhone || "Chưa cập nhật"}</Text>
+                <Text style={styles.identityText}>Phòng: {invoice.room || "Chưa cập nhật"}</Text>
+              </View>
               <ScrollView style={styles.lines} showsVerticalScrollIndicator={false}>
+              {invoice.type === "deposit" ? (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Tiền cọc hợp đồng</Text>
+                <Text style={styles.detailValue}>{formatCurrency(invoice.depositAmount ?? invoice.numericAmount ?? 0)}</Text>
+              </View>
+              ) : (
+              <>
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Tiền phòng</Text>
                 <Text style={styles.detailValue}>{invoice.details.roomFee}</Text>
@@ -135,6 +148,8 @@ export default function InvoiceDetailModal({
                     <Text style={styles.detailValue}>{invoice.details.otherServices}</Text>
                   </View>
                 </>
+              )}
+              </>
               )}
 
               <View style={styles.totalRow}>
@@ -211,6 +226,16 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSh
   amountHeroLabel: { color: theme.muted, fontSize: 12, fontWeight: "700" },
   amountHeroValue: { color: theme.primary, fontSize: 28, fontWeight: "900", marginTop: 5 },
   lines: { flexShrink: 1, flexGrow: 0 },
+  identityBlock: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.border,
+  },
+  identityText: {
+    color: theme.text,
+    fontSize: 13,
+    lineHeight: 20,
+  },
   modalSub: {
     color: theme.muted,
     fontSize: 13,

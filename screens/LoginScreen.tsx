@@ -14,6 +14,7 @@ import {
 import ForgotPasswordModal from "../components/ForgotPasswordModal";
 import TroHubLogo from "../components/TroHubLogo";
 import AppButton from "../components/ui/AppButton";
+import CCCDScannerModal from "../components/CCCDScannerModal";
 import { FONT_FAMILIES } from "../constants/theme";
 import { useAppTheme } from "../contexts/ThemeContext";
 import { useNotification } from "../hooks/useNotification";
@@ -49,6 +50,7 @@ export default function LoginScreen({ onLogin }: Props) {
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [forgotVisible, setForgotVisible] = useState(false);
+  const [scannerVisible, setScannerVisible] = useState(false);
 
   const validateLogin = () => {
     const nextIdentifierError = identifier.trim()
@@ -114,7 +116,10 @@ export default function LoginScreen({ onLogin }: Props) {
 
       try {
         setIsSubmitting(true);
-        await onLogin(identifier.trim(), password);
+        const cleanIdentifier = identifier.includes("@")
+          ? identifier.trim().toLowerCase()
+          : unformatDigits(identifier);
+        await onLogin(cleanIdentifier, password);
         notification.success("Đăng nhập thành công.");
       } catch (error) {
         notification.error(getNotificationMessage(error, "Không thể đăng nhập. Vui lòng thử lại."), {
@@ -290,25 +295,23 @@ export default function LoginScreen({ onLogin }: Props) {
 
                   <View style={styles.field}>
                     <Text style={[styles.label, { color: theme.text }]}>{t("idCard")}</Text>
-                    <TextInput
-                      keyboardType="numeric"
-                      editable={!isSubmitting}
-                      onChangeText={(value) => {
-                        setIdCard(formatCCCD(value));
-                        if (idCardError) setIdCardError("");
-                      }}
-                      placeholder="Nhập 12 số CCCD"
-                      placeholderTextColor={theme.muted}
-                      style={[
-                        styles.input,
-                        {
-                          backgroundColor: theme.surfaceElevated,
-                          borderColor: idCardError ? theme.danger : theme.border,
-                          color: theme.text,
-                        },
-                      ]}
-                      value={idCard}
-                    />
+                    <View style={styles.identityRow}>
+                      <TextInput
+                        keyboardType="numeric"
+                        editable={!isSubmitting}
+                        onChangeText={(value) => {
+                          setIdCard(formatCCCD(value));
+                          if (idCardError) setIdCardError("");
+                        }}
+                        placeholder="Nhập 12 số CCCD"
+                        placeholderTextColor={theme.muted}
+                        style={[styles.input, styles.identityInput, { backgroundColor: theme.surfaceElevated, borderColor: idCardError ? theme.danger : theme.border, color: theme.text }]}
+                        value={idCard}
+                      />
+                      <Pressable accessibilityRole="button" accessibilityLabel="Quét CCCD bằng camera" disabled={isSubmitting} onPress={() => setScannerVisible(true)} style={[styles.scanButton, { backgroundColor: theme.primarySoft }]}>
+                        <Text style={[styles.scanButtonText, { color: theme.primary }]}>📷 Quét CCCD (Camera)</Text>
+                      </Pressable>
+                    </View>
                     {idCardError ? (
                       <Text style={[styles.errorText, { color: theme.danger }]}>{idCardError}</Text>
                     ) : null}
@@ -399,11 +402,20 @@ export default function LoginScreen({ onLogin }: Props) {
         onClose={() => setForgotVisible(false)}
         visible={forgotVisible}
       />
+      <CCCDScannerModal
+        visible={scannerVisible}
+        onClose={() => setScannerVisible(false)}
+        onScan={(result) => { setIdCard(formatCCCD(result.idCard)); setFullName(result.fullName); setIdCardError(""); setFullNameError(""); }}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  identityRow: { flexDirection: "row", gap: 8 },
+  identityInput: { flex: 1 },
+  scanButton: { minHeight: 44, alignItems: "center", justifyContent: "center", borderRadius: 12, paddingHorizontal: 10 },
+  scanButtonText: { fontSize: 11, fontWeight: "800" },
   safe: {
     flex: 1,
   },

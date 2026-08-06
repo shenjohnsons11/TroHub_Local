@@ -35,6 +35,7 @@ type ApiInvoice = {
     tenantId?: {
       _id: string;
       fullName?: string;
+      phone?: string;
     };
     fixedRentPrice?: number;
   };
@@ -46,6 +47,12 @@ type ApiInvoice = {
   
   room?: string;
   roomAmount?: number;
+  rent?: number;
+  type?: "deposit" | "monthly";
+  depositAmount?: number;
+  tenantName?: string;
+  tenantPhone?: string;
+  roomName?: string;
   electricityOld?: number;
   electricityNew?: number;
   electricity?: number;
@@ -176,9 +183,11 @@ const mapApiInvoiceToInvoice = (apiInvoice: ApiInvoice): Invoice => {
   const gAmount = detailsArr.length > 0 ? oldGarbage : (apiInvoice.garbage || 0);
   const servicesAmount = detailsArr.length > 0 ? 0 : (apiInvoice.services || 0);
   
-  const roomFee = detailsArr.length > 0 
-    ? Math.max(totalAmount - oldServicesTotal, 0)
-    : (apiInvoice.roomAmount || Math.max(totalAmount - elecAmount - waterAmount - pAmount - iAmount - gAmount - servicesAmount, 0));
+  const roomFee = apiInvoice.type === "deposit" ? 0 : (apiInvoice.rent ?? apiInvoice.roomAmount ?? (
+    detailsArr.length > 0
+      ? Math.max(totalAmount - oldServicesTotal, 0)
+      : Math.max(totalAmount - elecAmount - waterAmount - pAmount - iAmount - gAmount - servicesAmount, 0)
+  ));
 
   let bankId = undefined;
   let bankAccountNo = undefined;
@@ -193,12 +202,16 @@ const mapApiInvoiceToInvoice = (apiInvoice: ApiInvoice): Invoice => {
 
   return {
     id: apiInvoice._id,
+    type: apiInvoice.type,
+    depositAmount: apiInvoice.depositAmount || 0,
+    tenantName: apiInvoice.tenantName || apiInvoice.contractId?.tenantId?.fullName || "",
+    tenantPhone: apiInvoice.tenantPhone || apiInvoice.contractId?.tenantId?.phone || "",
     month: apiInvoice.period,
-    room: apiInvoice.contractId?.roomId?.roomCode || apiInvoice.room || "Chưa rõ",
+    room: apiInvoice.roomName || apiInvoice.contractId?.roomId?.roomCode || apiInvoice.room || "Chưa rõ",
     amount: formatCurrency(totalAmount),
     numericAmount: totalAmount,
-    status: apiInvoice.status === 2 ? "paid" : "unpaid",
-    statusText: apiInvoice.status === 2 ? "Đã thanh toán" : "Chưa thanh toán",
+    status: apiInvoice.status === 2 ? "paid" : apiInvoice.status === 4 ? "settled" : "unpaid",
+    statusText: apiInvoice.status === 2 ? "Đã thanh toán" : apiInvoice.status === 4 ? "Đã gộp quyết toán" : "Chưa thanh toán",
     dueDate: formatDate(apiInvoice.dueDate),
     bankId,
     bankAccountNo,

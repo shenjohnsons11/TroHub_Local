@@ -1,5 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { WidgetDataSnapshot } from "../types/WidgetData";
+import { toWidgetSnapshot, type LandlordStatsInput } from "../utils/widgetData";
+import { updateAndroidLandlordWidget } from "../components/widgets/androidLandlordWidget";
+import { ExtensionStorage } from "@bacons/apple-targets";
 
 const WIDGET_STORAGE_KEY = "@trohub_widget_data";
 
@@ -8,6 +11,10 @@ export const widgetSyncService = {
     try {
       const jsonString = JSON.stringify(snapshot);
       await AsyncStorage.setItem(WIDGET_STORAGE_KEY, jsonString);
+      const sharedStorage = new ExtensionStorage("group.com.trohub.app");
+      sharedStorage.set("trohub_widget_json", jsonString);
+      ExtensionStorage.reloadWidget("TroHubWidget");
+      void updateAndroidLandlordWidget(snapshot);
 
       // Log App Group sync status for iOS WidgetKit / Android AppWidget
       console.log("[WidgetSync] Shared App Group 'group.com.trohub.app' synced:", jsonString);
@@ -39,21 +46,8 @@ export const widgetSyncService = {
     };
   },
 
-  async syncWidgetData(statsData: any): Promise<WidgetDataSnapshot> {
-    const totalRooms = statsData?.totalRooms || 10;
-    const occupiedRooms = statsData?.occupiedRooms || 8;
-    const occupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
-
-    const snapshot: WidgetDataSnapshot = {
-      totalRevenue: statsData?.totalRevenue ?? 186883000,
-      occupancyRate,
-      occupiedRooms,
-      totalRooms,
-      outstandingDebt: statsData?.outstandingDebt ?? 12500000,
-      utilityReadingProgress: `${occupiedRooms - 2}/${occupiedRooms} phòng`,
-      openRepairsCount: statsData?.pendingRepairs ?? 2,
-      lastSyncedAt: new Date().toISOString(),
-    };
+  async syncWidgetData(statsData: LandlordStatsInput): Promise<WidgetDataSnapshot> {
+    const snapshot = toWidgetSnapshot(statsData);
 
     await this.saveSnapshot(snapshot);
     return snapshot;

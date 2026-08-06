@@ -1,6 +1,7 @@
 const RepairRequest = require('../models/RepairRequest');
 const Contract = require('../models/Contract');
 const Account = require('../models/Account');
+const { sendNotification } = require('../services/notificationService');
 
 // 1. Lấy danh sách yêu cầu sửa chữa (Dành cho Chủ trọ - Web)
 exports.getAllRequests = async (req, res) => {
@@ -58,7 +59,20 @@ exports.getAllRequests = async (req, res) => {
 	// 2. Gửi yêu cầu sửa chữa mới (Dành cho Người thuê - Mobile App)
 	exports.createRequest = async (req, res) => {
 	    try {
-	        const { tenantId, title, content, priority } = req.body;
+	        const tenantId = req.auth?.id || req.body.tenantId;
+	        const { title, content, priority } = req.body;
+
+	        if (!tenantId) {
+	            return res.status(401).json({ success: false, message: "Không tìm thấy thông tin người thuê đăng nhập!" });
+	        }
+
+	        if (!title || typeof title !== 'string' || !title.trim()) {
+	            return res.status(400).json({ success: false, message: "Tiêu đề báo cáo sự cố không được để trống!" });
+	        }
+
+	        if (!content || typeof content !== 'string' || !content.trim()) {
+	            return res.status(400).json({ success: false, message: "Nội dung báo cáo sự cố không được để trống!" });
+	        }
 
 	        // 1. Tự động dò tìm Hợp đồng đang hiệu lực (status = 1) của người này
 	        const activeContract = await Contract.findOne({ tenantId: tenantId, status: 1 });
@@ -70,7 +84,6 @@ exports.getAllRequests = async (req, res) => {
         }
 
         let imagesArray = [];
-        console.log("REPAIR_CONTROLLER: Received images typeof:", typeof req.body.images, "isArray:", Array.isArray(req.body.images));
         if (Array.isArray(req.body.images)) {
             imagesArray = req.body.images.map(img => {
                 if (typeof img === 'string') return img;
@@ -82,9 +95,9 @@ exports.getAllRequests = async (req, res) => {
 	        const newRequest = new RepairRequest({
 	            tenantId,
 	            contractId: activeContract._id,
-            title,
-            content,
-            priority: 0, // Mặc định là 0 (Chưa phân loại) để Admin là người quyết định
+            title: title.trim(),
+            content: content.trim(),
+            priority: priority ?? 0,
             status: 0, // 0: Chờ xác nhận
             images: imagesArray
         });
@@ -131,6 +144,24 @@ exports.updateRequestStatus = async (req, res) => {
 
         if (!updatedRequest) {
             return res.status(404).json({ success: false, message: "Không tìm thấy yêu cầu sửa chữa này!" });
+        }
+
+        const populated = await RepairRequest.findById(req.params.id)
+            .populate({ path: 'contractId', populate: { path: 'roomId', select: 'roomCode' } });
+        if (populated?.tenantId) {
+            const statusNames = { 0: 'Chờ xác nhận', 1: 'Đang xử lý', 2: 'Đã hoàn thành', 3: 'Đã hủy' };
+            const statusText = statusNames[updatedRequest.status] || 'Đang cập nhật';
+            const roomCode = populated.contractId?.roomId?.roomCode || '-';
+            const title = populated.title || 'Sự cố sửa chữa';
+            await sendNotification({
+                userId: populated.tenantId,
+                title: "Cập nhật tiến độ sửa chữa",
+                content: `Yêu cầu sửa chữa ${title} (Phòng ${roomCode}) đã được cập nhật trạng thái: ${statusText}.`,
+                category: "repair",
+                deepLink: 'repair',
+                metadata: { repairId: updatedRequest._id, status: updatedRequest.status, note: updatedRequest.landlordNote || '' },
+                eventKey: `repair:${updatedRequest._id}:progress:${new Date(updatedRequest.updatedAt || Date.now()).getTime()}`,
+            });
         }
 
         res.status(200).json({

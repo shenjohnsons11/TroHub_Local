@@ -1,27 +1,30 @@
 const express = require('express');
 const router = express.Router();
 const contractController = require('../controllers/contractController');
-const { requireTenant } = require('../middleware/requireTenant');
 const { requireAdmin } = require('../middleware/requireAdmin');
+const { requireTenant } = require('../middleware/requireTenant');
 
 // Lấy danh sách & Tạo hợp đồng dự thảo
 router.get('/', contractController.getAllContracts);
-router.post('/', contractController.createContract);
+router.post('/', requireAdmin, contractController.createContract);
 
 // Lịch sử hợp đồng (Phải đặt TRƯỚC /:id)
-router.get('/history', contractController.getContractHistory);
-router.post('/:id/send', requireAdmin, contractController.sendContract);
+router.get('/history', requireAdmin, contractController.getContractHistory);
 
 // Xem chi tiết hợp đồng
 router.get('/:id', contractController.getContractById);
 
 // Cập nhật hợp đồng (Admin)
-router.put('/:id', contractController.updateContract);
+router.put('/:id', requireAdmin, contractController.updateContract);
 
 // Người thuê gọi API này để ký hợp đồng (Chuyển status thành 4)
 router.put('/:id/sign', requireTenant, contractController.signContract);
 
 // Chủ trọ duyệt xác nhận hợp đồng (Chuyển status thành 1)
-router.put('/:id/confirm', contractController.confirmContract);
+router.put('/:id/confirm', requireAdmin, contractController.confirmContract);
+
+// Chủ trọ quyết toán và duyệt trả phòng
+router.get('/:id/checkout-preview', requireAdmin, contractController.getCheckoutPreview);
+router.put('/:id/checkout', requireAdmin, contractController.checkoutContract);
 
 module.exports = router;

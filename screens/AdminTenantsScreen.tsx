@@ -9,15 +9,9 @@ import AppButton from "../components/ui/AppButton";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
 import GradientHero from "../components/ui/GradientHero";
 import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
-import ProgressStepper from "../components/ui/ProgressStepper";
+import CCCDScannerModal from "../components/CCCDScannerModal";
+import AddTenantModal from "../components/AddTenantModal";
 import { formatCCCD, formatPhone, unformatDigits } from "../utils/formatters";
-
-const steps = [
-  { label: "Tra cứu", icon: "search-outline" as const },
-  { label: "Thông tin", icon: "person-outline" as const },
-  { label: "Liên hệ", icon: "call-outline" as const },
-  { label: "Xác nhận", icon: "checkmark-circle-outline" as const },
-];
 
 export default function AdminTenantsScreen() {
   const { theme } = useAppTheme();
@@ -27,15 +21,16 @@ export default function AdminTenantsScreen() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
-  const [step, setStep] = useState(0);
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [idCard, setIdCard] = useState("");
-  const [emailError, setEmailError] = useState("");
-  const [phoneError, setPhoneError] = useState("");
-  const [idCardError, setIdCardError] = useState("");
+  const [roomCode, setRoomCode] = useState("");
+  const [lookupIdentifier, setLookupIdentifier] = useState("");
+  const [lookupStatus, setLookupStatus] = useState<"idle" | "loading" | "found" | "new" | "error">("idle");
+  const [existingTenantId, setExistingTenantId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [scannerVisible, setScannerVisible] = useState(false);
 
   const handleSendInvite = async (tenant: AdminTenant) => {
     const rawPhone = unformatDigits(tenant.phone);
@@ -66,56 +61,34 @@ export default function AdminTenantsScreen() {
   };
   useEffect(() => { void loadData(); }, []);
 
-  const handleCheckDuplicate = async (field: string, value: string) => {
-    if (!value.trim()) return;
-    try {
-      let cleanValue = value.trim();
-      if (field === "phone" || field === "idCard") cleanValue = unformatDigits(value);
-      if (field === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanValue)) { setEmailError("Email không hợp lệ"); return; }
-      if (field === "phone" && cleanValue.length !== 10) { setPhoneError("Số điện thoại chưa đủ 10 số"); return; }
-      if (field === "idCard" && cleanValue.length !== 12) { setIdCardError("CCCD chưa đủ 12 số"); return; }
-      const result = await adminService.checkTenantDuplicate(field, cleanValue);
-      if (field === "email") setEmailError(result.message || "");
-      if (field === "phone") setPhoneError(result.message || "");
-      if (field === "idCard") setIdCardError(result.message || "");
-    } catch (error) { console.log("Error checking duplicate:", error); }
-  };
-
-  const handleSearchTenant = async () => {
-    const cleanPhone = unformatDigits(phone);
-    if (cleanPhone.length !== 10) {
-      notification.error("Vui lòng nhập đúng 10 số điện thoại để tra cứu!");
-      return;
-    }
-    try {
-      setSubmitting(true);
-      // Gửi request POST /tenants với duy nhất phone để tra cứu
-      const res = await adminService.createTenant({
-        fullName: "",
-        phone: cleanPhone,
-        email: "",
-        idCard: ""
-      });
-      // Nếu thành công, có nghĩa là tài khoản đã tồn tại và hệ thống đã gửi lời mời liên kết
-      notification.success("Đã tìm thấy tài khoản và gửi lời mời liên kết thành công!");
-      setModalVisible(false);
-      void loadData();
-    } catch (error: any) {
-      const msg = error instanceof Error ? error.message : "";
-      if (msg.includes("Khách mới chưa có tài khoản")) {
-        // Tài khoản chưa tồn tại -> Chuyển sang bước nhập thông tin đầy đủ
-        setStep(1);
-        notification.info("Khách hàng mới chưa có tài khoản. Hãy điền tiếp thông tin để tạo mới.");
-      } else {
-        notification.error(msg || "Tra cứu Người thuê thất bại!");
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  useEffect(() => {
+    if (!modalVisible || !lookupIdentifier) return;
+    const digits = unformatDigits(lookupIdentifier);
+    const ready = digits.length === 10 || digits.length === 12 || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(lookupIdentifier.trim());
+    if (!ready) { setLookupStatus("idle"); return; }
+    let active = true;
+    setLookupStatus("loading");
+    const timer = setTimeout(() => {
+      adminService.lookupTenant(lookupIdentifier).then((result) => {
+        if (!active) return;
+        if (result.found && result.data) {
+          setExistingTenantId(result.data._id);
+          setFullName(result.data.fullName || "");
+          setPhone(formatPhone(result.data.phone));
+          setEmail(result.data.email || "");
+          setIdCard(formatCCCD(result.data.idCard));
+          setLookupStatus("found");
+        } else {
+          setExistingTenantId(null);
+          setLookupStatus("new");
+        }
+      }).catch(() => { if (active) setLookupStatus("error"); });
+    }, 450);
+    return () => { active = false; clearTimeout(timer); };
+  }, [lookupIdentifier, modalVisible]);
 
   const handleAddTenant = async () => {
-    if (!fullName.trim() || !phone.trim() || !email.trim() || !idCard.trim()) { notification.error("Vui lòng điền đầy đủ thông tin!"); return; }
+    if (!fullName.trim() || !phone.trim() || !email.trim() || !idCard.trim() || !roomCode) { notification.error("Vui lòng điền đầy đủ thông tin và chọn phòng!"); return; }
     const cleanPhone = unformatDigits(phone);
     const cleanIdCard = unformatDigits(idCard);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { notification.error("Vui lòng nhập Email đúng định dạng (ví dụ: nguyenvanA@gmail.com) để làm tên đăng nhập!"); return; }
@@ -123,21 +96,17 @@ export default function AdminTenantsScreen() {
     if (cleanIdCard.length !== 12) { notification.error("Số CCCD phải gồm đúng 12 chữ số!"); return; }
     try {
       setSubmitting(true);
-      await adminService.createTenant({ fullName: fullName.trim(), phone: cleanPhone, email: email.trim(), idCard: cleanIdCard });
-      notification.success("Đã thêm người thuê mới!");
-      setModalVisible(false); setStep(0); setFullName(""); setPhone(""); setEmail(""); setIdCard(""); setEmailError(""); setPhoneError(""); setIdCardError("");
+      await adminService.createTenant({ fullName: fullName.trim(), phone: cleanPhone, email: email.trim(), idCard: cleanIdCard, roomCode });
+      notification.success(existingTenantId ? "Đã liên kết Người thuê vào phòng!" : "Đã tạo mới và liên kết Người thuê vào phòng!");
+      setModalVisible(false);
       void loadData();
     } catch (error) { notification.error(error instanceof Error ? error.message : "Thêm người thuê thất bại!"); }
     finally { setSubmitting(false); }
   };
 
-  const advance = () => {
-    if (step === 1 && !fullName.trim()) { notification.error("Vui lòng nhập họ và tên!"); return; }
-    if (step === 2 && (!email.trim() || !phone.trim() || !idCard.trim())) { notification.error("Vui lòng điền đầy đủ thông tin liên hệ!"); return; }
-    setStep((current) => Math.min(current + 1, 3));
-  };
   const openCreateModal = () => {
-    setStep(0);
+    setFullName(""); setPhone(""); setEmail(""); setIdCard(""); setRoomCode("");
+    setLookupIdentifier(""); setLookupStatus("idle"); setExistingTenantId(null);
     setModalVisible(true);
   };
   if (loading) return <AppLoadingScreen />;
@@ -175,14 +144,6 @@ export default function AdminTenantsScreen() {
                 <Text style={[styles.sectionTitle, { color: theme.text }]}>Quản lý người thuê</Text>
                 <Text style={[styles.sectionSub, { color: theme.muted }]}>Danh sách Người thuê & liên kết ứng dụng</Text>
               </View>
-              <Pressable
-                accessibilityRole="button"
-                style={[styles.sectionBtn, { backgroundColor: "#10b981" }]}
-                onPress={openCreateModal}
-              >
-                <Ionicons name="person-add-outline" size={15} color="#fff" />
-                <Text style={styles.sectionBtnText}>+ Thêm người thuê</Text>
-              </Pressable>
             </View>
 
             {/* Ô Tìm Kiếm Người Thuê */}
@@ -290,89 +251,57 @@ export default function AdminTenantsScreen() {
         }}
       />
 
-    <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => { if (!submitting) setModalVisible(false); }}>
+      <Pressable accessibilityRole="button" accessibilityLabel="Thêm người thuê" onPress={openCreateModal} style={styles.fab}>
+        <Ionicons name="person-add-outline" size={20} color="#b8f5da" />
+        <Text style={styles.fabText}>+ Thêm người thuê</Text>
+      </Pressable>
+
+      <AddTenantModal visible={modalVisible} rooms={rooms} onClose={() => setModalVisible(false)} onSuccess={() => { void loadData(); }} />
+
+    <Modal visible={false} transparent animationType="slide" onRequestClose={() => { if (!submitting) setModalVisible(false); }}>
       <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === "ios" ? "padding" : undefined}><View style={[StyleSheet.absoluteFill, { backgroundColor: theme.overlay }]} /><View accessibilityViewIsModal style={[styles.sheet, { backgroundColor: theme.surfaceElevated }]}>
         <View style={styles.modalHeader}><Text accessibilityRole="header" style={[styles.modalTitle, { color: theme.text }]}>Thêm người thuê mới</Text><Pressable accessibilityRole="button" accessibilityLabel="Đóng thêm người thuê" disabled={submitting} onPress={() => setModalVisible(false)}><Ionicons name="close" size={26} color={theme.text} /></Pressable></View>
-        <ProgressStepper steps={steps} currentStep={step} />
         <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-          
-          {step === 0 ? (
-            <Field 
-              label="Số điện thoại của Người thuê"
-              value={phone} 
-              setValue={(text: string) => { 
-                setPhone(formatPhone(text));
-                setPhoneError(""); 
-              }} 
-              placeholder="Nhập 10 số điện thoại để tra cứu" 
-              style={inputStyle} 
-              muted={theme.muted} 
-              keyboardType="phone-pad" 
-              error={phoneError} 
-              danger={theme.danger} 
-            />
-          ) : null}
+          <Text style={[styles.formHint, { color: theme.muted }]}>Nhập SĐT, CCCD hoặc Email; hệ thống sẽ tự tra cứu sau khi dữ liệu hợp lệ.</Text>
+          <Field label="Số điện thoại" value={phone} setValue={(text: string) => { const value = formatPhone(text); setPhone(value); setLookupIdentifier(value); }} placeholder="0901.234.567" style={inputStyle} muted={theme.muted} keyboardType="phone-pad" editable={!existingTenantId} />
+          <Field label="Số CCCD" value={idCard} setValue={(text: string) => { const value = formatCCCD(text); setIdCard(value); setLookupIdentifier(value); }} placeholder="0790.1234.5678" style={inputStyle} muted={theme.muted} keyboardType="numeric" editable={!existingTenantId} accessory={<Pressable accessibilityRole="button" accessibilityLabel="Quét CCCD bằng camera" disabled={Boolean(existingTenantId)} onPress={() => setScannerVisible(true)} style={[styles.scanButton, { backgroundColor: theme.primarySoft }]}><Text style={[styles.scanButtonText, { color: theme.primary }]}>📷 Quét CCCD (Camera)</Text></Pressable>} />
+          <Field label="Email" value={email} setValue={(text: string) => { setEmail(text); setLookupIdentifier(text); }} placeholder="nguyenvana@gmail.com" style={inputStyle} muted={theme.muted} keyboardType="email-address" editable={!existingTenantId} />
+          <Field label="Họ và tên" value={fullName} setValue={setFullName} placeholder="Nguyễn Văn A" style={inputStyle} muted={theme.muted} editable={!existingTenantId} />
 
-          {step === 1 ? (
-            <Field 
-              label="Họ và tên" 
-              value={fullName} 
-              setValue={setFullName} 
-              placeholder="Nhập họ và tên khách" 
-              style={inputStyle} 
-              muted={theme.muted} 
-            />
-          ) : null}
-
-          {step === 2 ? <>
-            <Field label="Email (Tên đăng nhập)" value={email} setValue={(text: string) => { setEmail(text); setEmailError(""); }} placeholder="Nhập email" style={[...inputStyle, emailError && { backgroundColor: theme.warningSoft }]} muted={theme.muted} keyboardType="email-address" onBlur={() => void handleCheckDuplicate("email", email)} error={emailError} danger={theme.danger} />
-            <Field label="Số điện thoại" value={phone} setValue={() => {}} style={[...inputStyle, { opacity: 0.6 }]} muted={theme.muted} keyboardType="phone-pad" error={phoneError} danger={theme.danger} editable={false} />
-            <Field label="Số CCCD (Bắt buộc 12 số)" value={idCard} setValue={(text: string) => { setIdCard(formatCCCD(text)); setIdCardError(""); }} placeholder="Nhập CCCD" style={inputStyle} muted={theme.muted} keyboardType="numeric" onBlur={() => void handleCheckDuplicate("idCard", idCard)} error={idCardError} danger={theme.danger} />
-          </> : null}
-
-          {step === 3 ? (
-            <View style={[styles.summary, { backgroundColor: theme.background }]}>
-              <Ionicons name="shield-checkmark-outline" size={34} color={theme.primary} />
-              <Text style={[styles.summaryTitle, { color: theme.text }]}>{fullName}</Text>
-              <Text style={[styles.summaryText, { color: theme.muted }]}>{email}</Text>
-              <Text style={[styles.summaryText, { color: theme.muted }]}>{phone} · CCCD {idCard}</Text>
+          {lookupStatus !== "idle" ? (
+            <View accessibilityLiveRegion="polite" style={[styles.lookupBox, { backgroundColor: theme.primarySoft }]}>
+              <Ionicons name={lookupStatus === "found" ? "link-outline" : lookupStatus === "loading" ? "search-outline" : "person-add-outline"} size={18} color={theme.primary} />
+              <Text style={[styles.lookupText, { color: theme.text }]}>{lookupStatus === "loading" ? "Đang tra cứu…" : lookupStatus === "found" ? "Đã tìm thấy tài khoản. Hồ sơ được khóa để liên kết an toàn." : lookupStatus === "error" ? "Không thể tra cứu lúc này. Vui lòng thử lại." : "Chưa có tài khoản. Hệ thống sẽ tạo mới với mật khẩu 123456."}</Text>
+              {existingTenantId ? <Pressable accessibilityRole="button" onPress={openCreateModal}><Text style={[styles.resetLookup, { color: theme.primary }]}>Đổi người</Text></Pressable> : null}
             </View>
           ) : null}
 
+          <Text style={[styles.label, { color: theme.text }]}>Phòng xếp</Text>
+          <View style={styles.roomChips}>
+            {vacantRooms.map((room) => {
+              const selected = roomCode === room.roomCode;
+              return <Pressable key={room._id} accessibilityRole="button" accessibilityState={{ selected }} onPress={() => setRoomCode(room.roomCode)} style={[styles.roomChip, { backgroundColor: selected ? theme.primary : theme.background, borderColor: selected ? theme.primary : theme.border }]}><Text style={[styles.roomChipText, { color: selected ? theme.background : theme.text }]}>{room.roomCode}</Text></Pressable>;
+            })}
+          </View>
+
           <View style={styles.actions}>
-            {step > 0 ? (
-              <View style={styles.action}>
-                <AppButton icon="arrow-back" variant="secondary" disabled={submitting} onPress={() => setStep((current) => current - 1)}>
-                  Quay lại
-                </AppButton>
-              </View>
-            ) : null}
             <View style={styles.action}>
-              {step === 0 ? (
-                <AppButton icon="search-outline" iconPosition="left" loading={submitting} onPress={handleSearchTenant}>
-                  Tra cứu & liên kết
-                </AppButton>
-              ) : step === 3 ? (
-                <AppButton icon="person-add-outline" iconPosition="left" loading={submitting} onPress={handleAddTenant}>
-                  Thêm người thuê
-                </AppButton>
-              ) : (
-                <AppButton icon="arrow-forward" iconPosition="right" loading={submitting} onPress={advance}>
-                  Tiếp tục
-                </AppButton>
-              )}
+              <AppButton icon={existingTenantId ? "link-outline" : "person-add-outline"} loading={submitting} disabled={lookupStatus === "loading"} onPress={handleAddTenant}>
+                {existingTenantId ? "Liên kết Người thuê vào phòng" : "Tạo mới & Liên kết"}
+              </AppButton>
             </View>
           </View>
         </ScrollView>
       </View>
     </KeyboardAvoidingView>
   </Modal>
+  <CCCDScannerModal visible={scannerVisible} onClose={() => setScannerVisible(false)} onScan={(result) => { setIdCard(formatCCCD(result.idCard)); setFullName(result.fullName); setLookupIdentifier(result.idCard); }} />
 </View>
 );
 }
 
-function Field({ label, value, setValue, placeholder, style, muted, keyboardType, onBlur, error, danger, editable = true }: any) {
-  return <View style={styles.field}><Text style={[styles.label, { color: style[1].color }]}>{label}</Text><TextInput editable={editable} style={style} value={value} onChangeText={setValue} onBlur={onBlur} placeholder={placeholder} placeholderTextColor={muted} keyboardType={keyboardType} autoCapitalize={keyboardType === "email-address" ? "none" : undefined} />{error ? <Text accessibilityLiveRegion="polite" style={[styles.error, { color: danger }]}>{error}</Text> : null}</View>;
+function Field({ label, value, setValue, placeholder, style, muted, keyboardType, onBlur, error, danger, editable = true, accessory }: any) {
+  return <View style={styles.field}><Text style={[styles.label, { color: style[1].color }]}>{label}</Text><View style={accessory ? styles.fieldRow : undefined}><TextInput editable={editable} style={accessory ? [...style, styles.fieldInput] : style} value={value} onChangeText={setValue} onBlur={onBlur} placeholder={placeholder} placeholderTextColor={muted} keyboardType={keyboardType} autoCapitalize={keyboardType === "email-address" ? "none" : undefined} />{accessory}</View>{error ? <Text accessibilityLiveRegion="polite" style={[styles.error, { color: danger }]}>{error}</Text> : null}</View>;
 }
 
 const styles = StyleSheet.create({
@@ -382,15 +311,19 @@ const styles = StyleSheet.create({
   avatarText: { fontSize: 14, fontWeight: "900" }, info: { flex: 1 }, name: { fontSize: 16, fontWeight: "900" }, sub: { fontSize: 12, fontWeight: "600", marginTop: 3 },
   overlay: { flex: 1, justifyContent: "flex-end" }, sheet: { maxHeight: "92%", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20 },
   modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }, modalTitle: { flex: 1, fontSize: 20, fontWeight: "900" },
-  form: { paddingTop: 20, paddingBottom: 8 }, field: { marginBottom: 14 }, label: { fontSize: 12, fontWeight: "800", marginBottom: 7 },
+  form: { paddingTop: 4, paddingBottom: 8 }, formHint: { fontSize: 12, lineHeight: 18, marginBottom: 16 }, field: { marginBottom: 14 }, label: { fontSize: 12, fontWeight: "800", marginBottom: 7 },
   input: { minHeight: 48, borderRadius: 16, paddingHorizontal: 14, fontSize: 14 }, error: { fontSize: 11, fontWeight: "700", marginTop: 5 },
-  summary: { alignItems: "center", borderRadius: 20, padding: 22 }, summaryTitle: { fontSize: 20, fontWeight: "900", marginTop: 10 }, summaryText: { fontSize: 13, marginTop: 5 },
+  fieldRow: { flexDirection: "row", alignItems: "center", gap: 8 }, fieldInput: { flex: 1 }, scanButton: { minHeight: 44, justifyContent: "center", borderRadius: 12, paddingHorizontal: 10 }, scanButtonText: { fontSize: 11, fontWeight: "800" },
+  lookupBox: { flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 16, padding: 12, marginBottom: 16 }, lookupText: { flex: 1, fontSize: 12, lineHeight: 17 }, resetLookup: { fontSize: 12, fontWeight: "800" },
+  roomChips: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 4 }, roomChip: { minHeight: 44, minWidth: 68, borderWidth: 1, borderRadius: 14, alignItems: "center", justifyContent: "center", paddingHorizontal: 14 }, roomChipText: { fontSize: 13, fontWeight: "800" },
   actions: { flexDirection: "row", gap: 10, marginTop: 20 }, action: { flex: 1 },
   sectionRow: { flexDirection: "row", alignItems: "center", marginTop: 18, marginBottom: 10 },
   sectionTitle: { fontSize: 16, fontWeight: "900" },
   sectionSub: { fontSize: 11, fontWeight: "600", marginTop: 2 },
   sectionBtn: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, gap: 5 },
   sectionBtnText: { fontSize: 12, fontWeight: "800", color: "#fff" },
+  fab: { position: "absolute", right: 20, bottom: 24, minHeight: 52, flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 26, backgroundColor: "#073e36", paddingHorizontal: 18, elevation: 6, shadowColor: "#073e36", shadowOpacity: 0.28, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } },
+  fabText: { color: "#b8f5da", fontSize: 13, fontWeight: "900" },
   searchBox: { flexDirection: "row", alignItems: "center", minHeight: 44, borderRadius: 16, borderWidth: 1, paddingHorizontal: 14, gap: 8, marginBottom: 14 },
   searchInput: { flex: 1, fontSize: 13, fontWeight: "600", height: "100%" },
   inviteBtn: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 14, backgroundColor: "#10b981", marginLeft: 10 },

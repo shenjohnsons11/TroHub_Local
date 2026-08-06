@@ -58,6 +58,17 @@ exports.getStats = async (req, res) => {
         const invoices = await Invoice.find(invoiceQuery);
         const totalRevenue = invoices.reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
 
+        const landlordRoomIds = landlordId
+            ? (await Room.find({ landlordId }).select('_id')).map((room) => room._id)
+            : [];
+        const landlordContracts = landlordId
+            ? await Contract.find({ roomId: { $in: landlordRoomIds }, status: { $in: [1, 5] } }).select('_id')
+            : [];
+        const unpaidInvoices = landlordId
+            ? await Invoice.find({ contractId: { $in: landlordContracts.map((contract) => contract._id) }, status: { $in: [1, 3] } }).select('totalAmount')
+            : [];
+        const outstandingDebt = unpaidInvoices.reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
+
         res.status(200).json({
             success: true,
             data: {
@@ -65,7 +76,9 @@ exports.getStats = async (req, res) => {
                 occupiedRooms,
                 totalTenants,
                 pendingRepairs,
-                totalRevenue
+                totalRevenue,
+                outstandingDebt,
+                utilityReadingProgress: null
             }
         });
     } catch (error) {

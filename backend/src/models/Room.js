@@ -16,6 +16,8 @@ const roomSchema = new mongoose.Schema({
     },
     status: { type: Number, enum: [0, 1, 2], default: 0 },    // 0: Trống, 1: Đang thuê, 2: Đang sửa
     landlordId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account', required: true }, // ma_chu_tro
+    lastElectricityReading: { type: Number }, // Chỉ số điện mới nhất đã chốt
+    lastWaterReading: { type: Number },        // Chỉ số nước mới nhất đã chốt
     draftElectricity: { type: Number }, // Khách tự điền số điện nháp
     draftWater: { type: Number }        // Khách tự điền số nước nháp
 }, { timestamps: true });

@@ -25,15 +25,16 @@ import AnimatedEntry from "../components/ui/AnimatedEntry";
 import { formatPhone } from "../utils/formatters";
 import { useLanguage } from "../contexts/LanguageContext";
 
+import { UserProfile } from "../types/UserProfile";
+
 type Props = {
+  profile?: UserProfile | null;
   refreshKey: number;
-  onNavigate: (screen: "invoice" | "repair" | "contract" | "utility" | "notifications") => void;
+  onNavigate: (screen: "invoice" | "repair" | "contract" | "utility" | "notifications" | "ai_chat") => void;
   onLogout: () => void;
-  onOpenNotifications?: () => void;
-  notificationUnreadCount?: number;
 };
 
-export default function HomeScreen({ refreshKey, onNavigate, onLogout, onOpenNotifications, notificationUnreadCount }: Props) {
+export default function HomeScreen({ profile, refreshKey, onNavigate, onLogout }: Props) {
   const { theme } = useAppTheme();
   const { t } = useLanguage();
   const styles = createStyles(theme);
@@ -45,13 +46,14 @@ export default function HomeScreen({ refreshKey, onNavigate, onLogout, onOpenNot
 
   useEffect(() => {
     loadHomeData();
-    const interval = setInterval(checkNotifications, 5000);
-    return () => clearInterval(interval);
   }, [refreshKey]);
 
   const checkNotifications = async () => {
-    const count = await notificationService.getUnreadCount();
-    setUnreadCount(count);
+    try {
+      setUnreadCount(await notificationService.getUnreadCount());
+    } catch {
+      setUnreadCount(0);
+    }
   };
 
   const loadHomeData = async () => {
@@ -91,13 +93,19 @@ export default function HomeScreen({ refreshKey, onNavigate, onLogout, onOpenNot
   };
 
   const isUnpaid = homeData.paymentStatus === "unpaid";
-  const displayedUnreadCount = notificationUnreadCount ?? unreadCount;
   const openPropertyMap = () => {
     const destination = homeData.propertyLatitude != null && homeData.propertyLongitude != null
       ? `${homeData.propertyLatitude},${homeData.propertyLongitude}`
       : homeData.propertyAddress;
     if (destination) void Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`);
   };
+
+  const userDisplayName =
+    (profile?.fullName && profile.fullName !== "Người thuê" && profile.fullName.trim())
+      ? profile.fullName.trim()
+      : (homeData?.tenantName && homeData.tenantName !== "Người thuê" && homeData.tenantName.trim())
+        ? homeData.tenantName.trim()
+        : profile?.phone || "Bạn";
 
   return (
     <ScrollView
@@ -110,24 +118,33 @@ export default function HomeScreen({ refreshKey, onNavigate, onLogout, onOpenNot
         <View style={styles.headerActions}>
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel="Trợ lý AI"
+            onPress={() => onNavigate("ai_chat")}
+            style={[styles.bellButton, { backgroundColor: "#064E3B", borderRadius: 16 }]}
+          >
+            <Ionicons name="sparkles" size={20} color="#34D399" />
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${unreadCount} thông báo chưa đọc`}
+            onPress={() => onNavigate("notifications")}
+            style={styles.bellButton}
+          >
+
+            <Ionicons name="notifications-outline" size={24} color={theme.text} />
+            {unreadCount > 0 && (
+              <View style={styles.bellBadge}>
+                <Text style={styles.bellBadgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+              </View>
+            )}
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
             accessibilityLabel="Đăng xuất"
             onPress={onLogout}
             style={styles.logoutButton}
           >
-            <Ionicons name="log-out-outline" size={20} color={theme.warningForeground} />
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Thông báo"
-            onPress={() => onOpenNotifications?.() ?? onNavigate("notifications")}
-            style={styles.bellButton}
-          >
-            <Ionicons name="notifications-outline" size={24} color={theme.text} />
-            {displayedUnreadCount > 0 && (
-              <View style={styles.bellBadge}>
-                <Text style={styles.bellBadgeText}>{displayedUnreadCount > 99 ? "99+" : displayedUnreadCount}</Text>
-              </View>
-            )}
+            <Ionicons name="log-out-outline" size={22} color={theme.warningForeground} />
           </Pressable>
         </View>
       </View>
@@ -135,7 +152,7 @@ export default function HomeScreen({ refreshKey, onNavigate, onLogout, onOpenNot
       <View style={styles.homeHero}>
         <Text style={styles.heroKicker}>KHÔNG GIAN CỦA BẠN</Text>
         <Text style={styles.heroTitle}>
-          {getRealtimeGreeting().slice(0, -1)}, {homeData.tenantName}
+          {getRealtimeGreeting().slice(0, -1)}, {userDisplayName}
         </Text>
         <Text style={styles.heroRoom}>
           {homeData.room === "Chưa có phòng" ? "Chưa có phòng" : `Phòng ${homeData.room}`}
@@ -193,7 +210,27 @@ export default function HomeScreen({ refreshKey, onNavigate, onLogout, onOpenNot
         />
       </AnimatedEntry>
 
+      <AnimatedEntry delay={80}>
+        <Pressable onPress={() => onNavigate("ai_chat")}>
+          <Card style={[styles.infoCard, { backgroundColor: "#064E3B", borderColor: "rgba(16, 185, 129, 0.4)", borderWidth: 1 }]}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: "#042F2E", alignItems: "center", justifyContent: "center" }}>
+                  <Ionicons name="sparkles" size={20} color="#34D399" />
+                </View>
+                <View>
+                  <Text style={[styles.cardTitle, { color: "#ECFDF5", marginBottom: 2 }]}>Trợ lý AI TroHub 🤖</Text>
+                  <Text style={{ fontSize: 12, color: "#A7F3D0" }}>Hỏi đáp doanh thu, nhắc nợ, hợp đồng...</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#34D399" />
+            </View>
+          </Card>
+        </Pressable>
+      </AnimatedEntry>
+
       <SectionHeader title="Tiện ích của bạn" />
+
       <AnimatedEntry delay={100} style={styles.quickGrid}>
         <Pressable
           style={styles.quickItem}
