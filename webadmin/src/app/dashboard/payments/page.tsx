@@ -17,8 +17,8 @@ import {
 import { useNotification } from "@/hooks/use-notification";
 import { fetchAPI } from "@/lib/api";
 import { getNotificationMessage } from "@/lib/notification-messages";
+import { formatCurrency } from "@/lib/formatters";
 import {
-  formatCurrency,
   formatPaidAt,
   paidDateKey,
   type SuccessfulPayment,
