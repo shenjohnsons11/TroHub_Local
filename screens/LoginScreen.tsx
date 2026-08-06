@@ -405,7 +405,7 @@ export default function LoginScreen({ onLogin }: Props) {
       <CCCDScannerModal
         visible={scannerVisible}
         onClose={() => setScannerVisible(false)}
-        onScan={(result) => { setIdCard(formatCCCD(result.idCard)); setFullName(result.fullName); setIdCardError(""); setFullNameError(""); }}
+        onScan={(cccdNumber) => { setIdCard(formatCCCD(cccdNumber)); setIdCardError(""); }}
       />
     </SafeAreaView>
   );
