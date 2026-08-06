@@ -48,7 +48,3 @@ export function paidDateKey(value: string): string {
     parts.find((item) => item.type === type)?.value || "";
   return `${part("year")}-${part("month")}-${part("day")}`;
 }
-
-export function formatCurrency(value: number): string {
-  return `${Number(value || 0).toLocaleString("vi-VN")} đ`;
-}
