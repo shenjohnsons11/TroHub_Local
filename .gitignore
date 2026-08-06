@@ -2,12 +2,16 @@
 
 # dependencies
 node_modules/
+build/
 
 # Expo
 .expo/
 dist/
 web-build/
 expo-env.d.ts
+
+# Next.js
+.next/
 
 # Native
 .kotlin/
@@ -30,8 +34,10 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
-.env*.local
+# local env files (keep .env.example tracked)
+.env
+.env.local
+.env.*.local
 
 # typescript
 *.tsbuildinfo
@@ -50,14 +56,17 @@ GEMINI.md
 .superpowers/
 .worktrees/
 docs/superpowers/
+
+# Personal IDE configuration
+.vscode/
+.idea/
+
+# Temporary clones, mockups and generated reports
 design-demos/
 design-references/
-patch_contracts.js
 scratch_clone/
 reports/
-docker-compose.yml
-Dockerfile
-.dockerignore
+demo/
 
 # Keep documentation tracked
 !README.md
