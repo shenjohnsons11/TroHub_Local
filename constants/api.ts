@@ -12,8 +12,12 @@ const getLocalHostIp = () => {
   return Platform.OS === "android" ? "10.0.2.2" : "localhost";
 };
 
-const LOCAL_API_URL = `http://${getLocalHostIp()}:5000/api`;
+const localHostIp = getLocalHostIp();
+const LOCAL_API_URL = localHostIp === "10.0.2.2"
+  ? "http://10.0.2.2:5000/api"
+  : localHostIp === "localhost"
+    ? "http://localhost:5000/api"
+    : `http://${localHostIp}:5000/api`;
 
 export const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_BASE_URL || LOCAL_API_URL;
-

@@ -1,6 +1,8 @@
 const Notification = require('../models/Notification');
 const PushDevice = require('../models/PushDevice');
 
+const EXPO_PUSH_TOKEN_PATTERN = /^(ExponentPushToken|ExpoPushToken)\[[^\]]+\]$/;
+
 const buildRecipientFilter = (nguoiThueId) => ({ recipientId: nguoiThueId });
 const buildOwnedNotificationFilter = (id, nguoiThueId) => ({
     _id: id,
@@ -29,11 +31,19 @@ exports.getUnreadCount = async (req, res) => {
 };
 
 exports.markRead = async (req, res) => {
-    const data = await Notification.findOneAndUpdate(
-        buildOwnedNotificationFilter(req.params.id, req.auth.id),
+    const id = req.params.id;
+    const userId = req.auth.id;
+    let data = await Notification.findOneAndUpdate({ _id: id, userId },
         { isRead: true, readAt: new Date() },
         { new: true },
     );
+    if (!data) {
+        data = await Notification.findOneAndUpdate(
+            buildOwnedNotificationFilter(id, userId),
+            { isRead: true, readAt: new Date() },
+            { new: true },
+        );
+    }
     if (!data) return res.status(404).json({ success: false, code: 'NOTIFICATION_NOT_FOUND', message: 'Không tìm thấy thông báo.' });
     return res.json({ success: true, data });
 };
@@ -48,28 +58,45 @@ exports.markAllRead = async (req, res) => {
 
 exports.registerDevice = async (req, res) => {
     const { expoPushToken, platform, deviceId } = req.body;
-    if (!expoPushToken || !deviceId || !['android', 'ios'].includes(platform)) {
+    if (!EXPO_PUSH_TOKEN_PATTERN.test(expoPushToken || '') || !['android', 'ios'].includes(platform)) {
         return res.status(400).json({ success: false, code: 'PUSH_DEVICE_INVALID', message: 'Thông tin thiết bị không hợp lệ.' });
     }
-    const data = await PushDevice.findOneAndUpdate(
-        { nguoiThueId: req.auth.id, deviceId },
-        {
+    const resolvedDeviceId = deviceId || expoPushToken;
+    const update = {
+        $set: {
+            userId: req.auth.id,
             nguoiThueId: req.auth.id,
             expoPushToken,
             platform,
-            deviceId,
+            deviceId: resolvedDeviceId,
             lastActiveAt: new Date(),
+            active: true,
             isActive: true,
         },
-        { new: true, upsert: true, setDefaultsOnInsert: true },
+    };
+    const result = await PushDevice.updateOne({ userId: req.auth.id, expoPushToken: expoPushToken }, update);
+    if (!result.matchedCount) {
+        await PushDevice.updateOne({ expoPushToken }, update, { upsert: true });
+    }
+    return res.status(201).json({ success: true });
+};
+
+exports.deactivateDevice = async (req, res) => {
+    const { expoPushToken } = req.body;
+    if (!EXPO_PUSH_TOKEN_PATTERN.test(expoPushToken || '')) {
+        return res.status(400).json({ success: false, code: 'PUSH_DEVICE_INVALID', message: 'Push token không hợp lệ.' });
+    }
+    await PushDevice.updateOne(
+        { expoPushToken, $or: [{ userId: req.auth.id }, { nguoiThueId: req.auth.id }] },
+        { $set: { active: false, isActive: false, lastActiveAt: new Date() } },
     );
-    return res.status(201).json({ success: true, data });
+    return res.json({ success: true });
 };
 
 exports.unregisterDevice = async (req, res) => {
     await PushDevice.findOneAndUpdate(
         { nguoiThueId: req.auth.id, deviceId: req.params.deviceId },
-        { isActive: false, lastActiveAt: new Date() },
+        { active: false, isActive: false, lastActiveAt: new Date() },
     );
     return res.json({ success: true, message: 'Đã ngừng nhận push notification trên thiết bị này.' });
 };

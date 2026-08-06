@@ -35,7 +35,7 @@ function buildPasswordChangedEmail({ fullName }) {
                 <h1 style="font-size:24px">Mật khẩu đã được thay đổi</h1>
                 <p>Xin chào ${safeName},</p>
                 <p>Mật khẩu TroHub của bạn vừa được thay đổi thành công.</p>
-                <p>Nếu bạn không thực hiện thao tác này, hãy liên hệ Admin ngay.</p>
+                <p>Nếu bạn không thực hiện thao tác này, hãy liên hệ Chủ trọ ngay.</p>
             </div>
         `,
     };

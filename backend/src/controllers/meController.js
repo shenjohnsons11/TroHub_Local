@@ -320,6 +320,7 @@ exports.requestTerminateContract = async (req, res) => {
             category: 'contract',
             deepLink: '/contracts',
             metadata: { contractId: contract._id, roomId: contract.roomId, unpaidAmount: debt.totalAmount },
+            eventKey: `contract:${contract._id}:checkout-request`,
         });
 
         res.status(200).json({ success: true, message: 'Đã gửi yêu cầu trả phòng thành công. Vui lòng chờ chủ trọ xác nhận!' });

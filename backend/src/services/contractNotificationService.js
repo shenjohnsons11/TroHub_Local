@@ -34,7 +34,7 @@ async function sendContractToNguoiThue(
         recipientId: toId(contract.tenantId),
         type: 'CONTRACT_SENT',
         title: 'Bạn có hợp đồng mới',
-        message: 'Admin đã gửi hợp đồng để bạn xem xét và xác nhận.',
+        message: 'Chủ trọ đã gửi hợp đồng để bạn xem xét và xác nhận.',
         entityType: 'CONTRACT',
         entityId: toId(contract._id),
         deepLink: `/contract?id=${toId(contract._id)}`,

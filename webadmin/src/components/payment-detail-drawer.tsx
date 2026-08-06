@@ -10,10 +10,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  formatCurrency,
   formatPaidAt,
   type SuccessfulPayment,
 } from "@/lib/payment-history";
+import { formatCurrency } from "@/lib/formatters";
 
 type Props = {
   payment: SuccessfulPayment | null;

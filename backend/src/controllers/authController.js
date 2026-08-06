@@ -159,12 +159,12 @@ exports.login = async (req, res) => {
         // Ưu tiên SĐT, sau đó tên đăng nhập; email vẫn được giữ để tương thích tài khoản cũ.
         const account = await Account.findOne(buildLoginLookup(identifier));
         if (!account || account.status === 0) {
-            return res.status(400).json({ success: false, message: "Tài khoản không tồn tại hoặc đã bị khóa!" });
+            return res.status(400).json({ success: false, code: 'ACCOUNT_NOT_FOUND', message: "Tài khoản không tồn tại hoặc đã bị khóa!" });
         }
         // So khớp mật khẩu đã mã hóa lưu trong cơ sở dữ liệu
         const isMatch = await bcrypt.compare(password, account.password);
         if (!isMatch) {
-            return res.status(400).json({ success: false, message: "Mật khẩu đăng nhập không chính xác!" });
+            return res.status(400).json({ success: false, code: 'INVALID_PASSWORD', message: "Mật khẩu đăng nhập không chính xác!" });
         }
 
         // Tạo mã Token phiên làm việc thời hạn 30 ngày, đính kèm ID và Quyền hạn truy cập
