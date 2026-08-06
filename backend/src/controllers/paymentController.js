@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const querystring = require('qs');
 const moment = require('moment');
 const { applyOverduePenalty } = require('../services/overdueInvoice');
+const { notifyLandlord } = require('../services/landlordNotificationService');
 const {
     buildSuccessfulPaymentFilter,
     mapSuccessfulPayment,
@@ -387,6 +388,11 @@ exports.vietQRWebhook = async (req, res) => {
             invoice.paymentMethod = "VietQR";
             invoice.transactionCode = transaction.orderCode;
             await invoice.save();
+            await notifyLandlord({
+                event: 'invoice_paid',
+                contractId: invoice.contractId,
+                entityId: invoice._id,
+            });
         }
 
         return res.status(200).json({
@@ -563,6 +569,11 @@ exports.vnpayIpn = async (req, res) => {
 
                 invoice.status = 2; // Đã thanh toán
                 await invoice.save();
+                await notifyLandlord({
+                    event: 'invoice_paid',
+                    contractId: invoice.contractId,
+                    entityId: invoice._id,
+                });
 
                 console.info('[VNPAY_IPN] Payment confirmed and invoice updated', {
                     orderId,

@@ -18,6 +18,7 @@ const {
 const { CalculationError } = require('../services/invoiceCalculator');
 
 const { sendNotification } = require('../services/notificationService');
+const { notifyLandlord } = require('../services/landlordNotificationService');
 
 function sendContractError(res, error, fallbackMessage) {
     if (error instanceof ContractTermsError) {
@@ -234,6 +235,10 @@ exports.signContract = async (req, res) => {
         const result = await signContractAndEnsureDeposit({
             contractId: req.params.id,
             nguoiThueId: req.auth.id,
+        });
+        await notifyLandlord({
+            event: 'contract_signed',
+            contractId: result.contract._id,
         });
 
         res.status(200).json({

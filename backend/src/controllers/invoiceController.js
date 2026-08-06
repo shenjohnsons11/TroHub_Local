@@ -21,6 +21,7 @@ const {
     buildLateFeeSnapshot,
 } = require('../services/overdueInvoice');
 const { sendNotification } = require('../services/notificationService');
+const { notifyLandlord } = require('../services/landlordNotificationService');
 const { presentInvoice } = require('../services/invoicePresentationService');
 
 function formatVndCurrency(amount) {
@@ -751,6 +752,12 @@ exports.payInvoice = async (req, res) => {
             gatewayReference: invoice.transactionCode
         });
         await newTransaction.save();
+
+        await notifyLandlord({
+            event: 'invoice_paid',
+            contractId: invoice.contractId,
+            entityId: invoice._id,
+        });
 
         res.status(200).json({
             success: true,
