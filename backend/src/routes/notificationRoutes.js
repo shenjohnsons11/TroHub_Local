@@ -1,11 +1,9 @@
 const express = require('express');
 const { requireAuth } = require('../middleware/requireAuth');
-const { requireTenant } = require('../middleware/requireTenant');
 const notificationController = require('../controllers/notificationController');
 
 const router = express.Router();
 router.use(requireAuth);
-router.use(requireTenant);
 
 router.post('/devices', notificationController.registerDevice);
 router.post('/devices/deactivate', notificationController.deactivateDevice);
