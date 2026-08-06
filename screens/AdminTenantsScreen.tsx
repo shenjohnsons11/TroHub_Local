@@ -295,7 +295,7 @@ export default function AdminTenantsScreen() {
       </View>
     </KeyboardAvoidingView>
   </Modal>
-  <CCCDScannerModal visible={scannerVisible} onClose={() => setScannerVisible(false)} onScan={(result) => { setIdCard(formatCCCD(result.idCard)); setFullName(result.fullName); setLookupIdentifier(result.idCard); }} />
+  <CCCDScannerModal visible={scannerVisible} onClose={() => setScannerVisible(false)} onScan={(cccdNumber) => { setIdCard(formatCCCD(cccdNumber)); setLookupIdentifier(cccdNumber); }} />
 </View>
 );
 }
