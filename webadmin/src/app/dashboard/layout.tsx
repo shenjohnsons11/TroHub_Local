@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Calendar,
   CreditCard,
   Droplet,
   FileText,
@@ -16,6 +15,7 @@ import {
   Users,
   Wallet,
   Wrench,
+  MapPin,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { TroHubLogo } from "@/components/trohub-logo";
@@ -23,17 +23,26 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { AppLoading } from "@/components/app-loading";
 import { NotificationBell } from "@/components/notification-bell";
 import { MiniCalendarPopover } from "@/components/mini-calendar-popover";
+import { LanguageToggle } from "@/components/language-toggle";
+import { fetchAPI } from "@/lib/api";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [user, setUser] = useState<{ fullName?: string } | null>(null);
+  const [user, setUser] = useState<{ fullName?: string; propertyAddress?: string } | null>(null);
 
   useEffect(() => {
     const userData = localStorage.getItem("trohub_user");
     if (!userData) {
       window.location.href = "/";
     } else {
-      setUser(JSON.parse(userData));
+      const storedUser = JSON.parse(userData);
+      setUser(storedUser);
+      void fetchAPI("/auth/me").then((data) => {
+        if (!data.user) return;
+        const nextUser = { ...storedUser, ...data.user };
+        localStorage.setItem("trohub_user", JSON.stringify(nextUser));
+        setUser(nextUser);
+      }).catch(() => undefined);
     }
   }, []);
 
@@ -131,7 +140,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <main className="min-w-0 flex-1 md:ml-[288px]">
         <header className="app-topbar sticky top-0 z-20">
-          <div className="flex h-[76px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+          <div className="flex min-h-[76px] items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
             <div className="md:hidden"><TroHubLogo compact /></div>
             <div className="hidden sm:block">
               <p className="text-xs font-bold text-muted-foreground">Không gian vận hành</p>
@@ -139,11 +148,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 {navItems.find(item => pathname === item.href || (pathname.startsWith(item.href) && item.href !== "/dashboard"))?.name || "Dashboard"}
               </h2>
             </div>
+            {user.propertyAddress ? (
+              <div className="hidden min-w-0 flex-1 rounded-xl bg-primary/8 px-3 py-2 lg:flex lg:items-center lg:gap-2" title={user.propertyAddress}>
+                <MapPin className="size-4 shrink-0 text-primary" aria-hidden="true" />
+                <span className="truncate text-sm font-bold text-foreground">🏠 Nhà trọ TroHub - {user.propertyAddress}</span>
+              </div>
+            ) : <div className="hidden flex-1 lg:block" />}
             <div className="flex items-center gap-2">
               <div className="hidden sm:block">
                 <MiniCalendarPopover />
               </div>
               <NotificationBell />
+              <LanguageToggle />
               <ThemeToggle />
               <button
                 type="button"
