@@ -29,9 +29,11 @@ type Props = {
   refreshKey: number;
   onNavigate: (screen: "invoice" | "repair" | "contract" | "utility" | "notifications") => void;
   onLogout: () => void;
+  onOpenNotifications?: () => void;
+  notificationUnreadCount?: number;
 };
 
-export default function HomeScreen({ refreshKey, onNavigate, onLogout }: Props) {
+export default function HomeScreen({ refreshKey, onNavigate, onLogout, onOpenNotifications, notificationUnreadCount }: Props) {
   const { theme } = useAppTheme();
   const { t } = useLanguage();
   const styles = createStyles(theme);
@@ -89,6 +91,7 @@ export default function HomeScreen({ refreshKey, onNavigate, onLogout }: Props) 
   };
 
   const isUnpaid = homeData.paymentStatus === "unpaid";
+  const displayedUnreadCount = notificationUnreadCount ?? unreadCount;
   const openPropertyMap = () => {
     const destination = homeData.propertyLatitude != null && homeData.propertyLongitude != null
       ? `${homeData.propertyLatitude},${homeData.propertyLongitude}`
@@ -116,13 +119,13 @@ export default function HomeScreen({ refreshKey, onNavigate, onLogout }: Props) 
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Thông báo"
-            onPress={() => onNavigate("notifications")}
+            onPress={() => onOpenNotifications?.() ?? onNavigate("notifications")}
             style={styles.bellButton}
           >
             <Ionicons name="notifications-outline" size={24} color={theme.text} />
-            {unreadCount > 0 && (
+            {displayedUnreadCount > 0 && (
               <View style={styles.bellBadge}>
-                <Text style={styles.bellBadgeText}>{unreadCount}</Text>
+                <Text style={styles.bellBadgeText}>{displayedUnreadCount > 99 ? "99+" : displayedUnreadCount}</Text>
               </View>
             )}
           </Pressable>

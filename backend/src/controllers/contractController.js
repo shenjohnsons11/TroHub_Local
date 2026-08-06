@@ -1,6 +1,8 @@
 const Contract = require('../models/Contract');
 const Room = require('../models/Room');
 const Invoice = require('../models/Invoice');
+const Service = require('../models/Service');
+const { buildContractServiceSnapshot } = require('../services/serviceBilling');
 const {
     buildDepositPayment,
     signContractAndEnsureDeposit,
@@ -9,6 +11,7 @@ const {
     ContractTermsError,
     normalizeContractMeterTerms,
 } = require('../services/contractTerms');
+const { sendContractToNguoiThue } = require('../services/contractNotificationService');
 
 function sendContractError(res, error, fallbackMessage) {
     if (error instanceof ContractTermsError) {
@@ -19,12 +22,28 @@ function sendContractError(res, error, fallbackMessage) {
             message: error.message,
         });
     }
-
-    return res.status(500).json({
-        success: false,
-        message: `${fallbackMessage}: ${error.message}`,
-    });
+    return res.status(500).json({ success: false, message: `${fallbackMessage}: ${error.message}` });
 }
+
+exports.sendContract = async (req, res) => {
+    try {
+        const result = await sendContractToNguoiThue({
+            contractId: req.params.id,
+            adminId: req.auth.id,
+        });
+        return res.json({
+            success: true,
+            message: 'Đã gửi hợp đồng cho Người thuê.',
+            data: result,
+        });
+    } catch (error) {
+        return res.status(error.status || 500).json({
+            success: false,
+            code: error.code || 'CONTRACT_SEND_FAILED',
+            message: error.message || 'Không thể gửi hợp đồng.',
+        });
+    }
+};
 
 // 1. Lấy danh sách toàn bộ hợp đồng (Chủ trọ xem trên Web)
 exports.getAllContracts = async (req, res) => {
@@ -52,7 +71,7 @@ exports.getAllContracts = async (req, res) => {
         const contracts = await Contract.find(query)
             .populate('roomId', 'roomCode area')
             .populate('tenantId', 'fullName phone')
-            .populate('services.serviceId', 'name unit type defaultPrice')
+            .populate('services.serviceId', 'name code unit type billingMode defaultPrice defaultQuantity')
             .sort({ createdAt: -1 });
 
         const responseContracts = nguoiThueId
@@ -89,7 +108,7 @@ exports.getContractHistory = async (req, res) => {
         const contracts = await Contract.find(query)
             .populate('roomId', 'roomCode area')
             .populate('tenantId', 'fullName phone')
-            .populate('services.serviceId', 'name unit type defaultPrice')
+            .populate('services.serviceId', 'name code unit type billingMode defaultPrice defaultQuantity')
             .sort({ createdAt: -1 });
 
         res.status(200).json({ success: true, data: contracts });
@@ -131,6 +150,27 @@ exports.createContract = async (req, res) => {
         room.draftWater = meterTerms.initialWater;
         await room.save();
 
+        const requestedServices = Array.isArray(services) ? services : [];
+        const serviceDocuments = await Service.find({
+            _id: { $in: requestedServices.map((item) => item.serviceId) },
+            landlordId: room.landlordId,
+            isActive: true,
+        });
+        if (serviceDocuments.length !== requestedServices.length) {
+            return res.status(400).json({
+                success: false,
+                code: 'INVALID_CONTRACT_SERVICE',
+                message: 'Danh sách dịch vụ có mục không thuộc phạm vi quản lý.',
+            });
+        }
+        const serviceById = new Map(serviceDocuments.map((item) => [String(item._id), item]));
+        const serviceSnapshots = requestedServices.map((item) =>
+            buildContractServiceSnapshot(serviceById.get(String(item.serviceId)), {
+                fixedPrice: item.fixedPrice,
+                defaultQuantity: item.defaultQuantity,
+            })
+        );
+
         const newContract = new Contract({
             roomId,
             tenantId,
@@ -139,7 +179,7 @@ exports.createContract = async (req, res) => {
             fixedRentPrice,
             fixedDeposit,
             ...meterTerms,
-            services: services || [], // Nhúng thẳng mảng dịch vụ vào đây
+            services: serviceSnapshots,
             status: 0 // Trạng thái mặc định: 0 - Chờ Người thuê xác nhận
         });
 
@@ -160,7 +200,7 @@ exports.getContractById = async (req, res) => {
         const contract = await Contract.findById(req.params.id)
             .populate('roomId')
             .populate('tenantId', 'fullName phone idCard email')
-            .populate('services.serviceId', 'name unit type defaultPrice'); // Kéo chi tiết dịch vụ ra
+            .populate('services.serviceId', 'name code unit type billingMode defaultPrice defaultQuantity'); // Kéo chi tiết dịch vụ ra
 
         if (!contract) {
             return res.status(404).json({ success: false, message: "Không tìm thấy hợp đồng!" });
@@ -284,17 +324,10 @@ exports.updateContract = async (req, res) => {
         }
 
         // Nếu admin cập nhật số điện/nước đầu
-        if (targetRoomId && (
-            meterTerms.initialElectricity !== undefined
-            || meterTerms.initialWater !== undefined
-        )) {
+        if (targetRoomId && (meterTerms.initialElectricity !== undefined || meterTerms.initialWater !== undefined)) {
             const roomUpdates = {};
-            if (meterTerms.initialElectricity !== undefined) {
-                roomUpdates.draftElectricity = meterTerms.initialElectricity;
-            }
-            if (meterTerms.initialWater !== undefined) {
-                roomUpdates.draftWater = meterTerms.initialWater;
-            }
+            if (meterTerms.initialElectricity !== undefined) roomUpdates.draftElectricity = meterTerms.initialElectricity;
+            if (meterTerms.initialWater !== undefined) roomUpdates.draftWater = meterTerms.initialWater;
             await Room.findByIdAndUpdate(targetRoomId, roomUpdates);
         }
 
