@@ -34,6 +34,10 @@ export const translations = {
     all: "Tất cả",
     floor: "Tầng",
     rooms: "phòng",
+    invoices: "Hóa đơn",
+    finance: "Tài chính",
+    invoiceDescription: "Lập hóa đơn, kiểm tra chỉ số và theo dõi trạng thái thanh toán.",
+    searchRoom: "Tìm theo mã phòng...",
   },
   en: {
     login: "Sign in",
@@ -70,6 +74,10 @@ export const translations = {
     all: "All",
     floor: "Floor",
     rooms: "rooms",
+    invoices: "Invoices",
+    finance: "Finance",
+    invoiceDescription: "Create invoices, review readings, and track payment status.",
+    searchRoom: "Search by room code...",
   },
 } as const;
 

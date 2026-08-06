@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { useAppTheme } from "../contexts/ThemeContext";
+import { useLanguage } from "../contexts/LanguageContext";
 
 type Tab =
   | "home"
@@ -26,40 +27,41 @@ type Props = {
 };
 
 type IconName = React.ComponentProps<typeof Ionicons>["name"];
+type LabelKey = "home" | "invoices" | "repair" | "contract" | "account" | "overview" | "rooms" | "incident";
 
 const tenantTabs: {
   key: Tab;
-  label: string;
+  label: LabelKey;
   icon: IconName;
   activeIcon: IconName;
 }[] = [
   {
     key: "home",
-    label: "Trang chủ",
+    label: "home",
     icon: "home-outline",
     activeIcon: "home",
   },
   {
     key: "invoice",
-    label: "Hóa đơn",
+    label: "invoices",
     icon: "receipt-outline",
     activeIcon: "receipt",
   },
   {
     key: "repair",
-    label: "Sửa chữa",
+    label: "repair",
     icon: "construct-outline",
     activeIcon: "construct",
   },
   {
     key: "contract",
-    label: "Hợp đồng",
+    label: "contract",
     icon: "document-text-outline",
     activeIcon: "document-text",
   },
   {
     key: "account",
-    label: "Tài khoản",
+    label: "account",
     icon: "person-outline",
     activeIcon: "person",
   },
@@ -67,37 +69,37 @@ const tenantTabs: {
 
 const landlordTabs: {
   key: Tab;
-  label: string;
+  label: LabelKey;
   icon: IconName;
   activeIcon: IconName;
 }[] = [
   {
     key: "home",
-    label: "Thống kê",
+    label: "overview",
     icon: "grid-outline",
     activeIcon: "grid",
   },
   {
     key: "rooms",
-    label: "Phòng trọ",
+    label: "rooms",
     icon: "home-outline",
     activeIcon: "home",
   },
   {
     key: "contract",
-    label: "Hợp đồng",
+    label: "contract",
     icon: "document-text-outline",
     activeIcon: "document-text",
   },
   {
     key: "invoice",
-    label: "Hóa đơn",
+    label: "invoices",
     icon: "receipt-outline",
     activeIcon: "receipt",
   },
   {
     key: "repair",
-    label: "Sự cố",
+    label: "incident",
     icon: "construct-outline",
     activeIcon: "construct",
   },
@@ -106,6 +108,7 @@ const landlordTabs: {
 export default function BottomNav({ activeTab, onChangeTab, role }: Props) {
   const tabs = role === 1 ? landlordTabs : tenantTabs;
   const { theme, resolvedTheme } = useAppTheme();
+  const { t } = useLanguage();
 
   return (
     <View style={[styles.wrapper, { backgroundColor: theme.background }]}>
@@ -145,7 +148,7 @@ export default function BottomNav({ activeTab, onChangeTab, role }: Props) {
                 </View>
 
                 <Text style={[styles.label, { color: theme.muted }, active && styles.activeLabel, active && { color: theme.primary }]}>
-                  {tab.label}
+                  {t(tab.label)}
                 </Text>
               </Pressable>
             );

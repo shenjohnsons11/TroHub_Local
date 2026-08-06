@@ -218,7 +218,7 @@ export default function RoomsPage() {
               </div>
               <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
                 <div><dt className="text-muted-foreground">{t("floor")}</dt><dd className="mt-1 font-bold">{t("floor")} {room.floor || 1}</dd></div>
-                <div><dt className="text-muted-foreground">Người thuê</dt><dd className="mt-1 truncate font-bold">{room.tenant || "Chưa có"}</dd></div>
+                <div><dt className="text-muted-foreground">Diện tích · Người thuê</dt><dd className="mt-1 truncate font-bold">{room.area} m² · {room.tenant || "Chưa có"}</dd></div>
               </dl>
               <div className="mt-5 flex flex-wrap justify-end gap-2">
                 <Button onClick={() => openEditModal(room)} variant="secondary" size="sm"><Edit className="size-4" />Sửa</Button>
