@@ -7,6 +7,7 @@ const { requireTenant } = require('../middleware/requireTenant');
 // Lấy danh sách & Tạo hợp đồng dự thảo
 router.get('/', contractController.getAllContracts);
 router.post('/', requireAdmin, contractController.createContract);
+router.post('/:id/send', requireAdmin, contractController.sendContract);
 
 // Lịch sử hợp đồng (Phải đặt TRƯỚC /:id)
 router.get('/history', requireAdmin, contractController.getContractHistory);
