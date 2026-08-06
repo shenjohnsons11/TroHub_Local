@@ -31,6 +31,9 @@ export const translations = {
     tenantMobileOnly: "Tài khoản Người thuê vui lòng đăng nhập trên ứng dụng di động.",
     loginFailed: "Đăng nhập thất bại",
     registerFailed: "Đăng ký thất bại.",
+    all: "Tất cả",
+    floor: "Tầng",
+    rooms: "phòng",
   },
   en: {
     login: "Sign in",
@@ -64,6 +67,9 @@ export const translations = {
     tenantMobileOnly: "Tenant accounts must sign in through the mobile app.",
     loginFailed: "Sign-in failed",
     registerFailed: "Registration failed.",
+    all: "All",
+    floor: "Floor",
+    rooms: "rooms",
   },
 } as const;
 
