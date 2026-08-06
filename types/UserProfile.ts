@@ -10,4 +10,7 @@ export type UserProfile = {
   bankId?: string;
   bankAccountNo?: string;
   bankAccountName?: string;
+  propertyAddress?: string;
+  propertyLatitude?: number;
+  propertyLongitude?: number;
 };
