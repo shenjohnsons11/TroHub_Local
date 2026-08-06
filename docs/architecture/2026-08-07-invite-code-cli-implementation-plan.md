@@ -193,7 +193,7 @@ landlordAccount = new Account({
 claimedInviteCode = await InviteCode.findOneAndUpdate(
     { code: cleanInviteCode, isUsed: false },
     { $set: { isUsed: true, usedAt: new Date(), usedBy: landlordAccount._id } },
-    { new: true }
+    { returnDocument: 'after' }
 );
 if (!claimedInviteCode) {
     return res.status(403).json({ success: false, code: 'INVALID_LANDLORD_INVITE', message: 'Mã mời đăng ký Chủ trọ không hợp lệ.' });
