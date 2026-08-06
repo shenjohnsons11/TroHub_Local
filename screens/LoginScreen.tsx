@@ -20,6 +20,8 @@ import { useNotification } from "../hooks/useNotification";
 import { getNotificationMessage } from "../utils/notificationMessages";
 import { authService } from "../services/authService";
 import { formatCCCD, formatPhone, unformatDigits } from "../utils/formatters";
+import LanguageToggle from "../components/LanguageToggle";
+import { useLanguage } from "../contexts/LanguageContext";
 
 type Props = {
   onLogin: (identifier: string, password: string) => Promise<void>;
@@ -28,6 +30,7 @@ type Props = {
 export default function LoginScreen({ onLogin }: Props) {
   const notification = useNotification();
   const { theme, themeMode } = useAppTheme();
+  const { t } = useLanguage();
   
   const [mode, setMode] = useState<"login" | "register">("login");
   const [identifier, setIdentifier] = useState("");
@@ -182,19 +185,20 @@ export default function LoginScreen({ onLogin }: Props) {
                 { backgroundColor: theme.surface, borderColor: theme.border },
               ]}
             >
+              <View style={{ alignItems: "flex-end", marginBottom: 14 }}><LanguageToggle /></View>
               <Text style={[styles.eyebrow, { color: theme.primary }]}>TRO HUB</Text>
               <Text style={[styles.title, { color: theme.text }]}>
-                {mode === "login" ? "Đăng nhập" : "Đăng ký Người thuê"}
+                {mode === "login" ? t("login") : t("register")}
               </Text>
               <Text style={[styles.subtitle, { color: theme.muted }]}>
                 {mode === "login"
-                  ? "Sử dụng số điện thoại hoặc Email để bắt đầu."
-                  : "Điền các thông tin để tự tạo tài khoản Người thuê."}
+                  ? t("loginDescription")
+                  : t("registerDescription")}
               </Text>
 
               {mode === "register" && (
                 <View style={styles.field}>
-                  <Text style={[styles.label, { color: theme.text }]}>Họ và tên</Text>
+                  <Text style={[styles.label, { color: theme.text }]}>{t("fullName")}</Text>
                   <TextInput
                     editable={!isSubmitting}
                     onChangeText={(value) => {
@@ -221,10 +225,10 @@ export default function LoginScreen({ onLogin }: Props) {
 
               <View style={styles.field}>
                 <Text style={[styles.label, { color: theme.text }]}>
-                  {mode === "login" ? "Số điện thoại hoặc Email" : "Số điện thoại"}
+                  {mode === "login" ? t("phoneOrEmail") : t("phone")}
                 </Text>
                 <TextInput
-                  accessibilityLabel={mode === "login" ? "Số điện thoại hoặc Email" : "Số điện thoại"}
+                  accessibilityLabel={mode === "login" ? t("phoneOrEmail") : t("phone")}
                   keyboardType={mode === "login" ? "email-address" : "phone-pad"}
                   autoCapitalize={mode === "login" ? "none" : undefined}
                   editable={!isSubmitting}
@@ -256,7 +260,7 @@ export default function LoginScreen({ onLogin }: Props) {
               {mode === "register" && (
                 <>
                   <View style={styles.field}>
-                    <Text style={[styles.label, { color: theme.text }]}>Email (Tên đăng nhập)</Text>
+                    <Text style={[styles.label, { color: theme.text }]}>{t("email")}</Text>
                     <TextInput
                       keyboardType="email-address"
                       autoCapitalize="none"
@@ -283,7 +287,7 @@ export default function LoginScreen({ onLogin }: Props) {
                   </View>
 
                   <View style={styles.field}>
-                    <Text style={[styles.label, { color: theme.text }]}>Số CCCD (12 số)</Text>
+                    <Text style={[styles.label, { color: theme.text }]}>{t("idCard")}</Text>
                     <TextInput
                       keyboardType="numeric"
                       editable={!isSubmitting}
@@ -311,9 +315,9 @@ export default function LoginScreen({ onLogin }: Props) {
               )}
 
               <View style={styles.field}>
-                <Text style={[styles.label, { color: theme.text }]}>Mật khẩu</Text>
+                <Text style={[styles.label, { color: theme.text }]}>{t("password")}</Text>
                 <TextInput
-                  accessibilityLabel="Mật khẩu"
+                  accessibilityLabel={t("password")}
                   editable={!isSubmitting}
                   onChangeText={(value) => {
                     setPassword(value);
@@ -345,7 +349,7 @@ export default function LoginScreen({ onLogin }: Props) {
                 onPress={handleSubmit}
                 style={styles.primaryButton}
               >
-                {mode === "login" ? "Đăng nhập" : "Đăng ký ngay"}
+                {mode === "login" ? t("login") : t("signUpNow")}
               </AppButton>
 
               {mode === "login" && (
@@ -356,18 +360,18 @@ export default function LoginScreen({ onLogin }: Props) {
                   style={styles.forgotButton}
                   variant="ghost"
                 >
-                  Quên mật khẩu?
+                  {t("forgotPassword")}
                 </AppButton>
               )}
 
               <View style={styles.toggleContainer}>
                 {mode === "login" ? (
                   <Pressable onPress={() => { setMode("register"); setIdentifierError(""); setPasswordError(""); }}>
-                    <Text style={[styles.toggleText, { color: theme.primary }]}>Đăng ký tài khoản Người thuê</Text>
+                    <Text style={[styles.toggleText, { color: theme.primary }]}>{t("tenantRegister")}</Text>
                   </Pressable>
                 ) : (
                   <Pressable onPress={() => { setMode("login"); setIdentifierError(""); setPasswordError(""); }}>
-                    <Text style={[styles.toggleText, { color: theme.primary }]}>Quay lại Đăng nhập</Text>
+                    <Text style={[styles.toggleText, { color: theme.primary }]}>{t("backToLogin")}</Text>
                   </Pressable>
                 )}
               </View>

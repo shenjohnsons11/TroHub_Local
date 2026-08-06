@@ -3,6 +3,8 @@ import { userService } from "./userService";
 import { invoiceService } from "./invoiceService";
 import { repairService } from "./repairService";
 import { contractService } from "./contractService";
+import { authService } from "./authService";
+import { apiClient } from "./apiClient";
 import { formatCurrency } from "../utils/formatters";
 
 const getRepairStatusText = (status?: string) => {
@@ -12,14 +14,27 @@ const getRepairStatusText = (status?: string) => {
   return "Không có";
 };
 
+type TenantPortalResponse = {
+  success: boolean;
+  data?: { property?: { propertyAddress?: string; propertyLatitude?: number; propertyLongitude?: number } | null };
+};
+
+const getProperty = async () => {
+  const token = await authService.getToken();
+  if (!token) return undefined;
+  const response = await apiClient.get<TenantPortalResponse>("/me", token);
+  return response.data?.property || undefined;
+};
+
 export const homeService = {
   async getHomeData(): Promise<HomeData> {
     try {
-      const [profile, invoices, repairs, contract] = await Promise.all([
+      const [profile, invoices, repairs, contract, property] = await Promise.all([
         userService.getProfile(),
         invoiceService.getInvoices(),
         repairService.getRequests(),
         contractService.getContract(),
+        getProperty(),
       ]);
 
       const activeContracts = await contractService.getMyContracts();
@@ -42,6 +57,9 @@ export const homeService = {
         dueDate: unpaidInvoices.length > 0 ? unpaidInvoices[0].dueDate : "Không có",
 
         contractEndDate: contract?.endDate || "Không có",
+        propertyAddress: property?.propertyAddress,
+        propertyLatitude: property?.propertyLatitude,
+        propertyLongitude: property?.propertyLongitude,
 
         recentRepair: {
           title: latestRepair?.description || "Không có yêu cầu sửa chữa",
