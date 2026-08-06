@@ -1,6 +1,6 @@
 import { API_BASE_URL } from "../constants/api";
 
-type RequestMethod = "GET" | "POST" | "PUT" | "DELETE";
+type RequestMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 type ApiOptions = {
   method?: RequestMethod;
@@ -88,6 +88,10 @@ export const apiClient = {
       body,
       token,
     });
+  },
+
+  patch<T>(endpoint: string, body?: unknown, token?: string | null) {
+    return this.request<T>(endpoint, { method: "PATCH", body, token });
   },
 
   delete<T>(endpoint: string, token?: string | null) {

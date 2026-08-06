@@ -39,16 +39,20 @@ function normalizeServiceInput(input, { partial = false } = {}) {
     if (!partial || input.code !== undefined || input.name !== undefined) {
         result.code = normalizeCode(input.code, result.name || input.name);
     }
-    if (!partial || input.type !== undefined) {
-        const type = Number(input.type);
-        if (type !== 1 && type !== 2) {
+    if (!partial || input.billingMode !== undefined || input.type !== undefined) {
+        const legacyType = Number(input.type);
+        const billingMode = input.billingMode
+            ? String(input.billingMode).trim().toUpperCase()
+            : legacyType === 1 ? 'METER' : legacyType === 2 ? 'FIXED' : '';
+        if (!['FIXED', 'QUANTITY', 'METER'].includes(billingMode)) {
             throw new ServiceValidationError(
                 'INVALID_SERVICE_TYPE',
-                'Loại dịch vụ phải là tính theo chỉ số hoặc tính khoán.',
-                'type'
+                'Cách tính phải là cố định, theo số lượng hoặc theo chỉ số.',
+                'billingMode'
             );
         }
-        result.type = type;
+        result.billingMode = billingMode;
+        result.type = billingMode === 'METER' ? 1 : 2;
     }
     if (!partial || input.unit !== undefined) {
         result.unit = normalizeText(input.unit, 'unit', 'Đơn vị');
@@ -63,6 +67,17 @@ function normalizeServiceInput(input, { partial = false } = {}) {
             );
         }
         result.defaultPrice = Math.round(defaultPrice);
+    }
+    if (!partial || input.defaultQuantity !== undefined) {
+        const defaultQuantity = Number(input.defaultQuantity ?? 1);
+        if (!Number.isFinite(defaultQuantity) || defaultQuantity < 0) {
+            throw new ServiceValidationError(
+                'INVALID_SERVICE_QUANTITY',
+                'Số lượng mặc định phải là số hữu hạn không âm.',
+                'defaultQuantity'
+            );
+        }
+        result.defaultQuantity = defaultQuantity;
     }
     if (input.isActive !== undefined) {
         if (typeof input.isActive !== 'boolean') {

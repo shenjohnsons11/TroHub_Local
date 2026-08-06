@@ -9,7 +9,9 @@
     "migrate:payment-dates": "node scripts/backfillSuccessfulPaymentDates.js",
     "migrate:payment-dates:apply": "node scripts/backfillSuccessfulPaymentDates.js --apply",
     "test": "node --test test_*.js",
-    "test:api-timeout": "node test_api_timeout_performance.js"
+    "test:api-timeout": "node test_api_timeout_performance.js",
+    "migrate:invoice-codes": "node scripts/backfillInvoiceCodes.js",
+    "migrate:invoice-codes:apply": "node scripts/backfillInvoiceCodes.js --apply"
   },
   "keywords": [],
   "author": "",

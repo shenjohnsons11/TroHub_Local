@@ -57,9 +57,10 @@ const getStatusBg = (status: ContractStatus, theme: ReturnType<typeof useAppThem
 
 type Props = {
   onNavigate?: (screen: "invoice", params?: any) => void;
+  params?: { contractId?: string };
 };
 
-export default function ContractScreen({ onNavigate }: Props) {
+export default function ContractScreen({ onNavigate, params }: Props) {
   const notification = useNotification();
   const { theme } = useAppTheme();
   const styles = createStyles(theme);
@@ -85,6 +86,13 @@ export default function ContractScreen({ onNavigate }: Props) {
       setIsLoading(true);
       const data = await contractService.getMyContracts();
       setContracts(data);
+      if (params?.contractId) {
+        const target = data.find((contract) => contract.id === params.contractId);
+        if (target) {
+          setSelectedContract(target);
+          setWizardVisible(true);
+        }
+      }
     } catch (error) {
       console.log("Lỗi load hợp đồng:", error);
     } finally {

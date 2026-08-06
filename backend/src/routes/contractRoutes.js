@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const contractController = require('../controllers/contractController');
 const { requireTenant } = require('../middleware/requireTenant');
+const { requireAdmin } = require('../middleware/requireAdmin');
 
 // Lấy danh sách & Tạo hợp đồng dự thảo
 router.get('/', contractController.getAllContracts);
@@ -9,6 +10,7 @@ router.post('/', contractController.createContract);
 
 // Lịch sử hợp đồng (Phải đặt TRƯỚC /:id)
 router.get('/history', contractController.getContractHistory);
+router.post('/:id/send', requireAdmin, contractController.sendContract);
 
 // Xem chi tiết hợp đồng
 router.get('/:id', contractController.getContractById);

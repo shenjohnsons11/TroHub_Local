@@ -435,15 +435,15 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
         renderItem={({ item, index }) => (
           <AnimatedEntry delay={Math.min(index, 6) * 45}><Pressable accessibilityRole="button" accessibilityLabel={`Mở chi tiết hóa đơn phòng ${item.room || item.contractId?.roomId?.roomCode || "N/A"}`} style={styles.invoiceCard} onPress={() => handleOpenDetail(item)}>
             <View style={styles.invoiceInfo}>
-              <Text style={styles.invoicePeriod}>Mã HD: HD-{(item.period || "").replace("/", "")}-{(item._id || "000").substring(0, 3).toUpperCase()}</Text>
-              <Text style={styles.roomCode}>Phòng {item.room || item.contractId?.roomId?.roomCode || "N/A"}</Text>
+              <Text style={styles.invoicePeriod}>Mã HD: {item.invoiceCode || `HD-${(item.period || "").replace("/", "")}-${(item._id || "000").substring(0, 3).toUpperCase()}`}</Text>
+              <Text style={styles.roomCode}>Phòng {item.roomCode || item.room || item.contractId?.roomId?.roomCode || "N/A"}</Text>
               <Text style={styles.invoicePeriod}>Kỳ hóa đơn: {item.period}</Text>
               <Text style={styles.invoiceAmount}>Tổng tiền: {formatCurrency(item.totalAmount)}</Text>
-              <Text style={styles.invoiceSub}>Người thuê: {item.tenant || item.contractId?.tenantId?.fullName || "N/A"}</Text>
+              <Text style={styles.invoiceSub}>Người thuê: {item.nguoiThue || item.tenant || item.contractId?.tenantId?.fullName || "N/A"}</Text>
             </View>
             <View style={{ alignItems: "flex-end" }}>
               <View style={[styles.statusBadge, { backgroundColor: getStatusBg(item.status) }]}>
-                <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>{getStatusText(item.status)}</Text>
+                <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>{item.statusLabel || getStatusText(item.status)}</Text>
               </View>
               {((item.status as any) === 1 || (item.status as any) === "UNPAID" || (item.status as any) === "Chưa thanh toán") && (
                 <AppButton
