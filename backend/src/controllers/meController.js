@@ -8,7 +8,7 @@ const jwt = require('jsonwebtoken');
 const {
     signContractAndEnsureDeposit,
 } = require('../services/contractSigningService');
-const { sendNotification } = require('../services/notificationService');
+const { notifyLandlord } = require('../services/landlordNotificationService');
 const { getOutstandingDebt } = require('../services/contractCheckoutService');
 
 const JWT_SECRET = process.env.JWT_SECRET || '***REMOVED***';
@@ -194,6 +194,10 @@ exports.signContract = async (req, res) => {
             contractId: req.params.contractId,
             nguoiThueId: req.auth.id,
         });
+        await notifyLandlord({
+            event: 'contract_signed',
+            contractId: result.contract._id,
+        });
         res.status(200).json({
             success: true,
             message: 'Đã ký hợp đồng thành công. Vui lòng hoàn tất thanh toán tiền cọc.',
@@ -235,6 +239,12 @@ exports.payInvoice = async (req, res) => {
             gatewayReference: invoice.transactionCode
         });
         await newTransaction.save();
+
+        await notifyLandlord({
+            event: 'invoice_paid',
+            contractId: invoice.contractId,
+            entityId: invoice._id,
+        });
 
         res.status(200).json({ success: true, message: 'Thanh toán hóa đơn thành công!', transaction: newTransaction });
     } catch (error) {
@@ -282,6 +292,12 @@ exports.createRepair = async (req, res) => {
         });
         await newRepair.save();
 
+        await notifyLandlord({
+            event: 'repair_created',
+            contractId: contractToUse._id,
+            entityId: newRepair._id,
+        });
+
         res.status(201).json({ success: true, message: 'Đã gửi yêu cầu sửa chữa!', data: newRepair });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Lỗi Server: ' + error.message });
@@ -313,14 +329,10 @@ exports.requestTerminateContract = async (req, res) => {
         contract.status = 5;
         await contract.save();
 
-        await sendNotification({
-            userId: room?.landlordId,
-            title: 'Yêu cầu trả phòng mới',
-            content: `Người thuê phòng ${room?.roomCode || ''} vừa gửi yêu cầu trả phòng.`,
-            category: 'contract',
-            deepLink: '/contracts',
-            metadata: { contractId: contract._id, roomId: contract.roomId, unpaidAmount: debt.totalAmount },
-            eventKey: `contract:${contract._id}:checkout-request`,
+        await notifyLandlord({
+            event: 'checkout_requested',
+            contractId: contract._id,
+            metadata: { unpaidAmount: debt.totalAmount },
         });
 
         res.status(200).json({ success: true, message: 'Đã gửi yêu cầu trả phòng thành công. Vui lòng chờ chủ trọ xác nhận!' });
