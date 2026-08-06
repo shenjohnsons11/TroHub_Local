@@ -24,7 +24,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     try { localStorage.setItem(storageKey, next); } catch {}
   }, []);
   const t = useCallback((key: TranslationKey, params?: Record<string, string | number>) => {
-    let value = translations[language][key] || translations.vi[key];
+    let value: string = translations[language][key] || translations.vi[key];
     for (const [name, replacement] of Object.entries(params || {})) value = value.replaceAll(`{${name}}`, String(replacement));
     return value;
   }, [language]);

@@ -23,6 +23,8 @@ import { formatCCCD, formatPhone, unformatDigits } from "../utils/formatters";
 import LanguageToggle from "../components/LanguageToggle";
 import { useLanguage } from "../contexts/LanguageContext";
 
+// Vietnamese identifier label: Số điện thoại hoặc Email.
+
 type Props = {
   onLogin: (identifier: string, password: string) => Promise<void>;
 };

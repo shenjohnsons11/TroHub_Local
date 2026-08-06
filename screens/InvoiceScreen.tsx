@@ -20,6 +20,7 @@ import AnimatedEntry from "../components/ui/AnimatedEntry";
 import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
 import { calculateUnpaidTotal } from "../utils/invoicePresentation";
 import { formatCurrency } from "../utils/formatters";
+import { useLanguage } from "../contexts/LanguageContext";
 
 type FilterType = "all" | "unpaid" | "paid";
 
@@ -29,6 +30,7 @@ type Props = {
 
 export default function InvoiceScreen({ params }: Props) {
   const { theme } = useAppTheme();
+  const { t } = useLanguage();
   const notification = useNotification();
   const styles = createStyles(theme);
   const [filter, setFilter] = useState<FilterType>(params?.filter || "all");
@@ -108,15 +110,15 @@ export default function InvoiceScreen({ params }: Props) {
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <>
-            <Text style={styles.title}>Hóa đơn</Text>
+            <Text style={styles.title}>{t("invoices")}</Text>
             {unpaidInvoices.length > 0 ? (
               <AnimatedEntry>
                 <GradientHero
                   actionIcon="card-outline"
-                  actionLabel="Thanh toán hóa đơn"
+                  actionLabel={t("payInvoice")}
                   detail={`${unpaidInvoices.length} hóa đơn chưa thanh toán`}
                   icon="receipt-outline"
-                  label="TỔNG CẦN THANH TOÁN"
+                  label={t("paymentDue")}
                   onAction={() => openPaymentModal(unpaidInvoices[0])}
                   value={formatCurrency(unpaidTotal)}
                 />
@@ -132,7 +134,7 @@ export default function InvoiceScreen({ params }: Props) {
                   style={[styles.filterButton, filter === value && styles.filterActive]}
                 >
                   <Text style={[styles.filterText, filter === value && styles.filterTextActive]}>
-                    {value === "all" ? "Tất cả" : value === "unpaid" ? "Chưa TT" : "Đã TT"}
+                    {value === "all" ? t("all") : value === "unpaid" ? t("unpaid") : t("paid")}
                   </Text>
                 </Pressable>
               ))}
@@ -142,14 +144,14 @@ export default function InvoiceScreen({ params }: Props) {
         ListEmptyComponent={
           invoiceList.length === 0 ? (
             <IllustratedEmptyState
-              description="Hóa đơn mới sẽ xuất hiện tại đây."
+              description={t("invoiceNewHere")}
               kind="invoice"
-              title="Chưa có hóa đơn"
+              title={t("noInvoices")}
             />
           ) : (
             <View style={styles.filterEmpty}>
               <Ionicons name="filter-outline" size={22} color={theme.muted} />
-              <Text style={styles.filterEmptyText}>Không có hóa đơn phù hợp với bộ lọc.</Text>
+              <Text style={styles.filterEmptyText}>{t("noMatchingInvoices")}</Text>
             </View>
           )
         }
@@ -176,12 +178,12 @@ export default function InvoiceScreen({ params }: Props) {
                   {!isPaid ? (
                     <Pressable style={styles.payButton} onPress={() => openPaymentModal(invoice)}>
                       <Ionicons name="card-outline" size={18} color={theme.background} />
-                      <Text style={styles.payText}>Thanh toán</Text>
+                      <Text style={styles.payText}>{t("pay")}</Text>
                     </Pressable>
                   ) : null}
                   <Pressable style={styles.detailButton} onPress={() => setSelectedInvoice(invoice)}>
                     <Ionicons name="eye-outline" size={18} color={theme.primary} />
-                    <Text style={styles.detailText}>Xem chi tiết</Text>
+                    <Text style={styles.detailText}>{t("details")}</Text>
                   </Pressable>
                 </View>
               </Card>
