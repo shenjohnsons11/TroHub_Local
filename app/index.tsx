@@ -23,6 +23,7 @@ import BulkInvoiceScreen from "../screens/BulkInvoiceScreen";
 import ChangePasswordScreen from "../screens/ChangePasswordScreen";
 import AdminSettingsScreen from "../screens/AdminSettingsScreen";
 import NotificationsScreen from "../screens/NotificationsScreen";
+import AdminNotificationsScreen from "../screens/AdminNotificationsScreen";
 import MeterScannerScreen from "../screens/MeterScannerScreen";
 import CCCDScannerScreen from "../screens/CCCDScannerScreen";
 import AIChatScreen from "../screens/AIChatScreen";
@@ -161,12 +162,16 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (!isLoggedIn || profile?.role !== 2) return;
+    if (!isLoggedIn || !profile) return;
     let socket: ReturnType<typeof io> | null = null;
     let responseSubscription: Notifications.EventSubscription | null = null;
     let receivedSubscription: Notifications.EventSubscription | null = null;
     const refresh = () => setNotificationRefreshKey((value) => value + 1);
-    const openPush = (data: any) => {
+    const openPush = async (data: any) => {
+      if (data?.notificationId) {
+        await notificationService.markAsRead(String(data.notificationId)).catch(() => undefined);
+        refresh();
+      }
       const target = resolveNotificationTarget({ type: data?.category || "system", deepLink: data?.deepLink, metadata: data?.metadata });
       handleChangeTab(target.tab as Tab, target.params);
     };
@@ -184,17 +189,17 @@ export default function App() {
       socket = io(API_BASE_URL.replace(/\/api$/, ""), { auth: { token }, transports: ["websocket"] });
       socket.on("new_notification", refresh);
       const lastResponse = await Notifications.getLastNotificationResponseAsync();
-      if (lastResponse) openPush(lastResponse.notification.request.content.data);
+      if (lastResponse) await openPush(lastResponse.notification.request.content.data);
     })().catch((error) => console.log("Lỗi khởi tạo thông báo:", error));
 
     receivedSubscription = Notifications.addNotificationReceivedListener(refresh);
-    responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => openPush(response.notification.request.content.data));
+    responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => void openPush(response.notification.request.content.data));
     return () => {
       socket?.disconnect();
       receivedSubscription?.remove();
       responseSubscription?.remove();
     };
-  }, [isLoggedIn, profile?.role]);
+  }, [isLoggedIn, profile?.id]);
 
   if (isChecking) {
     return <AppLoadingScreen />;
@@ -218,6 +223,7 @@ export default function App() {
               {activeTab === "home" && (
                 <AdminDashboardScreen
                   profile={profile}
+                  refreshKey={notificationRefreshKey}
                   onNavigate={handleChangeTab}
                   onLogout={handleLogout}
                 />
@@ -231,7 +237,7 @@ export default function App() {
 
               {activeTab === "invoice_bulk" && <BulkInvoiceScreen onNavigate={handleChangeTab} params={actionParams} />}
 
-              {activeTab === "repair" && <AdminRepairsScreen />}
+              {activeTab === "repair" && <AdminRepairsScreen params={actionParams} />}
 
               {activeTab === "tenants" && <AdminTenantsScreen />}
 
@@ -241,10 +247,11 @@ export default function App() {
                   onSave={handleSaveProfile}
                   onBack={() => setActiveTab("home")}
                   onLogout={handleLogout}
+                  onPushTokenChange={(token) => { pushTokenRef.current = token; }}
                 />
               )}
 
-              {activeTab === "notifications" && <NotificationsScreen onBack={() => setActiveTab("home")} />}
+              {activeTab === "notifications" && <AdminNotificationsScreen onBack={() => handleChangeTab("home")} onNavigate={handleChangeTab} refreshKey={notificationRefreshKey} onUnreadChanged={() => setNotificationRefreshKey((value) => value + 1)} />}
 
               {activeTab === "ai_chat" && <AIChatScreen onBack={() => setActiveTab("home")} onAction={handleAIAction} />}
             </>

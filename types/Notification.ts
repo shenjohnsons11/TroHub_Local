@@ -1,6 +1,6 @@
 export interface AppNotification {
   id: string;
-  type: "invoice" | "contract" | "repair" | "tenant" | "utility" | "system";
+  type: "invoice" | "contract" | "checkout" | "repair" | "tenant" | "utility" | "system";
   title: string;
   content: string;
   category?: string;

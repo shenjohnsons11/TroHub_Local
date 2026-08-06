@@ -5,6 +5,7 @@ export type NotificationTab = "home" | "invoice" | "repair" | "contract" | "util
 export function resolveNotificationTarget(notification: Pick<AppNotification, "type" | "deepLink" | "metadata">): { tab: NotificationTab; params: Record<string, unknown> } {
   const params = notification.metadata || {};
   if (notification.deepLink === "home" || notification.type === "tenant") return { tab: "home", params };
+  if (notification.type === "checkout") return { tab: "contract", params: { ...params, action: params.action || "checkout" } };
   if (notification.deepLink === "invoice" || notification.deepLink === "/invoices" || notification.type === "invoice") return { tab: "invoice", params };
   if (notification.deepLink === "utility" || notification.type === "utility") return { tab: "utility", params };
   if (notification.deepLink === "repair" || notification.deepLink === "/repairs" || notification.type === "repair") return { tab: "repair", params };
