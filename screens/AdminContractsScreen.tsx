@@ -280,6 +280,12 @@ export default function AdminContractsScreen({ params }: Props) {
     }
   };
 
+  useEffect(() => {
+    if (!loading && params?.contractId && params?.action === "checkout") {
+      void openCheckoutModal(params.contractId);
+    }
+  }, [loading, params?.contractId, params?.action]);
+
   const getStatusText = (contract: AdminContract) => {
     if (contract.status === 1 && new Date(contract.startDate).getTime() > Date.now()) {
       return "Cọc trước - Chờ nhận phòng";
@@ -309,6 +315,7 @@ export default function AdminContractsScreen({ params }: Props) {
   };
 
   const filteredContracts = contracts.filter((contract) => {
+    if (params?.contractId) return contract._id === params.contractId;
     if (filter === "pending") return contract.status === 0 || contract.status === 4;
     if (filter === "active") return contract.status === 1;
     if (filter === "checkout") return contract.status === 5 || contract.status === 2; // Include expired/checkout

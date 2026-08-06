@@ -44,6 +44,7 @@ exports.getAllRequests = async (req, res) => {
 	            contractId: r.contractId,
 	            title: r.title,
 	            content: r.content,
+            description: r.content,
             priority: r.priority || 1,
             status: r.status || 0,
             landlordNote: r.landlordNote || '',

@@ -2,7 +2,23 @@ import { apiClient } from "./apiClient";
 import { authService } from "./authService";
 import { AppNotification } from "../types/Notification";
 
-type NotificationResponse = { success: boolean; data: AppNotification[] };
+type ApiNotification = Partial<AppNotification> & {
+  _id?: string;
+  message?: string;
+};
+type NotificationResponse = { success: boolean; data: ApiNotification[] };
+
+const mapNotification = (item: ApiNotification): AppNotification => ({
+  id: String(item._id || item.id || ""),
+  type: String(item.category || item.type || "system").toLowerCase() as AppNotification["type"],
+  title: item.title || "Thông báo",
+  content: item.content || item.message || "",
+  category: item.category,
+  deepLink: item.deepLink,
+  metadata: item.metadata || {},
+  isRead: Boolean(item.isRead),
+  createdAt: item.createdAt || new Date().toISOString(),
+});
 
 async function token() {
   return authService.getToken();
@@ -11,7 +27,7 @@ async function token() {
 export const notificationService = {
   async getNotifications(): Promise<AppNotification[]> {
     const response = await apiClient.get<NotificationResponse>("/notifications", await token());
-    return response.data || [];
+    return (response.data || []).map(mapNotification);
   },
 
   async getUnreadCount(): Promise<number> {

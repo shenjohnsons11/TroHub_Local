@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, FlatList, Pressable, TextInput, Modal, KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text, StyleSheet, FlatList, Pressable, TextInput, Modal, KeyboardAvoidingView, Platform, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "../contexts/ThemeContext";
 import { useNotification } from "../hooks/useNotification";
@@ -10,7 +10,9 @@ import AnimatedEntry from "../components/ui/AnimatedEntry";
 import AppButton from "../components/ui/AppButton";
 import { adminService, AdminRepair, AdminRoom, AdminContract } from "../services/adminService";
 
-export default function AdminRepairsScreen() {
+type Props = { params?: { repairId?: string } };
+
+export default function AdminRepairsScreen({ params }: Props) {
   const { theme } = useAppTheme();
   const notification = useNotification();
   const styles = createStyles(theme);
@@ -51,6 +53,12 @@ export default function AdminRepairsScreen() {
     setLandlordNote(repair.landlordNote || "");
     setModalVisible(true);
   };
+
+  useEffect(() => {
+    if (loading || !params?.repairId) return;
+    const repair = repairs.find((item) => item._id === params.repairId);
+    if (repair) openEditModal(repair);
+  }, [loading, params?.repairId]);
 
   const handleUpdateRepair = async () => {
     if (!selectedRepair) return;
@@ -265,6 +273,8 @@ export default function AdminRepairsScreen() {
                     <Text style={styles.infoDesc}>Tiêu đề: {selectedRepair.title}</Text>
                     <Text style={styles.infoDesc}>Mô tả: {selectedRepair.description}</Text>
 
+                    {selectedRepair.images?.length ? <><Text style={styles.label}>Hình ảnh sự cố</Text><FlatList horizontal data={selectedRepair.images} keyExtractor={(uri, index) => `${uri}-${index}`} showsHorizontalScrollIndicator={false} contentContainerStyle={styles.imageRow} renderItem={({ item, index }) => <Image accessibilityLabel={`Ảnh sự cố ${index + 1}`} source={{ uri: item }} style={styles.repairImage} resizeMode="cover" />} /></> : null}
+
                     {/* Chọn độ ưu tiên */}
                     <Text style={styles.label}>Độ ưu tiên</Text>
                     <View style={styles.selectGrid}>
@@ -360,6 +370,8 @@ const createStyles = (theme: any) => StyleSheet.create({
     fontWeight: "900",
     color: theme.text,
   },
+  imageRow: { gap: 10, paddingBottom: 4 },
+  repairImage: { width: 180, height: 128, borderRadius: 14, backgroundColor: theme.surfaceElevated },
   filterContainer: {
     flexDirection: "row",
     paddingHorizontal: 18,
