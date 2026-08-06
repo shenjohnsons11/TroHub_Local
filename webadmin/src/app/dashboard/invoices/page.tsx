@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Bell, CheckCircle, ChevronLeft, ChevronRight, Eye, FileText, Gauge, Plus, Printer, ScanSearch, Search, Send, Trash2 } from "lucide-react";
+import { CalendarDays, Bell, CheckCircle, ChevronLeft, ChevronRight, Eye, FileText, Gauge, Plus, ScanSearch, Search, Send, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { formatCurrency, formatNumberInput, unformatNumber } from "@/lib/formatters";
@@ -15,6 +15,7 @@ import { useNotification } from "@/hooks/use-notification";
 import { getNotificationMessage } from "@/lib/notification-messages";
 import { PageHeader } from "@/components/calm-ops/page-header";
 import { useLanguage } from "@/components/language-provider";
+import { InvoiceDetailDrawer } from "@/components/invoice-detail-drawer";
 
 const INVOICE_STEPS = [
   { label: "Chọn kỳ", icon: CalendarDays },
@@ -449,20 +450,20 @@ export default function InvoicesPage() {
               filteredInvoices.map(invoice => (
                 <TableRow key={invoice._id || invoice.id} className="cursor-pointer hover:bg-accent/40" onClick={() => setDetailInvoice(invoice)}>
                   <TableCell className="font-medium text-foreground">
-                    {`HD-${(invoice.period || "").replace("/", "")}-${(invoice._id || invoice.id || "000").substring(0, 3).toUpperCase()}`}
+                    {invoice.invoiceCode}
                   </TableCell>
                   <TableCell>{invoice.period}</TableCell>
-                  <TableCell>{invoice.room || invoice.contractId?.roomId?.roomCode || "N/A"}</TableCell>
+                  <TableCell><span className="font-semibold">{invoice.roomCode || "N/A"}</span><span className="block text-xs text-muted-foreground">{invoice.nguoiThue || "Chưa cập nhật"}</span></TableCell>
                   <TableCell>{formatCurrency(invoice.totalAmount)}</TableCell>
-                  <TableCell>{getStatusBadge(invoice.status)}</TableCell>
+                  <TableCell>{getStatusBadge(invoice.statusLabel)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1" onClick={e => e.stopPropagation()}>
                       <Button aria-label="Xem chi tiết hóa đơn" onClick={e => { e.stopPropagation(); setDetailInvoice(invoice); }} variant="ghost" size="icon" title="Xem chi tiết" className="text-muted-foreground hover:text-foreground">
                         <Eye className="size-4" />
                       </Button>
-                      {invoice.status !== "Đã thanh toán" && (
+                      {invoice.statusLabel !== "Đã thanh toán" && invoice.statusLabel !== "Đã gộp quyết toán" && (
                         <>
-                          <Button aria-label="Nhắc nhở thanh toán" onClick={e => handleRemind(invoice._id || invoice.id, e)} variant="ghost" size="icon" title="Nhắc nợ" className="text-amber-600 hover:bg-amber-50 hover:text-amber-700">
+                          <Button aria-label="Gửi nhắc thanh toán" onClick={e => handleRemind(invoice._id || invoice.id, e)} variant="ghost" size="icon" title="Gửi nhắc thanh toán" className="text-amber-600 hover:bg-amber-50 hover:text-amber-700">
                             <Bell className="size-4" />
                           </Button>
                           <Button aria-label="Đánh dấu hóa đơn đã thu" onClick={e => { e.stopPropagation(); handleMarkPaid(invoice._id || invoice.id); }} variant="ghost" size="icon" title="Đánh dấu đã thu" className="text-primary hover:bg-primary/10 hover:text-primary">
@@ -493,50 +494,7 @@ export default function InvoicesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Invoice Detail Modal */}
-      <Dialog open={!!detailInvoice} onOpenChange={open => { if (!open) setDetailInvoice(null); }}>
-        <DialogContent className="max-w-lg print:shadow-none">
-          <div id="invoice-print-area">
-            <DialogHeader>
-              <DialogTitle className="text-xl font-black">Chi tiết Hóa đơn</DialogTitle>
-            </DialogHeader>
-            {detailInvoice && (
-              <div className="mt-4 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Mã hóa đơn</p>
-                    <p className="font-black">{`HD-${(detailInvoice.period || "").replace("/", "")}-${(detailInvoice._id || "000").substring(0, 3).toUpperCase()}`}</p>
-                  </div>
-                  {getStatusBadge(detailInvoice.status)}
-                </div>
-                <div className="grid grid-cols-2 gap-3 rounded-[16px] bg-muted p-4 text-sm">
-                  <div><p className="text-muted-foreground">Người thuê</p><p className="font-bold">{detailInvoice.tenantName || detailInvoice.contractId?.tenantId?.fullName || "Chưa cập nhật"}</p></div>
-                  <div><p className="text-muted-foreground">Số điện thoại</p><p className="font-bold">{detailInvoice.tenantPhone || detailInvoice.contractId?.tenantId?.phone || "Chưa cập nhật"}</p></div>
-                  <div><p className="text-muted-foreground">Phòng</p><p className="font-bold">{detailInvoice.roomName || detailInvoice.room || detailInvoice.contractId?.roomId?.roomCode || "N/A"}</p></div>
-                  <div><p className="text-muted-foreground">Kỳ thanh toán</p><p className="font-bold">{detailInvoice.period || "-"}</p></div>
-                  {detailInvoice.type === "deposit" ? (
-                    <div className="col-span-2 flex items-center justify-between border-t border-border pt-3"><p className="text-muted-foreground">Tiền cọc hợp đồng</p><p className="font-black">{formatCurrency(detailInvoice.depositAmount)}</p></div>
-                  ) : (
-                    <>
-                      <div><p className="text-muted-foreground">Tiền thuê</p><p className="font-bold">{formatCurrency(detailInvoice.rent)}</p></div>
-                      <div><p className="text-muted-foreground">Điện</p><p className="font-bold">{formatCurrency(detailInvoice.electricity)}</p></div>
-                      <div><p className="text-muted-foreground">Nước</p><p className="font-bold">{formatCurrency(detailInvoice.water)}</p></div>
-                      <div><p className="text-muted-foreground">Dịch vụ khác</p><p className="font-bold">{formatCurrency(detailInvoice.services)}</p></div>
-                    </>
-                  )}
-                </div>
-                <div className="flex items-center justify-between rounded-[16px] bg-primary/10 px-5 py-4">
-                  <p className="font-black text-foreground">Tổng cộng</p>
-                  <p className="text-2xl font-black text-primary">{formatCurrency(detailInvoice.totalAmount)}</p>
-                </div>
-                <button onClick={() => window.print()} className="flex w-full items-center justify-center gap-2 rounded-[16px] border border-border bg-card py-2.5 text-sm font-bold transition hover:bg-accent">
-                  <Printer className="size-4" /> In hóa đơn
-                </button>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <InvoiceDetailDrawer invoice={detailInvoice} onClose={() => setDetailInvoice(null)} />
     </div>
   );
 }

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Edit, FileSignature, Plus, Search, Trash2 } from "lucide-react";
+import { CheckCircle2, Edit, FileSignature, Plus, Search, Send, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useNotification } from "@/hooks/use-notification";
@@ -239,6 +239,16 @@ export default function ContractsPage() {
       }
     } catch (err: unknown) {
       notification.error(getNotificationMessage(err, "Không thể duyệt hợp đồng."));
+    }
+  };
+
+  const handleSendContract = async (id: string) => {
+    try {
+      await fetchAPI(`/contracts/${id}/send`, { method: "POST" });
+      notification.success("Đã gửi hợp đồng cho Người thuê.");
+      await loadData();
+    } catch (error) {
+      notification.error(getNotificationMessage(error, "Không thể gửi hợp đồng."));
     }
   };
 
@@ -731,6 +741,11 @@ export default function ContractsPage() {
                     })()}
                   </TableCell>
                   <TableCell className="text-right">
+                    {contract.status === 0 && (
+                      <Button onClick={() => void handleSendContract(contract._id || contract.id)} variant="outline" size="sm" className="mr-2">
+                        <Send className="size-4" />{contract.lastSentAt ? "Gửi lại" : "Gửi cho Người thuê"}
+                      </Button>
+                    )}
                     {contract.status === 4 && (
                       <Button onClick={() => handleConfirmContract(contract._id || contract.id)} variant="secondary" size="sm" className="mr-2 text-primary">
                         <CheckCircle2 className="size-4" />Duyệt

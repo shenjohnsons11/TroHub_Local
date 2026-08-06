@@ -19,6 +19,7 @@ const { CalculationError } = require('../services/invoiceCalculator');
 
 const { sendNotification } = require('../services/notificationService');
 const { notifyLandlord } = require('../services/landlordNotificationService');
+const { sendContractToNguoiThue } = require('../services/contractNotificationService');
 
 function sendContractError(res, error, fallbackMessage) {
     if (error instanceof ContractTermsError) {
@@ -226,6 +227,22 @@ exports.getContractById = async (req, res) => {
         res.status(200).json({ success: true, data: contract });
     } catch (error) {
         res.status(500).json({ success: false, message: "Lỗi Server: " + error.message });
+    }
+};
+
+exports.sendContract = async (req, res) => {
+    try {
+        const result = await sendContractToNguoiThue({
+            contractId: req.params.id,
+            adminId: req.auth.id,
+        });
+        return res.json({ success: true, message: 'Đã gửi hợp đồng cho Người thuê.', data: result });
+    } catch (error) {
+        return res.status(error.status || 500).json({
+            success: false,
+            code: error.code || 'CONTRACT_SEND_FAILED',
+            message: error.message || 'Không thể gửi hợp đồng.',
+        });
     }
 };
 
