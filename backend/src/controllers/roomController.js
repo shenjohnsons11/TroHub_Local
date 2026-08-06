@@ -1,5 +1,15 @@
 const Room = require('../models/Room');
 
+function normalizeFloor(value) {
+    const floor = Number(value === undefined ? 1 : value);
+    if (!Number.isInteger(floor) || floor < 1) {
+        const error = new Error('Tầng phải là số nguyên từ 1 trở lên.');
+        error.code = 'INVALID_ROOM_FLOOR';
+        throw error;
+    }
+    return floor;
+}
+
 // 1. Lấy danh sách toàn bộ phòng (Có thể lọc theo mã chủ trọ)
 exports.getAllRooms = async (req, res) => {
     try {
@@ -16,13 +26,14 @@ exports.getAllRooms = async (req, res) => {
         let query = {};
         if (landlordId) query.landlordId = landlordId;
 
-        const rooms = await Room.find(query).lean().sort({ createdAt: -1 });
+        const rooms = await Room.find(query).lean().sort({ floor: 1, roomCode: 1 });
         
         // Populate tenant from active contracts
         const Contract = require('../models/Contract');
         const activeContracts = await Contract.find({ status: 1 }).populate('tenantId', 'fullName');
         
         for (let room of rooms) {
+            room.floor = room.floor || 1;
             const contract = activeContracts.find(c => c.roomId && c.roomId.toString() === room._id.toString());
             if (contract && contract.tenantId) {
                 room.tenant = contract.tenantId.fullName;
@@ -42,7 +53,7 @@ exports.getAllRooms = async (req, res) => {
 // 2. Thêm phòng trọ mới
 exports.createRoom = async (req, res) => {
     try {
-        let { roomCode, area, defaultRentPrice, defaultDeposit, landlordId, rent, deposit } = req.body;
+        let { roomCode, area, defaultRentPrice, defaultDeposit, landlordId, rent, deposit, floor } = req.body;
         
         // Hỗ trợ map field từ frontend gửi lên (rent, deposit)
         if (rent !== undefined) defaultRentPrice = rent;
@@ -59,6 +70,7 @@ exports.createRoom = async (req, res) => {
             area,
             defaultRentPrice,
             defaultDeposit,
+            floor: normalizeFloor(floor),
             landlordId,
             status: 0 // 0: Trống (Mặc định khi mới tạo)
         });
@@ -70,6 +82,9 @@ exports.createRoom = async (req, res) => {
             data: newRoom
         });
     } catch (error) {
+        if (error.code === 'INVALID_ROOM_FLOOR') {
+            return res.status(400).json({ success: false, code: error.code, message: error.message });
+        }
         res.status(500).json({ success: false, message: "Lỗi khi tạo phòng: " + error.message });
     }
 };
@@ -95,6 +110,7 @@ exports.updateRoom = async (req, res) => {
         let updateData = { ...req.body };
         if (updateData.rent !== undefined) updateData.defaultRentPrice = updateData.rent;
         if (updateData.deposit !== undefined) updateData.defaultDeposit = updateData.deposit;
+        if (updateData.floor !== undefined) updateData.floor = normalizeFloor(updateData.floor);
 
         const updatedRoom = await Room.findByIdAndUpdate(
             req.params.id, 
@@ -112,6 +128,9 @@ exports.updateRoom = async (req, res) => {
             data: updatedRoom
         });
     } catch (error) {
+        if (error.code === 'INVALID_ROOM_FLOOR') {
+            return res.status(400).json({ success: false, code: error.code, message: error.message });
+        }
         res.status(500).json({ success: false, message: "Lỗi khi cập nhật phòng: " + error.message });
     }
 };
