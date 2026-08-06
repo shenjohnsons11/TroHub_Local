@@ -2,6 +2,7 @@ const RepairRequest = require('../models/RepairRequest');
 const Contract = require('../models/Contract');
 const Account = require('../models/Account');
 const { sendNotification } = require('../services/notificationService');
+const { notifyLandlord } = require('../services/landlordNotificationService');
 
 // 1. Lấy danh sách yêu cầu sửa chữa (Dành cho Chủ trọ - Web)
 exports.getAllRequests = async (req, res) => {
@@ -103,6 +104,11 @@ exports.getAllRequests = async (req, res) => {
         });
 
         await newRequest.save();
+        await notifyLandlord({
+            event: 'repair_created',
+            contractId: activeContract._id,
+            entityId: newRequest._id,
+        });
         res.status(201).json({
             success: true,
             message: "Gửi báo cáo sự cố thành công!",
