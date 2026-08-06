@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useState, useEffect } from "react";
-import { Building2, KeyRound, LoaderCircle, LogIn, ShieldCheck, UserPlus, ExternalLink } from "lucide-react";
+import { Building2, KeyRound, LoaderCircle, LogIn, ShieldCheck, UserPlus, ExternalLink, MapPin } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,10 @@ import { fetchAPI } from "@/lib/api";
 import { formatPhone, unformatDigits } from "@/lib/formatters";
 import { useNotification } from "@/hooks/use-notification";
 import { getNotificationMessage } from "@/lib/notification-messages";
+import { LanguageToggle } from "@/components/language-toggle";
+import { useLanguage } from "@/components/language-provider";
+
+// Vietnamese identifier label: Số điện thoại hoặc Email.
 import {
   Dialog,
   DialogContent,
@@ -27,44 +31,25 @@ const SUPER_ADMIN_ZALO = "0584085384";
 
 export default function LoginPage() {
   const notification = useNotification();
+  const { t } = useLanguage();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [idCard, setIdCard] = useState("");
   const [inviteCode, setInviteCode] = useState("");
+  const [propertyAddress, setPropertyAddress] = useState("");
+  const [propertyLatitude, setPropertyLatitude] = useState<number | undefined>();
+  const [propertyLongitude, setPropertyLongitude] = useState<number | undefined>();
+  const [isLocating, setIsLocating] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [qrUrl, setQrUrl] = useState("");
 
-  // Seed default invite codes & log to console for super-admin testing
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("@admin_invite_codes");
-      let activeCodes: string[] = [];
-      if (!stored) {
-        const defaultCodes = ["102938", "574839", "293847", "847291", "482019", "673920"];
-        localStorage.setItem("@admin_invite_codes", JSON.stringify(defaultCodes));
-        activeCodes = defaultCodes;
-      } else {
-        activeCodes = JSON.parse(stored);
-      }
-      
-      // In ra console trình duyệt để Tester/Super-Admin dễ dàng copy khi F12
-      console.log(
-        "%c🔑 [TroHub Dev] DANH SÁCH MÃ MỜI ĐĂNG KÝ ADMIN HIỆN CÓ:",
-        "background: #04100e; color: #b8f5da; font-weight: bold; padding: 4px 8px; border-radius: 4px;",
-        activeCodes
-      );
-
-      // Cấu hình URL cho mã QR quét yêu cầu code
-      if (typeof window !== "undefined") {
-        setQrUrl(window.location.origin + "/request-invite");
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  }, [mode]);
+    setQrUrl(window.location.origin + "/request-invite");
+  }, []);
 
   const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -99,7 +84,7 @@ export default function LoginPage() {
       if (data.success) {
         const user = data.user || data.data;
         if (user.role === 2) {
-          const message = "Tài khoản Người thuê vui lòng đăng nhập trên ứng dụng di động.";
+          const message = t("tenantMobileOnly");
           setError(message);
           notification.info(message);
           return;
@@ -107,16 +92,16 @@ export default function LoginPage() {
 
         localStorage.setItem("trohub_token", data.token);
         localStorage.setItem("trohub_user", JSON.stringify(user));
-        notification.success("Đăng nhập thành công.");
+        notification.success(t("loginSuccess"));
         window.location.href = "/dashboard";
       }
     } catch (caughtError: unknown) {
       const message = getNotificationMessage(
         caughtError,
-        "Số điện thoại, Email hoặc mật khẩu không đúng.",
+        t("loginFailed"),
       );
       setError(message);
-      notification.error(message, { title: "Đăng nhập thất bại" });
+      notification.error(message, { title: t("loginFailed") });
     } finally {
       setLoading(false);
     }
@@ -129,60 +114,75 @@ export default function LoginPage() {
 
     try {
       const phoneClean = unformatDigits(identifier);
-      if (phoneClean.length !== 10) {
-        setError("Số điện thoại phải gồm đúng 10 chữ số!");
-        setLoading(false);
-        return;
-      }
+      if (!fullName.trim()) throw new Error(t("requiredFullName"));
+      if (phoneClean.length !== 10) throw new Error(t("invalidPhone"));
+      if (!/^\S+@\S+\.\S+$/.test(email.trim())) throw new Error(t("invalidEmail"));
+      if (idCard.replace(/\D/g, "").length !== 12) throw new Error("CCCD phải gồm đúng 12 chữ số.");
+      if (password.length < 6) throw new Error(t("invalidPassword"));
+      if (!propertyAddress.trim()) throw new Error(t("propertyAddress"));
+      if (!inviteCode.trim()) throw new Error(t("invalidInvite"));
 
-      // Check duplicate SĐT
-      const mockAdmins = JSON.parse(localStorage.getItem("@mock_admins") || "[]");
-      if (mockAdmins.some((u: any) => u.phone === phoneClean || u.email === email)) {
-        setError("Số điện thoại hoặc Email đã được đăng ký trước đó!");
-        setLoading(false);
-        return;
-      }
-
-      // Validate invite code
-      const storedInvites = JSON.parse(localStorage.getItem("@admin_invite_codes") || "[]");
-      const codeIndex = storedInvites.indexOf(inviteCode.trim());
-      if (codeIndex === -1) {
-        setError("Mã mời không đúng hoặc đã được sử dụng!");
-        setLoading(false);
-        return;
-      }
-
-      // Consume the code
-      storedInvites.splice(codeIndex, 1);
-      localStorage.setItem("@admin_invite_codes", JSON.stringify(storedInvites));
-
-      // Save into mock admin db
-      const newAdmin = {
-        id: "mock_id_" + Math.random().toString(36).substring(2, 9),
-        username: phoneClean,
-        phone: phoneClean,
-        email,
-        fullName,
-        password,
-      };
-      mockAdmins.push(newAdmin);
-      localStorage.setItem("@mock_admins", JSON.stringify(mockAdmins));
-
-      notification.success("Đăng ký tài khoản Admin thành công!");
+      const data = await fetchAPI("/auth/register", {
+        method: "POST",
+        body: JSON.stringify({
+          role: 1,
+          fullName: fullName.trim(),
+          phone: phoneClean,
+          email: email.trim(),
+          idCard: idCard.replace(/\D/g, ""),
+          password,
+          inviteCode: inviteCode.trim(),
+          propertyAddress: propertyAddress.trim(),
+          propertyLatitude,
+          propertyLongitude,
+        }),
+      });
+      localStorage.setItem("trohub_token", data.token);
+      localStorage.setItem("trohub_user", JSON.stringify(data.user));
+      notification.success(t("registerSuccess"));
       setMode("login");
       setIdentifier(phoneClean);
       setPassword("");
       setInviteCode("");
     } catch (err) {
-      setError("Đăng ký thất bại!");
+      setError(err instanceof Error ? err.message : t("registerFailed"));
     } finally {
       setLoading(false);
     }
   };
 
+  const handleLocate = () => {
+    if (!navigator.geolocation) {
+      setError(t("locationUnavailable"));
+      return;
+    }
+    setIsLocating(true);
+    setError("");
+    navigator.geolocation.getCurrentPosition(async (position) => {
+      try {
+        const latitude = position.coords.latitude;
+        const longitude = position.coords.longitude;
+        const response = await fetchAPI(`/auth/reverse-geocode?lat=${latitude}&lng=${longitude}`);
+        setPropertyLatitude(latitude);
+        setPropertyLongitude(longitude);
+        setPropertyAddress(response.data.address);
+      } catch (error) {
+        const message = getNotificationMessage(error, t("locationUnavailable"));
+        setError(message);
+        notification.error(message);
+      } finally {
+        setIsLocating(false);
+      }
+    }, () => {
+      setIsLocating(false);
+      setError(t("locationUnavailable"));
+    }, { enableHighAccuracy: true, timeout: 10000 });
+  };
+
   return (
     <main className="login-shell relative grid min-h-[100dvh] bg-background lg:grid-cols-[1.08fr_.92fr]">
-      <div className="absolute right-4 top-4 z-10 lg:right-7 lg:top-7">
+      <div className="absolute right-4 top-4 z-10 flex items-center gap-2 lg:right-7 lg:top-7">
+        <LanguageToggle />
         <ThemeToggle />
       </div>
 
@@ -225,17 +225,17 @@ export default function LoginPage() {
               {mode === "login" ? <KeyRound className="size-5" aria-hidden="true" /> : <UserPlus className="size-5" aria-hidden="true" />}
             </span>
             <h2 className="text-3xl font-black tracking-[-0.025em] text-foreground text-balance">
-              {mode === "login" ? "Chào mừng trở lại" : "Đăng ký Chủ trọ"}
+              {mode === "login" ? t("welcomeBack") : t("registerLandlord")}
             </h2>
             <p className="mb-8 mt-2 max-w-[46ch] leading-relaxed text-muted-foreground text-pretty">
-              {mode === "login" ? "Đăng nhập bằng tài khoản Chủ trọ hoặc Admin." : "Tự tạo tài khoản quản trị dãy trọ của bạn."}
+              {mode === "login" ? t("loginDescription") : t("registerDescription")}
             </p>
 
             {mode === "login" ? (
               <form onSubmit={handleLogin} className="space-y-5">
                 <div className="space-y-2">
                   <Label htmlFor="identifier" className="font-bold text-foreground">
-                    Số điện thoại hoặc Email
+                    {t("phoneOrEmail")}
                   </Label>
                   <Input
                     id="identifier"
@@ -256,7 +256,7 @@ export default function LoginPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="password" className="font-bold text-foreground">
-                    Mật khẩu
+                    {t("password")}
                   </Label>
                   <Input
                     id="password"
@@ -302,9 +302,9 @@ export default function LoginPage() {
                   className="h-12 w-full rounded-[16px] bg-primary text-base font-extrabold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_25%,transparent)] transition-transform hover:bg-primary/90 active:scale-[0.98]"
                 >
                   {loading ? (
-                    <><LoaderCircle className="animate-spin" aria-hidden="true" />Đang đăng nhập...</>
+                    <><LoaderCircle className="animate-spin" aria-hidden="true" />{t("loggingIn")}</>
                   ) : (
-                    <><LogIn aria-hidden="true" />Đăng nhập</>
+                    <><LogIn aria-hidden="true" />{t("login")}</>
                   )}
                 </Button>
               </form>
@@ -312,7 +312,7 @@ export default function LoginPage() {
               <form onSubmit={handleRegister} className="space-y-5">
                 <div className="space-y-2">
                   <Label htmlFor="fullName" className="font-bold text-foreground">
-                    Họ và tên *
+                    {t("fullName")} *
                   </Label>
                   <Input
                     id="fullName"
@@ -327,7 +327,7 @@ export default function LoginPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="phone" className="font-bold text-foreground">
-                    Số điện thoại *
+                    {t("phoneOrEmail")} *
                   </Label>
                   <Input
                     id="phone"
@@ -342,7 +342,7 @@ export default function LoginPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="email" className="font-bold text-foreground">
-                    Email *
+                    {t("email")} *
                   </Label>
                   <Input
                     id="email"
@@ -357,8 +357,23 @@ export default function LoginPage() {
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="idCard" className="font-bold text-foreground">CCCD *</Label>
+                  <Input
+                    id="idCard"
+                    name="idCard"
+                    inputMode="numeric"
+                    value={idCard}
+                    onChange={(event) => setIdCard(unformatDigits(event.target.value))}
+                    placeholder="Nhập CCCD 12 số"
+                    required
+                    maxLength={12}
+                    className="h-12 rounded-[16px] bg-background px-4 text-base placeholder:text-muted-foreground focus-visible:ring-primary"
+                  />
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="password" className="font-bold text-foreground">
-                    Mật khẩu *
+                    {t("password")} *
                   </Label>
                   <Input
                     id="password"
@@ -375,7 +390,7 @@ export default function LoginPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="inviteCode" className="font-bold text-foreground">
-                    Mã mời đăng ký (6 số) *
+                    {t("inviteCode")} *
                   </Label>
                   <Input
                     id="inviteCode"
@@ -432,6 +447,24 @@ export default function LoginPage() {
                   </div>
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="propertyAddress" className="font-bold text-foreground">{t("propertyAddress")} *</Label>
+                  <Input
+                    id="propertyAddress"
+                    name="propertyAddress"
+                    value={propertyAddress}
+                    onChange={(event) => setPropertyAddress(event.target.value)}
+                    placeholder={t("propertyAddressPlaceholder")}
+                    required
+                    className="h-12 rounded-[16px] bg-background px-4 text-base placeholder:text-muted-foreground focus-visible:ring-primary"
+                  />
+                  <Button type="button" variant="outline" disabled={isLocating} onClick={handleLocate} className="h-11 w-full rounded-[14px] font-bold">
+                    {isLocating ? <><LoaderCircle className="animate-spin" aria-hidden="true" />{t("locating")}</> : <><MapPin aria-hidden="true" />{t("getLocation")}</>}
+                  </Button>
+                  <p className="text-xs leading-relaxed text-muted-foreground">{t("propertyAddressHint")}</p>
+                  <p className="text-xs leading-relaxed text-muted-foreground">{t("propertyLocationAttribution")}</p>
+                </div>
+
                 {error ? (
                   <div
                     role="alert"
@@ -447,9 +480,9 @@ export default function LoginPage() {
                   className="h-12 w-full rounded-[16px] bg-primary text-base font-extrabold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_25%,transparent)] transition-transform hover:bg-primary/90 active:scale-[0.98]"
                 >
                   {loading ? (
-                    <><LoaderCircle className="animate-spin" aria-hidden="true" />Đang đăng ký...</>
+                    <><LoaderCircle className="animate-spin" aria-hidden="true" />{t("registering")}</>
                   ) : (
-                    <><UserPlus aria-hidden="true" />Đăng ký</>
+                    <><UserPlus aria-hidden="true" />{t("register")}</>
                   )}
                 </Button>
               </form>

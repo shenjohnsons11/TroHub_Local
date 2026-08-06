@@ -39,7 +39,14 @@ exports.getTenantPortal = async (req, res) => {
 
         // Lấy TẤT CẢ hợp đồng (bao gồm cả Chờ ký status=0) của tenant này
         const contracts = await Contract.find({ tenantId: tenantId })
-            .populate('roomId', 'roomCode area defaultRentPrice defaultDeposit')
+            .populate({
+                path: 'roomId',
+                select: 'roomCode area defaultRentPrice defaultDeposit landlordId',
+                populate: {
+                    path: 'landlordId',
+                    select: 'propertyAddress propertyLatitude propertyLongitude',
+                },
+            })
             .sort({ createdAt: -1 });
 
         // Lấy CÁC hợp đồng đang hiệu lực
@@ -47,6 +54,7 @@ exports.getTenantPortal = async (req, res) => {
 
         // Thông tin phòng
         let roomInfo = null;
+        let property = null;
         if (activeContracts.length > 0) {
             const roomNames = activeContracts.map(c => c.roomId?.roomCode).filter(Boolean);
             const firstRoom = activeContracts[0].roomId || {};
@@ -58,6 +66,14 @@ exports.getTenantPortal = async (req, res) => {
                 area: firstRoom.area || 0,
                 status: 'Đang thuê'
             };
+            const landlord = firstRoom.landlordId;
+            if (landlord?.propertyAddress) {
+                property = {
+                    propertyAddress: landlord.propertyAddress,
+                    propertyLatitude: landlord.propertyLatitude,
+                    propertyLongitude: landlord.propertyLongitude,
+                };
+            }
         }
 
         const allContractIds = contracts.map(c => c._id);
@@ -150,6 +166,7 @@ exports.getTenantPortal = async (req, res) => {
                     room: roomInfo ? roomInfo.id : '-'
                 },
                 room: roomInfo,
+                property,
                 contracts: contractsMapped,
                 invoices,
                 payments,

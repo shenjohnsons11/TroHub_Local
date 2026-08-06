@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -22,6 +23,7 @@ import { getRealtimeGreeting } from "../utils/dateHelpers";
 import MiniCalendarPopover from "../components/MiniCalendarPopover";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
 import { formatPhone } from "../utils/formatters";
+import { useLanguage } from "../contexts/LanguageContext";
 
 type Props = {
   refreshKey: number;
@@ -31,6 +33,7 @@ type Props = {
 
 export default function HomeScreen({ refreshKey, onNavigate, onLogout }: Props) {
   const { theme } = useAppTheme();
+  const { t } = useLanguage();
   const styles = createStyles(theme);
   const [homeData, setHomeData] = useState<HomeData | null>(null);
   const [invites, setInvites] = useState<Invite[]>([]);
@@ -86,6 +89,12 @@ export default function HomeScreen({ refreshKey, onNavigate, onLogout }: Props) 
   };
 
   const isUnpaid = homeData.paymentStatus === "unpaid";
+  const openPropertyMap = () => {
+    const destination = homeData.propertyLatitude != null && homeData.propertyLongitude != null
+      ? `${homeData.propertyLatitude},${homeData.propertyLongitude}`
+      : homeData.propertyAddress;
+    if (destination) void Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`);
+  };
 
   return (
     <ScrollView
@@ -130,6 +139,17 @@ export default function HomeScreen({ refreshKey, onNavigate, onLogout }: Props) 
         </Text>
         <MiniCalendarPopover />
       </View>
+
+      {homeData.propertyAddress ? (
+        <Card style={styles.propertyCard}>
+          <Text style={[styles.propertyTitle, { color: theme.text }]}>{t("property")}</Text>
+          <Text style={[styles.propertyAddress, { color: theme.muted }]}>{homeData.propertyAddress}</Text>
+          <Pressable accessibilityRole="button" onPress={openPropertyMap} style={[styles.mapButton, { backgroundColor: theme.primarySoft }]}>
+            <Ionicons name="map-outline" size={18} color={theme.primary} />
+            <Text style={[styles.mapButtonText, { color: theme.primary }]}>{t("openMaps")}</Text>
+          </Pressable>
+        </Card>
+      ) : null}
 
       {invites.length > 0 && invites.map((invite, index) => (
         <AnimatedEntry delay={index * 40} key={invite.id}>
@@ -305,6 +325,11 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSh
     borderRadius: 16,
     backgroundColor: theme.primarySoft,
   },
+  propertyCard: { marginBottom: 18, padding: 16 },
+  propertyTitle: { fontSize: 14, fontWeight: "900" },
+  propertyAddress: { fontSize: 13, lineHeight: 19, marginTop: 5 },
+  mapButton: { alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 12, marginTop: 12, minHeight: 42, paddingHorizontal: 12 },
+  mapButtonText: { fontSize: 12, fontWeight: "900" },
   heroKicker: {
     color: theme.primary,
     fontSize: 10,
