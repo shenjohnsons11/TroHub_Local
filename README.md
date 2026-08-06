@@ -45,18 +45,6 @@ npx expo start --web --port 8083
 
 ---
 
-## 🔐 Tài Khoản Test Mặc Định (Từ file Seed)
-
-- **Tài khoản Admin (Chủ trọ) - Đăng nhập trên Web Admin:**
-  - Tên đăng nhập: `admin@trohub.vn`
-  - Mật khẩu: `123456`
-
-- **Tài khoản Người thuê (NGUOI_THUE) - Đăng nhập trên Mobile App:**
-  - Tên đăng nhập: `tenant@trohub.vn` (hoặc email/sđt của người thuê mà bạn đã tạo)
-  - Mật khẩu: `123456`
-
----
-
 ## ✉️ Cấu hình email OTP
 
 Chức năng quên mật khẩu sử dụng Gmail SMTP qua Nodemailer:
