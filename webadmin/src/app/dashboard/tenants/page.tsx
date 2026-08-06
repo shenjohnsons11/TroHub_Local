@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { BadgeCheck, ChevronLeft, ChevronRight, Contact, Edit, Plus, Search, Trash2, UserRound, Send } from "lucide-react";
+import { BadgeCheck, ChevronLeft, ChevronRight, Contact, Edit, KeyRound, Plus, Search, Trash2, UserRound, Send } from "lucide-react";
 import { PageHeader } from "@/components/calm-ops/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,8 @@ import { useNotification } from "@/hooks/use-notification";
 import { fetchAPI } from "@/lib/api";
 import { getNotificationMessage } from "@/lib/notification-messages";
 import { formatCCCD, formatPhone, unformatDigits } from "@/lib/formatters";
+import { TemporaryPasswordDialog } from "@/components/temporary-password-dialog";
+import { issueTemporaryPassword } from "@/lib/password-reset";
 
 const TENANT_STEPS = [
   { label: "Thông tin", icon: UserRound },
@@ -40,6 +42,8 @@ export default function TenantsPage() {
   const [email, setEmail] = useState("");
   const [idCard, setIdCard] = useState("");
   const [roomCode, setRoomCode] = useState("");
+  const [temporaryPassword, setTemporaryPassword] = useState("");
+  const [temporaryPasswordName, setTemporaryPasswordName] = useState("");
 
   const loadData = async () => {
     try {
@@ -112,6 +116,16 @@ export default function TenantsPage() {
       await loadData();
     } catch (error) {
       notification.error(getNotificationMessage(error, "Không thể xóa người thuê."));
+    }
+  };
+
+  const handleTemporaryPassword = async (tenant: any) => {
+    try {
+      const result = await issueTemporaryPassword(tenant._id || tenant.id);
+      setTemporaryPasswordName(tenant.fullName || tenant.name || "Người thuê");
+      setTemporaryPassword(result.temporaryPassword);
+    } catch (error) {
+      notification.error(getNotificationMessage(error, "Không thể tạo mật khẩu tạm."));
     }
   };
 
@@ -222,11 +236,12 @@ export default function TenantsPage() {
                   <TableCell>{formatPhone(tenant.phone)}</TableCell>
                   <TableCell>{tenant.roomCode || "Chưa xếp phòng"}</TableCell>
                   <TableCell>{tenant.linkedAccountId ? <Badge className="border-0 bg-primary/10 text-primary">Đã liên kết</Badge> : <div className="flex flex-col items-start gap-1"><Badge variant="secondary">Chưa liên kết App</Badge><Button variant="link" size="sm" className="h-auto p-0 text-xs text-primary" onClick={() => openInviteModal(tenant)}><Send className="mr-1 size-3" /> Gửi lời mời</Button></div>}</TableCell>
-                  <TableCell><div className="flex justify-end gap-2"><Button aria-label={`Sửa ${tenant.fullName || tenant.name}`} onClick={() => openEditModal(tenant)} variant="ghost" size="icon"><Edit className="size-4" /></Button><Button aria-label={`Xóa ${tenant.fullName || tenant.name}`} onClick={() => void handleDelete(tenant._id || tenant.id)} variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive"><Trash2 className="size-4" /></Button></div></TableCell>
+                  <TableCell><div className="flex justify-end gap-2"><Button aria-label={`Tạo mật khẩu tạm cho ${tenant.fullName || tenant.name}`} onClick={() => void handleTemporaryPassword(tenant)} variant="ghost" size="icon"><KeyRound className="size-4" /></Button><Button aria-label={`Sửa ${tenant.fullName || tenant.name}`} onClick={() => openEditModal(tenant)} variant="ghost" size="icon"><Edit className="size-4" /></Button><Button aria-label={`Xóa ${tenant.fullName || tenant.name}`} onClick={() => void handleDelete(tenant._id || tenant.id)} variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive"><Trash2 className="size-4" /></Button></div></TableCell>
                 </TableRow>)}
           </TableBody>
         </Table>
       </div>
+      <TemporaryPasswordDialog open={Boolean(temporaryPassword)} nguoiThueName={temporaryPasswordName} temporaryPassword={temporaryPassword} onOpenChange={(open) => { if (!open) setTemporaryPassword(""); }} />
     </div>
   );
 }

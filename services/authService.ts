@@ -168,6 +168,18 @@ export const authService = {
     await apiClient.post("/auth/reset-password", { resetToken, newPassword });
   },
 
+  async requestPasswordResetV2(identifier: string): Promise<{ message: string }> {
+    return apiClient.post("/auth/password-reset/request", { identifier });
+  },
+
+  async verifyPasswordReset(identifier: string, otp: string): Promise<{ success: boolean; resetToken: string }> {
+    return apiClient.post("/auth/password-reset/verify", { identifier, otp });
+  },
+
+  async completePasswordReset(resetToken: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+    return apiClient.post("/auth/password-reset/complete", { resetToken, newPassword });
+  },
+
   async getToken(): Promise<string | null> {
     try {
       return await AsyncStorage.getItem(TOKEN_KEY);
