@@ -38,6 +38,7 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
   const [resetToken, setResetToken] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [secondsUntilResend, setSecondsUntilResend] = useState(0);
   const titleRef = useRef<Text>(null);
 
   useEffect(() => {
@@ -48,6 +49,12 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
     }, 300);
     return () => clearTimeout(timer);
   }, [visible, step]);
+
+  useEffect(() => {
+    if (!secondsUntilResend) return;
+    const timer = setInterval(() => setSecondsUntilResend((value) => Math.max(0, value - 1)), 1000);
+    return () => clearInterval(timer);
+  }, [secondsUntilResend]);
 
   const resetForm = () => {
     setStep("request");
@@ -89,6 +96,7 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
       if (step === "request") {
         const message = await authService.requestPasswordReset(identifier.trim());
         notification.success(message, { title: "Đã gửi OTP" });
+        setSecondsUntilResend(60);
         setStep("verify");
       } else if (step === "verify") {
         const token = await authService.verifyPasswordResetOtp(identifier.trim(), otp);

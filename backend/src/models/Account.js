@@ -17,6 +17,7 @@ const accountSchema = new mongoose.Schema({
     passwordResetOtpAttempts: { type: Number, default: 0, select: false },
     passwordResetOtpSentAt: { type: Date, select: false },
     passwordResetNonce: { type: String, select: false },
+    passwordChangedAt: { type: Date, default: null },
     bankId: { type: String, default: "" }, // Tên rút gọn ngân hàng (VD: VCB, MB, TCB)
     bankAccountNo: { type: String, default: "" }, // Số tài khoản
     bankAccountName: { type: String, default: "" }, // Tên chủ tài khoản
