@@ -6,6 +6,9 @@ export type HomeData = {
   paymentStatusText: string;
   dueDate: string;
   contractEndDate: string;
+  propertyAddress?: string;
+  propertyLatitude?: number;
+  propertyLongitude?: number;
   recentRepair: {
     title: string;
     status: string;

@@ -8,6 +8,7 @@ export type AdminRoom = {
   area: string;
   defaultRentPrice: number;
   defaultDeposit: number;
+  floor: number;
   status: number; // 0: Trống, 1: Đang thuê, 2: Đang sửa
   landlordId?: string;
   createdAt?: string;
@@ -117,7 +118,7 @@ export const adminService = {
     return response.success ? response.data : [];
   },
 
-  async createRoom(roomData: { roomCode: string; area: string; defaultRentPrice: number; defaultDeposit: number }): Promise<AdminRoom> {
+  async createRoom(roomData: { roomCode: string; area: string; defaultRentPrice: number; defaultDeposit: number; floor: number }): Promise<AdminRoom> {
     const token = await authService.getToken();
     const user = await authService.getAuthUser();
     const landlordId = user?.id || "";
