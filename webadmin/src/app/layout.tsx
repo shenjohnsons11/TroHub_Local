@@ -5,6 +5,7 @@ import "sweetalert2/dist/sweetalert2.min.css";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { NotificationProvider } from "@/providers/notification-provider";
+import { LanguageProvider } from "@/components/language-provider";
 
 const themeScript = `(function(){var t;try{t=localStorage.getItem("trohub_theme")}catch(e){}var d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d)})()`;
 
@@ -25,9 +26,11 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col">
         <NextTopLoader color="#0e806d" showSpinner={false} />
-        <ThemeProvider>
-          <NotificationProvider>{children}</NotificationProvider>
-        </ThemeProvider>
+        <LanguageProvider>
+          <ThemeProvider>
+            <NotificationProvider>{children}</NotificationProvider>
+          </ThemeProvider>
+        </LanguageProvider>
       </body>
     </html>
   );

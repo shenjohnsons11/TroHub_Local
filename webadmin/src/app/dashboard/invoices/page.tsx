@@ -15,6 +15,7 @@ import { useNotification } from "@/hooks/use-notification";
 import { getNotificationMessage } from "@/lib/notification-messages";
 import { PageHeader } from "@/components/calm-ops/page-header";
 import { addWebNotification } from "@/components/notification-bell";
+import { useLanguage } from "@/components/language-provider";
 
 const INVOICE_STEPS = [
   { label: "Chọn kỳ", icon: CalendarDays },
@@ -24,6 +25,7 @@ const INVOICE_STEPS = [
 ];
 
 export default function InvoicesPage() {
+  const { t } = useLanguage();
   const notification = useNotification();
   const bulkFormRef = useRef<HTMLFormElement>(null);
   const [invoices, setInvoices] = useState<any[]>([]);
@@ -206,12 +208,12 @@ export default function InvoicesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Tài chính" title="Hóa đơn" description="Lập hóa đơn, kiểm tra chỉ số và theo dõi trạng thái thanh toán." />
+      <PageHeader eyebrow={t("finance")} title={t("invoices")} description={t("invoiceDescription")} />
       <section className="calm-surface flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input 
-            placeholder="Tìm theo mã phòng..." 
+            placeholder={t("searchRoom")}
             className="pl-9"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}

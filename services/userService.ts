@@ -17,6 +17,9 @@ type ApiUser = {
   bankId?: string;
   bankAccountNo?: string;
   bankAccountName?: string;
+  propertyAddress?: string;
+  propertyLatitude?: number;
+  propertyLongitude?: number;
 };
 
 type GetMeResponse = {
@@ -55,6 +58,9 @@ const mapApiUserToProfile = (user: ApiUser): UserProfile => {
     bankId: user.bankId || "",
     bankAccountNo: user.bankAccountNo || "",
     bankAccountName: user.bankAccountName || "",
+    propertyAddress: user.propertyAddress || "",
+    propertyLatitude: user.propertyLatitude,
+    propertyLongitude: user.propertyLongitude,
   };
 };
 

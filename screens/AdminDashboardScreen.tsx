@@ -86,6 +86,16 @@ export default function AdminDashboardScreen({ profile, onNavigate }: Props) {
         </View>
       </View>
 
+      {profile?.propertyAddress ? (
+        <View style={[styles.propertyBanner, { backgroundColor: theme.primarySoft }]}>
+          <Ionicons name="location-outline" size={18} color={theme.primary} />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.propertyTitle, { color: theme.text }]}>🏠 Nhà trọ TroHub</Text>
+            <Text style={[styles.propertyAddress, { color: theme.muted }]}>{profile.propertyAddress}</Text>
+          </View>
+        </View>
+      ) : null}
+
       <AnimatedEntry>
         <GradientHero icon="wallet-outline" label="DOANH THU ĐÃ THU TRONG KỲ" value={formatCurrency(stats?.totalRevenue)} detail={`${stats?.occupiedRooms || 0}/${stats?.totalRooms || 0} phòng đang được thuê · ${occupancyRate}% lấp đầy`} />
       </AnimatedEntry>
@@ -132,6 +142,9 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingHorizontal: 20, paddingTop: 28, paddingBottom: 36 },
   heading: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20 },
+  propertyBanner: { flexDirection: "row", alignItems: "flex-start", gap: 10, borderRadius: 18, padding: 14, marginBottom: 18 },
+  propertyTitle: { fontSize: 13, fontWeight: "900" },
+  propertyAddress: { fontSize: 12, lineHeight: 17, marginTop: 2 },
   eyebrow: { fontSize: 11, fontWeight: "900", letterSpacing: 1.3 },
   title: { fontSize: 28, lineHeight: 34, fontWeight: "900", marginTop: 4 },
   subtitle: { fontSize: 13, marginTop: 4 },
