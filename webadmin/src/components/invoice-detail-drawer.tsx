@@ -12,6 +12,7 @@ type Props = {
 
 export function InvoiceDetailDrawer({ invoice, onClose }: Props) {
   if (!invoice) return null;
+  const isDeposit = invoice.type === "deposit";
   const serviceLines = invoice.details || [];
 
   return (
@@ -30,7 +31,7 @@ export function InvoiceDetailDrawer({ invoice, onClose }: Props) {
               Chi tiết hóa đơn
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              Phòng {invoice.roomCode} · {invoice.nguoiThue}
+              Phòng {invoice.roomName || invoice.roomCode} · {invoice.tenantName || invoice.nguoiThue}
             </p>
           </div>
           <Button variant="ghost" size="icon" onClick={onClose} aria-label="Đóng chi tiết hóa đơn">
@@ -42,13 +43,17 @@ export function InvoiceDetailDrawer({ invoice, onClose }: Props) {
           <div><dt className="text-muted-foreground">Kỳ thanh toán</dt><dd className="mt-1 font-bold">{invoice.period}</dd></div>
           <div><dt className="text-muted-foreground">Hạn thanh toán</dt><dd className="mt-1 font-bold">{formatInvoiceDate(invoice.dueDate)}</dd></div>
           <div><dt className="text-muted-foreground">Trạng thái</dt><dd className="mt-1 font-bold">{invoice.statusLabel}</dd></div>
+          <div><dt className="text-muted-foreground">Số điện thoại</dt><dd className="mt-1 font-bold">{invoice.tenantPhone || "Chưa cập nhật"}</dd></div>
           <div><dt className="text-muted-foreground">Tổng thanh toán</dt><dd className="mt-1 font-black text-primary">{invoiceCurrency.format(invoice.totalAmount)}</dd></div>
         </dl>
 
         <section className="py-5">
-          <h3 className="font-black">Chi tiết khoản thu</h3>
+          <h3 className="font-black">{isDeposit ? "Chi tiết tiền cọc" : "Chi tiết khoản thu"}</h3>
           <div className="mt-3 divide-y divide-border">
-            <Line label="Tiền phòng" amount={invoice.roomAmount} />
+            {isDeposit ? (
+              <Line label="Tiền cọc hợp đồng" amount={invoice.depositAmount} />
+            ) : <>
+            <Line label="Tiền phòng" amount={invoice.rent ?? invoice.roomAmount} />
             {serviceLines.length > 0 ? serviceLines.map((line, index) => (
               <Line
                 key={line._id || `${line.serviceCode || line.serviceName}-${index}`}
@@ -69,6 +74,7 @@ export function InvoiceDetailDrawer({ invoice, onClose }: Props) {
             )}
             {(invoice.penalty || 0) > 0 && <Line label="Phí quá hạn" amount={invoice.penalty} />}
             {(invoice.discount || 0) > 0 && <Line label="Giảm trừ" amount={-(invoice.discount || 0)} />}
+            </>}
           </div>
         </section>
       </aside>

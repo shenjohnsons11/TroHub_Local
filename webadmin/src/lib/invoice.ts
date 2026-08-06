@@ -12,6 +12,12 @@ export type SemanticInvoice = {
   status?: number;
   statusCode: InvoiceStatusCode;
   statusLabel: string;
+  type?: "deposit" | "monthly";
+  depositAmount?: number;
+  rent?: number;
+  tenantName?: string;
+  tenantPhone?: string;
+  roomName?: string;
   roomAmount?: number;
   electricityOld?: number;
   electricityNew?: number;
