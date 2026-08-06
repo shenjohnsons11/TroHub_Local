@@ -270,7 +270,7 @@ export default function App() {
 
               {activeTab === "repair" && <RepairScreen />}
 
-              {activeTab === "contract" && <ContractScreen onNavigate={handleChangeTab as any} />}
+              {activeTab === "contract" && <ContractScreen onNavigate={handleChangeTab as any} params={actionParams} />}
 
               {activeTab === "utility" && (
                 <UtilityScreen onBack={() => setActiveTab("home")} />
