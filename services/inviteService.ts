@@ -1,4 +1,5 @@
 import { apiClient } from "./apiClient";
+import { authService } from "./authService";
 
 export type Invite = {
   id: string;
@@ -20,11 +21,22 @@ type InviteActionResponse = {
 export const inviteService = {
   async getInvites(): Promise<Invite[]> {
     try {
-      const data = await apiClient.get<InviteListResponse>("/me/invites");
-      if (data.success) {
-        return data.data;
+      const token = await authService.getToken();
+
+      if (!token) {
+        throw new Error("Chưa đăng nhập");
       }
-      return [];
+
+      const data = await apiClient.get<InviteListResponse>(
+        "/me/invites",
+        token,
+      );
+
+      if (!data.success) {
+        throw new Error(data.message || "Không thể tải lời mời");
+      }
+
+      return data.data ?? [];
     } catch (error) {
       console.log("Error getting invites", error);
       return [];
@@ -33,7 +45,18 @@ export const inviteService = {
 
   async acceptInvite(landlordId: string): Promise<boolean> {
     try {
-      const data = await apiClient.put<InviteActionResponse>(`/me/invites/${landlordId}/accept`);
+      const token = await authService.getToken();
+
+      if (!token) {
+        throw new Error("Chưa đăng nhập");
+      }
+
+      const data = await apiClient.put<InviteActionResponse>(
+        `/me/invites/${landlordId}/accept`,
+        undefined,
+        token,
+      );
+
       return data.success;
     } catch (error) {
       console.log("Error accepting invite", error);
@@ -43,11 +66,22 @@ export const inviteService = {
 
   async rejectInvite(landlordId: string): Promise<boolean> {
     try {
-      const data = await apiClient.put<InviteActionResponse>(`/me/invites/${landlordId}/reject`);
+      const token = await authService.getToken();
+
+      if (!token) {
+        throw new Error("Chưa đăng nhập");
+      }
+
+      const data = await apiClient.put<InviteActionResponse>(
+        `/me/invites/${landlordId}/reject`,
+        undefined,
+        token,
+      );
+
       return data.success;
     } catch (error) {
       console.log("Error rejecting invite", error);
       return false;
     }
-  }
+  },
 };
