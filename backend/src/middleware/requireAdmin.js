@@ -1,8 +1,6 @@
-const jwt = require('jsonwebtoken');
+const { verifySession } = require('../services/sessionAuth');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'trohub_secret_key_2026';
-
-function requireAdmin(req, res, next) {
+async function requireAdmin(req, res, next) {
     const authHeader = req.headers?.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return res.status(401).json({
@@ -13,8 +11,8 @@ function requireAdmin(req, res, next) {
     }
 
     try {
-        const decoded = jwt.verify(authHeader.slice(7), JWT_SECRET);
-        if (decoded.role !== 1) {
+        const auth = await verifySession(authHeader.slice(7));
+        if (auth.role !== 1) {
             return res.status(403).json({
                 success: false,
                 code: 'ADMIN_REQUIRED',
@@ -22,13 +20,13 @@ function requireAdmin(req, res, next) {
             });
         }
 
-        req.auth = { id: decoded.id, role: decoded.role };
+        req.auth = auth;
         return next();
-    } catch (_error) {
+    } catch (error) {
         return res.status(401).json({
             success: false,
-            code: 'INVALID_TOKEN',
-            message: 'Phiên đăng nhập không hợp lệ hoặc đã hết hạn.',
+            code: error.code || 'INVALID_TOKEN',
+            message: error.message || 'Phiên đăng nhập không hợp lệ hoặc đã hết hạn.',
         });
     }
 }
