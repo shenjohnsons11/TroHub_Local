@@ -78,6 +78,10 @@ export type CheckoutSettlement = CheckoutPreview & {
 
 export type AdminInvoice = {
   _id: string;
+  invoiceCode?: string;
+  roomCode?: string;
+  nguoiThue?: string;
+  statusLabel?: string;
   contractId: {
     _id: string;
     roomId: { _id: string; roomCode: string; defaultRentPrice?: number };
