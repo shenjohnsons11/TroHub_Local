@@ -89,7 +89,7 @@ export default function DebtsPage() {
           <h2 className="text-lg font-black">Danh sách nợ theo phòng</h2>
           <div className="relative w-full sm:w-72">
             <Search aria-hidden="true" className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input aria-label="Tìm công nợ" placeholder="Tìm theo phòng hoặc khách..." value={search} onChange={(event) => setSearch(event.target.value)} className="h-11 pl-9" />
+            <Input aria-label="Tìm công nợ" placeholder="Tìm theo phòng hoặc Người thuê" value={search} onChange={(event) => setSearch(event.target.value)} className="h-11 pl-9" />
           </div>
         </div>
         <Table>
