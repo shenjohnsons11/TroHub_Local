@@ -1,28 +1,59 @@
+import { useEffect, useRef } from "react";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
-import { parseCCCDQr, type CCCDQrData } from "../utils/cccdQr";
+import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 
 type Props = {
   visible: boolean;
   onClose: () => void;
-  onScan: (result: CCCDQrData) => void;
+  onScan: (cccdNumber: string) => void;
 };
+
+const VIEWFINDER_SIZE = 260;
 
 export default function CCCDScannerModal({ visible, onClose, onScan }: Props) {
   const [permission, requestPermission] = useCameraPermissions();
-  const handleBarcodeScanned = ({ data }: { data: string }) => {
-    const result = parseCCCDQr(data);
-    if (result) {
-      onScan(result);
-      onClose();
+  const scanningRef = useRef(false);
+  const permissionRequestedRef = useRef(false);
+  const { height, width } = useWindowDimensions();
+  const frameLeft = Math.max(0, (width - VIEWFINDER_SIZE) / 2);
+  const frameTop = Math.max(128, (height - VIEWFINDER_SIZE) / 2);
+  const frameBottom = frameTop + VIEWFINDER_SIZE;
+
+  useEffect(() => {
+    if (!visible) {
+      scanningRef.current = false;
+      permissionRequestedRef.current = false;
+      return;
     }
+
+    if (!permission?.granted && permission?.canAskAgain && !permissionRequestedRef.current) {
+      permissionRequestedRef.current = true;
+      void requestPermission();
+    }
+  }, [visible, permission?.canAskAgain, permission?.granted, requestPermission]);
+
+  const handleBarcodeScanned = ({ data }: { data: string }) => {
+    if (scanningRef.current) return;
+
+    const rawText = data;
+    const parts = rawText.split("|");
+    const cccdNumber = (parts[0] || rawText).replace(/\D/g, "").slice(0, 12);
+    if (cccdNumber.length !== 12) return;
+
+    scanningRef.current = true;
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    onScan(cccdNumber);
+    onClose();
   };
 
+  const cameraReady = Boolean(permission?.granted);
+
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose} statusBarTranslucent>
       <View style={styles.container}>
-        {permission?.granted ? (
+        {cameraReady ? (
           <CameraView
             style={StyleSheet.absoluteFill}
             facing="back"
@@ -31,32 +62,65 @@ export default function CCCDScannerModal({ visible, onClose, onScan }: Props) {
           />
         ) : (
           <View style={styles.permission}>
-            <Text style={styles.message}>Cần quyền camera để quét mã QR trên CCCD.</Text>
-            <Pressable accessibilityRole="button" style={styles.permissionButton} onPress={requestPermission}>
-              <Text style={styles.permissionText}>Cho phép dùng camera</Text>
-            </Pressable>
+            <Text style={styles.message}>
+              {permission ? "Cần quyền camera để quét mã QR trên CCCD." : "Đang khởi tạo camera..."}
+            </Text>
+            {permission ? (
+              <Pressable accessibilityRole="button" style={styles.permissionButton} onPress={requestPermission}>
+                <Text style={styles.permissionText}>Cho phép dùng camera</Text>
+              </Pressable>
+            ) : null}
           </View>
         )}
+
+        {cameraReady ? (
+          <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+            <View style={[styles.scrim, { top: 0, left: 0, right: 0, height: frameTop }]} />
+            <View style={[styles.scrim, { top: frameTop, left: 0, width: frameLeft, height: VIEWFINDER_SIZE }]} />
+            <View style={[styles.scrim, { top: frameTop, left: frameLeft + VIEWFINDER_SIZE, right: 0, height: VIEWFINDER_SIZE }]} />
+            <View style={[styles.scrim, { top: frameBottom, left: 0, right: 0, bottom: 0 }]} />
+
+            <View style={[styles.viewfinder, { top: frameTop, left: frameLeft }]}>
+              <View style={[styles.corner, styles.cornerTopLeft]} />
+              <View style={[styles.corner, styles.cornerTopRight]} />
+              <View style={[styles.corner, styles.cornerBottomLeft]} />
+              <View style={[styles.corner, styles.cornerBottomRight]} />
+            </View>
+
+            <Text style={[styles.hint, { top: frameBottom + 20 }]}>
+              Hướng mã QR trên thẻ CCCD vào khung ngắm để tự động quét
+            </Text>
+          </View>
+        ) : null}
+
         <View style={styles.header}>
           <Text style={styles.title}>Quét mã QR CCCD</Text>
           <Pressable accessibilityRole="button" accessibilityLabel="Đóng camera quét CCCD" onPress={onClose} style={styles.close}>
-            <Ionicons name="close" size={24} color="#ffffff" />
+            <Ionicons name="close" size={20} color="#ffffff" />
+            <Text style={styles.closeText}>Đóng</Text>
           </Pressable>
         </View>
-        {permission?.granted ? <Text style={styles.hint}>Đặt mã QR trên CCCD vào trong khung.</Text> : null}
       </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0b1511" },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingTop: 64 },
+  container: { flex: 1, backgroundColor: "#07110e" },
+  header: { position: "absolute", top: 0, left: 0, right: 0, zIndex: 2, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingTop: 60 },
   title: { color: "#ffffff", fontSize: 18, fontWeight: "800" },
-  close: { alignItems: "center", justifyContent: "center", width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(0,0,0,0.45)" },
-  hint: { position: "absolute", bottom: 72, left: 24, right: 24, color: "#ffffff", textAlign: "center", fontSize: 15, fontWeight: "700" },
+  close: { minWidth: 74, minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, borderRadius: 12, backgroundColor: "rgba(0,0,0,0.45)", paddingHorizontal: 10 },
+  closeText: { color: "#ffffff", fontSize: 13, fontWeight: "800" },
   permission: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   message: { color: "#ffffff", textAlign: "center", fontSize: 16, lineHeight: 24 },
-  permissionButton: { minHeight: 44, marginTop: 20, justifyContent: "center", borderRadius: 12, backgroundColor: "#10b981", paddingHorizontal: 18 },
-  permissionText: { color: "#ffffff", fontWeight: "800" },
+  permissionButton: { minHeight: 44, marginTop: 20, justifyContent: "center", borderRadius: 12, backgroundColor: "#b8f5da", paddingHorizontal: 18 },
+  permissionText: { color: "#073e36", fontWeight: "900" },
+  scrim: { position: "absolute", backgroundColor: "rgba(0, 7, 5, 0.62)" },
+  viewfinder: { position: "absolute", width: VIEWFINDER_SIZE, height: VIEWFINDER_SIZE },
+  corner: { position: "absolute", width: 36, height: 36, borderColor: "#b8f5da", shadowColor: "#b8f5da", shadowOpacity: 0.9, shadowRadius: 8, elevation: 8 },
+  cornerTopLeft: { top: 0, left: 0, borderTopWidth: 3, borderLeftWidth: 3, borderTopLeftRadius: 12 },
+  cornerTopRight: { top: 0, right: 0, borderTopWidth: 3, borderRightWidth: 3, borderTopRightRadius: 12 },
+  cornerBottomLeft: { bottom: 0, left: 0, borderBottomWidth: 3, borderLeftWidth: 3, borderBottomLeftRadius: 12 },
+  cornerBottomRight: { right: 0, bottom: 0, borderRightWidth: 3, borderBottomWidth: 3, borderBottomRightRadius: 12 },
+  hint: { position: "absolute", left: 24, right: 24, color: "#ffffff", textAlign: "center", fontSize: 15, fontWeight: "700", lineHeight: 22 },
 });
