@@ -3,10 +3,10 @@ const PushDevice = require('../models/PushDevice');
 
 const EXPO_PUSH_TOKEN_PATTERN = /^(ExponentPushToken|ExpoPushToken)\[[^\]]+\]$/;
 
-const buildRecipientFilter = (nguoiThueId) => ({ recipientId: nguoiThueId });
-const buildOwnedNotificationFilter = (id, nguoiThueId) => ({
+const buildRecipientFilter = (userId) => ({ recipientId: userId });
+const buildOwnedNotificationFilter = (id, userId) => ({
     _id: id,
-    recipientId: nguoiThueId,
+    recipientId: userId,
 });
 
 exports.listNotifications = async (req, res) => {
@@ -95,7 +95,7 @@ exports.deactivateDevice = async (req, res) => {
 
 exports.unregisterDevice = async (req, res) => {
     await PushDevice.findOneAndUpdate(
-        { nguoiThueId: req.auth.id, deviceId: req.params.deviceId },
+        { deviceId: req.params.deviceId, $or: [{ userId: req.auth.id }, { nguoiThueId: req.auth.id }] },
         { active: false, isActive: false, lastActiveAt: new Date() },
     );
     return res.json({ success: true, message: 'Đã ngừng nhận push notification trên thiết bị này.' });
