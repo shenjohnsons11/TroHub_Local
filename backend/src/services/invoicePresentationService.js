@@ -1,3 +1,5 @@
+const { presentInvoiceListItem } = require('./invoicePresenter');
+
 function asAmount(value) {
     const amount = Number(value);
     return Number.isFinite(amount) ? amount : 0;
@@ -18,6 +20,7 @@ function presentInvoice(invoice) {
 
     return {
         ...source,
+        ...presentInvoiceListItem(source),
         type: isDeposit ? 'deposit' : 'monthly',
         depositAmount: isDeposit ? asAmount(source.totalAmount) || asAmount(contract.fixedDeposit) : 0,
         rent: isDeposit ? 0 : asAmount(source.roomAmount) || asAmount(contract.fixedRentPrice) || asAmount(room.defaultRentPrice),
