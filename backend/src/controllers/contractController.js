@@ -1,6 +1,9 @@
 const Contract = require('../models/Contract');
 const Room = require('../models/Room');
 const Invoice = require('../models/Invoice');
+const Property = require('../models/Property');
+const PropertyMembership = require('../models/PropertyMembership');
+const { assertContractEligibility, PropertyMembershipError } = require('../services/propertyMembershipService');
 const {
     buildDepositPayment,
     signContractAndEnsureDeposit,
@@ -22,6 +25,9 @@ const { notifyLandlord } = require('../services/landlordNotificationService');
 const { sendContractToNguoiThue } = require('../services/contractNotificationService');
 
 function sendContractError(res, error, fallbackMessage) {
+    if (error instanceof PropertyMembershipError) {
+        return res.status(error.status).json({ success: false, code: error.code, message: error.message });
+    }
     if (error instanceof ContractTermsError) {
         return res.status(error.status).json({
             success: false,
@@ -112,12 +118,12 @@ exports.getContractHistory = async (req, res) => {
 // 2. Chủ trọ tạo dự thảo hợp đồng (Giao diện Tạo hợp đồng trên Figma)
 exports.createContract = async (req, res) => {
     try {
-        const { roomId, tenantId, startDate, endDate, services } = req.body;
+        const { propertyId, roomId, tenantId, startDate, endDate, services } = req.body;
 
-        if (!roomId || !tenantId || !startDate || !endDate) {
+        if (!propertyId || !roomId || !tenantId || !startDate || !endDate) {
             return res.status(400).json({
                 success: false,
-                message: "Vui lòng cung cấp đầy đủ roomId, tenantId, startDate và endDate!",
+                message: "Vui lòng cung cấp đầy đủ propertyId, roomId, tenantId, startDate và endDate!",
             });
         }
 
@@ -131,9 +137,16 @@ exports.createContract = async (req, res) => {
             });
         }
 
-        // 1. Ràng buộc Phòng: Kiểm tra phòng có đang trống không
-        const room = await Room.findById(roomId);
-        if (!room) return res.status(404).json({ success: false, message: "Không tìm thấy phòng!" });
+        const room = await assertContractEligibility({
+            propertyId,
+            landlordId: req.auth.id,
+            roomId,
+            tenantId,
+            PropertyModel: Property,
+            RoomModel: Room,
+            MembershipModel: PropertyMembership,
+            ContractModel: Contract,
+        });
 
         const previousContract = await Contract.findOne({ roomId })
             .sort({ createdAt: -1 })
@@ -156,21 +169,6 @@ exports.createContract = async (req, res) => {
             }),
             ...req.body,
         });
-
-        // Chống spam: Kiểm tra xem Phòng hoặc Người thuê đã có hợp đồng chờ xử lý chưa
-        const existingPending = await Contract.findOne({
-            $or: [
-                { roomId, status: { $in: [0, 4] } },
-                { tenantId, status: { $in: [0, 4] } }
-            ]
-        });
-
-        if (existingPending) {
-            return res.status(400).json({
-                success: false,
-                message: "Người thuê hoặc Phòng này đã có một hợp đồng nháp đang chờ xử lý. Vui lòng kiểm tra lại danh sách hợp đồng!"
-            });
-        }
 
         // Xóa các số điện/nước nháp cũ của phòng để ô số điện mới trên màn hình chốt điện nước để trống
         room.draftElectricity = undefined;
@@ -199,7 +197,7 @@ exports.createContract = async (req, res) => {
             content: `Chủ trọ vừa gửi hợp đồng thuê phòng ${roomCode}. Vui lòng kiểm tra và ký xác nhận.`,
             category: "contract",
             deepLink: "contract",
-            metadata: { contractId: newContract._id, roomId, action: 'review' },
+            metadata: { propertyId, contractId: newContract._id, roomId, action: 'review' },
             eventKey: `contract:${newContract._id}:created`,
         });
 
@@ -222,6 +220,12 @@ exports.getContractById = async (req, res) => {
             .populate('services.serviceId', 'name unit type defaultPrice'); // Kéo chi tiết dịch vụ ra
 
         if (!contract) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy hợp đồng!" });
+        }
+        if (req.auth.role === 2 && String(contract.tenantId?._id || contract.tenantId) !== String(req.auth.id)) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy hợp đồng!" });
+        }
+        if (req.auth.role === 1 && String(contract.roomId?.landlordId || '') !== String(req.auth.id)) {
             return res.status(404).json({ success: false, message: "Không tìm thấy hợp đồng!" });
         }
         res.status(200).json({ success: true, data: contract });
