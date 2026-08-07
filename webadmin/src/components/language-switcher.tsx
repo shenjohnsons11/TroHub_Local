@@ -1,0 +1,39 @@
+"use client";
+
+import React from "react";
+import { useLanguage } from "@/components/language-provider";
+
+export function LanguageSwitcher({ className = "" }: { className?: string }) {
+  const { language, setLanguage } = useLanguage();
+
+  return (
+    <div className={`inline-flex items-center rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-900/80 p-1 text-xs font-semibold ${className}`}>
+      <button
+        type="button"
+        onClick={() => setLanguage("vi")}
+        className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 transition-all ${
+          language === "vi"
+            ? "bg-white dark:bg-slate-800 text-teal-700 dark:text-teal-400 shadow-xs font-bold"
+            : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+        }`}
+        aria-label="Chuyển sang Tiếng Việt"
+      >
+        <span className="text-sm">🇻🇳</span>
+        <span>VIE</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => setLanguage("en")}
+        className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 transition-all ${
+          language === "en"
+            ? "bg-white dark:bg-slate-800 text-teal-700 dark:text-teal-400 shadow-xs font-bold"
+            : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+        }`}
+        aria-label="Switch to English"
+      >
+        <span className="text-sm">🇬🇧</span>
+        <span>ENG</span>
+      </button>
+    </div>
+  );
+}

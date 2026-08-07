@@ -1,0 +1,169 @@
+{
+  "common": {
+    "all": "All",
+    "search": "Search...",
+    "filter": "Filter",
+    "status": "Status",
+    "action": "Action",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add New",
+    "loading": "Loading...",
+    "success": "Success",
+    "error": "System Error",
+    "back": "Back",
+    "close": "Close",
+    "details": "View Details",
+    "floor": "Floor {number}",
+    "unitVnd": "VND",
+    "unitKwh": "kWh",
+    "unitM3": "m³"
+  },
+  "auth": {
+    "login": "Sign In",
+    "loginTitle": "Welcome Back",
+    "loginDescription": "Sign in to your TroHub Landlord Management account.",
+    "register": "Register",
+    "registerLandlord": "Register Landlord",
+    "registerDescription": "Create an account to manage your boarding house.",
+    "forgotPassword": "Forgot Password?",
+    "forgotPasswordTitle": "Reset Password",
+    "forgotPasswordDesc": "Enter your registered Email or Phone to receive an OTP verification code.",
+    "verifyOtp": "Verify OTP Code",
+    "enterOtp": "Enter 6-digit OTP code",
+    "resetPassword": "Reset Password",
+    "newPassword": "New Password",
+    "confirmPassword": "Confirm New Password",
+    "sendOtp": "Send OTP Code",
+    "resendOtp": "Resend OTP ({seconds}s)",
+    "phoneOrEmail": "Phone Number or Email",
+    "password": "Password",
+    "fullName": "Full Name",
+    "email": "Email Address",
+    "phone": "Phone Number",
+    "idCard": "National ID (12 digits)",
+    "inviteCode": "Registration Invite Code (6 digits)",
+    "tenantRegister": "Create Tenant Account",
+    "tenantMobileOnly": "Tenant accounts must sign in using the TroHub Mobile App.",
+    "logout": "Sign Out"
+  },
+  "nav": {
+    "overview": "Overview",
+    "rooms": "Room Management",
+    "tenants": "Tenants",
+    "contracts": "Contracts",
+    "invoices": "Invoices",
+    "utilities": "Electricity & Water",
+    "repairs": "Repairs & Issues",
+    "settings": "Settings",
+    "payments": "Payment Gateway",
+    "debts": "Outstanding Debts",
+    "notifications": "Notifications"
+  },
+  "rooms": {
+    "title": "Room Management",
+    "subtitle": "Track room status, rental prices, and room list by floor",
+    "addRoom": "Add New Room",
+    "editRoom": "Edit Room Info",
+    "roomCode": "Room Code",
+    "price": "Monthly Rent",
+    "deposit": "Security Deposit",
+    "area": "Area (m²)",
+    "maxTenants": "Max Capacity",
+    "status": {
+      "rented": "Rented",
+      "available": "Available",
+      "maintenance": "Under Maintenance"
+    },
+    "filterStatus": "Room Status",
+    "filterFloor": "Filter by Floor",
+    "searchPlaceholder": "Search by room code...",
+    "emptyRooms": "No rooms created yet."
+  },
+  "tenants": {
+    "title": "Tenant Management",
+    "subtitle": "List of current tenants and room assignments",
+    "addTenant": "Add New Tenant",
+    "unassigned": "Unassigned",
+    "assigned": "Assigned Room",
+    "fullName": "Full Name",
+    "phone": "Phone Number",
+    "idCard": "National ID",
+    "currentRoom": "Current Room",
+    "startDate": "Move-in Date",
+    "emptyTenants": "No tenants found."
+  },
+  "contracts": {
+    "title": "Contract Management",
+    "subtitle": "Create, extend, and settle lease contracts",
+    "createContract": "Create New Contract",
+    "checkout": "Process Checkout",
+    "settleDeposit": "Settle Deposit",
+    "contractCode": "Contract Code",
+    "room": "Rented Room",
+    "tenant": "Tenant Representative",
+    "startDate": "Start Date",
+    "endDate": "Expiration Date",
+    "depositAmount": "Deposit Collected",
+    "rentalPrice": "Agreed Rent",
+    "status": {
+      "active": "Active",
+      "expired": "Expired",
+      "terminated": "Terminated"
+    }
+  },
+  "invoices": {
+    "title": "Invoice Management",
+    "subtitle": "Record meter readings, create invoices, and track payments",
+    "createInvoice": "Create New Invoice",
+    "recordMeter": "Record Meter Readings",
+    "printInvoice": "Print Invoice PDF",
+    "electricIndex": "Electricity Meter (old -> new)",
+    "waterIndex": "Water Meter (old -> new)",
+    "totalAmount": "Total Amount Due",
+    "dueDate": "Payment Due Date",
+    "status": {
+      "unpaid": "Unpaid",
+      "paid": "Paid",
+      "overdue": "Overdue"
+    },
+    "payNow": "Pay Now"
+  },
+  "repairs": {
+    "title": "Repairs & Issue Reports",
+    "subtitle": "Receive incident reports from tenants and track progress",
+    "reportIssue": "Report New Issue",
+    "issueTitle": "Issue Title / Damage",
+    "description": "Detailed Description",
+    "priority": "Priority Level",
+    "progress": "Resolution Progress",
+    "status": {
+      "pending": "Pending",
+      "processing": "Processing",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    }
+  },
+  "notifications": {
+    "title": "System Notifications",
+    "bell": "Notifications 🔔",
+    "markAllRead": "Mark All as Read",
+    "noNotifications": "No new notifications.",
+    "categories": {
+      "invoice": "Invoices & Payments",
+      "contract": "Contracts",
+      "repair": "Repair Reports",
+      "system": "System"
+    }
+  },
+  "ai": {
+    "title": "TroHub Co-pilot AI Assistant",
+    "subtitle": "Smart Q&A, automatic revenue analysis, and management suggestions",
+    "inputPlaceholder": "Ask TroHub AI (e.g., Rooms with unpaid electricity bills this month...)",
+    "send": "Send Query",
+    "suggested": "Suggested Questions"
+  }
+}
