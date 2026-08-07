@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   CreditCard,
   Droplet,
@@ -26,31 +26,69 @@ import { MiniCalendarPopover } from "@/components/mini-calendar-popover";
 import { LanguageToggle } from "@/components/language-toggle";
 import { fetchAPI } from "@/lib/api";
 import AIChatWidget from "@/components/AIChatWidget";
+import { safeJsonParse, safeStorageString, type WebAdminUser } from "@/lib/client-storage";
+import { useNotification } from "@/hooks/use-notification";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [user, setUser] = useState<{ fullName?: string; propertyAddress?: string } | null>(null);
+  const router = useRouter();
+  const notification = useNotification();
+  const [user, setUser] = useState<WebAdminUser | null>(null);
 
   useEffect(() => {
-    const userData = localStorage.getItem("trohub_user");
-    if (!userData) {
-      window.location.href = "/";
-    } else {
-      const storedUser = JSON.parse(userData);
-      setUser(storedUser);
-      void fetchAPI("/auth/me").then((data) => {
-        if (!data.user) return;
-        const nextUser = { ...storedUser, ...data.user };
+    let active = true;
+    let redirectTimer: number | undefined;
+    const clearSession = () => {
+      localStorage.removeItem("trohub_token");
+      localStorage.removeItem("trohub_user");
+    };
+    const redirectToLogin = () => {
+      clearSession();
+      router.replace("/");
+    };
+    const token = safeStorageString(localStorage.getItem("trohub_token"));
+    const storedUser = safeJsonParse<WebAdminUser | null>(
+      localStorage.getItem("trohub_user"),
+      null,
+    );
+
+    if (!token || !storedUser || typeof storedUser.role !== "number") {
+      redirectToLogin();
+      return () => undefined;
+    }
+    if (storedUser.role !== 1) {
+      notification.error("Tài khoản không có quyền truy cập WebAdmin");
+      redirectTimer = window.setTimeout(redirectToLogin, 250);
+      return () => window.clearTimeout(redirectTimer);
+    }
+
+    setUser(storedUser);
+    void fetchAPI("/auth/me")
+      .then((data) => {
+        if (!active || !data.user || typeof data.user !== "object") return;
+        const nextUser = { ...storedUser, ...data.user } as WebAdminUser;
+        if (nextUser.role !== 1) {
+          notification.error("Tài khoản không có quyền truy cập WebAdmin");
+          redirectTimer = window.setTimeout(redirectToLogin, 250);
+          return;
+        }
         localStorage.setItem("trohub_user", JSON.stringify(nextUser));
         setUser(nextUser);
-      }).catch(() => undefined);
-    }
-  }, []);
+      })
+      .catch((error: { status?: number }) => {
+        if (active && error.status === 401) redirectToLogin();
+      });
+
+    return () => {
+      active = false;
+      if (redirectTimer) window.clearTimeout(redirectTimer);
+    };
+  }, [notification, router]);
 
   const handleLogout = () => {
     localStorage.removeItem("trohub_token");
     localStorage.removeItem("trohub_user");
-    window.location.replace("/");
+    router.replace("/");
   };
 
   const navGroups = [
