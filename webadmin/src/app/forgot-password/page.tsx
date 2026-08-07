@@ -16,11 +16,15 @@ import {
   requestPasswordReset,
   verifyPasswordReset,
 } from "@/lib/password-reset";
+import { useLanguage } from "@/components/language-provider";
+import { LanguageToggle } from "@/components/language-toggle";
 
 type Step = "identifier" | "otp" | "password" | "done";
 
 export default function ForgotPasswordPage() {
   const notification = useNotification();
+  const { t } = useLanguage();
+
   const [step, setStep] = useState<Step>("identifier");
   const [identifier, setIdentifier] = useState("");
   const [otp, setOtp] = useState("");
@@ -85,9 +89,13 @@ export default function ForgotPasswordPage() {
   };
 
   const stepNumber = step === "identifier" ? 1 : step === "otp" ? 2 : 3;
+
   return (
     <main className="relative grid min-h-[100dvh] place-items-center bg-background px-4 py-16">
-      <div className="absolute right-5 top-5"><ThemeToggle /></div>
+      <div className="absolute right-5 top-5 flex items-center gap-2">
+        <LanguageToggle />
+        <ThemeToggle />
+      </div>
       <section className="w-full max-w-[460px]">
         <TroHubLogo />
         <div className="mt-9 border-t border-border pt-8">
@@ -118,34 +126,82 @@ export default function ForgotPasswordPage() {
                 {step === "identifier" && (
                   <div className="space-y-2">
                     <Label htmlFor="identifier">Số điện thoại hoặc tên đăng nhập</Label>
-                    <Input id="identifier" autoComplete="username" value={identifier}
-                      onChange={(event) => setIdentifier(event.target.value)} className="h-12" />
+                    <Input
+                      id="identifier"
+                      autoComplete="username"
+                      value={identifier}
+                      disabled={loading}
+                      onChange={(event) => setIdentifier(event.target.value)}
+                      className="h-12"
+                    />
                   </div>
                 )}
                 {step === "otp" && (
                   <div className="space-y-2">
                     <Label htmlFor="otp">Mã OTP 6 số</Label>
-                    <Input id="otp" inputMode="numeric" maxLength={6} value={otp}
+                    <Input
+                      id="otp"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={otp}
+                      disabled={loading}
                       onChange={(event) => setOtp(event.target.value.replace(/\D/g, ""))}
-                      className="h-12 text-center text-xl font-black tracking-[.35em]" />
-                    <button type="button" disabled={loading || secondsUntilResend > 0}
-                      onClick={requestOtp} className="w-full text-right text-sm font-bold text-primary disabled:text-muted-foreground">
+                      className="h-12 text-center text-xl font-black tracking-[.35em]"
+                    />
+                    <button
+                      type="button"
+                      disabled={loading || secondsUntilResend > 0}
+                      onClick={requestOtp}
+                      className="w-full text-right text-sm font-bold text-primary disabled:text-muted-foreground"
+                    >
                       {secondsUntilResend ? `Gửi lại sau ${secondsUntilResend}s` : "Gửi lại mã"}
                     </button>
                   </div>
                 )}
                 {step === "password" && (
                   <>
-                    <div className="space-y-2"><Label htmlFor="password">Mật khẩu mới</Label>
-                      <Input id="password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="h-12" /></div>
-                    <div className="space-y-2"><Label htmlFor="confirmation">Xác nhận mật khẩu</Label>
-                      <Input id="confirmation" type="password" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} className="h-12" /></div>
+                    <div className="space-y-2">
+                      <Label htmlFor="password">Mật khẩu mới</Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        value={password}
+                        disabled={loading}
+                        onChange={(event) => setPassword(event.target.value)}
+                        className="h-12"
+                        placeholder="Nhập mật khẩu mới"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmation">Xác nhận mật khẩu</Label>
+                      <Input
+                        id="confirmation"
+                        type="password"
+                        value={confirmation}
+                        disabled={loading}
+                        onChange={(event) => setConfirmation(event.target.value)}
+                        className="h-12"
+                        placeholder="Nhập lại mật khẩu mới"
+                      />
+                    </div>
                   </>
                 )}
-                <Button disabled={loading} onClick={step === "identifier" ? requestOtp : step === "otp" ? verifyOtp : complete} className="h-12 w-full">
-                  {loading ? "Đang xử lý..." : step === "identifier" ? "Gửi mã xác minh" : step === "otp" ? "Xác minh" : "Đặt mật khẩu mới"}
+                <Button
+                  disabled={loading}
+                  onClick={step === "identifier" ? requestOtp : step === "otp" ? verifyOtp : complete}
+                  className="h-12 w-full font-bold"
+                >
+                  {loading
+                    ? "Đang xử lý..."
+                    : step === "identifier"
+                    ? "Gửi mã xác minh"
+                    : step === "otp"
+                    ? "Xác minh OTP"
+                    : "🔒 Đặt lại mật khẩu"}
                 </Button>
-                <Link href="/" className="block text-center text-sm font-bold text-muted-foreground hover:text-foreground">Quay lại đăng nhập</Link>
+                <Link href="/" className="block text-center text-sm font-bold text-muted-foreground hover:text-foreground">
+                  Quay lại đăng nhập
+                </Link>
               </div>
             </>
           )}
