@@ -101,11 +101,11 @@ export default function HomeScreen({ profile, refreshKey, onNavigate, onLogout }
   };
 
   const userDisplayName =
-    (profile?.fullName && profile.fullName !== "Người thuê" && profile.fullName.trim())
+    (profile?.fullName && profile.fullName !== t("mobile.home.tenantFallback") && profile.fullName.trim())
       ? profile.fullName.trim()
-      : (homeData?.tenantName && homeData.tenantName !== "Người thuê" && homeData.tenantName.trim())
+      : (homeData?.tenantName && homeData.tenantName !== t("mobile.home.tenantFallback") && homeData.tenantName.trim())
         ? homeData.tenantName.trim()
-        : profile?.phone || "Bạn";
+        : profile?.phone || t("mobile.home.you");
 
   return (
     <ScrollView
@@ -118,7 +118,7 @@ export default function HomeScreen({ profile, refreshKey, onNavigate, onLogout }
         <View style={styles.headerActions}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Trợ lý AI"
+            accessibilityLabel={t("mobile.home.aiLabel")}
             onPress={() => onNavigate("ai_chat")}
             style={[styles.bellButton, { backgroundColor: "#064E3B", borderRadius: 16 }]}
           >
@@ -126,7 +126,7 @@ export default function HomeScreen({ profile, refreshKey, onNavigate, onLogout }
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`${unreadCount} thông báo chưa đọc`}
+            accessibilityLabel={t("mobile.home.unread", { count: unreadCount })}
             onPress={() => onNavigate("notifications")}
             style={styles.bellButton}
           >
@@ -140,7 +140,7 @@ export default function HomeScreen({ profile, refreshKey, onNavigate, onLogout }
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Đăng xuất"
+            accessibilityLabel={t("mobile.home.logout")}
             onPress={onLogout}
             style={styles.logoutButton}
           >
@@ -150,12 +150,12 @@ export default function HomeScreen({ profile, refreshKey, onNavigate, onLogout }
       </View>
 
       <View style={styles.homeHero}>
-        <Text style={styles.heroKicker}>KHÔNG GIAN CỦA BẠN</Text>
+        <Text style={styles.heroKicker}>{t("mobile.home.hero")}</Text>
         <Text style={styles.heroTitle}>
           {getRealtimeGreeting().slice(0, -1)}, {userDisplayName}
         </Text>
         <Text style={styles.heroRoom}>
-          {homeData.room === "Chưa có phòng" ? "Chưa có phòng" : `Phòng ${homeData.room}`}
+          {homeData.room === t("mobile.home.noRoom") ? t("mobile.home.noRoom") : t("mobile.home.room", { room: homeData.room })}
         </Text>
         <MiniCalendarPopover />
       </View>
@@ -174,9 +174,9 @@ export default function HomeScreen({ profile, refreshKey, onNavigate, onLogout }
       {invites.length > 0 && invites.map((invite, index) => (
         <AnimatedEntry delay={index * 40} key={invite.id}>
         <Card style={[styles.amountCard, styles.inviteCard]}>
-          <Text style={[styles.cardTitle, { color: theme.warningForeground, marginBottom: 4 }]}>Lời mời vào nhà trọ</Text>
+          <Text style={[styles.cardTitle, { color: theme.warningForeground, marginBottom: 4 }]}>{t("mobile.home.inviteTitle")}</Text>
           <Text style={styles.smallText}>
-            Chủ trọ <Text style={{fontWeight: 'bold'}}>{invite.landlordName}</Text> ({formatPhone(invite.phone)}) vừa thêm bạn vào danh sách quản lý.
+            {t("mobile.home.inviteMessage", { name: invite.landlordName, phone: formatPhone(invite.phone) })}
           </Text>
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
             <Pressable
@@ -184,14 +184,14 @@ export default function HomeScreen({ profile, refreshKey, onNavigate, onLogout }
               onPress={() => handleAcceptInvite(invite.id)}
             >
               <Ionicons name="checkmark-circle-outline" size={18} color={theme.background} />
-              <Text style={styles.primaryText}>Chấp nhận</Text>
+              <Text style={styles.primaryText}>{t("mobile.home.accept")}</Text>
             </Pressable>
             <Pressable
               style={[styles.secondaryButton, { flex: 1 }]}
               onPress={() => handleRejectInvite(invite.id)}
             >
               <Ionicons name="close-circle-outline" size={18} color={theme.warningForeground} />
-              <Text style={[styles.primaryText, { color: theme.warningForeground }]}>Từ chối</Text>
+              <Text style={[styles.primaryText, { color: theme.warningForeground }]}>{t("mobile.home.reject")}</Text>
             </Pressable>
           </View>
         </Card>
@@ -201,10 +201,10 @@ export default function HomeScreen({ profile, refreshKey, onNavigate, onLogout }
       <AnimatedEntry delay={60}>
         <GradientHero
           actionIcon="card-outline"
-          actionLabel={isUnpaid ? "Thanh toán qua VNPay" : undefined}
-          detail={`${homeData.paymentStatusText} · Hạn thanh toán: ${homeData.dueDate}`}
+          actionLabel={isUnpaid ? t("mobile.home.pay") : undefined}
+          detail={t("mobile.home.due", { status: homeData.paymentStatusText, date: homeData.dueDate })}
           icon="wallet-outline"
-          label="HÓA ĐƠN HIỆN TẠI"
+          label={t("mobile.home.invoice")}
           onAction={isUnpaid ? () => onNavigate("invoice") : undefined}
           value={homeData.totalAmount}
         />
@@ -219,8 +219,8 @@ export default function HomeScreen({ profile, refreshKey, onNavigate, onLogout }
                   <Ionicons name="sparkles" size={20} color="#34D399" />
                 </View>
                 <View>
-                  <Text style={[styles.cardTitle, { color: "#ECFDF5", marginBottom: 2 }]}>Trợ lý AI TroHub 🤖</Text>
-                  <Text style={{ fontSize: 12, color: "#A7F3D0" }}>Hỏi đáp doanh thu, nhắc nợ, hợp đồng...</Text>
+                  <Text style={[styles.cardTitle, { color: "#ECFDF5", marginBottom: 2 }]}>{t("mobile.home.aiTitle")}</Text>
+                  <Text style={{ fontSize: 12, color: "#A7F3D0" }}>{t("mobile.home.aiDescription")}</Text>
                 </View>
               </View>
               <Ionicons name="chevron-forward" size={20} color="#34D399" />
@@ -229,7 +229,7 @@ export default function HomeScreen({ profile, refreshKey, onNavigate, onLogout }
         </Pressable>
       </AnimatedEntry>
 
-      <SectionHeader title="Tiện ích của bạn" />
+      <SectionHeader title={t("mobile.home.utilities")} />
 
       <AnimatedEntry delay={100} style={styles.quickGrid}>
         <Pressable
@@ -238,7 +238,7 @@ export default function HomeScreen({ profile, refreshKey, onNavigate, onLogout }
         >
           <Card style={styles.quickCard}>
             <View style={styles.quickIcon}><Ionicons name="document-text-outline" size={22} color={theme.primary} /></View>
-            <Text style={styles.quickText}>Hợp đồng</Text>
+            <Text style={styles.quickText}>{t("mobile.home.contract")}</Text>
           </Card>
         </Pressable>
 
@@ -248,7 +248,7 @@ export default function HomeScreen({ profile, refreshKey, onNavigate, onLogout }
         >
           <Card style={styles.quickCard}>
             <View style={styles.quickIcon}><Ionicons name="water-outline" size={22} color={theme.primary} /></View>
-            <Text style={styles.quickText}>Điện nước</Text>
+            <Text style={styles.quickText}>{t("mobile.home.utility")}</Text>
           </Card>
         </Pressable>
 
@@ -258,7 +258,7 @@ export default function HomeScreen({ profile, refreshKey, onNavigate, onLogout }
         >
           <Card style={styles.quickCard}>
             <View style={styles.quickIcon}><Ionicons name="construct-outline" size={22} color={theme.primary} /></View>
-            <Text style={styles.quickText}>Sửa chữa</Text>
+            <Text style={styles.quickText}>{t("mobile.home.repair")}</Text>
           </Card>
         </Pressable>
 
@@ -268,7 +268,7 @@ export default function HomeScreen({ profile, refreshKey, onNavigate, onLogout }
         >
           <Card style={styles.quickCard}>
             <View style={styles.quickIcon}><Ionicons name="receipt-outline" size={22} color={theme.primary} /></View>
-            <Text style={styles.quickText}>Hóa đơn</Text>
+            <Text style={styles.quickText}>{t("mobile.home.invoiceShort")}</Text>
           </Card>
         </Pressable>
       </AnimatedEntry>
@@ -276,9 +276,9 @@ export default function HomeScreen({ profile, refreshKey, onNavigate, onLogout }
       <AnimatedEntry delay={140}>
       <Pressable onPress={() => onNavigate("contract")}>
         <Card style={styles.infoCard}>
-          <Text style={styles.cardTitle}>Hợp đồng</Text>
+          <Text style={styles.cardTitle}>{t("mobile.home.contract")}</Text>
           <Text style={styles.cardDesc}>
-            Ngày hết hạn: {homeData.contractEndDate}
+            {t("mobile.home.expires", { date: homeData.contractEndDate })}
           </Text>
         </Card>
       </Pressable>
@@ -288,7 +288,7 @@ export default function HomeScreen({ profile, refreshKey, onNavigate, onLogout }
       <Pressable onPress={() => onNavigate("repair")}>
         <Card style={styles.infoCard}>
           <Text style={styles.cardTitle}>{homeData.recentRepair.title}</Text>
-          <StatusBadge label={homeData.recentRepair.status || "Đang xử lý"} />
+          <StatusBadge label={homeData.recentRepair.status || t("mobile.home.processing")} />
         </Card>
       </Pressable>
       </AnimatedEntry>

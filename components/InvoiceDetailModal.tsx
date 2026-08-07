@@ -14,6 +14,7 @@ import { useAppTheme } from "../contexts/ThemeContext";
 import AppButton from "./ui/AppButton";
 import { Ionicons } from "@expo/vector-icons";
 import { formatCurrency } from "../utils/formatters";
+import { useTranslation } from "../contexts/LanguageContext";
 
 type Props = {
   visible: boolean;
@@ -33,6 +34,7 @@ export default function InvoiceDetailModal({
   onConfirmPaid,
 }: Props) {
   const { theme } = useAppTheme();
+  const { t } = useTranslation();
   const styles = createStyles(theme);
   const titleRef = useRef<Text>(null);
 
@@ -63,10 +65,10 @@ export default function InvoiceDetailModal({
                     accessibilityRole="header"
                     accessibilityLiveRegion="polite"
                   >
-                    Chi tiết hóa đơn
+                    {t("invoiceDetail.title")}
                   </Text>
                   <Text style={styles.modalSub}>
-                    Tháng {invoice.month} • Phòng {invoice.room}
+                    {t("invoiceDetail.subtitle", { month: invoice.month, room: invoice.room })}
                   </Text>
                 </View>
 
@@ -74,40 +76,40 @@ export default function InvoiceDetailModal({
                   style={styles.closeButton}
                   onPress={onClose}
                   accessibilityRole="button"
-                  accessibilityLabel="Đóng chi tiết hóa đơn"
+                  accessibilityLabel={t("invoiceDetail.close")}
                 >
                   <Ionicons name="close" size={22} color={theme.text} />
                 </Pressable>
               </View>
 
               <View style={styles.amountHero}>
-                <Text style={styles.amountHeroLabel}>Tổng thanh toán</Text>
+                <Text style={styles.amountHeroLabel}>{t("invoiceDetail.totalDue")}</Text>
                 <Text style={styles.amountHeroValue}>{invoice.amount}</Text>
               </View>
               <View style={styles.identityBlock}>
-                <Text style={styles.identityText}>Người thuê: {invoice.tenantName || "Chưa cập nhật"}</Text>
-                <Text style={styles.identityText}>Số điện thoại: {invoice.tenantPhone || "Chưa cập nhật"}</Text>
-                <Text style={styles.identityText}>Phòng: {invoice.room || "Chưa cập nhật"}</Text>
+                <Text style={styles.identityText}>{t("invoiceDetail.tenant", { name: invoice.tenantName || t("invoiceDetail.notUpdated") })}</Text>
+                <Text style={styles.identityText}>{t("invoiceDetail.phone", { phone: invoice.tenantPhone || t("invoiceDetail.notUpdated") })}</Text>
+                <Text style={styles.identityText}>{t("invoiceDetail.room", { room: invoice.room || t("invoiceDetail.notUpdated") })}</Text>
               </View>
               <ScrollView style={styles.lines} showsVerticalScrollIndicator={false}>
               {invoice.type === "deposit" ? (
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Tiền cọc hợp đồng</Text>
+                <Text style={styles.detailLabel}>{t("invoiceDetail.deposit")}</Text>
                 <Text style={styles.detailValue}>{formatCurrency(invoice.depositAmount ?? invoice.numericAmount ?? 0)}</Text>
               </View>
               ) : (
               <>
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Tiền phòng</Text>
+                <Text style={styles.detailLabel}>{t("invoiceDetail.rent")}</Text>
                 <Text style={styles.detailValue}>{invoice.details.roomFee}</Text>
               </View>
 
               <View style={styles.detailRow}>
                 <View>
-                  <Text style={styles.detailLabel}>Tiền điện</Text>
+                  <Text style={styles.detailLabel}>{t("invoiceDetail.electricity")}</Text>
                   {invoice.details.electric.newIndex !== null && invoice.details.electric.oldIndex !== null && (
                     <Text style={styles.detailSubLabel}>
-                      (Số mới: {invoice.details.electric.newIndex} - Số cũ: {invoice.details.electric.oldIndex})
+                      {t("invoiceDetail.electricReading", { next: invoice.details.electric.newIndex, previous: invoice.details.electric.oldIndex })}
                     </Text>
                   )}
                 </View>
@@ -116,10 +118,10 @@ export default function InvoiceDetailModal({
 
               <View style={styles.detailRow}>
                 <View>
-                  <Text style={styles.detailLabel}>Tiền nước</Text>
+                  <Text style={styles.detailLabel}>{t("invoiceDetail.water")}</Text>
                   {invoice.details.water.newIndex !== null && invoice.details.water.oldIndex !== null && (
                     <Text style={styles.detailSubLabel}>
-                      (Số mới: {invoice.details.water.newIndex} - Số cũ: {invoice.details.water.oldIndex})
+                      {t("invoiceDetail.waterReading", { next: invoice.details.water.newIndex, previous: invoice.details.water.oldIndex })}
                     </Text>
                   )}
                 </View>
@@ -127,7 +129,7 @@ export default function InvoiceDetailModal({
               </View>
 
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Gửi xe</Text>
+                <Text style={styles.detailLabel}>{t("invoiceDetail.parking")}</Text>
                 <Text style={styles.detailValue}>{invoice.details.parking}</Text>
               </View>
               <View style={styles.divider} />
@@ -137,14 +139,14 @@ export default function InvoiceDetailModal({
               </View>
               <View style={styles.divider} />
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Rác / Vệ sinh</Text>
+                <Text style={styles.detailLabel}>{t("invoiceDetail.garbage")}</Text>
                 <Text style={styles.detailValue}>{invoice.details.garbage}</Text>
               </View>
               {invoice.details.otherServices !== "0đ" && invoice.details.otherServices !== "0" && (
                 <>
                   <View style={styles.divider} />
                   <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Khác</Text>
+                    <Text style={styles.detailLabel}>{t("invoiceDetail.other")}</Text>
                     <Text style={styles.detailValue}>{invoice.details.otherServices}</Text>
                   </View>
                 </>
@@ -153,7 +155,7 @@ export default function InvoiceDetailModal({
               )}
 
               <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>Tổng cộng</Text>
+                <Text style={styles.totalLabel}>{t("invoiceDetail.total")}</Text>
                 <Text style={styles.totalValue}>{invoice.amount}</Text>
               </View>
               </ScrollView>
@@ -164,19 +166,19 @@ export default function InvoiceDetailModal({
                     icon="card-outline"
                     onPress={() => onPay && onPay(invoice.id)}
                   >
-                    Thanh toán ngay
+                    {t("invoiceDetail.pay")}
                   </AppButton>
                 ) : (
                   <AppButton
                     icon="checkmark-circle-outline"
                     onPress={() => onConfirmPaid && onConfirmPaid(invoice.id)}
                   >
-                    Xác nhận đã thu
+                    {t("invoiceDetail.confirm")}
                   </AppButton>
                 )
               ) : (
                 <View style={styles.paidBox}>
-                  <Text style={styles.paidBoxText}>Hóa đơn đã thanh toán</Text>
+                  <Text style={styles.paidBoxText}>{t("invoiceDetail.paid")}</Text>
                 </View>
               )}
             </>

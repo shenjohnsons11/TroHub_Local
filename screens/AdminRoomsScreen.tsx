@@ -56,16 +56,16 @@ export default function AdminRoomsScreen({ params }: Props) {
           electricity: data.electricity ? unformatNumber(data.electricity) : undefined,
           water: data.water ? unformatNumber(data.water) : undefined,
         }));
-      if (payload.length === 0) { notification.error("Vui lòng nhập ít nhất một chỉ số"); return; }
+      if (payload.length === 0) { notification.error(t("mobile.rooms.requiredMeter")); return; }
       const token = await authService.getToken();
       const response = await apiClient.post<{ success: boolean }>("/rooms/bulk-report-utility", { readings: payload }, token);
       if (response.success) {
-        notification.success("Đã lưu chỉ số điện nước hàng loạt!");
+        notification.success(t("mobile.rooms.meterSaved"));
         setMeterModalVisible(false);
         setMeterReadings({});
       }
     } catch (error) {
-      notification.error(error instanceof Error ? error.message : "Có lỗi xảy ra!");
+      notification.error(error instanceof Error ? error.message : t("mobile.rooms.genericError"));
     } finally {
       setSubmitting(false);
     }
@@ -73,26 +73,26 @@ export default function AdminRoomsScreen({ params }: Props) {
 
   const handleAddRoom = async () => {
     if (!roomCode.trim() || !area.trim() || !rentPrice.trim() || !deposit.trim() || !Number.isInteger(Number(floor)) || Number(floor) < 1) {
-      notification.error("Vui lòng điền đầy đủ thông tin!");
+      notification.error(t("mobile.rooms.required"));
       return;
     }
     try {
       setSubmitting(true);
       await adminService.createRoom({ roomCode: roomCode.trim(), area: area.trim(), defaultRentPrice: unformatNumber(rentPrice), defaultDeposit: unformatNumber(deposit), floor: Number(floor) });
-      notification.success("Đã thêm phòng mới thành công!");
+      notification.success(t("mobile.rooms.created"));
       setModalVisible(false);
       setRoomCode(""); setArea(""); setRentPrice(""); setDeposit(""); setFloor("1");
       void loadRooms();
     } catch (error) {
-      notification.error(error instanceof Error ? error.message : "Thêm phòng thất bại!");
+      notification.error(error instanceof Error ? error.message : t("mobile.rooms.createFailed"));
     } finally { setSubmitting(false); }
   };
 
   const statusMeta = (status: number) => status === 0
-    ? ["Trống", theme.positive, theme.positiveSoft]
+    ? [t("mobile.rooms.available"), theme.positive, theme.positiveSoft]
     : status === 1
-      ? ["Đang thuê", theme.warningForeground, theme.warningSoft]
-      : ["Đang sửa", theme.danger, theme.warningSoft];
+      ? [t("mobile.rooms.occupied"), theme.warningForeground, theme.warningSoft]
+      : [t("mobile.rooms.repair"), theme.danger, theme.warningSoft];
   const floors = useMemo(() => [...new Set(rooms.map((room) => room.floor || 1))].sort((a, b) => a - b), [rooms]);
   const filteredRooms = rooms.filter((room) => {
     const matchesStatus = filter === "empty" ? room.status === 0 : filter === "occupied" ? room.status === 1 : filter === "repair" ? room.status === 2 : true;
@@ -110,28 +110,28 @@ export default function AdminRoomsScreen({ params }: Props) {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={<>
-          <GradientHero icon="home-outline" label="DANH MỤC PHÒNG" value={`${rooms.length} phòng`} detail={`${rooms.filter((room) => room.status === 0).length} phòng đang trống`} />
+          <GradientHero icon="home-outline" label={t("mobile.rooms.heroLabel")} value={t("mobile.rooms.heroValue", { count: rooms.length })} detail={t("mobile.rooms.heroDetail", { count: rooms.filter((room) => room.status === 0).length })} />
           <View style={styles.sectionRow}>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.sectionTitle, { color: theme.text }]}>Danh sách phòng trọ</Text>
-              <Text style={[styles.sectionSub, { color: theme.muted }]}>Quản lý và theo dõi trạng thái từng phòng</Text>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>{t("mobile.rooms.listTitle")}</Text>
+              <Text style={[styles.sectionSub, { color: theme.muted }]}>{t("mobile.rooms.listSubtitle")}</Text>
             </View>
             <Pressable accessibilityRole="button" style={[styles.sectionBtn, { backgroundColor: theme.warningForeground }]} onPress={() => { setMeterReadings({}); setMeterModalVisible(true); }}>
               <Ionicons name="flash" size={16} color="#fff" />
-              <Text style={styles.sectionBtnText}>Chốt điện nước</Text>
+              <Text style={styles.sectionBtnText}>{t("mobile.rooms.recordMeter")}</Text>
             </Pressable>
             <Pressable accessibilityRole="button" style={[styles.sectionBtn, { backgroundColor: theme.primary }]} onPress={() => setModalVisible(true)}>
               <Ionicons name="add" size={16} color="#fff" />
-              <Text style={styles.sectionBtnText}>Thêm phòng</Text>
+              <Text style={styles.sectionBtnText}>{t("mobile.rooms.add")}</Text>
             </Pressable>
           </View>
-          <View style={styles.filters}>{(["all", "empty", "occupied", "repair"] as const).map((value) => <Pressable key={value} accessibilityRole="button" accessibilityState={{ selected: filter === value }} style={[styles.filter, { backgroundColor: filter === value ? theme.primarySoft : theme.surfaceElevated }]} onPress={() => setFilter(value)}><Text style={[styles.filterText, { color: filter === value ? theme.primary : theme.muted }]}>{({ all: t("all"), empty: "Trống", occupied: "Đang thuê", repair: "Sửa chữa" })[value]}</Text></Pressable>)}</View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.floorFilters}><Pressable accessibilityRole="button" accessibilityState={{ selected: selectedFloor === "all" }} style={[styles.filter, { backgroundColor: selectedFloor === "all" ? theme.primarySoft : theme.surfaceElevated }]} onPress={() => setSelectedFloor("all")}><Text style={[styles.filterText, { color: selectedFloor === "all" ? theme.primary : theme.muted }]}>{t("all")}</Text></Pressable>{floors.map((value) => <Pressable key={value} accessibilityRole="button" accessibilityState={{ selected: selectedFloor === value }} style={[styles.filter, { backgroundColor: selectedFloor === value ? theme.primarySoft : theme.surfaceElevated }]} onPress={() => setSelectedFloor(value)}><Text style={[styles.filterText, { color: selectedFloor === value ? theme.primary : theme.muted }]}>{t("floor")} {value}</Text></Pressable>)}</ScrollView>
+          <View style={styles.filters}>{(["all", "empty", "occupied", "repair"] as const).map((value) => <Pressable key={value} accessibilityRole="button" accessibilityState={{ selected: filter === value }} style={[styles.filter, { backgroundColor: filter === value ? theme.primarySoft : theme.surfaceElevated }]} onPress={() => setFilter(value)}><Text style={[styles.filterText, { color: filter === value ? theme.primary : theme.muted }]}>{({ all: t("common.all"), empty: t("mobile.rooms.available"), occupied: t("mobile.rooms.occupied"), repair: t("mobile.rooms.repair") })[value]}</Text></Pressable>)}</View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.floorFilters}><Pressable accessibilityRole="button" accessibilityState={{ selected: selectedFloor === "all" }} style={[styles.filter, { backgroundColor: selectedFloor === "all" ? theme.primarySoft : theme.surfaceElevated }]} onPress={() => setSelectedFloor("all")}><Text style={[styles.filterText, { color: selectedFloor === "all" ? theme.primary : theme.muted }]}>{t("common.all")}</Text></Pressable>{floors.map((value) => <Pressable key={value} accessibilityRole="button" accessibilityState={{ selected: selectedFloor === value }} style={[styles.filter, { backgroundColor: selectedFloor === value ? theme.primarySoft : theme.surfaceElevated }]} onPress={() => setSelectedFloor(value)}><Text style={[styles.filterText, { color: selectedFloor === value ? theme.primary : theme.muted }]}>{t("common.floor", { number: value })}</Text></Pressable>)}</ScrollView>
         </>}
-        ListEmptyComponent={<IllustratedEmptyState kind="contract" title={rooms.length ? "Không có phòng phù hợp" : "Chưa có phòng trọ"} description={rooms.length ? "Hãy chọn bộ lọc khác." : "Thêm phòng đầu tiên để bắt đầu vận hành."} actionLabel={rooms.length ? undefined : "Thêm phòng"} actionIcon="add" onAction={rooms.length ? undefined : () => setModalVisible(true)} />}
+        ListEmptyComponent={<IllustratedEmptyState kind="contract" title={rooms.length ? t("mobile.rooms.noMatch") : t("mobile.rooms.empty")} description={rooms.length ? t("mobile.rooms.tryFilter") : t("mobile.rooms.addFirst")} actionLabel={rooms.length ? undefined : t("mobile.rooms.add")} actionIcon="add" onAction={rooms.length ? undefined : () => setModalVisible(true)} />}
         renderItem={({ item: group, index }) => (
           <View style={styles.floorGroup}>
-            <Text style={[styles.floorTitle, { color: theme.text }]}>{t("floor").toUpperCase()} {group.floor}</Text>
+            <Text style={[styles.floorTitle, { color: theme.text }]}>{t("common.floor", { number: group.floor }).toUpperCase()}</Text>
             <View style={styles.roomGrid}>
               {group.rooms.map((item, roomIndex) => {
                 const [label, color, background] = statusMeta(item.status);
@@ -141,7 +141,7 @@ export default function AdminRoomsScreen({ params }: Props) {
                       <View style={[styles.iconTile, { backgroundColor: theme.primarySoft }]}><Ionicons name="business-outline" size={22} color={theme.primary} /></View>
                       <View style={[styles.badge, { backgroundColor: background as string }]}><Text style={[styles.badgeText, { color: color as string }]}>{label}</Text></View>
                     </View>
-                    <View style={styles.info}><Text style={[styles.roomCode, { color: theme.text }]}>{item.roomCode}</Text><Text style={[styles.sub, { color: theme.muted }]}>{item.area}</Text><Text style={[styles.sub, { color: theme.primary }]}>{formatCurrency(item.defaultRentPrice)}/th</Text></View>
+                    <View style={styles.info}><Text style={[styles.roomCode, { color: theme.text }]}>{item.roomCode}</Text><Text style={[styles.sub, { color: theme.muted }]}>{item.area}</Text><Text style={[styles.sub, { color: theme.primary }]}>{formatCurrency(item.defaultRentPrice)}/{t("mobile.rooms.month")}</Text></View>
                   </Pressable>
                 </AnimatedEntry>;
               })}
@@ -152,19 +152,19 @@ export default function AdminRoomsScreen({ params }: Props) {
 
       <Modal visible={detailVisible} transparent animationType="slide" onRequestClose={() => { if (!submitting) setDetailVisible(false); }}>
         <View style={[styles.overlay, { backgroundColor: theme.overlay }]}><View accessibilityViewIsModal style={[styles.sheet, { backgroundColor: theme.surfaceElevated }]}>
-          <View style={styles.modalHeader}><Text accessibilityRole="header" style={[styles.modalTitle, { color: theme.text }]}>Chi tiết phòng {selectedRoom?.roomCode}</Text><Pressable accessibilityRole="button" accessibilityLabel="Đóng chi tiết phòng" onPress={() => setDetailVisible(false)}><Ionicons name="close" size={26} color={theme.text} /></Pressable></View>
-          {selectedRoom ? <View style={styles.detailBody}>{[[t("floor"), selectedRoom.floor || 1], ["Diện tích", selectedRoom.area], ["Giá thuê mặc định", `${formatCurrency(selectedRoom.defaultRentPrice)}/tháng`], ["Tiền cọc mặc định", formatCurrency(selectedRoom.defaultDeposit)], ["Trạng thái", statusMeta(selectedRoom.status)[0]]].map(([label, value]) => <View key={String(label)} style={[styles.detailRow, { backgroundColor: theme.background }]}><Text style={[styles.detailLabel, { color: theme.muted }]}>{label}</Text><Text style={[styles.detailValue, { color: theme.text }]}>{value}</Text></View>)}</View> : null}
+          <View style={styles.modalHeader}><Text accessibilityRole="header" style={[styles.modalTitle, { color: theme.text }]}>{t("mobile.rooms.detailTitle", { roomCode: selectedRoom?.roomCode || "" })}</Text><Pressable accessibilityRole="button" accessibilityLabel={t("mobile.rooms.closeDetail")} onPress={() => setDetailVisible(false)}><Ionicons name="close" size={26} color={theme.text} /></Pressable></View>
+          {selectedRoom ? <View style={styles.detailBody}>{[[t("common.floor", { number: selectedRoom.floor || 1 }), selectedRoom.floor || 1], [t("mobile.rooms.area"), selectedRoom.area], [t("mobile.rooms.defaultRent"), `${formatCurrency(selectedRoom.defaultRentPrice)}/${t("mobile.rooms.month")}`], [t("mobile.rooms.defaultDeposit"), formatCurrency(selectedRoom.defaultDeposit)], [t("mobile.rooms.status"), statusMeta(selectedRoom.status)[0]]].map(([label, value]) => <View key={String(label)} style={[styles.detailRow, { backgroundColor: theme.background }]}><Text style={[styles.detailLabel, { color: theme.muted }]}>{label}</Text><Text style={[styles.detailValue, { color: theme.text }]}>{value}</Text></View>)}</View> : null}
         </View></View>
       </Modal>
 
       <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => { if (!submitting) setModalVisible(false); }}>
         <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === "ios" ? "padding" : undefined}><View style={[StyleSheet.absoluteFill, { backgroundColor: theme.overlay }]} /><View accessibilityViewIsModal style={[styles.sheet, { backgroundColor: theme.surfaceElevated }]}>
-          <View style={styles.modalHeader}><Text accessibilityRole="header" style={[styles.modalTitle, { color: theme.text }]}>Thêm phòng trọ mới</Text><Pressable accessibilityRole="button" accessibilityLabel="Đóng thêm phòng" disabled={submitting} onPress={() => setModalVisible(false)}><Ionicons name="close" size={26} color={theme.text} /></Pressable></View>
+          <View style={styles.modalHeader}><Text accessibilityRole="header" style={[styles.modalTitle, { color: theme.text }]}>{t("mobile.rooms.newTitle")}</Text><Pressable accessibilityRole="button" accessibilityLabel={t("mobile.rooms.closeNew")} disabled={submitting} onPress={() => setModalVisible(false)}><Ionicons name="close" size={26} color={theme.text} /></Pressable></View>
           <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-            <View style={styles.field}><Text style={[styles.label, { color: theme.text }]}>Mã phòng (ví dụ: P.101)</Text><TextInput style={inputStyle} value={roomCode} onChangeText={setRoomCode} placeholder="Nhập mã phòng" placeholderTextColor={theme.muted} autoCapitalize="characters" /></View>
-            <View style={styles.field}><Text style={[styles.label, { color: theme.text }]}>{t("floor")}</Text><TextInput style={inputStyle} value={floor} onChangeText={setFloor} placeholder="1" placeholderTextColor={theme.muted} keyboardType="number-pad" /></View>
-            {[["Diện tích (ví dụ: 25m2)", area, setArea, "Nhập diện tích", "default"], ["Giá thuê mặc định (VNĐ)", rentPrice, (value: string) => setRentPrice(formatNumberInput(value)), "Nhập giá thuê", "numeric"], ["Tiền đặt cọc mặc định (VNĐ)", deposit, (value: string) => setDeposit(formatNumberInput(value)), "Nhập tiền đặt cọc", "numeric"]].map(([label, value, setter, placeholder, keyboard]) => <View key={label as string} style={styles.field}><Text style={[styles.label, { color: theme.text }]}>{label as string}</Text><TextInput style={inputStyle} value={value as string} onChangeText={setter as (text: string) => void} placeholder={placeholder as string} placeholderTextColor={theme.muted} keyboardType={keyboard as any} /></View>)}
-            <AppButton icon="add-circle-outline" loading={submitting} onPress={handleAddRoom}>Thêm phòng</AppButton>
+            <View style={styles.field}><Text style={[styles.label, { color: theme.text }]}>{t("mobile.rooms.roomCode")}</Text><TextInput style={inputStyle} value={roomCode} onChangeText={setRoomCode} placeholder={t("mobile.rooms.roomCodePlaceholder")} placeholderTextColor={theme.muted} autoCapitalize="characters" /></View>
+            <View style={styles.field}><Text style={[styles.label, { color: theme.text }]}>{t("common.floor", { number: "" })}</Text><TextInput style={inputStyle} value={floor} onChangeText={setFloor} placeholder="1" placeholderTextColor={theme.muted} keyboardType="number-pad" /></View>
+            {[[t("mobile.rooms.areaInput"), area, setArea, t("mobile.rooms.areaPlaceholder"), "default"], [t("mobile.rooms.rentInput"), rentPrice, (value: string) => setRentPrice(formatNumberInput(value)), t("mobile.rooms.rentPlaceholder"), "numeric"], [t("mobile.rooms.depositInput"), deposit, (value: string) => setDeposit(formatNumberInput(value)), t("mobile.rooms.depositPlaceholder"), "numeric"]].map(([label, value, setter, placeholder, keyboard]) => <View key={label as string} style={styles.field}><Text style={[styles.label, { color: theme.text }]}>{label as string}</Text><TextInput style={inputStyle} value={value as string} onChangeText={setter as (text: string) => void} placeholder={placeholder as string} placeholderTextColor={theme.muted} keyboardType={keyboard as any} /></View>)}
+            <AppButton icon="add-circle-outline" loading={submitting} onPress={handleAddRoom}>{t("mobile.rooms.add")}</AppButton>
           </ScrollView>
         </View></KeyboardAvoidingView>
       </Modal>
@@ -174,27 +174,27 @@ export default function AdminRoomsScreen({ params }: Props) {
           <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.overlay }]} />
           <View accessibilityViewIsModal style={[styles.sheet, { backgroundColor: theme.surfaceElevated, maxHeight: "90%" }]}>
             <View style={styles.modalHeader}>
-              <Text accessibilityRole="header" style={[styles.modalTitle, { color: theme.text }]}>Chốt chỉ số điện nước</Text>
+              <Text accessibilityRole="header" style={[styles.modalTitle, { color: theme.text }]}>{t("mobile.rooms.meterTitle")}</Text>
               <Pressable disabled={submitting} onPress={() => setMeterModalVisible(false)}><Ionicons name="close" size={26} color={theme.text} /></Pressable>
             </View>
             <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               {rooms.filter(r => r.status === 1).length === 0 && (
-                <Text style={{ color: theme.muted, textAlign: "center", marginVertical: 40 }}>Không có phòng đang thuê</Text>
+                <Text style={{ color: theme.muted, textAlign: "center", marginVertical: 40 }}>{t("mobile.rooms.noOccupied")}</Text>
               )}
               {rooms.filter(r => r.status === 1).map(room => (
                 <View key={room._id} style={{ marginBottom: 14, padding: 12, backgroundColor: theme.background, borderRadius: 12 }}>
-                  <View style={styles.meterCardHeader}><Text style={{ fontWeight: "800", color: theme.text }}>Phòng: {room.roomCode}</Text><Pressable accessibilityRole="button" accessibilityLabel={`Quét số đồng hồ phòng ${room.roomCode}`} disabled={submitting} onPress={() => setScanTarget({ roomId: room._id, roomCode: room.roomCode, meterType: "electricity" })} style={[styles.scanMeterButton, { backgroundColor: theme.primarySoft }]}><Ionicons name="camera-outline" size={15} color={theme.primary} /><Text style={[styles.scanMeterText, { color: theme.primary }]}>Quét số</Text></Pressable></View>
+                  <View style={styles.meterCardHeader}><Text style={{ fontWeight: "800", color: theme.text }}>{t("mobile.rooms.room", { roomCode: room.roomCode })}</Text><Pressable accessibilityRole="button" accessibilityLabel={t("mobile.rooms.scanMeter", { roomCode: room.roomCode })} disabled={submitting} onPress={() => setScanTarget({ roomId: room._id, roomCode: room.roomCode, meterType: "electricity" })} style={[styles.scanMeterButton, { backgroundColor: theme.primarySoft }]}><Ionicons name="camera-outline" size={15} color={theme.primary} /><Text style={[styles.scanMeterText, { color: theme.primary }]}>{t("mobile.rooms.scan")}</Text></Pressable></View>
                   <View style={{ flexDirection: "row", gap: 10 }}>
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.label, { color: theme.muted }]}>Điện mới (kWh)</Text>
-                      <TextInput style={inputStyle} keyboardType="numeric" placeholder="Số điện" placeholderTextColor={theme.muted}
+                      <Text style={[styles.label, { color: theme.muted }]}>{t("mobile.rooms.newElectricity")}</Text>
+                      <TextInput style={inputStyle} keyboardType="numeric" placeholder={t("mobile.rooms.electricityPlaceholder")} placeholderTextColor={theme.muted}
                         value={meterReadings[room._id]?.electricity || ""}
                         onChangeText={(value) => setMeterReadings(prev => ({ ...prev, [room._id]: { ...prev[room._id], electricity: formatNumberInput(value), water: prev[room._id]?.water || "" } }))}
                       />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.label, { color: theme.muted }]}>Nước mới (m³)</Text>
-                      <TextInput style={inputStyle} keyboardType="numeric" placeholder="Số nước" placeholderTextColor={theme.muted}
+                      <Text style={[styles.label, { color: theme.muted }]}>{t("mobile.rooms.newWater")}</Text>
+                      <TextInput style={inputStyle} keyboardType="numeric" placeholder={t("mobile.rooms.waterPlaceholder")} placeholderTextColor={theme.muted}
                         value={meterReadings[room._id]?.water || ""}
                         onChangeText={(value) => setMeterReadings(prev => ({ ...prev, [room._id]: { ...prev[room._id], water: formatNumberInput(value), electricity: prev[room._id]?.electricity || "" } }))}
                       />
@@ -202,7 +202,7 @@ export default function AdminRoomsScreen({ params }: Props) {
                   </View>
                 </View>
               ))}
-              <AppButton icon="save-outline" loading={submitting} onPress={handleBulkMeterReport}>Lưu tất cả</AppButton>
+              <AppButton icon="save-outline" loading={submitting} onPress={handleBulkMeterReport}>{t("mobile.rooms.saveAll")}</AppButton>
             </ScrollView>
           </View>
         </KeyboardAvoidingView>
@@ -215,7 +215,7 @@ export default function AdminRoomsScreen({ params }: Props) {
         onRead={(meterType, digits) => {
           if (!scanTarget) return;
           setMeterReadings((current) => applyMeterReading(current, scanTarget.roomId, meterType, formatNumberInput(digits)));
-          notification.success(`Đã điền chỉ số ${meterType === "electricity" ? "điện" : "nước"} phòng ${scanTarget.roomCode}.`);
+          notification.success(t("mobile.rooms.meterFilled", { meterType: t(meterType === "electricity" ? "mobile.camera.electricity" : "mobile.camera.water"), roomCode: scanTarget.roomCode }));
         }}
       />
     </View>

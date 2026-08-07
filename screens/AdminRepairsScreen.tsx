@@ -9,11 +9,13 @@ import GradientHero from "../components/ui/GradientHero";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
 import AppButton from "../components/ui/AppButton";
 import { adminService, AdminRepair, AdminRoom, AdminContract } from "../services/adminService";
+import { useTranslation } from "../contexts/LanguageContext";
 
 type Props = { params?: { repairId?: string } };
 
 export default function AdminRepairsScreen({ params }: Props) {
   const { theme } = useAppTheme();
+  const { t, language } = useTranslation();
   const notification = useNotification();
   const styles = createStyles(theme);
   const [repairs, setRepairs] = useState<AdminRepair[]>([]);
@@ -70,12 +72,12 @@ export default function AdminRepairsScreen({ params }: Props) {
         priority,
         landlordNote: landlordNote.trim(),
       });
-      notification.success("Đã cập nhật yêu cầu sửa chữa!");
+      notification.success(t("mobile.repairs.updated"));
 
       setModalVisible(false);
       loadRepairs();
     } catch (error) {
-      notification.error(error instanceof Error ? error.message : "Cập nhật thất bại!");
+      notification.error(error instanceof Error ? error.message : t("mobile.repairs.updateFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -97,24 +99,24 @@ export default function AdminRepairsScreen({ params }: Props) {
 
   const handleBulkDelete = async () => {
     if (selectedIds.length === 0) return;
-    const confirmed = await notification.confirm({ title: "Xác nhận xóa", message: `Bạn có chắc chắn muốn xóa vĩnh viễn ${selectedIds.length} yêu cầu đã chọn không?`, confirmText: "Xóa", cancelText: "Hủy", destructive: true });
+    const confirmed = await notification.confirm({ title: t("mobile.repairs.deleteTitle"), message: t("mobile.repairs.deleteMessage", { count: selectedIds.length }), confirmText: t("common.delete"), cancelText: t("common.cancel"), destructive: true });
     if (!confirmed) return;
     try {
       setLoading(true);
       await Promise.all(selectedIds.map((id) => adminService.deleteRepair(id)));
-      notification.success(`Đã xóa ${selectedIds.length} yêu cầu!`);
+      notification.success(t("mobile.repairs.deleted", { count: selectedIds.length }));
       setSelectedIds([]);
       void loadRepairs();
     } catch {
-      notification.error("Không thể xóa một số yêu cầu.");
+      notification.error(t("mobile.repairs.deleteFailed"));
       setLoading(false);
     }
   };
 
   const getPriorityText = (p: number) => {
-    if (p === 1) return "Thấp";
-    if (p === 2) return "Vừa";
-    return "Gấp";
+    if (p === 1) return t("mobile.repairs.low");
+    if (p === 2) return t("mobile.repairs.medium");
+    return t("mobile.repairs.urgent");
   };
 
   const getPriorityColor = (p: number) => {
@@ -124,10 +126,10 @@ export default function AdminRepairsScreen({ params }: Props) {
   };
 
   const getStatusText = (s: number) => {
-    if (s === 0) return "Chờ xử lý";
-    if (s === 1) return "Đang sửa";
-    if (s === 2) return "Hoàn tất";
-    return "Đã hủy";
+    if (s === 0) return t("mobile.repairs.pending");
+    if (s === 1) return t("mobile.repairs.repairing");
+    if (s === 2) return t("mobile.repairs.done");
+    return t("mobile.repairs.cancelled");
   };
 
   const getStatusColor = (s: number) => {
@@ -149,29 +151,29 @@ export default function AdminRepairsScreen({ params }: Props) {
     <View style={styles.container}>
       {/* Tầng 1: Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Xử lý sự cố / Sửa chữa</Text>
+        <Text style={styles.title}>{t("mobile.repairs.title")}</Text>
       </View>
 
       {/* Hành động hàng loạt */}
       {selectedIds.length > 0 && (
         <View style={styles.bulkActionContainer}>
-          <Text style={styles.bulkText}>Đã chọn {selectedIds.length}</Text>
-          <Pressable accessibilityRole="button" accessibilityLabel={`Xóa ${selectedIds.length} yêu cầu đã chọn`} style={styles.bulkDeleteButton} onPress={handleBulkDelete}>
+          <Text style={styles.bulkText}>{t("mobile.repairs.selected", { count: selectedIds.length })}</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel={t("mobile.repairs.deleteSelected", { count: selectedIds.length })} style={styles.bulkDeleteButton} onPress={handleBulkDelete}>
             <Ionicons name="trash-outline" size={16} color={theme.dangerForeground} />
-            <Text style={styles.bulkDeleteText}>Xóa tất cả</Text>
+            <Text style={styles.bulkDeleteText}>{t("mobile.repairs.deleteAll")}</Text>
           </Pressable>
         </View>
       )}
 
       {/* Tùy chọn chọn tất cả */}
       {filteredRepairs.length > 0 && (
-        <Pressable accessibilityRole="checkbox" accessibilityLabel="Chọn tất cả yêu cầu sửa chữa" accessibilityState={{ checked: selectedIds.length === filteredRepairs.length }} style={styles.selectAllContainer} onPress={toggleAll}>
+        <Pressable accessibilityRole="checkbox" accessibilityLabel={t("mobile.repairs.selectAllLabel")} accessibilityState={{ checked: selectedIds.length === filteredRepairs.length }} style={styles.selectAllContainer} onPress={toggleAll}>
           <Ionicons 
             name={selectedIds.length === filteredRepairs.length ? "checkbox" : "square-outline"} 
             size={22} 
             color={selectedIds.length === filteredRepairs.length ? theme.primary : theme.muted}
           />
-          <Text style={styles.selectAllText}>Chọn tất cả</Text>
+          <Text style={styles.selectAllText}>{t("mobile.repairs.selectAll")}</Text>
         </Pressable>
       )}
 
@@ -183,45 +185,45 @@ export default function AdminRepairsScreen({ params }: Props) {
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <>
-            <GradientHero icon="construct-outline" label="YÊU CẦU SỬ A CHỮA" value={`${repairs.filter((repair) => repair.status === 0 || repair.status === 1).length} đang mở`} detail={`${repairs.length} yêu cầu trong hệ thống`} />
+            <GradientHero icon="construct-outline" label={t("mobile.repairs.heroLabel")} value={t("mobile.repairs.heroValue", { count: repairs.filter((repair) => repair.status === 0 || repair.status === 1).length })} detail={t("mobile.repairs.heroDetail", { count: repairs.length })} />
             <View style={styles.sectionRow}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.sectionTitle}>Xử lý sự cố</Text>
-                <Text style={styles.sectionSub}>Quản lý các yêu cầu sửa chữa từ người thuê</Text>
+                <Text style={styles.sectionTitle}>{t("mobile.repairs.sectionTitle")}</Text>
+                <Text style={styles.sectionSub}>{t("mobile.repairs.sectionSubtitle")}</Text>
               </View>
             </View>
             <View style={styles.filterContainer}>
               <Pressable accessibilityRole="button" accessibilityState={{ selected: filter === 'all' }} style={[styles.filterButton, filter === 'all' && styles.filterActive]} onPress={() => setFilter('all')}>
-                <Text style={[styles.filterText, filter === 'all' && styles.filterTextActive]}>Tất cả</Text>
+                <Text style={[styles.filterText, filter === 'all' && styles.filterTextActive]}>{t("common.all")}</Text>
               </Pressable>
               <Pressable accessibilityRole="button" accessibilityState={{ selected: filter === 'pending' }} style={[styles.filterButton, filter === 'pending' && styles.filterActive]} onPress={() => setFilter('pending')}>
-                <Text style={[styles.filterText, filter === 'pending' && styles.filterTextActive]}>Chờ xử lý</Text>
+                <Text style={[styles.filterText, filter === 'pending' && styles.filterTextActive]}>{t("mobile.repairs.pending")}</Text>
               </Pressable>
               <Pressable accessibilityRole="button" accessibilityState={{ selected: filter === 'done' }} style={[styles.filterButton, filter === 'done' && styles.filterActive]} onPress={() => setFilter('done')}>
-                <Text style={[styles.filterText, filter === 'done' && styles.filterTextActive]}>Hoàn tất</Text>
+                <Text style={[styles.filterText, filter === 'done' && styles.filterTextActive]}>{t("mobile.repairs.done")}</Text>
               </Pressable>
             </View>
           </>
         }
-        ListEmptyComponent={<IllustratedEmptyState kind="repair" title={repairs.length ? "Không có sự cố phù hợp" : "Chưa có sự cố"} description={repairs.length ? "Hãy chọn bộ lọc khác." : "Các yêu cầu sửa chữa mới sẽ xuất hiện tại đây."} />}
+        ListEmptyComponent={<IllustratedEmptyState kind="repair" title={repairs.length ? t("mobile.repairs.noMatch") : t("mobile.repairs.empty")} description={repairs.length ? t("mobile.repairs.tryFilter") : t("mobile.repairs.emptyDescription")} />}
         renderItem={({ item, index }) => (
           <AnimatedEntry delay={Math.min(index, 6) * 45}><Pressable
             accessibilityRole="button"
-            accessibilityLabel={`Mở yêu cầu sửa chữa ${item.title}`}
+            accessibilityLabel={t("mobile.repairs.open", { title: item.title })}
             style={[styles.repairCard, selectedIds.includes(item._id) && styles.repairCardSelected]} 
             onPress={() => openEditModal(item)}
             onLongPress={() => toggleSelection(item._id)}
           >
             <View style={styles.cardHeader}>
               <View style={styles.roomCodeContainer}>
-                <Pressable accessibilityRole="checkbox" accessibilityLabel={`Chọn yêu cầu ${item.title}`} accessibilityState={{ checked: selectedIds.includes(item._id) }} onPress={() => toggleSelection(item._id)} style={styles.checkboxArea}>
+                <Pressable accessibilityRole="checkbox" accessibilityLabel={t("mobile.repairs.select", { title: item.title })} accessibilityState={{ checked: selectedIds.includes(item._id) }} onPress={() => toggleSelection(item._id)} style={styles.checkboxArea}>
                   <Ionicons 
                     name={selectedIds.includes(item._id) ? "checkbox" : "square-outline"} 
                     size={22} 
                     color={selectedIds.includes(item._id) ? theme.primary : theme.muted}
                   />
                 </Pressable>
-                <Text style={styles.roomCode}>Phòng {item.contractId?.roomId?.roomCode || "N/A"}</Text>
+                <Text style={styles.roomCode}>{t("mobile.repairs.room", { roomCode: item.contractId?.roomId?.roomCode || "N/A" })}</Text>
               </View>
               <View style={styles.badges}>
                 <View style={[styles.badge, { backgroundColor: getPriorityColor(item.priority) + "15" }]}>
@@ -241,9 +243,9 @@ export default function AdminRepairsScreen({ params }: Props) {
             <Text style={styles.repairDesc} numberOfLines={2}>{item.description}</Text>
             
             <View style={styles.cardFooter}>
-              <Text style={styles.tenantName}>Khách: {item.contractId?.tenantId?.fullName || "N/A"}</Text>
+              <Text style={styles.tenantName}>{t("mobile.repairs.tenant", { name: item.contractId?.tenantId?.fullName || "N/A" })}</Text>
               <Text style={styles.dateText}>
-                {item.createdAt ? new Date(item.createdAt).toLocaleDateString("vi-VN") : ""}
+                {item.createdAt ? new Date(item.createdAt).toLocaleDateString(language === "en" ? "en-US" : "vi-VN") : ""}
               </Text>
             </View>
           </Pressable></AnimatedEntry>
@@ -255,8 +257,8 @@ export default function AdminRepairsScreen({ params }: Props) {
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === "ios" ? "padding" : undefined}>
           <View accessibilityViewIsModal style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text accessibilityRole="header" style={styles.modalTitle}>Cập nhật xử lý sự cố</Text>
-              <Pressable accessibilityRole="button" accessibilityLabel="Đóng cập nhật sửa chữa" disabled={submitting} onPress={() => setModalVisible(false)}>
+              <Text accessibilityRole="header" style={styles.modalTitle}>{t("mobile.repairs.modalTitle")}</Text>
+              <Pressable accessibilityRole="button" accessibilityLabel={t("mobile.repairs.close")} disabled={submitting} onPress={() => setModalVisible(false)}>
                 <Ionicons name="close" size={24} color={theme.text} />
               </Pressable>
             </View>
@@ -269,20 +271,20 @@ export default function AdminRepairsScreen({ params }: Props) {
                 keyboardShouldPersistTaps="handled"
                 renderItem={() => (
                   <View style={styles.form}>
-                    <Text style={styles.infoTitle}>Phòng {selectedRepair.contractId?.roomId?.roomCode}</Text>
-                    <Text style={styles.infoDesc}>Tiêu đề: {selectedRepair.title}</Text>
-                    <Text style={styles.infoDesc}>Mô tả: {selectedRepair.description}</Text>
+                    <Text style={styles.infoTitle}>{t("mobile.repairs.room", { roomCode: selectedRepair.contractId?.roomId?.roomCode || "N/A" })}</Text>
+                    <Text style={styles.infoDesc}>{t("mobile.repairs.issueTitle", { title: selectedRepair.title })}</Text>
+                    <Text style={styles.infoDesc}>{t("mobile.repairs.description", { description: selectedRepair.description })}</Text>
 
-                    {selectedRepair.images?.length ? <><Text style={styles.label}>Hình ảnh sự cố</Text><FlatList horizontal data={selectedRepair.images} keyExtractor={(uri, index) => `${uri}-${index}`} showsHorizontalScrollIndicator={false} contentContainerStyle={styles.imageRow} renderItem={({ item, index }) => <Image accessibilityLabel={`Ảnh sự cố ${index + 1}`} source={{ uri: item }} style={styles.repairImage} resizeMode="cover" />} /></> : null}
+                    {selectedRepair.images?.length ? <><Text style={styles.label}>{t("mobile.repairs.images")}</Text><FlatList horizontal data={selectedRepair.images} keyExtractor={(uri, index) => `${uri}-${index}`} showsHorizontalScrollIndicator={false} contentContainerStyle={styles.imageRow} renderItem={({ item, index }) => <Image accessibilityLabel={t("mobile.repairs.image", { index: index + 1 })} source={{ uri: item }} style={styles.repairImage} resizeMode="cover" />} /></> : null}
 
                     {/* Chọn độ ưu tiên */}
-                    <Text style={styles.label}>Độ ưu tiên</Text>
+                    <Text style={styles.label}>{t("mobile.repairs.priority")}</Text>
                     <View style={styles.selectGrid}>
                       {[1, 2, 3].map((p) => (
                         <Pressable
                           key={p}
                           accessibilityRole="radio"
-                          accessibilityLabel={`Độ ưu tiên ${getPriorityText(p)}`}
+                          accessibilityLabel={`${t("mobile.repairs.priority")}: ${getPriorityText(p)}`}
                           accessibilityState={{ selected: priority === p }}
                           style={[
                             styles.selectItem,
@@ -298,13 +300,13 @@ export default function AdminRepairsScreen({ params }: Props) {
                     </View>
 
                     {/* Chọn trạng thái */}
-                    <Text style={styles.label}>Trạng thái xử lý</Text>
+                    <Text style={styles.label}>{t("mobile.repairs.status")}</Text>
                     <View style={styles.selectGrid}>
                       {[0, 1, 2, 3].map((s) => (
                         <Pressable
                           key={s}
                           accessibilityRole="radio"
-                          accessibilityLabel={`Trạng thái ${getStatusText(s)}`}
+                          accessibilityLabel={`${t("mobile.repairs.status")}: ${getStatusText(s)}`}
                           accessibilityState={{ selected: status === s }}
                           style={[
                             styles.selectItem,
@@ -320,13 +322,13 @@ export default function AdminRepairsScreen({ params }: Props) {
                     </View>
 
                     {/* Ghi chú phản hồi */}
-                    <Text style={styles.label}>Ghi chú phản hồi từ Chủ trọ</Text>
+                    <Text style={styles.label}>{t("mobile.repairs.note")}</Text>
                     <TextInput
-                      accessibilityLabel="Ghi chú phản hồi từ Chủ trọ"
+                      accessibilityLabel={t("mobile.repairs.note")}
                       style={[styles.input, styles.textArea]}
                       value={landlordNote}
                       onChangeText={setLandlordNote}
-                      placeholder="Nhập ghi chú hoặc phản hồi cho khách"
+                      placeholder={t("mobile.repairs.notePlaceholder")}
                       multiline
                       numberOfLines={4}
                     />
@@ -336,7 +338,7 @@ export default function AdminRepairsScreen({ params }: Props) {
                       loading={submitting}
                       onPress={handleUpdateRepair}
                     >
-                      Cập nhật trạng thái
+                      {t("mobile.repairs.update")}
                     </AppButton>
                   </View>
                 )}
