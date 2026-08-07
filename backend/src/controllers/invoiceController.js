@@ -110,6 +110,7 @@ async function triggerInvoiceReminder(invoice) {
     });
 }
 const {
+    resolveUtilityPriceDefaults,
     resolveContractMeterSnapshot,
 } = require('../services/contractTerms');
 
@@ -154,8 +155,12 @@ exports.getBulkPreview = async (req, res) => {
         }
         if (!userId) return res.status(401).json({ success: false, message: 'Chưa đăng nhập' });
 
-        const rooms = await Room.find({ landlordId: userId });
+        const [rooms, utilityServices] = await Promise.all([
+            Room.find({ landlordId: userId }),
+            Service.find({ landlordId: userId, isActive: true, type: 1 }).sort({ updatedAt: -1, _id: -1 }).select('name code type defaultPrice').lean(),
+        ]);
         const roomIds = rooms.map(r => r._id);
+        const utilityDefaults = resolveUtilityPriceDefaults(utilityServices);
 
         const contracts = await Contract.find({ roomId: { $in: roomIds }, status: 1 })
             .populate('roomId', 'roomCode draftElectricity draftWater lastElectricityReading lastWaterReading')
@@ -177,7 +182,7 @@ exports.getBulkPreview = async (req, res) => {
                 waterOld,
                 electricityPrice,
                 waterPrice,
-            } = resolveContractMeterSnapshot(contract, previousInvoice, contract.roomId);
+            } = resolveContractMeterSnapshot(contract, previousInvoice, contract.roomId, utilityDefaults);
             let servicesTotal = 0;
             let parking = 0;
             let internet = 0;
