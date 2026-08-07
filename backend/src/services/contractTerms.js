@@ -4,10 +4,41 @@ const FIELDS = {
     initialElectricity: 'Chỉ số điện đầu',
     initialWater: 'Chỉ số nước đầu',
 };
+const DEFAULT_UTILITY_PRICES = {
+    electricityPrice: 3500,
+    waterPrice: 15000,
+};
 
 function readFiniteNumber(value) {
     const number = Number(value);
     return Number.isFinite(number) ? number : undefined;
+}
+
+function readPositiveNumber(value) {
+    const number = readFiniteNumber(value);
+    return number !== undefined && number > 0 ? number : undefined;
+}
+
+function resolveUtilityPriceDefaults(services = []) {
+    const defaults = { ...DEFAULT_UTILITY_PRICES };
+    const found = { electricity: false, water: false };
+
+    for (const service of services) {
+        if (Number(service?.type) !== 1 && service?.billingMode !== 'METER') continue;
+        const price = readPositiveNumber(service?.defaultPrice);
+        if (!price) continue;
+        const key = `${service.code || ''} ${service.name || ''}`.toLowerCase();
+        if (!found.electricity && (key.includes('điện') || key.includes('dien') || key.includes('electric'))) {
+            defaults.electricityPrice = price;
+            found.electricity = true;
+        }
+        if (!found.water && (key.includes('nước') || key.includes('nuoc') || key.includes('water'))) {
+            defaults.waterPrice = price;
+            found.water = true;
+        }
+    }
+
+    return defaults;
 }
 
 class ContractTermsError extends Error {
@@ -71,9 +102,9 @@ function resolveLatestMeterValue({
         ?? 0;
 }
 
-function resolveContractMeterSnapshot(contract, previousInvoice, roomSnapshot = {}) {
-    let electricityPrice = contract.electricityPrice;
-    let waterPrice = contract.waterPrice;
+function resolveContractMeterSnapshot(contract, previousInvoice, roomSnapshot = {}, utilityDefaults = DEFAULT_UTILITY_PRICES) {
+    let electricityPrice = readPositiveNumber(contract.electricityPrice);
+    let waterPrice = readPositiveNumber(contract.waterPrice);
 
     for (const item of contract.services || []) {
         const service = item.serviceId;
@@ -84,19 +115,19 @@ function resolveContractMeterSnapshot(contract, previousInvoice, roomSnapshot = 
             electricityPrice === undefined
             && (name.includes('điện') || name.includes('dien'))
         ) {
-            electricityPrice = Number(item.fixedPrice) || 0;
+            electricityPrice = readPositiveNumber(item.fixedPrice);
         }
         if (
             waterPrice === undefined
             && (name.includes('nước') || name.includes('nuoc'))
         ) {
-            waterPrice = Number(item.fixedPrice) || 0;
+            waterPrice = readPositiveNumber(item.fixedPrice);
         }
     }
 
     return {
-        electricityPrice: electricityPrice ?? 0,
-        waterPrice: waterPrice ?? 0,
+        electricityPrice: electricityPrice ?? readPositiveNumber(utilityDefaults.electricityPrice) ?? DEFAULT_UTILITY_PRICES.electricityPrice,
+        waterPrice: waterPrice ?? readPositiveNumber(utilityDefaults.waterPrice) ?? DEFAULT_UTILITY_PRICES.waterPrice,
         electricityOld: resolveLatestMeterValue({
             previousInvoice,
             roomSnapshot,
@@ -144,6 +175,7 @@ function resolveInitialContractMeterTerms({ room, previousInvoice, previousContr
 module.exports = {
     ContractTermsError,
     normalizeContractMeterTerms,
+    resolveUtilityPriceDefaults,
     resolveContractMeterSnapshot,
     resolveInitialContractMeterTerms,
 };
