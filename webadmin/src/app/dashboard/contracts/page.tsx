@@ -15,6 +15,7 @@ import { useNotification } from "@/hooks/use-notification";
 import { getNotificationMessage } from "@/lib/notification-messages";
 import { formatCurrency, formatNumberInput, formatPhone, unformatNumber } from "@/lib/formatters";
 import { PageHeader } from "@/components/calm-ops/page-header";
+import { safeJsonParse } from "@/lib/client-storage";
 
 type CheckoutPreview = {
   roomCode: string;
@@ -92,7 +93,7 @@ export default function ContractsPage() {
   useEffect(() => {
     loadData();
     try {
-      const drafts = JSON.parse(localStorage.getItem("@trohub_draft_contracts") || "[]");
+      const drafts = safeJsonParse<unknown>(localStorage.getItem("@trohub_draft_contracts"), []);
       setDraftContracts(Array.isArray(drafts) ? drafts : []);
     } catch (e) {
       console.error("Failed to load drafts", e);
