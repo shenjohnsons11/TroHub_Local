@@ -9,10 +9,9 @@ export function getRealtimeGreeting(): string {
   }
 }
 
-export function getFormattedDateWidget(): string {
+export function getFormattedDateWidget(locale = "vi-VN"): string {
   const now = new Date();
-  const days = ["Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
-  const dayName = days[now.getDay()];
+  const dayName = new Intl.DateTimeFormat(locale, { weekday: "long" }).format(now);
   const dd = String(now.getDate()).padStart(2, "0");
   const mm = String(now.getMonth() + 1).padStart(2, "0");
   const yyyy = now.getFullYear();

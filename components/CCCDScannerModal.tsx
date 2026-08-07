@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { CameraView, useCameraPermissions } from "expo-camera";
+import { CameraView, useCameraPermissions, type BarcodeScanningResult } from "expo-camera";
 import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
 import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
@@ -11,6 +11,23 @@ type Props = {
 };
 
 const VIEWFINDER_SIZE = 260;
+
+function isBarcodeInsideViewfinder(
+  result: BarcodeScanningResult,
+  frame: { left: number; top: number; size: number },
+) {
+  const { origin, size } = result.bounds;
+  if (!origin || !size || size.width <= 0 || size.height <= 0) return false;
+  const centerX = origin.x + size.width / 2;
+  const centerY = origin.y + size.height / 2;
+  const inset = 10;
+  return (
+    centerX >= frame.left + inset &&
+    centerX <= frame.left + frame.size - inset &&
+    centerY >= frame.top + inset &&
+    centerY <= frame.top + frame.size - inset
+  );
+}
 
 export default function CCCDScannerModal({ visible, onClose, onScan }: Props) {
   const [permission, requestPermission] = useCameraPermissions();
@@ -34,10 +51,13 @@ export default function CCCDScannerModal({ visible, onClose, onScan }: Props) {
     }
   }, [visible, permission?.canAskAgain, permission?.granted, requestPermission]);
 
-  const handleBarcodeScanned = ({ data }: { data: string }) => {
-    if (scanningRef.current) return;
+  const frame = { left: frameLeft, top: frameTop, size: VIEWFINDER_SIZE };
 
-    const rawText = data;
+  const handleBarcodeScanned = (event: BarcodeScanningResult) => {
+    if (scanningRef.current) return;
+    if (!isBarcodeInsideViewfinder(event, frame)) return;
+
+    const rawText = event.data;
     const parts = rawText.split("|");
     const cccdNumber = (parts[0] || rawText).replace(/\D/g, "").slice(0, 12);
     if (cccdNumber.length !== 12) return;
@@ -58,6 +78,7 @@ export default function CCCDScannerModal({ visible, onClose, onScan }: Props) {
             style={StyleSheet.absoluteFill}
             facing="back"
             onBarcodeScanned={handleBarcodeScanned}
+            autofocus="on"
             barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
           />
         ) : (

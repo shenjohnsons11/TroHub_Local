@@ -4,10 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { getFormattedDateWidget } from "@/lib/utils";
 import { fetchAPI } from "@/lib/api";
+import { useLanguage } from "@/components/language-provider";
 
-const DAYS_OF_WEEK = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
+const DAYS_OF_WEEK = { vi: ["T2", "T3", "T4", "T5", "T6", "T7", "CN"], en: ["M", "T", "W", "T", "F", "S", "S"] };
 
 export function MiniCalendarPopover() {
+  const { language } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [viewDate, setViewDate] = useState(() => new Date());
   const [eventDays, setEventDays] = useState<{ [day: number]: "invoice" | "contract" | "both" }>({});
@@ -96,7 +98,8 @@ export function MiniCalendarPopover() {
   // Calendar calculations (Monday start)
   const firstDayIndex = (new Date(year, month, 1).getDay() + 6) % 7;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const monthLabel = `THÁNG ${month + 1} | ${year}`;
+  const locale = language === "en" ? "en-US" : "vi-VN";
+  const monthLabel = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(viewDate);
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -112,7 +115,7 @@ export function MiniCalendarPopover() {
         aria-label="Mở lịch mini"
       >
         <CalendarIcon className="size-3.5 text-primary" />
-        <span>{getFormattedDateWidget()}</span>
+        <span>{getFormattedDateWidget(locale)}</span>
       </button>
 
       {/* Glassmorphism Popover */}
@@ -143,7 +146,7 @@ export function MiniCalendarPopover() {
 
           {/* Days of Week Header */}
           <div className="mb-2 grid grid-cols-7 text-center">
-            {DAYS_OF_WEEK.map((day, idx) => (
+            {DAYS_OF_WEEK[language].map((day, idx) => (
               <span key={day} className={`text-[11px] font-extrabold ${idx >= 5 ? "text-primary/80" : "text-muted-foreground"}`}>
                 {day}
               </span>
@@ -197,13 +200,13 @@ export function MiniCalendarPopover() {
           {/* Footer Legend */}
           <div className="mt-4 flex items-center justify-center gap-4 border-t border-border/50 pt-3 text-[10px] font-bold text-muted-foreground">
             <span className="flex items-center gap-1.5">
-              <span className="size-2 rounded-full bg-primary" /> Hôm nay
+              <span className="size-2 rounded-full bg-primary" /> {language === "en" ? "Today" : "Hôm nay"}
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="size-2 rounded-full bg-amber-500" /> Hạn hóa đơn
+              <span className="size-2 rounded-full bg-amber-500" /> {language === "en" ? "Invoice due" : "Hạn hóa đơn"}
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="size-2 rounded-full bg-indigo-500" /> Hạn hợp đồng
+              <span className="size-2 rounded-full bg-indigo-500" /> {language === "en" ? "Contract due" : "Hạn hợp đồng"}
             </span>
           </div>
         </div>
