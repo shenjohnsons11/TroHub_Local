@@ -3,6 +3,7 @@ import { CameraView, useCameraPermissions, type BarcodeScanningResult } from "ex
 import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
 import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { useTranslation } from "../contexts/LanguageContext";
 
 type Props = {
   visible: boolean;
@@ -30,6 +31,7 @@ function isBarcodeInsideViewfinder(
 }
 
 export default function CCCDScannerModal({ visible, onClose, onScan }: Props) {
+  const { t } = useTranslation();
   const [permission, requestPermission] = useCameraPermissions();
   const scanningRef = useRef(false);
   const permissionRequestedRef = useRef(false);
@@ -84,11 +86,11 @@ export default function CCCDScannerModal({ visible, onClose, onScan }: Props) {
         ) : (
           <View style={styles.permission}>
             <Text style={styles.message}>
-              {permission ? "Cần quyền camera để quét mã QR trên CCCD." : "Đang khởi tạo camera..."}
+              {permission ? t("mobile.camera.idPermission") : t("mobile.camera.initializing")}
             </Text>
             {permission ? (
               <Pressable accessibilityRole="button" style={styles.permissionButton} onPress={requestPermission}>
-                <Text style={styles.permissionText}>Cho phép dùng camera</Text>
+                <Text style={styles.permissionText}>{t("mobile.camera.allow")}</Text>
               </Pressable>
             ) : null}
           </View>
@@ -109,16 +111,16 @@ export default function CCCDScannerModal({ visible, onClose, onScan }: Props) {
             </View>
 
             <Text style={[styles.hint, { top: frameBottom + 20 }]}>
-              Hướng mã QR trên thẻ CCCD vào khung ngắm để tự động quét
+              {t("mobile.camera.idHint")}
             </Text>
           </View>
         ) : null}
 
         <View style={styles.header}>
-          <Text style={styles.title}>Quét mã QR CCCD</Text>
-          <Pressable accessibilityRole="button" accessibilityLabel="Đóng camera quét CCCD" onPress={onClose} style={styles.close}>
+          <Text style={styles.title}>{t("mobile.camera.idTitle")}</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel={t("mobile.camera.idClose")} onPress={onClose} style={styles.close}>
             <Ionicons name="close" size={20} color="#ffffff" />
-            <Text style={styles.closeText}>Đóng</Text>
+            <Text style={styles.closeText}>{t("common.close")}</Text>
           </Pressable>
         </View>
       </View>

@@ -5,6 +5,7 @@ import { ActivityIndicator, Animated, Modal, Pressable, StyleSheet, Text, useWin
 import { Ionicons } from "@expo/vector-icons";
 import { ocrService } from "../services/ocrService";
 import type { MeterType } from "../utils/meterReadingTarget";
+import { useTranslation } from "../contexts/LanguageContext";
 
 type Props = {
   visible: boolean;
@@ -29,6 +30,7 @@ function getRoiCrop(imageWidth: number, imageHeight: number, viewportWidth: numb
 }
 
 export default function MeterCameraModal({ visible, roomCode, initialMeterType, onClose, onRead }: Props) {
+  const { t } = useTranslation();
   const cameraRef = useRef<CameraView>(null);
   const laserAnim = useRef(new Animated.Value(0)).current;
   const [permission, requestPermission] = useCameraPermissions();
@@ -70,7 +72,7 @@ export default function MeterCameraModal({ visible, roomCode, initialMeterType, 
       setReading(true);
       setError("");
       const photo = await cameraRef.current.takePictureAsync({ quality: 0.85 });
-      if (!photo?.uri || !photo.width || !photo.height) throw new Error("Ảnh đồng hồ không hợp lệ.");
+      if (!photo?.uri || !photo.width || !photo.height) throw new Error(t("mobile.camera.invalidImage"));
 
       const cropped = await ImageManipulator.manipulateAsync(
         photo.uri,
@@ -81,7 +83,7 @@ export default function MeterCameraModal({ visible, roomCode, initialMeterType, 
       onRead(meterType, result.digits);
       onClose();
     } catch {
-      setError("Không đọc được dải số trong khung. Hãy căn thẳng, bật đèn và chụp lại.");
+      setError(t("mobile.camera.readError"));
     } finally {
       setReading(false);
     }
@@ -100,8 +102,8 @@ export default function MeterCameraModal({ visible, roomCode, initialMeterType, 
           />
         ) : (
           <View style={styles.permission}>
-            <Text style={styles.message}>{permission ? "Cần quyền camera để đọc chỉ số đồng hồ." : "Đang khởi tạo camera..."}</Text>
-            {permission ? <Pressable accessibilityRole="button" style={styles.permissionButton} onPress={requestPermission}><Text style={styles.permissionText}>Cho phép dùng camera</Text></Pressable> : null}
+            <Text style={styles.message}>{permission ? t("mobile.camera.meterPermission") : t("mobile.camera.initializing")}</Text>
+            {permission ? <Pressable accessibilityRole="button" style={styles.permissionButton} onPress={requestPermission}><Text style={styles.permissionText}>{t("mobile.camera.allow")}</Text></Pressable> : null}
           </View>
         )}
 
@@ -118,19 +120,19 @@ export default function MeterCameraModal({ visible, roomCode, initialMeterType, 
               <View style={[styles.corner, styles.bottomRight]} />
               <Animated.View style={[styles.laser, { transform: [{ translateY: laserY }] }]} />
             </View>
-            <Text style={[styles.hint, { top: frameBottom + 18 }]}>Đưa dải số đồng hồ vào khung để nhận diện chính xác</Text>
+            <Text style={[styles.hint, { top: frameBottom + 18 }]}>{t("mobile.camera.meterHint")}</Text>
           </View>
         ) : null}
 
         <View style={styles.header}>
           <View>
-            <Text style={styles.title}>Quét đồng hồ · Phòng {roomCode}</Text>
-            <Text style={styles.subtitle}>Chỉ số sẽ được điền vào đúng phòng này.</Text>
+            <Text style={styles.title}>{t("mobile.camera.meterTitle", { roomCode })}</Text>
+            <Text style={styles.subtitle}>{t("mobile.camera.meterSubtitle")}</Text>
           </View>
           <View style={styles.headerActions}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={torchOn ? "Tắt đèn flash" : "Bật đèn flash"}
+              accessibilityLabel={t(torchOn ? "mobile.camera.flashOff" : "mobile.camera.flashOn")}
               accessibilityState={{ selected: torchOn }}
               disabled={reading}
               onPress={() => setTorchOn((current) => !current)}
@@ -138,7 +140,7 @@ export default function MeterCameraModal({ visible, roomCode, initialMeterType, 
             >
               <Ionicons name={torchOn ? "flash" : "flash-outline"} size={19} color={torchOn ? "#07110e" : "#ffffff"} />
             </Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel="Đóng camera quét đồng hồ" disabled={reading} onPress={onClose} style={styles.close}>
+            <Pressable accessibilityRole="button" accessibilityLabel={t("mobile.camera.meterClose")} disabled={reading} onPress={onClose} style={styles.close}>
               <Ionicons name="close" size={22} color="#ffffff" />
             </Pressable>
           </View>
@@ -150,12 +152,12 @@ export default function MeterCameraModal({ visible, roomCode, initialMeterType, 
             <View style={styles.modeRow}>
               {(["electricity", "water"] as MeterType[]).map((type) => (
                 <Pressable key={type} accessibilityRole="button" accessibilityState={{ selected: meterType === type }} disabled={reading} onPress={() => setMeterType(type)} style={[styles.mode, meterType === type && styles.modeActive]}>
-                  <Text style={[styles.modeText, meterType === type && styles.modeTextActive]}>{type === "electricity" ? "⚡ Điện" : "💧 Nước"}</Text>
+                  <Text style={[styles.modeText, meterType === type && styles.modeTextActive]}>{t(type === "electricity" ? "mobile.camera.electricity" : "mobile.camera.water")}</Text>
                 </Pressable>
               ))}
             </View>
-            <Pressable accessibilityRole="button" accessibilityLabel={`Chụp chỉ số ${meterType === "electricity" ? "điện" : "nước"} phòng ${roomCode}`} disabled={reading} onPress={() => void capture()} style={styles.capture}>
-              {reading ? <ActivityIndicator color="#073e36" /> : <><Ionicons name="camera" size={20} color="#073e36" /><Text style={styles.captureText}>Chụp & đọc vùng đã chọn</Text></>}
+            <Pressable accessibilityRole="button" accessibilityLabel={t("mobile.camera.captureLabel", { meterType: t(meterType === "electricity" ? "mobile.camera.electricity" : "mobile.camera.water"), roomCode })} disabled={reading} onPress={() => void capture()} style={styles.capture}>
+              {reading ? <ActivityIndicator color="#073e36" /> : <><Ionicons name="camera" size={20} color="#073e36" /><Text style={styles.captureText}>{t("mobile.camera.capture")}</Text></>}
             </Pressable>
           </View>
         ) : null}

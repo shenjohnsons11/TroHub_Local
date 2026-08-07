@@ -12,6 +12,7 @@ import { adminService, AdminInvoice, AdminRoom, AdminContract } from "../service
 import InvoiceDetailModal from "../components/InvoiceDetailModal";
 import { Invoice } from "../types/Invoice";
 import { formatCurrency, formatNumberInput, unformatNumber } from "../utils/formatters";
+import { useTranslation } from "../contexts/LanguageContext";
 type Props = {
   params?: any;
   onNavigate?: (tab: any, params?: any) => void;
@@ -19,6 +20,7 @@ type Props = {
 
 export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
   const { theme } = useAppTheme();
+  const { t } = useTranslation();
   const notification = useNotification();
   const styles = createStyles(theme);
   const [invoices, setInvoices] = useState<AdminInvoice[]>([]);
@@ -116,7 +118,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
 
   const handleCreateInvoice = async () => {
     if (!selectedRoomId || !period.trim() || !dueDate.trim()) {
-      notification.error("Vui lòng điền đầy đủ thông tin!");
+      notification.error(t("mobile.invoices.required"));
       return;
     }
 
@@ -125,7 +127,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
     );
 
     if (!roomContract) {
-      notification.error("Không tìm thấy hợp đồng có hiệu lực cho phòng này!");
+      notification.error(t("mobile.invoices.noContract"));
       return;
     }
 
@@ -198,24 +200,24 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
         total: totalAmount,
         status: 1 // 1: Chưa thanh toán
       });
-      notification.success("Tạo hóa đơn thành công!");
+      notification.success(t("mobile.invoices.created"));
       
       setModalVisible(false);
       loadData();
     } catch (error) {
-      notification.error(error instanceof Error ? error.message : "Tạo hóa đơn thất bại!");
+      notification.error(error instanceof Error ? error.message : t("mobile.invoices.createFailed"));
     } finally {
       setSubmitting(false);
     }
   };
 
   const getStatusText = (status: any) => {
-    if (status === 0 || status === "DRAFT" || status === "Nháp") return "Nháp";
-    if (status === 1 || status === "UNPAID" || status === "Chưa thanh toán") return "Chưa thanh toán";
-    if (status === 2 || status === "PAID" || status === "Đã thanh toán") return "Đã thanh toán";
-    if (status === 3 || status === "OVERDUE" || status === "Quá hạn") return "Quá hạn";
-    if (status === 4 || status === "SETTLED" || status === "Đã gộp quyết toán") return "Đã gộp quyết toán";
-    return "Chưa thanh toán";
+    if (status === 0 || status === "DRAFT" || status === "Nháp") return t("mobile.invoices.draft");
+    if (status === 1 || status === "UNPAID" || status === "Chưa thanh toán") return t("mobile.invoices.unpaid");
+    if (status === 2 || status === "PAID" || status === "Đã thanh toán") return t("mobile.invoices.paid");
+    if (status === 3 || status === "OVERDUE" || status === "Quá hạn") return t("mobile.invoices.overdue");
+    if (status === 4 || status === "SETTLED" || status === "Đã gộp quyết toán") return t("mobile.invoices.settled");
+    return t("mobile.invoices.unpaid");
   };
 
   const getStatusColor = (status: any) => {
@@ -239,10 +241,10 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
   const handleRemind = async (invoiceId: string) => {
     try {
       await adminService.remindInvoice(invoiceId);
-      notification.success("Đã gửi nhắc nhở và cập nhật trạng thái!");
+      notification.success(t("mobile.invoices.reminded"));
       loadData();
     } catch {
-      notification.error("Gửi nhắc nhở thất bại!");
+      notification.error(t("mobile.invoices.remindFailed"));
     }
   };
 
@@ -351,11 +353,11 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
   const handleConfirmPaid = async (invoiceId: string) => {
     try {
       await adminService.confirmPaidInvoice(invoiceId);
-      notification.success("Đã xác nhận thanh toán!");
+      notification.success(t("mobile.invoices.confirmed"));
       setSelectedInvoice(null);
       loadData();
     } catch {
-      notification.error("Xác nhận thất bại!");
+      notification.error(t("mobile.invoices.confirmFailed"));
     }
   };
 
@@ -381,7 +383,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Quản lý hóa đơn</Text>
+        <Text style={styles.title}>{t("mobile.invoices.title")}</Text>
       </View>
 
       <FlatList
@@ -391,22 +393,22 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <>
-            <GradientHero icon="receipt-outline" label="TỔNG GIÁ TRỊ HÓA ĐƠN" value={formatCurrency(invoices.reduce((sum, invoice) => sum + (invoice.totalAmount || 0), 0))} detail={`${invoices.length} hóa đơn trong hệ thống`} />
+            <GradientHero icon="receipt-outline" label={t("mobile.invoices.heroLabel")} value={formatCurrency(invoices.reduce((sum, invoice) => sum + (invoice.totalAmount || 0), 0))} detail={t("mobile.invoices.heroDetail", { count: invoices.length })} />
 
             {/* Section Header Row — Tầng 3 */}
             <View style={styles.sectionRow}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.sectionTitle}>Quản lý hóa đơn</Text>
-                <Text style={styles.sectionSub}>Theo dõi và phát hành hóa đơn hàng tháng</Text>
+                <Text style={styles.sectionTitle}>{t("mobile.invoices.title")}</Text>
+                <Text style={styles.sectionSub}>{t("mobile.invoices.subtitle")}</Text>
               </View>
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <Pressable accessibilityRole="button" style={[styles.sectionBtn, { backgroundColor: theme.primarySoft }]} onPress={() => onNavigate && onNavigate('invoice_bulk')}>
                   <Ionicons name="documents-outline" size={16} color={theme.primary} />
-                  <Text style={[styles.sectionBtnText, { color: theme.primary }]}>Hàng loạt</Text>
+                  <Text style={[styles.sectionBtnText, { color: theme.primary }]}>{t("mobile.invoices.bulk")}</Text>
                 </Pressable>
                 <Pressable accessibilityRole="button" style={[styles.sectionBtn, { backgroundColor: theme.primary }]} onPress={() => setModalVisible(true)}>
                   <Ionicons name="add" size={16} color={theme.background} />
-                  <Text style={[styles.sectionBtnText, { color: theme.background }]}>Tạo mới</Text>
+                  <Text style={[styles.sectionBtnText, { color: theme.background }]}>{t("mobile.invoices.create")}</Text>
                 </Pressable>
               </View>
             </View>
@@ -419,7 +421,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
                 style={[styles.filterButton, filter === "all" && styles.filterActive]}
                 onPress={() => setFilter("all")}
               >
-                <Text style={[styles.filterText, filter === "all" && styles.filterTextActive]}>Tất cả</Text>
+                <Text style={[styles.filterText, filter === "all" && styles.filterTextActive]}>{t("common.all")}</Text>
               </Pressable>
               <Pressable
                 accessibilityRole="button"
@@ -427,7 +429,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
                 style={[styles.filterButton, filter === "unpaid" && styles.filterActive]}
                 onPress={() => setFilter("unpaid")}
               >
-                <Text style={[styles.filterText, filter === "unpaid" && styles.filterTextActive]}>Chưa thu</Text>
+                <Text style={[styles.filterText, filter === "unpaid" && styles.filterTextActive]}>{t("mobile.invoices.unpaidFilter")}</Text>
               </Pressable>
               <Pressable
                 accessibilityRole="button"
@@ -435,20 +437,20 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
                 style={[styles.filterButton, filter === "paid" && styles.filterActive]}
                 onPress={() => setFilter("paid")}
               >
-                <Text style={[styles.filterText, filter === "paid" && styles.filterTextActive]}>Đã thu</Text>
+                <Text style={[styles.filterText, filter === "paid" && styles.filterTextActive]}>{t("mobile.invoices.paidFilter")}</Text>
               </Pressable>
             </View>
           </>
         }
-        ListEmptyComponent={<IllustratedEmptyState kind="invoice" title={invoices.length ? "Không có hóa đơn phù hợp" : "Chưa có hóa đơn"} description={invoices.length ? "Hãy chọn bộ lọc khác." : "Tạo hóa đơn đầu tiên cho phòng đang thuê."} actionLabel={invoices.length ? undefined : "Tạo hóa đơn"} actionIcon="receipt-outline" onAction={invoices.length ? undefined : () => setModalVisible(true)} />}
+        ListEmptyComponent={<IllustratedEmptyState kind="invoice" title={invoices.length ? t("mobile.invoices.noMatch") : t("mobile.invoices.empty")} description={invoices.length ? t("mobile.invoices.tryFilter") : t("mobile.invoices.emptyDescription")} actionLabel={invoices.length ? undefined : t("mobile.invoices.createInvoice")} actionIcon="receipt-outline" onAction={invoices.length ? undefined : () => setModalVisible(true)} />}
         renderItem={({ item, index }) => (
-          <AnimatedEntry delay={Math.min(index, 6) * 45}><Pressable accessibilityRole="button" accessibilityLabel={`Mở chi tiết hóa đơn phòng ${item.room || item.contractId?.roomId?.roomCode || "N/A"}`} style={styles.invoiceCard} onPress={() => handleOpenDetail(item)}>
+          <AnimatedEntry delay={Math.min(index, 6) * 45}><Pressable accessibilityRole="button" accessibilityLabel={t("mobile.invoices.open", { roomCode: item.room || item.contractId?.roomId?.roomCode || "N/A" })} style={styles.invoiceCard} onPress={() => handleOpenDetail(item)}>
             <View style={styles.invoiceInfo}>
-              <Text style={styles.invoicePeriod}>Mã HD: {item.invoiceCode || `HD-${(item.period || "").replace("/", "")}-${(item._id || "000").substring(0, 3).toUpperCase()}`}</Text>
-              <Text style={styles.roomCode}>Phòng {item.roomCode || item.room || item.contractId?.roomId?.roomCode || "N/A"}</Text>
-              <Text style={styles.invoicePeriod}>Kỳ hóa đơn: {item.period}</Text>
-              <Text style={styles.invoiceAmount}>Tổng tiền: {formatCurrency(item.totalAmount)}</Text>
-              <Text style={styles.invoiceSub}>Người thuê: {item.nguoiThue || item.tenant || item.contractId?.tenantId?.fullName || "N/A"}</Text>
+              <Text style={styles.invoicePeriod}>{t("mobile.invoices.code", { code: item.invoiceCode || `HD-${(item.period || "").replace("/", "")}-${(item._id || "000").substring(0, 3).toUpperCase()}` })}</Text>
+              <Text style={styles.roomCode}>{t("mobile.invoices.room", { roomCode: item.roomCode || item.room || item.contractId?.roomId?.roomCode || "N/A" })}</Text>
+              <Text style={styles.invoicePeriod}>{t("mobile.invoices.period", { period: item.period || "" })}</Text>
+              <Text style={styles.invoiceAmount}>{t("mobile.invoices.total", { amount: formatCurrency(item.totalAmount) })}</Text>
+              <Text style={styles.invoiceSub}>{t("mobile.invoices.tenant", { name: item.nguoiThue || item.tenant || item.contractId?.tenantId?.fullName || "N/A" })}</Text>
             </View>
             <View style={{ alignItems: "flex-end" }}>
               <View style={[styles.statusBadge, { backgroundColor: getStatusBg(item.status) }]}>
@@ -456,12 +458,12 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
               </View>
               {((item.status as any) === 1 || (item.status as any) === "UNPAID" || (item.status as any) === "Chưa thanh toán") && (
                 <AppButton
-                  accessibilityLabel={`Nhắc thanh toán phòng ${item.room || item.contractId?.roomId?.roomCode || "N/A"}`}
+                  accessibilityLabel={t("mobile.invoices.remindLabel", { roomCode: item.room || item.contractId?.roomId?.roomCode || "N/A" })}
                   icon="notifications-outline"
                   style={styles.remindButton}
                   onPress={(e) => { e.stopPropagation(); handleRemind(item._id); }}
                 >
-                  Nhắc nhở
+                  {t("mobile.invoices.remind")}
                 </AppButton>
               )}
             </View>
@@ -474,8 +476,8 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === "ios" ? "padding" : undefined}>
           <View accessibilityViewIsModal style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text accessibilityRole="header" style={styles.modalTitle}>Tạo hóa đơn tháng mới</Text>
-              <Pressable accessibilityRole="button" accessibilityLabel="Đóng tạo hóa đơn" disabled={submitting} onPress={() => setModalVisible(false)}>
+              <Text accessibilityRole="header" style={styles.modalTitle}>{t("mobile.invoices.newTitle")}</Text>
+              <Pressable accessibilityRole="button" accessibilityLabel={t("mobile.invoices.closeNew")} disabled={submitting} onPress={() => setModalVisible(false)}>
                 <Ionicons name="close" size={24} color={theme.text} />
               </Pressable>
             </View>
@@ -487,16 +489,16 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
               keyboardShouldPersistTaps="handled"
               renderItem={() => (
                 <View style={styles.form}>
-                  <Text style={styles.label}>Chọn phòng đang thuê</Text>
+                  <Text style={styles.label}>{t("mobile.invoices.selectRoom")}</Text>
                   <View style={styles.roomSelectGrid}>
                     {occupiedRooms.length === 0 ? (
-                      <Text style={styles.noOccupiedText}>Không có phòng nào đang được thuê hiện tại!</Text>
+                      <Text style={styles.noOccupiedText}>{t("mobile.invoices.noOccupied")}</Text>
                     ) : (
                       occupiedRooms.map((room) => (
                         <Pressable
                           key={room._id}
                           accessibilityRole="radio"
-                          accessibilityLabel={`Chọn phòng ${room.roomCode}`}
+                          accessibilityLabel={t("mobile.invoices.selectRoomLabel", { roomCode: room.roomCode })}
                           accessibilityState={{ selected: selectedRoomId === room._id }}
                           style={[
                             styles.roomSelectItem,
@@ -517,7 +519,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
                     )}
                   </View>
 
-                  <Text style={styles.label}>Kỳ hóa đơn (tháng/năm - MM/YYYY)</Text>
+                  <Text style={styles.label}>{t("mobile.invoices.periodInput")}</Text>
                   <TextInput
                     style={styles.input}
                     value={period}
@@ -525,7 +527,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
                     placeholder="MM/YYYY"
                   />
 
-                  <Text style={styles.label}>Hạn thanh toán (YYYY-MM-DD)</Text>
+                  <Text style={styles.label}>{t("mobile.invoices.dueDate")}</Text>
                   <TextInput
                     style={styles.input}
                     value={dueDate}
@@ -536,7 +538,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
                   {/* Chỉ số điện */}
                   <View style={styles.indexRow}>
                     <View style={styles.indexCol}>
-                      <Text style={styles.label}>Chỉ số điện Cũ</Text>
+                      <Text style={styles.label}>{t("mobile.invoices.electricityOld")}</Text>
                       <TextInput
                         style={styles.input}
                         value={elecOld}
@@ -545,7 +547,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
                       />
                     </View>
                     <View style={styles.indexCol}>
-                      <Text style={styles.label}>Chỉ số điện Mới</Text>
+                      <Text style={styles.label}>{t("mobile.invoices.electricityNew")}</Text>
                       <TextInput
                         style={styles.input}
                         value={elecNew}
@@ -558,7 +560,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
                   {/* Chỉ số nước */}
                   <View style={styles.indexRow}>
                     <View style={styles.indexCol}>
-                      <Text style={styles.label}>Chỉ số nước Cũ</Text>
+                      <Text style={styles.label}>{t("mobile.invoices.waterOld")}</Text>
                       <TextInput
                         style={styles.input}
                         value={waterOld}
@@ -567,7 +569,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
                       />
                     </View>
                     <View style={styles.indexCol}>
-                      <Text style={styles.label}>Chỉ số nước Mới</Text>
+                      <Text style={styles.label}>{t("mobile.invoices.waterNew")}</Text>
                       <TextInput
                         style={styles.input}
                         value={waterNew}
@@ -582,7 +584,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
                     loading={submitting}
                     onPress={handleCreateInvoice}
                   >
-                    Tạo hóa đơn
+                    {t("mobile.invoices.createInvoice")}
                   </AppButton>
                 </View>
               )}
