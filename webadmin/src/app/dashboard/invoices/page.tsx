@@ -26,6 +26,14 @@ const INVOICE_STEPS = [
 
 type InvoiceMeterField = "electricity" | "water";
 
+const DEFAULT_ELECTRICITY_PRICE = 3500;
+const DEFAULT_WATER_PRICE = 15000;
+
+const utilityPriceOrDefault = (value: unknown, fallback: number) => {
+  const price = Number(value);
+  return Number.isFinite(price) && price > 0 ? price : fallback;
+};
+
 const fileToDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
   const reader = new FileReader();
   reader.onload = () => typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("Không thể đọc ảnh."));
@@ -71,8 +79,10 @@ export default function InvoicesPage() {
             ...p,
             electricityOldInput: formatNumberInput(p.electricityOld),
             electricityNewInput: formatNumberInput(p.electricityDraft || p.electricityOld),
+            electricityPrice: utilityPriceOrDefault(p.electricityPrice, DEFAULT_ELECTRICITY_PRICE),
             waterOldInput: formatNumberInput(p.waterOld),
             waterNewInput: formatNumberInput(p.waterDraft || p.waterOld),
+            waterPrice: utilityPriceOrDefault(p.waterPrice, DEFAULT_WATER_PRICE),
             discountInput: "0",
             selected: true
           }));
@@ -387,7 +397,8 @@ export default function InvoicesPage() {
                             </TableCell>
                             <TableCell>
                               <Input className="w-20 h-8 px-2 text-sm bg-card" inputMode="numeric" value={item.electricityNewInput} onChange={e => { const u=[...bulkData]; u[index].electricityNewInput=formatNumberInput(e.target.value); setBulkData(u); }} />
-                              {!item.electricityPrice && <span className="block text-[10px] text-destructive">Thiếu giá Điện</span>}
+                              <Label className="mt-1 block text-[10px] text-muted-foreground" htmlFor={`electricity-price-${item.contractId}`}>Giá điện</Label>
+                              <Input id={`electricity-price-${item.contractId}`} className="mt-1 h-8 w-20 px-2 text-xs bg-card" inputMode="numeric" value={item.electricityPrice} onChange={e => { const u=[...bulkData]; u[index].electricityPrice=utilityPriceOrDefault(unformatNumber(e.target.value), DEFAULT_ELECTRICITY_PRICE); setBulkData(u); }} aria-label={`Đơn giá điện phòng ${item.room}`} />
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-1">
@@ -397,7 +408,8 @@ export default function InvoicesPage() {
                             </TableCell>
                             <TableCell>
                               <Input className="w-20 h-8 px-2 text-sm bg-card" inputMode="numeric" value={item.waterNewInput} onChange={e => { const u=[...bulkData]; u[index].waterNewInput=formatNumberInput(e.target.value); setBulkData(u); }} />
-                              {!item.waterPrice && <span className="block text-[10px] text-destructive">Thiếu giá Nước</span>}
+                              <Label className="mt-1 block text-[10px] text-muted-foreground" htmlFor={`water-price-${item.contractId}`}>Giá nước</Label>
+                              <Input id={`water-price-${item.contractId}`} className="mt-1 h-8 w-20 px-2 text-xs bg-card" inputMode="numeric" value={item.waterPrice} onChange={e => { const u=[...bulkData]; u[index].waterPrice=utilityPriceOrDefault(unformatNumber(e.target.value), DEFAULT_WATER_PRICE); setBulkData(u); }} aria-label={`Đơn giá nước phòng ${item.room}`} />
                             </TableCell>
                             <TableCell className="text-right font-medium text-foreground">{formatCurrency(total)}</TableCell>
                           </TableRow>
