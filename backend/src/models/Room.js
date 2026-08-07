@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const roomSchema = new mongoose.Schema({
-    roomCode: { type: String, required: true, unique: true }, // so_phong (Mã phòng)
+    roomCode: { type: String, required: true, trim: true },   // so_phong (Mã phòng)
     area: { type: String },                                   // dien_tich
     defaultRentPrice: { type: Number, required: true },       // gia_thue_mac_dinh
     defaultDeposit: { type: Number, required: true },         // gia_coc_mac_dinh
@@ -16,10 +16,13 @@ const roomSchema = new mongoose.Schema({
     },
     status: { type: Number, enum: [0, 1, 2], default: 0 },    // 0: Trống, 1: Đang thuê, 2: Đang sửa
     landlordId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account', required: true }, // ma_chu_tro
+    propertyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Property', default: null },
     lastElectricityReading: { type: Number }, // Chỉ số điện mới nhất đã chốt
     lastWaterReading: { type: Number },        // Chỉ số nước mới nhất đã chốt
     draftElectricity: { type: Number }, // Khách tự điền số điện nháp
     draftWater: { type: Number }        // Khách tự điền số nước nháp
 }, { timestamps: true });
+
+roomSchema.index({ propertyId: 1, roomCode: 1 }, { unique: true });
 
 module.exports = mongoose.model('Room', roomSchema);
