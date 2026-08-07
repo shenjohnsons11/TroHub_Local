@@ -1,4 +1,6 @@
 const Room = require('../models/Room');
+const Property = require('../models/Property');
+const { assertOwnedProperty, PropertyMembershipError } = require('../services/propertyMembershipService');
 
 function normalizeFloor(value) {
     const floor = Number(value === undefined ? 1 : value);
@@ -13,24 +15,21 @@ function normalizeFloor(value) {
 // 1. Lấy danh sách toàn bộ phòng (Có thể lọc theo mã chủ trọ)
 exports.getAllRooms = async (req, res) => {
     try {
-        let landlordId = req.query.landlordId;
-        const authHeader = req.headers['authorization'];
-        if (!landlordId && authHeader && authHeader.startsWith('Bearer ')) {
-            const token = authHeader.split(' ')[1];
-            try {
-                const decoded = require('jsonwebtoken').verify(token, process.env.JWT_SECRET || '***REMOVED***');
-                if (decoded.role === 1) landlordId = decoded.id;
-            } catch(e) {}
+        const propertyId = req.query.propertyId;
+        let query;
+        if (propertyId) {
+            await assertOwnedProperty({ propertyId, landlordId: req.auth.id });
+            query = { propertyId };
+        } else {
+            const propertyIds = await Property.find({ ownerId: req.auth.id }).distinct('_id');
+            query = { propertyId: { $in: propertyIds } };
         }
-        
-        let query = {};
-        if (landlordId) query.landlordId = landlordId;
 
         const rooms = await Room.find(query).lean().sort({ floor: 1, roomCode: 1 });
         
         // Populate tenant from active contracts
         const Contract = require('../models/Contract');
-        const activeContracts = await Contract.find({ status: 1 }).populate('tenantId', 'fullName');
+        const activeContracts = await Contract.find({ roomId: { $in: rooms.map((room) => room._id) }, status: { $in: [1, 5] } }).populate('tenantId', 'fullName');
         
         for (let room of rooms) {
             room.floor = room.floor || 1;
@@ -53,7 +52,7 @@ exports.getAllRooms = async (req, res) => {
 // 2. Thêm phòng trọ mới
 exports.createRoom = async (req, res) => {
     try {
-        let { roomCode, area, defaultRentPrice, defaultDeposit, landlordId, rent, deposit, floor } = req.body;
+        let { roomCode, area, defaultRentPrice, defaultDeposit, rent, deposit, floor, propertyId } = req.body;
         
         if (!roomCode || typeof roomCode !== 'string' || !roomCode.trim()) {
             return res.status(400).json({ success: false, message: "Mã phòng không được để trống!" });
@@ -67,14 +66,12 @@ exports.createRoom = async (req, res) => {
             return res.status(400).json({ success: false, message: "Giá thuê phòng không được để trống!" });
         }
 
-        if (!landlordId && req.auth?.id) {
-            landlordId = req.auth.id;
-        }
+        await assertOwnedProperty({ propertyId, landlordId: req.auth.id });
 
         // Kiểm tra xem mã phòng đã tồn tại chưa
-        const existingRoom = await Room.findOne({ roomCode });
+        const existingRoom = await Room.findOne({ propertyId, roomCode: roomCode.trim() });
         if (existingRoom) {
-            return res.status(400).json({ success: false, message: "Mã phòng này đã tồn tại trên hệ thống!" });
+            return res.status(409).json({ success: false, code: 'ROOM_CODE_EXISTS', message: "Mã phòng này đã tồn tại trong nhà trọ!" });
         }
 
         const newRoom = new Room({
@@ -83,7 +80,8 @@ exports.createRoom = async (req, res) => {
             defaultRentPrice,
             defaultDeposit,
             floor: normalizeFloor(floor),
-            landlordId,
+            landlordId: req.auth.id,
+            propertyId,
             status: 0 // 0: Trống (Mặc định khi mới tạo)
         });
 
@@ -97,7 +95,7 @@ exports.createRoom = async (req, res) => {
         if (error.code === 'INVALID_ROOM_FLOOR') {
             return res.status(400).json({ success: false, code: error.code, message: error.message });
         }
-        res.status(500).json({ success: false, message: "Lỗi khi tạo phòng: " + error.message });
+        res.status(error.status || 500).json({ success: false, code: error.code, message: "Lỗi khi tạo phòng: " + error.message });
     }
 };
 
@@ -105,7 +103,7 @@ exports.createRoom = async (req, res) => {
 exports.getRoomById = async (req, res) => {
     try {
         // Dùng populate để kéo thông tin fullName và phone của chủ trọ từ bảng Account sang
-        const room = await Room.findById(req.params.id).populate('landlordId', 'fullName phone');
+        const room = await Room.findOne({ _id: req.params.id, landlordId: req.auth.id }).populate('landlordId', 'fullName phone');
         
         if (!room) {
             return res.status(404).json({ success: false, message: "Không tìm thấy thông tin phòng!" });
@@ -120,12 +118,14 @@ exports.getRoomById = async (req, res) => {
 exports.updateRoom = async (req, res) => {
     try {
         let updateData = { ...req.body };
+        delete updateData.landlordId;
+        delete updateData.propertyId;
         if (updateData.rent !== undefined) updateData.defaultRentPrice = updateData.rent;
         if (updateData.deposit !== undefined) updateData.defaultDeposit = updateData.deposit;
         if (updateData.floor !== undefined) updateData.floor = normalizeFloor(updateData.floor);
 
-        const updatedRoom = await Room.findByIdAndUpdate(
-            req.params.id, 
+        const updatedRoom = await Room.findOneAndUpdate(
+            { _id: req.params.id, landlordId: req.auth.id },
             updateData, 
             { new: true }
         );
@@ -151,7 +151,7 @@ exports.updateRoom = async (req, res) => {
 exports.deleteRoom = async (req, res) => {
     try {
         const roomId = req.params.id;
-        const room = await Room.findById(roomId);
+        const room = await Room.findOne({ _id: roomId, landlordId: req.auth.id });
         if (!room) {
             return res.status(404).json({ success: false, message: 'Không tìm thấy phòng cần xóa!' });
         }

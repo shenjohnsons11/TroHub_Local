@@ -3,8 +3,11 @@ const Room = require('../models/Room');
 const Contract = require('../models/Contract');
 const Invoice = require('../models/Invoice');
 const RepairRequest = require('../models/RepairRequest');
+const Property = require('../models/Property');
+const PropertyMembership = require('../models/PropertyMembership');
 const bcrypt = require('bcryptjs');
-const { createOrLinkTenant, lookupTenantAccount } = require('../services/tenantLinkService');
+const { createOrInviteTenant, lookupTenantAccount } = require('../services/tenantLinkService');
+const { assertOwnedProperty } = require('../services/propertyMembershipService');
 
 // =========================================================================
 // PHẦN 1: DÀNH CHO GIAO DIỆN WEB (CHỦ TRỌ QUẢN LÝ)
@@ -13,42 +16,25 @@ const { createOrLinkTenant, lookupTenantAccount } = require('../services/tenantL
 // 1. Lấy danh sách toàn bộ người thuê (role = 2) thuộc danh bạ của Chủ trọ
 exports.getAllTenants = async (req, res) => {
     try {
-        let landlordId = null;
-        const authHeader = req.headers['authorization'];
-        if (authHeader && authHeader.startsWith('Bearer ')) {
-            const token = authHeader.split(' ')[1];
-            try {
-                const decoded = require('jsonwebtoken').verify(token, process.env.JWT_SECRET || '***REMOVED***');
-                if (decoded.role === 1) landlordId = decoded.id;
-            } catch(e) {}
-        }
-
-        if (!landlordId) return res.status(401).json({ success: false, message: "Không tìm thấy thông tin chủ trọ!" });
-
-        // Lấy tất cả người thuê mà trong linkedLandlords hoặc pendingLandlords có chứa landlordId
-        let tenants = await Account.find({
-            role: 2,
-            $or: [{ linkedLandlords: landlordId }, { pendingLandlords: landlordId }]
-        }).lean().sort({ createdAt: -1 });
-
-        // Populate room from active contracts (1: Hiệu lực, 5: Yêu cầu trả phòng) để hiển thị thông tin phòng nếu có
-        const activeContracts = await Contract.find({ status: { $in: [1, 5] } }).populate('roomId');
-
-        for (let t of tenants) {
-            // Đánh dấu nếu Người thuê đang chờ xác nhận
-            if (t.pendingLandlords && t.pendingLandlords.some(id => id.toString() === landlordId.toString())) {
-                t.pending = true;
-            }
-
-            const contract = activeContracts.find(c => c.tenantId && c.tenantId.toString() === t._id.toString());
-            if (contract && contract.roomId) {
-                t.room = contract.roomId.roomCode || contract.roomId.name;
-                t.contractStatus = contract.status;
-            } else {
-                t.room = "Chưa xếp phòng";
-                t.contractStatus = "Không có";
-            }
-        }
+        const propertyId = req.query.propertyId;
+        await assertOwnedProperty({ propertyId, landlordId: req.auth.id });
+        const memberships = await PropertyMembership.find({ propertyId })
+            .populate('tenantId', 'username fullName phone email idCard role status mustChangePassword createdAt')
+            .lean()
+            .sort({ createdAt: -1 });
+        const roomIds = await Room.find({ propertyId }).distinct('_id');
+        const contracts = await Contract.find({ roomId: { $in: roomIds }, status: { $in: [0, 1, 4, 5] } }).populate('roomId', 'roomCode').lean();
+        const tenants = memberships.map((membership) => {
+            const tenant = membership.tenantId || {};
+            const contract = contracts.find((item) => String(item.tenantId) === String(tenant._id));
+            return {
+                ...tenant,
+                membershipId: membership._id,
+                membershipStatus: membership.status,
+                room: contract?.roomId?.roomCode || 'Chưa xếp phòng',
+                contractStatus: contract?.status ?? null,
+            };
+        });
 
         res.status(200).json({
             success: true,
@@ -108,23 +94,15 @@ exports.lookupTenant = async (req, res) => {
 // 2. Tạo hoặc liên kết người thuê vào một hợp đồng nháp
 exports.createTenant = async (req, res) => {
     try {
-        let landlordId = req.auth?.id || null;
-        const authHeader = req.headers['authorization'];
-        if (authHeader && authHeader.startsWith('Bearer ')) {
-            const token = authHeader.split(' ')[1];
-            try {
-                const decoded = require('jsonwebtoken').verify(token, process.env.JWT_SECRET || '***REMOVED***');
-                if (decoded.role === 1) landlordId = decoded.id;
-            } catch(e) {}
-        }
-        if (!landlordId) return res.status(401).json({ success: false, message: "Không tìm thấy thông tin chủ trọ!" });
-
-        const result = await createOrLinkTenant({ ...req.body, landlordId });
+        const propertyId = req.body.propertyId;
+        await assertOwnedProperty({ propertyId, landlordId: req.auth.id });
+        const property = await Property.findOne({ _id: propertyId, ownerId: req.auth.id });
+        const result = await createOrInviteTenant({ ...req.body, propertyId, propertyName: property.name, landlordId: req.auth.id });
         res.status(result.created ? 201 : 200).json({
             success: true,
-            message: result.created ? "Đã tạo mới và liên kết Người thuê vào phòng!" : "Đã liên kết Người thuê vào phòng!",
+            message: result.created ? "Đã tạo mới và gửi lời mời Người thuê." : "Đã gửi lời mời Người thuê.",
             data: result.tenant,
-            contract: result.contract
+            membership: result.membership,
         });
     } catch (error) {
         if (error && error.code === 11000) {

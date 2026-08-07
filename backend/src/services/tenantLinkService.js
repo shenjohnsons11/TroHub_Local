@@ -1,7 +1,6 @@
 const bcrypt = require('bcryptjs');
 const Account = require('../models/Account');
-const Room = require('../models/Room');
-const Contract = require('../models/Contract');
+const PropertyMembership = require('../models/PropertyMembership');
 const { sendNotification } = require('./notificationService');
 
 class TenantLinkError extends Error {
@@ -37,35 +36,31 @@ async function lookupTenantAccount(identifier, { AccountModel = Account } = {}) 
     return account ? safeTenantProfile(account) : null;
 }
 
-async function createOrLinkTenant(input, dependencies = {}) {
-    const {
-        AccountModel = Account,
-        RoomModel = Room,
-        ContractModel = Contract,
-        hashPassword = (plain) => bcrypt.hash(plain, 10),
-        notify = sendNotification,
-    } = dependencies;
-    const landlordId = input.landlordId;
+function getIdentity(input) {
     const phone = String(input.phone || '').replace(/\D/g, '');
     const idCard = String(input.idCard || '').replace(/\D/g, '');
     const email = String(input.email || '').trim().toLowerCase();
-    const roomCode = String(input.roomCode || '').trim();
     const identifiers = [phone && { phone }, idCard && { idCard }, email && { email }].filter(Boolean);
+    return { phone, idCard, email, identifiers };
+}
 
-    if (!landlordId) throw new TenantLinkError('Không tìm thấy thông tin chủ trọ!', 401);
-    let room = null;
-    if (roomCode) {
-        room = await RoomModel.findOne({ roomCode, landlordId });
-        if (!room || room.status !== 0) throw new TenantLinkError('Phòng đã chọn không còn trống hoặc không thuộc Chủ trọ!');
-        if (await ContractModel.exists({ roomId: room._id, status: { $in: [0, 1, 4, 5] } })) {
-            throw new TenantLinkError('Phòng đã có hợp đồng đang chờ hoặc đang hiệu lực!');
-        }
-    }
+async function createOrInviteTenant(input, dependencies = {}) {
+    const {
+        AccountModel = Account,
+        MembershipModel = PropertyMembership,
+        hashPassword = (plain) => bcrypt.hash(plain, 10),
+        notify = sendNotification,
+    } = dependencies;
+    const propertyId = input.propertyId;
+    const landlordId = input.landlordId;
+    const propertyName = String(input.propertyName || 'nhà trọ').trim();
+    if (!propertyId || !landlordId) throw new TenantLinkError('Không tìm thấy thông tin nhà trọ hoặc chủ trọ!', 401);
 
+    const { phone, idCard, email, identifiers } = getIdentity(input);
     const matches = identifiers.length ? await AccountModel.find({ role: 2, $or: identifiers }) : [];
     const uniqueMatches = [...new Map(matches.map((account) => [String(account._id), account])).values()];
     if (uniqueMatches.length > 1) {
-        throw new TenantLinkError('SĐT, CCCD hoặc Email đang thuộc các tài khoản khác nhau!');
+        throw new TenantLinkError('SĐT, CCCD hoặc Email đang thuộc các tài khoản khác nhau!', 409, 'TENANT_IDENTITY_CONFLICT');
     }
 
     let tenant = uniqueMatches[0];
@@ -75,7 +70,7 @@ async function createOrLinkTenant(input, dependencies = {}) {
         if (phone.length !== 10) throw new TenantLinkError('Số điện thoại phải gồm đúng 10 chữ số!');
         if (idCard.length !== 12) throw new TenantLinkError('Số CCCD phải gồm đúng 12 chữ số!');
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new TenantLinkError('Email không hợp lệ!');
-        tenant = new AccountModel({
+        tenant = await AccountModel.create({
             username: email,
             password: await hashPassword('123456'),
             fullName: String(input.fullName).trim(),
@@ -84,55 +79,40 @@ async function createOrLinkTenant(input, dependencies = {}) {
             idCard,
             role: 2,
             status: 1,
-            linkedLandlords: [landlordId],
-            pendingLandlords: [],
             mustChangePassword: true,
         });
-    } else {
-        tenant.linkedLandlords = tenant.linkedLandlords || [];
-        if (!tenant.linkedLandlords.some((id) => String(id) === String(landlordId))) tenant.linkedLandlords.push(landlordId);
-        tenant.pendingLandlords = (tenant.pendingLandlords || []).filter((id) => String(id) !== String(landlordId));
     }
-    await tenant.save();
 
-    let contract = null;
-    if (room) {
-        const startDate = new Date();
-        const endDate = new Date(startDate);
-        endDate.setFullYear(endDate.getFullYear() + 1);
-        contract = new ContractModel({
-            roomId: room._id,
-            tenantId: tenant._id,
-            startDate,
-            endDate,
-            fixedRentPrice: room.defaultRentPrice || 0,
-            fixedDeposit: room.defaultDeposit || 0,
-            services: [],
-            status: 0,
-        });
-        await contract.save();
+    let membership = await MembershipModel.findOne({ propertyId, tenantId: tenant._id });
+    if (membership?.status === 'active' || membership?.status === 'invited') {
+        throw new TenantLinkError('Người thuê đã thuộc hoặc đang có lời mời vào nhà trọ này.', 409, 'MEMBERSHIP_EXISTS');
+    }
+    if (membership) {
+        membership.status = 'invited';
+        membership.invitedAt = new Date();
+        membership.joinedAt = null;
+        membership.leftAt = null;
+        await membership.save();
+    } else {
+        membership = await MembershipModel.create({ propertyId, tenantId: tenant._id, status: 'invited' });
     }
 
     await notify({
         userId: tenant._id,
-        title: room ? 'Đã được thêm vào phòng' : 'Đã được thêm vào danh bạ chủ trọ',
-        content: created
-            ? (room ? `Bạn đã được Chủ trọ thêm vào Phòng ${room.roomCode}. Mật khẩu mặc định: 123456` : `Bạn đã được Chủ trọ thêm vào danh sách người thuê. Mật khẩu mặc định: 123456`)
-            : (room ? `Bạn đã được Chủ trọ thêm vào Phòng ${room.roomCode}.` : `Bạn đã được Chủ trọ thêm vào danh sách người thuê.`),
+        title: 'Lời mời vào nhà trọ',
+        content: `Bạn được mời tham gia ${propertyName}.`,
         category: 'tenant',
-        deepLink: room ? 'home' : 'profile',
-        metadata: { roomId: room?._id, roomCode: room?.roomCode, action: room ? 'room-assigned' : 'linked' },
-        eventKey: room
-            ? `tenant:${tenant._id}:room:${room._id}:assigned`
-            : `tenant:${tenant._id}:landlord:${landlordId}:linked`,
+        deepLink: 'home',
+        metadata: { propertyId, membershipId: membership._id, action: 'membership-invite' },
+        eventKey: `membership:${membership._id}:invited`,
     });
 
-    return { tenant, contract, created, roomCode: room?.roomCode };
+    return { tenant, membership, created };
 }
 
 module.exports = {
     TenantLinkError,
-    createOrLinkTenant,
+    createOrInviteTenant,
     lookupTenantAccount,
     normalizeTenantIdentifier,
 };

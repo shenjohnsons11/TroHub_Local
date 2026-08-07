@@ -77,3 +77,42 @@ test('accepting an invitation activates the membership once', async () => {
     assert.equal(membership.joinedAt.toISOString(), now.toISOString());
     assert.equal(saveCount, 1);
 });
+
+test('inviting a tenant creates membership without creating a contract', async () => {
+    const { createOrInviteTenant } = require('../src/services/tenantLinkService');
+    const created = [];
+    const memberships = [];
+    const result = await createOrInviteTenant({
+        propertyId: 'property-a',
+        landlordId: 'landlord-a',
+        propertyName: 'Nhà A',
+        fullName: 'Tenant A',
+        phone: '0900000000',
+        email: 'tenant-a@example.com',
+        idCard: '012345678901',
+    }, {
+        AccountModel: {
+            find: async () => [],
+            create: async (data) => {
+                const tenant = { _id: 'tenant-a', ...data };
+                created.push(tenant);
+                return tenant;
+            },
+        },
+        MembershipModel: {
+            findOne: async () => null,
+            create: async (data) => {
+                const membership = { _id: 'membership-a', ...data };
+                memberships.push(membership);
+                return membership;
+            },
+        },
+        hashPassword: async () => 'hash',
+        notify: async () => undefined,
+    });
+
+    assert.equal(result.membership.status, 'invited');
+    assert.equal(created.length, 1);
+    assert.equal(memberships.length, 1);
+    assert.equal('contract' in result, false);
+});
