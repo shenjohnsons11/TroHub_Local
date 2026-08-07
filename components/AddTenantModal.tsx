@@ -3,6 +3,7 @@ import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleShee
 import { Ionicons } from "@expo/vector-icons";
 import { adminService, AdminRoom } from "../services/adminService";
 import { useAppTheme } from "../contexts/ThemeContext";
+import { useTranslation } from "../contexts/LanguageContext";
 import { useNotification } from "../hooks/useNotification";
 import AppButton from "./ui/AppButton";
 import CCCDScannerModal from "./CCCDScannerModal";
@@ -12,6 +13,7 @@ type Props = { visible: boolean; rooms: AdminRoom[]; onClose: () => void; onSucc
 
 export default function AddTenantModal({ visible, rooms, onClose, onSuccess }: Props) {
   const { theme } = useAppTheme();
+  const { t } = useTranslation();
   const notification = useNotification();
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
@@ -51,16 +53,16 @@ export default function AddTenantModal({ visible, rooms, onClose, onSuccess }: P
 
   const handleAddTenant = async () => {
     const cleanPhone = unformatDigits(phone); const cleanIdCard = unformatDigits(idCard);
-    if (!fullName.trim() || !phone.trim() || !email.trim() || !idCard.trim() || !roomCode) return notification.error("Vui lòng điền đầy đủ thông tin và chọn phòng!");
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return notification.error("Vui lòng nhập Email đúng định dạng.");
-    if (cleanPhone.length !== 10) return notification.error("Số điện thoại phải gồm đúng 10 chữ số!");
-    if (cleanIdCard.length !== 12) return notification.error("Số CCCD phải gồm đúng 12 chữ số!");
+    if (!fullName.trim() || !phone.trim() || !email.trim() || !idCard.trim() || !roomCode) return notification.error(t("mobile.addTenant.required"));
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return notification.error(t("mobile.addTenant.invalidEmail"));
+    if (cleanPhone.length !== 10) return notification.error(t("mobile.addTenant.invalidPhone"));
+    if (cleanIdCard.length !== 12) return notification.error(t("mobile.addTenant.invalidIdCard"));
     try {
       setSubmitting(true);
       await adminService.createTenant({ fullName: fullName.trim(), phone: cleanPhone, email: email.trim(), idCard: cleanIdCard, roomCode });
-      notification.success(existingTenantId ? "Đã liên kết Người thuê vào phòng!" : "Đã tạo mới và liên kết Người thuê vào phòng!");
+      notification.success(existingTenantId ? t("mobile.addTenant.linked") : t("mobile.addTenant.createdAndLinked"));
       onClose(); onSuccess();
-    } catch (error) { notification.error(error instanceof Error ? error.message : "Thêm người thuê thất bại!"); }
+    } catch (error) { notification.error(error instanceof Error ? error.message : t("mobile.addTenant.failed")); }
     finally { setSubmitting(false); }
   };
 
@@ -68,16 +70,16 @@ export default function AddTenantModal({ visible, rooms, onClose, onSuccess }: P
   return <>
     <Modal visible={visible} transparent animationType="slide" onRequestClose={() => { if (!submitting) onClose(); }}>
       <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === "ios" ? "padding" : undefined}><View style={[StyleSheet.absoluteFill, { backgroundColor: theme.overlay }]} /><View accessibilityViewIsModal style={[styles.sheet, { backgroundColor: theme.surfaceElevated }]}>
-        <View style={styles.modalHeader}><Text accessibilityRole="header" style={[styles.modalTitle, { color: theme.text }]}>Thêm người thuê mới</Text><Pressable accessibilityRole="button" accessibilityLabel="Đóng thêm người thuê" disabled={submitting} onPress={onClose}><Ionicons name="close" size={26} color={theme.text} /></Pressable></View>
+        <View style={styles.modalHeader}><Text accessibilityRole="header" style={[styles.modalTitle, { color: theme.text }]}>{t("mobile.addTenant.title")}</Text><Pressable accessibilityRole="button" accessibilityLabel={t("mobile.addTenant.close")} disabled={submitting} onPress={onClose}><Ionicons name="close" size={26} color={theme.text} /></Pressable></View>
         <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-          <Text style={[styles.formHint, { color: theme.muted }]}>Nhập SĐT, CCCD hoặc Email; hệ thống sẽ tự tra cứu sau khi dữ liệu hợp lệ.</Text>
-          <Field label="Số điện thoại" value={phone} onChange={(text: string) => { const value = formatPhone(text); setPhone(value); setLookupIdentifier(value); }} placeholder="0901.234.567" style={inputStyle} muted={theme.muted} keyboardType="phone-pad" editable={!existingTenantId} />
-          <Field label="Số CCCD" value={idCard} onChange={(text: string) => { const value = formatCCCD(text); setIdCard(value); setLookupIdentifier(value); }} placeholder="0790.1234.5678" style={inputStyle} muted={theme.muted} keyboardType="numeric" editable={!existingTenantId} accessory={<Pressable accessibilityRole="button" accessibilityLabel="Quét CCCD bằng camera" disabled={Boolean(existingTenantId)} onPress={() => setScannerVisible(true)} style={[styles.scanButton, { backgroundColor: theme.primarySoft }]}><Text style={[styles.scanButtonText, { color: theme.primary }]}>📷 Quét CCCD</Text></Pressable>} />
+          <Text style={[styles.formHint, { color: theme.muted }]}>{t("mobile.addTenant.hint")}</Text>
+          <Field label={t("mobile.addTenant.phone")} value={phone} onChange={(text: string) => { const value = formatPhone(text); setPhone(value); setLookupIdentifier(value); }} placeholder="0901.234.567" style={inputStyle} muted={theme.muted} keyboardType="phone-pad" editable={!existingTenantId} />
+          <Field label={t("mobile.addTenant.idCard")} value={idCard} onChange={(text: string) => { const value = formatCCCD(text); setIdCard(value); setLookupIdentifier(value); }} placeholder="0790.1234.5678" style={inputStyle} muted={theme.muted} keyboardType="numeric" editable={!existingTenantId} accessory={<Pressable accessibilityRole="button" accessibilityLabel={t("mobile.addTenant.scanIdCard")} disabled={Boolean(existingTenantId)} onPress={() => setScannerVisible(true)} style={[styles.scanButton, { backgroundColor: theme.primarySoft }]}><Text style={[styles.scanButtonText, { color: theme.primary }]}>{t("mobile.addTenant.scan")}</Text></Pressable>} />
           <Field label="Email" value={email} onChange={(text: string) => { setEmail(text); setLookupIdentifier(text); }} placeholder="nguyenvana@gmail.com" style={inputStyle} muted={theme.muted} keyboardType="email-address" editable={!existingTenantId} />
-          <Field label="Họ và tên" value={fullName} onChange={setFullName} placeholder="Nguyễn Văn A" style={inputStyle} muted={theme.muted} editable={!existingTenantId} />
-          {lookupStatus !== "idle" ? <View accessibilityLiveRegion="polite" style={[styles.lookupBox, { backgroundColor: theme.primarySoft }]}><Ionicons name={lookupStatus === "found" ? "link-outline" : lookupStatus === "loading" ? "search-outline" : "person-add-outline"} size={18} color={theme.primary} /><Text style={[styles.lookupText, { color: theme.text }]}>{lookupStatus === "loading" ? "Đang tra cứu…" : lookupStatus === "found" ? "Đã tìm thấy tài khoản. Hồ sơ được khóa để liên kết an toàn." : lookupStatus === "error" ? "Không thể tra cứu lúc này. Vui lòng thử lại." : "Chưa có tài khoản. Hệ thống sẽ tạo mới với mật khẩu 123456."}</Text></View> : null}
-          <Text style={[styles.label, { color: theme.text }]}>Phòng xếp</Text><View style={styles.roomChips}>{vacantRooms.map((room) => { const selected = roomCode === room.roomCode; return <Pressable key={room._id} accessibilityRole="button" accessibilityState={{ selected }} onPress={() => setRoomCode(room.roomCode)} style={[styles.roomChip, { backgroundColor: selected ? theme.primary : theme.background, borderColor: selected ? theme.primary : theme.border }]}><Text style={[styles.roomChipText, { color: selected ? theme.background : theme.text }]}>{room.roomCode}</Text></Pressable>; })}</View>
-          <AppButton icon={existingTenantId ? "link-outline" : "person-add-outline"} loading={submitting} disabled={lookupStatus === "loading"} onPress={handleAddTenant}>{existingTenantId ? "Liên kết Người thuê vào phòng" : "Tạo mới & Liên kết"}</AppButton>
+          <Field label={t("mobile.addTenant.fullName")} value={fullName} onChange={setFullName} placeholder={t("mobile.addTenant.fullNamePlaceholder")} style={inputStyle} muted={theme.muted} editable={!existingTenantId} />
+          {lookupStatus !== "idle" ? <View accessibilityLiveRegion="polite" style={[styles.lookupBox, { backgroundColor: theme.primarySoft }]}><Ionicons name={lookupStatus === "found" ? "link-outline" : lookupStatus === "loading" ? "search-outline" : "person-add-outline"} size={18} color={theme.primary} /><Text style={[styles.lookupText, { color: theme.text }]}>{lookupStatus === "loading" ? t("mobile.addTenant.lookupLoading") : lookupStatus === "found" ? t("mobile.addTenant.lookupFound") : lookupStatus === "error" ? t("mobile.addTenant.lookupError") : t("mobile.addTenant.lookupNew")}</Text></View> : null}
+          <Text style={[styles.label, { color: theme.text }]}>{t("mobile.addTenant.room")}</Text><View style={styles.roomChips}>{vacantRooms.map((room) => { const selected = roomCode === room.roomCode; return <Pressable key={room._id} accessibilityRole="button" accessibilityState={{ selected }} onPress={() => setRoomCode(room.roomCode)} style={[styles.roomChip, { backgroundColor: selected ? theme.primary : theme.background, borderColor: selected ? theme.primary : theme.border }]}><Text style={[styles.roomChipText, { color: selected ? theme.background : theme.text }]}>{room.roomCode}</Text></Pressable>; })}</View>
+          <AppButton icon={existingTenantId ? "link-outline" : "person-add-outline"} loading={submitting} disabled={lookupStatus === "loading"} onPress={handleAddTenant}>{existingTenantId ? t("mobile.addTenant.link") : t("mobile.addTenant.createAndLink")}</AppButton>
         </ScrollView>
       </View></KeyboardAvoidingView>
     </Modal>

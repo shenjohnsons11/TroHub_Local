@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { ActivityIndicator, View, Text, StyleSheet, Modal, TextInput, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import AppButton from "../ui/AppButton";
 import { useAppTheme } from "../../contexts/ThemeContext";
+import { useTranslation } from "../../contexts/LanguageContext";
 import { formatCurrency, formatNumberInput, unformatNumber } from "../../utils/formatters";
 import type { CheckoutPreview } from "../../services/adminService";
 
@@ -16,6 +17,7 @@ type CheckoutModalProps = {
 
 export default function CheckoutModal({ visible, onClose, onConfirm, loading, preview, previewLoading }: CheckoutModalProps) {
   const { theme } = useAppTheme();
+  const { t } = useTranslation();
   const [electricityNew, setElectricityNew] = useState("");
   const [waterNew, setWaterNew] = useState("");
   const [damage, setDamage] = useState("0");
@@ -56,26 +58,26 @@ export default function CheckoutModal({ visible, onClose, onConfirm, loading, pr
         <View style={styles.backdrop} />
         <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
           <ScrollView>
-            <Text style={[styles.title, { color: theme.text }]}>Quyết toán Trả phòng</Text>
+            <Text style={[styles.title, { color: theme.text }]}>{t("mobile.checkout.title")}</Text>
 
             {previewLoading ? (
               <ActivityIndicator color={theme.primary} />
             ) : preview ? (
               <View style={[styles.summary, { backgroundColor: theme.surfaceElevated }]}>
-                <SummaryRow label="Tiền cọc ban đầu" value={formatCurrency(preview.depositAmount)} color={theme.text} />
-                <SummaryRow label="(−) Hóa đơn nợ cũ" value={formatCurrency(preview.unpaidAmount)} color={theme.text} />
-                <SummaryRow label="(−) Điện nước cuối kỳ" value={formatCurrency(utilitiesAmount)} color={theme.text} />
-                <SummaryRow label="(−) Tiền bồi thường hư hại" value={formatCurrency(unformatNumber(damage))} color={theme.text} />
-                <SummaryRow label="Tổng nợ" value={formatCurrency(totalDebt)} color={theme.text} strong />
+                <SummaryRow label={t("mobile.checkout.deposit")} value={formatCurrency(preview.depositAmount)} color={theme.text} />
+                <SummaryRow label={t("mobile.checkout.unpaid")} value={formatCurrency(preview.unpaidAmount)} color={theme.text} />
+                <SummaryRow label={t("mobile.checkout.utilities")} value={formatCurrency(utilitiesAmount)} color={theme.text} />
+                <SummaryRow label={t("mobile.checkout.damage")} value={formatCurrency(unformatNumber(damage))} color={theme.text} />
+                <SummaryRow label={t("mobile.checkout.totalDebt")} value={formatCurrency(totalDebt)} color={theme.text} strong />
                 <Text style={[styles.result, { color: balance < 0 ? theme.danger : theme.positive }]}>
                   {balance < 0
-                    ? `KHÁCH CÒN NỢ THÊM: ${formatCurrency(-balance)}`
-                    : `CẦN HOÀN LẠI CHO KHÁCH: ${formatCurrency(balance)}`}
+                    ? t("mobile.checkout.extraDebt", { amount: formatCurrency(-balance) })
+                    : t("mobile.checkout.refund", { amount: formatCurrency(balance) })}
                 </Text>
               </View>
             ) : null}
             
-            <Text style={[styles.label, { color: theme.text }]}>Chỉ số điện cuối cùng</Text>
+            <Text style={[styles.label, { color: theme.text }]}>{t("mobile.checkout.electricity")}</Text>
             <TextInput
               style={[styles.input, { borderColor: theme.border, color: theme.text }]}
               keyboardType="number-pad"
@@ -85,7 +87,7 @@ export default function CheckoutModal({ visible, onClose, onConfirm, loading, pr
               placeholderTextColor={theme.muted}
             />
 
-            <Text style={[styles.label, { color: theme.text }]}>Chỉ số nước cuối cùng</Text>
+            <Text style={[styles.label, { color: theme.text }]}>{t("mobile.checkout.water")}</Text>
             <TextInput
               style={[styles.input, { borderColor: theme.border, color: theme.text }]}
               keyboardType="number-pad"
@@ -95,7 +97,7 @@ export default function CheckoutModal({ visible, onClose, onConfirm, loading, pr
               placeholderTextColor={theme.muted}
             />
 
-            <Text style={[styles.label, { color: theme.text }]}>Tiền bồi thường hư hại (nếu có)</Text>
+            <Text style={[styles.label, { color: theme.text }]}>{t("mobile.checkout.damageInput")}</Text>
             <TextInput
               style={[styles.input, { borderColor: theme.border, color: theme.text }]}
               keyboardType="number-pad"
@@ -105,19 +107,19 @@ export default function CheckoutModal({ visible, onClose, onConfirm, loading, pr
               placeholderTextColor={theme.muted}
             />
 
-            <Text style={[styles.label, { color: theme.text }]}>Ghi chú trả phòng</Text>
+            <Text style={[styles.label, { color: theme.text }]}>{t("mobile.checkout.note")}</Text>
             <TextInput
               style={[styles.input, { borderColor: theme.border, color: theme.text, height: 80 }]}
               multiline
               value={note}
               onChangeText={setNote}
-              placeholder="Tình trạng phòng, hư hỏng..."
+              placeholder={t("mobile.checkout.notePlaceholder")}
               placeholderTextColor={theme.muted}
             />
 
             <View style={styles.actions}>
-              <AppButton variant="secondary" onPress={onClose} style={styles.btn}>Hủy</AppButton>
-              <AppButton loading={loading || previewLoading} disabled={!preview} onPress={handleConfirm} style={styles.btn}>Duyệt trả phòng</AppButton>
+              <AppButton variant="secondary" onPress={onClose} style={styles.btn}>{t("common.cancel")}</AppButton>
+              <AppButton loading={loading || previewLoading} disabled={!preview} onPress={handleConfirm} style={styles.btn}>{t("mobile.checkout.approve")}</AppButton>
             </View>
           </ScrollView>
         </View>

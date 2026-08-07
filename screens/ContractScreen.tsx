@@ -21,15 +21,16 @@ import { Ionicons } from "@expo/vector-icons";
 import GradientHero from "../components/ui/GradientHero";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
 import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
+import { useTranslation } from "../contexts/LanguageContext";
 
-const getStatusLabel = (status: ContractStatus): string => {
+const getStatusLabel = (status: ContractStatus, t: (key: string) => string): string => {
   switch (status) {
-    case "pending": return "Chờ ký xác nhận";
-    case "active": return "Có hiệu lực";
-    case "expired": return "Hết hạn";
-    case "cancelled": return "Đã hủy";
-    case "awaiting_approval": return "Chờ chủ trọ duyệt";
-    default: return "Không xác định";
+    case "pending": return t("tenantContract.pending");
+    case "active": return t("tenantContract.active");
+    case "expired": return t("tenantContract.expired");
+    case "cancelled": return t("tenantContract.cancelled");
+    case "awaiting_approval": return t("tenantContract.awaiting");
+    default: return t("tenantContract.unknown");
   }
 };
 
@@ -63,6 +64,7 @@ type Props = {
 export default function ContractScreen({ onNavigate, params }: Props) {
   const notification = useNotification();
   const { theme } = useAppTheme();
+  const { t } = useTranslation();
   const styles = createStyles(theme);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -121,7 +123,7 @@ export default function ContractScreen({ onNavigate, params }: Props) {
       notification.error(
         error instanceof Error
           ? error.message
-          : "Không thể tải hóa đơn tiền cọc.",
+          : t("tenantContract.depositLoadFailed"),
       );
       if (onNavigate) {
         onNavigate("invoice", { paymentInvoiceId: invoiceId });
@@ -136,7 +138,7 @@ export default function ContractScreen({ onNavigate, params }: Props) {
       setSigningId(contract.id);
       const result = await contractService.signContract(contract.id);
       notification.success(
-        "Ký xác nhận thành công. Vui lòng hoàn tất thanh toán tiền cọc.",
+        t("tenantContract.signed"),
       );
       setWizardVisible(false);
       // Reload danh sách
@@ -147,14 +149,14 @@ export default function ContractScreen({ onNavigate, params }: Props) {
         await openDepositPayment(result.invoiceId);
       } else if (result.depositRequired) {
         notification.warning(
-          "Hóa đơn tiền cọc chưa sẵn sàng. Vui lòng tải lại hợp đồng.",
+          t("tenantContract.depositUnavailable"),
         );
       }
     } catch (error) {
       notification.error(
         error instanceof Error
           ? error.message
-          : "Ký hợp đồng thất bại. Vui lòng thử lại.",
+          : t("tenantContract.signFailed"),
       );
     } finally {
       setSigningId(null);
@@ -164,17 +166,12 @@ export default function ContractScreen({ onNavigate, params }: Props) {
   const handleDepositPaymentConfirmed = async (_invoiceId: string) => {
     setPaymentInvoice(null);
     await loadContracts();
-    notification.success("Thanh toán tiền cọc đã được ghi nhận.");
+    notification.success(t("tenantContract.depositRecorded"));
   };
 
   const handleRequestTerminate = async (contract: Contract) => {
     const confirmed = await notification.confirm({
-      title: "Yêu cầu trả phòng",
-      message:
-        `Bạn có chắc chắn muốn gửi yêu cầu trả phòng ${contract.room}?\n\n` +
-        "Lưu ý: Bạn phải thanh toán toàn bộ hóa đơn nợ trước khi gửi yêu cầu. Sau khi gửi, chủ trọ sẽ kiểm tra phòng và chốt hợp đồng.",
-      cancelText: "Hủy",
-      confirmText: "Gửi yêu cầu",
+      title: t("tenantContract.terminateTitle"), message: t("tenantContract.terminateMessage", { room: contract.room }), cancelText: t("common.cancel"), confirmText: t("tenantContract.terminate"),
       destructive: true,
     });
     if (!confirmed) return;
@@ -183,15 +180,13 @@ export default function ContractScreen({ onNavigate, params }: Props) {
       setIsLoading(true);
       await contractService.requestTerminate(contract.id);
       notification.success(
-        "Đã gửi yêu cầu trả phòng! Vui lòng chờ chủ trọ xác nhận.",
-        { title: "Thành công" },
+        t("tenantContract.terminateSent"), { title: t("common.success") },
       );
       const data = await contractService.getMyContracts();
       setContracts(data);
     } catch (error) {
       notification.error(
-        error instanceof Error ? error.message : "Gửi yêu cầu thất bại. Vui lòng thử lại.",
-        { title: "Lỗi" },
+        error instanceof Error ? error.message : t("tenantContract.terminateFailed"), { title: t("common.error") },
       );
     } finally {
       setIsLoading(false);
@@ -219,18 +214,18 @@ export default function ContractScreen({ onNavigate, params }: Props) {
       }
       ListHeaderComponent={
         <>
-          <Text style={styles.title}>Hợp đồng của tôi</Text>
-          <Text style={styles.subtitle}>Xem và xác nhận hợp đồng thuê phòng của bạn.</Text>
+          <Text style={styles.title}>{t("tenantContract.title")}</Text>
+          <Text style={styles.subtitle}>{t("tenantContract.subtitle")}</Text>
         </>
       }
       ListEmptyComponent={
         <View style={styles.emptyContainer}>
           <IllustratedEmptyState
-            description="Khi chủ trọ tạo hợp đồng, hợp đồng sẽ xuất hiện ở đây."
+            description={t("tenantContract.emptyDescription")}
             kind="contract"
-            title="Chưa có hợp đồng"
+            title={t("tenantContract.empty")}
           />
-          <Text style={styles.emptyHint}>Kéo xuống để làm mới</Text>
+          <Text style={styles.emptyHint}>{t("tenantContract.refresh")}</Text>
         </View>
       }
       renderItem={({ item: contract, index }) => {
@@ -239,22 +234,22 @@ export default function ContractScreen({ onNavigate, params }: Props) {
         return (
           <AnimatedEntry delay={Math.min(index, 5) * 45}>
           <GradientHero
-            detail={`${getStatusLabel(contract.status)} · ${contract.startDate} — ${contract.endDate}`}
+            detail={`${getStatusLabel(contract.status, t)} · ${contract.startDate} — ${contract.endDate}`}
             icon="document-text-outline"
-            label={`PHÒNG ${contract.room} · TIỀN THUÊ`}
+            label={t("tenantContract.hero", { room: contract.room })}
             value={contract.rentFee}
           />
           <Card style={styles.contractCard}>
             {/* Header: Phòng + Badge */}
             <View style={styles.cardHeader}>
               <View style={styles.cardHeaderLeft}>
-                <Text style={styles.roomTitle}>Phòng {contract.room}</Text>
+                <Text style={styles.roomTitle}>{t("tenantContract.room", { room: contract.room })}</Text>
                 <Text style={styles.tenantText}>{contract.tenantName}</Text>
               </View>
 
               <View style={[styles.statusBadge, { backgroundColor: getStatusBg(contract.status, theme) }]}>
                 <Text style={[styles.statusText, { color: getStatusColor(contract.status, theme) }]}>
-                  {getStatusLabel(contract.status)}
+                  {getStatusLabel(contract.status, t)}
                 </Text>
               </View>
             </View>
@@ -262,19 +257,19 @@ export default function ContractScreen({ onNavigate, params }: Props) {
             {/* Thông tin chính */}
             <View style={styles.infoGrid}>
               <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>Tiền thuê</Text>
+                <Text style={styles.infoLabel}>{t("tenantContract.rent")}</Text>
                 <Text style={styles.infoValue}>{contract.rentFee}</Text>
               </View>
               <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>Tiền cọc</Text>
+                <Text style={styles.infoLabel}>{t("tenantContract.deposit")}</Text>
                 <Text style={styles.infoValue}>{contract.deposit}</Text>
               </View>
               <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>Bắt đầu</Text>
+                <Text style={styles.infoLabel}>{t("tenantContract.start")}</Text>
                 <Text style={styles.infoValue}>{contract.startDate}</Text>
               </View>
               <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>Kết thúc</Text>
+                <Text style={styles.infoLabel}>{t("tenantContract.end")}</Text>
                 <Text style={styles.infoValue}>{contract.endDate}</Text>
               </View>
             </View>
@@ -292,10 +287,10 @@ export default function ContractScreen({ onNavigate, params }: Props) {
                 </View>
                 <View style={styles.progressTextRow}>
                   <Text style={styles.progressText}>
-                    Đã sử dụng {contract.usedMonths} tháng
+                    {t("tenantContract.used", { count: contract.usedMonths })}
                   </Text>
                   <Text style={styles.progressText}>
-                    Còn {contract.remainingMonths} tháng
+                    {t("tenantContract.remaining", { count: contract.remainingMonths })}
                   </Text>
                 </View>
               </View>
@@ -304,15 +299,15 @@ export default function ContractScreen({ onNavigate, params }: Props) {
             {/* Phí dịch vụ */}
             {(contract.status === "active" || contract.status === "pending") && (
               <View style={styles.servicesBox}>
-                <Text style={styles.servicesTitle}>Phí dịch vụ</Text>
+                <Text style={styles.servicesTitle}>{t("tenantContract.services")}</Text>
                 <View style={styles.servicesGrid}>
                   <Text style={styles.serviceItem}>⚡ {contract.serviceFees.electric}</Text>
                   <Text style={styles.serviceItem}>
-                    Chỉ số điện đầu: {contract.meterTerms.initialElectricity}
+                    {t("tenantContract.initialElectricity", { value: contract.meterTerms.initialElectricity })}
                   </Text>
                   <Text style={styles.serviceItem}>💧 {contract.serviceFees.water}</Text>
                   <Text style={styles.serviceItem}>
-                    Chỉ số nước đầu: {contract.meterTerms.initialWater}
+                    {t("tenantContract.initialWater", { value: contract.meterTerms.initialWater })}
                   </Text>
                   <Text style={styles.serviceItem}>🅿️ {contract.serviceFees.parking}</Text>
                   <Text style={styles.serviceItem}>🌐 {contract.serviceFees.internet}</Text>
@@ -325,7 +320,7 @@ export default function ContractScreen({ onNavigate, params }: Props) {
               <View style={styles.signBox}>
                 <View style={styles.signHintBox}>
                   <Text style={styles.signHint}>
-                    ✍️ Chủ trọ đã tạo hợp đồng này cho bạn. Hãy xem kỹ thông tin và nhấn nút bên dưới để ký xác nhận.
+                    {t("tenantContract.signHint")}
                   </Text>
                 </View>
                 <Pressable
@@ -336,7 +331,7 @@ export default function ContractScreen({ onNavigate, params }: Props) {
                   {isSigning ? (
                     <ActivityIndicator color={theme.background} />
                   ) : (
-                    <><Ionicons name="create-outline" size={19} color={theme.background} /><Text style={styles.signButtonText}>Ký xác nhận hợp đồng</Text></>
+                    <><Ionicons name="create-outline" size={19} color={theme.background} /><Text style={styles.signButtonText}>{t("tenantContract.sign")}</Text></>
                   )}
                 </Pressable>
               </View>
@@ -347,7 +342,7 @@ export default function ContractScreen({ onNavigate, params }: Props) {
               <>
                 <View style={styles.awaitingBox}>
                   <Text style={styles.awaitingText}>
-                    ⏳ Bạn đã ký xác nhận. Đang chờ chủ trọ duyệt để hợp đồng có hiệu lực.
+                    {t("tenantContract.awaitingHint")}
                   </Text>
                 </View>
                 {contract.depositPayment?.required &&
@@ -355,13 +350,13 @@ export default function ContractScreen({ onNavigate, params }: Props) {
                     <View style={styles.depositPaymentCard}>
                       <View style={styles.depositPaymentCopy}>
                         <Text style={styles.depositPaymentTitle}>
-                          Tiền cọc chưa thanh toán
+                          {t("tenantContract.depositUnpaid")}
                         </Text>
                         <Text style={styles.depositPaymentAmount}>
                           {contract.deposit}
                         </Text>
                         <Text style={styles.depositPaymentHint}>
-                          Hoàn tất tiền cọc để Chủ trọ có thể duyệt hợp đồng.
+                          {t("tenantContract.depositHint")}
                         </Text>
                       </View>
                       <Pressable
@@ -389,7 +384,7 @@ export default function ContractScreen({ onNavigate, params }: Props) {
                           <ActivityIndicator color={theme.background} size="small" />
                         ) : (
                           <><Ionicons name="card-outline" size={18} color={theme.background} /><Text style={styles.depositPaymentButtonText}>
-                            Thanh toán ngay
+                            {t("tenantContract.pay")}
                           </Text></>
                         )}
                       </Pressable>
@@ -409,7 +404,7 @@ export default function ContractScreen({ onNavigate, params }: Props) {
                   {isLoading ? (
                     <ActivityIndicator color={theme.dangerForeground} />
                   ) : (
-                    <><Ionicons name="exit-outline" size={19} color={theme.dangerForeground} /><Text style={[styles.signButtonText, { color: theme.dangerForeground }]}>Yêu cầu trả phòng</Text></>
+                    <><Ionicons name="exit-outline" size={19} color={theme.dangerForeground} /><Text style={[styles.signButtonText, { color: theme.dangerForeground }]}>{t("tenantContract.terminateTitle")}</Text></>
                   )}
                 </Pressable>
               </View>
@@ -419,7 +414,7 @@ export default function ContractScreen({ onNavigate, params }: Props) {
             {contract.status === "requesting_termination" && (
               <View style={styles.awaitingBox}>
                 <Text style={styles.awaitingText}>
-                  ⏳ Bạn đã gửi yêu cầu trả phòng. Đang chờ chủ trọ kiểm tra và chốt hợp đồng.
+                  {t("tenantContract.terminationHint")}
                 </Text>
               </View>
             )}

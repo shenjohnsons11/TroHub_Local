@@ -41,19 +41,14 @@ import {
   formatPhone,
   unformatNumber,
 } from "../utils/formatters";
+import { useTranslation } from "../contexts/LanguageContext";
 
 type Props = { params?: any };
 type IconName = React.ComponentProps<typeof Ionicons>["name"];
 
-const contractSteps: { label: string; icon: IconName }[] = [
-  { label: "Chọn phòng", icon: "home-outline" },
-  { label: "Thông tin khách", icon: "person-outline" },
-  { label: "Điện & nước", icon: "flash-outline" },
-  { label: "Ký & xác nhận", icon: "create-outline" },
-];
-
 export default function AdminContractsScreen({ params }: Props) {
   const { theme } = useAppTheme();
+  const { t, language } = useTranslation();
   const notification = useNotification();
   const initialDates = defaultContractDates();
   const [contracts, setContracts] = useState<AdminContract[]>([]);
@@ -101,7 +96,7 @@ export default function AdminContractsScreen({ params }: Props) {
       setTenants(tenantsData);
     } catch (error) {
       console.log("Lỗi tải dữ liệu hợp đồng:", error);
-      notification.error("Không thể tải dữ liệu hợp đồng.");
+      notification.error(t("contractsMobile.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -117,7 +112,7 @@ export default function AdminContractsScreen({ params }: Props) {
     const action = params?.aiAction;
     if (action?.type !== "FILL_CONTRACT_FORM" || !rooms.length) return;
     const room = rooms.find((item) => item.roomCode?.trim().toLowerCase() === action.roomCode?.trim().toLowerCase());
-    if (!room) return notification.warning(`Không tìm thấy phòng ${action.roomCode}.`);
+    if (!room) return notification.warning(t("contractsMobile.missingRoom", { roomCode: action.roomCode }));
     const tenant = tenants.find((item) => item.fullName?.trim().toLowerCase() === action.tenantName?.trim().toLowerCase());
     setModalVisible(true);
     setCurrentStep(1);
@@ -126,7 +121,7 @@ export default function AdminContractsScreen({ params }: Props) {
     const [year, month, day] = action.startDate.split("-");
     if (year && month && day) setStartDate(`${day}/${month}/${year}`);
     if (tenant) setSelectedTenantId(tenant._id);
-    else notification.info(`Chưa có người thuê “${action.tenantName}”. Hãy chọn hoặc tạo hồ sơ.`);
+    else notification.info(t("contractsMobile.missingTenant", { name: action.tenantName }));
   }, [params?.aiAction, rooms, tenants]);
 
   const closeWizard = async () => {
@@ -164,7 +159,7 @@ export default function AdminContractsScreen({ params }: Props) {
 
   const handleCreateContract = async () => {
     if (!selectedRoomId || !selectedTenantId || !fixedRent.trim() || !fixedDeposit.trim() || !startDate.trim() || !endDate.trim()) {
-      notification.error("Vui lòng điền đầy đủ thông tin!", { title: "Lỗi" });
+      notification.error(t("contractsMobile.required"), { title: t("common.error") });
       return;
     }
 
@@ -173,8 +168,8 @@ export default function AdminContractsScreen({ params }: Props) {
     const endDateIso = parseDisplayToIso(endDate);
     if (Object.keys(dateErrors).length || !startDateIso || !endDateIso) {
       notification.error(
-        dateErrors.startDate || dateErrors.endDate || "Ngày phải đúng định dạng dd/mm/yyyy.",
-        { title: "Ngày hợp đồng không hợp lệ" },
+        dateErrors.startDate || dateErrors.endDate || t("contractsMobile.invalidDate"),
+        { title: t("contractsMobile.invalidDateTitle") },
       );
       setCurrentStep(2);
       return;
@@ -186,13 +181,13 @@ export default function AdminContractsScreen({ params }: Props) {
       initialWater: unformatNumber(initialWater),
     };
     if (Object.values(meterTerms).some((value) => !Number.isFinite(value) || value < 0)) {
-      notification.error("Giá và chỉ số đầu điện nước phải là số không âm.", { title: "Lỗi" });
+      notification.error(t("contractsMobile.invalidMeter"), { title: t("common.error") });
       setCurrentStep(3);
       return;
     }
 
     setSubmitting(true);
-    const closeLoading = notification.loading("Đang tạo hợp đồng...");
+    const closeLoading = notification.loading(t("contractsMobile.creating"));
     try {
       await adminService.createContract({
         roomId: selectedRoomId,
@@ -203,7 +198,7 @@ export default function AdminContractsScreen({ params }: Props) {
         fixedDeposit: unformatNumber(fixedDeposit),
         ...meterTerms,
       });
-      notification.success("Tạo hợp đồng nháp thành công! Chờ người thuê ký xác nhận.");
+      notification.success(t("contractsMobile.created"));
       
       setModalVisible(false);
       setSelectedRoomId("");
@@ -218,7 +213,7 @@ export default function AdminContractsScreen({ params }: Props) {
       setEndDateWasEdited(false);
       void loadData();
     } catch (error) {
-      notification.error(error instanceof Error ? error.message : "Tạo hợp đồng thất bại!");
+      notification.error(error instanceof Error ? error.message : t("contractsMobile.createFailed"));
     } finally {
       closeLoading();
       setSubmitting(false);
@@ -243,22 +238,19 @@ export default function AdminContractsScreen({ params }: Props) {
 
   const handleApproveContract = async (contractId: string) => {
     const approved = await notification.confirm({
-      title: "Xác nhận",
-      message: "Bạn có chắc chắn muốn duyệt và kích hoạt hợp đồng này không?",
-      confirmText: "Duyệt",
-      cancelText: "Hủy",
+      title: t("contractsMobile.confirmTitle"), message: t("contractsMobile.confirmMessage"), confirmText: t("contractsMobile.approve"), cancelText: t("common.cancel"),
     });
     if (!approved) return;
 
     setLoading(true);
-    const closeLoading = notification.loading("Đang duyệt hợp đồng...");
+    const closeLoading = notification.loading(t("contractsMobile.approving"));
     try {
       const success = await adminService.confirmContract(contractId);
-      if (!success) throw new Error("Không thể xác nhận hợp đồng");
-      notification.success("Đã duyệt và kích hoạt hợp đồng thành công!");
+      if (!success) throw new Error(t("contractsMobile.approveFailed"));
+      notification.success(t("contractsMobile.approved"));
       void loadData();
     } catch (error) {
-      notification.error(error instanceof Error ? error.message : "Duyệt hợp đồng thất bại!");
+      notification.error(error instanceof Error ? error.message : t("contractsMobile.approveFailed"));
       setLoading(false);
     } finally {
       closeLoading();
@@ -274,7 +266,7 @@ export default function AdminContractsScreen({ params }: Props) {
       setCheckoutPreview(await adminService.getCheckoutPreview(contractId));
     } catch (error) {
       setCheckoutModalVisible(false);
-      notification.error(error instanceof Error ? error.message : "Không thể tải bảng quyết toán.");
+      notification.error(error instanceof Error ? error.message : t("contractsMobile.checkoutLoadFailed"));
     } finally {
       setCheckoutPreviewLoading(false);
     }
@@ -288,16 +280,10 @@ export default function AdminContractsScreen({ params }: Props) {
 
   const getStatusText = (contract: AdminContract) => {
     if (contract.status === 1 && new Date(contract.startDate).getTime() > Date.now()) {
-      return "Cọc trước - Chờ nhận phòng";
+      return t("contractsMobile.preMoveIn");
     }
     switch (contract.status) {
-      case 0: return "Chờ khách ký";
-      case 1: return "Đang hiệu lực";
-      case 2: return "Đã trả phòng";
-      case 3: return "Đã hủy";
-      case 4: return "Chờ chủ duyệt";
-      case 5: return "Chờ duyệt trả phòng";
-      default: return "Nháp";
+      case 0: return t("contractsMobile.pendingTenant"); case 1: return t("contractsMobile.active"); case 2: return t("contractsMobile.checkedOut"); case 3: return t("contractsMobile.cancelled"); case 4: return t("contractsMobile.pendingOwner"); case 5: return t("contractsMobile.pendingCheckout"); default: return t("contractsMobile.draft");
     }
   };
   const getStatusColor = (contract: AdminContract) => {
@@ -328,7 +314,7 @@ export default function AdminContractsScreen({ params }: Props) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={theme.primary} />
-        <Text style={styles.loadingText}>Đang chuẩn bị hợp đồng...</Text>
+        <Text style={styles.loadingText}>{t("contractsMobile.loading")}</Text>
       </View>
     );
   }
@@ -356,24 +342,24 @@ export default function AdminContractsScreen({ params }: Props) {
             <AnimatedEntry>
               <GradientHero
                 icon="documents-outline"
-                label="HỢP ĐỒNG VẬN HÀNH"
-                value={`${contracts.length} hợp đồng`}
-                detail={`${contracts.filter((item) => item.status === 1).length} đang có hiệu lực`}
+                label={t("contractsMobile.heroLabel")}
+                value={t("contractsMobile.heroValue", { count: contracts.length })}
+                detail={t("contractsMobile.heroDetail", { count: contracts.filter((item) => item.status === 1).length })}
               />
             </AnimatedEntry>
             <View style={styles.headingRow}>
               <View>
-                <Text style={styles.title}>Quản lý hợp đồng</Text>
-                <Text style={styles.subtitle}>Theo dõi, tạo mới và phê duyệt.</Text>
+                <Text style={styles.title}>{t("contractsMobile.title")}</Text>
+                <Text style={styles.subtitle}>{t("contractsMobile.subtitle")}</Text>
               </View>
               <AppButton icon="add-circle-outline" onPress={() => setModalVisible(true)} style={styles.addButton}>
-                Tạo mới
+                {t("contractsMobile.create")}
               </AppButton>
             </View>
             <View style={styles.filterContainer}>
-              {filterButton("all", "Tất cả")}
-              {filterButton("pending", "Chờ duyệt/ký")}
-              {filterButton("active", "Hiệu lực")}
+              {filterButton("all", t("common.all"))}
+              {filterButton("pending", t("contractsMobile.pending"))}
+              {filterButton("active", t("contractsMobile.activeFilter"))}
             </View>
           </View>
         }
@@ -381,14 +367,14 @@ export default function AdminContractsScreen({ params }: Props) {
           contracts.length === 0 ? (
             <IllustratedEmptyState
               kind="contract"
-              title="Chưa có hợp đồng"
-              description="Tạo hợp đồng đầu tiên để bắt đầu quản lý phòng và người thuê."
-              actionLabel="Tạo hợp đồng"
+              title={t("contractsMobile.empty")}
+              description={t("contractsMobile.emptyDescription")}
+              actionLabel={t("contractsMobile.create")}
               actionIcon="add-circle-outline"
               onAction={() => setModalVisible(true)}
             />
           ) : (
-            <Text style={styles.filteredEmpty}>Không có hợp đồng phù hợp bộ lọc.</Text>
+            <Text style={styles.filteredEmpty}>{t("contractsMobile.noMatch")}</Text>
           )
         }
         renderItem={({ item, index }) => {
@@ -406,7 +392,7 @@ export default function AdminContractsScreen({ params }: Props) {
                       <Ionicons name="home-outline" size={20} color={theme.primary} />
                     </View>
                     <View>
-                      <Text style={styles.roomCode}>Phòng {roomCode}</Text>
+                      <Text style={styles.roomCode}>{t("contractsMobile.room", { roomCode })}</Text>
                       <Text style={styles.tenantName}>{tenantName} · {formattedPhone}</Text>
                     </View>
                   </View>
@@ -417,11 +403,11 @@ export default function AdminContractsScreen({ params }: Props) {
                   </View>
                 </View>
                 <Text style={styles.money}>{formatCurrency(item.fixedRentPrice)}</Text>
-                <Text style={styles.moneyCaption}>Tiền thuê mỗi tháng · Cọc {formatCurrency(item.fixedDeposit)}</Text>
+                <Text style={styles.moneyCaption}>{t("contractsMobile.rentDeposit", { deposit: formatCurrency(item.fixedDeposit) })}</Text>
                 <View style={styles.metaRow}>
                   <Ionicons name="calendar-outline" size={16} color={theme.muted} />
                   <Text style={styles.contractDates}>
-                    {item.startDate ? new Date(item.startDate).toLocaleDateString("vi-VN") : ""} – {item.endDate ? new Date(item.endDate).toLocaleDateString("vi-VN") : ""}
+                    {item.startDate ? new Date(item.startDate).toLocaleDateString(language === "en" ? "en-US" : "vi-VN") : ""} – {item.endDate ? new Date(item.endDate).toLocaleDateString(language === "en" ? "en-US" : "vi-VN") : ""}
                   </Text>
                 </View>
                 {item.status === 4 ? (
@@ -430,7 +416,7 @@ export default function AdminContractsScreen({ params }: Props) {
                     onPress={() => void handleApproveContract(item._id)}
                     style={styles.approveButton}
                   >
-                    Duyệt hợp đồng
+                    {t("contractsMobile.approveContract")}
                   </AppButton>
                 ) : null}
                 {item.status === 5 ? (
@@ -440,7 +426,7 @@ export default function AdminContractsScreen({ params }: Props) {
                     onPress={() => void openCheckoutModal(item._id)}
                     style={styles.approveButton}
                   >
-                    Duyệt trả phòng
+                    {t("contractsMobile.approveCheckout")}
                   </AppButton>
                 ) : null}
               </View>
@@ -451,9 +437,9 @@ export default function AdminContractsScreen({ params }: Props) {
 
       {filter === "draft" && (
         <View style={styles.draftContainer}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Hợp đồng đang soạn dở</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>{t("contractsMobile.drafts")}</Text>
           {drafts.length === 0 ? (
-            <Text style={{ color: theme.muted, marginTop: 10 }}>Không có bản nháp nào.</Text>
+            <Text style={{ color: theme.muted, marginTop: 10 }}>{t("contractsMobile.noDrafts")}</Text>
           ) : (
             drafts.map((draft, idx) => (
               <AnimatedEntry key={draft.id} delay={idx * 50}>
@@ -464,8 +450,8 @@ export default function AdminContractsScreen({ params }: Props) {
                         <Ionicons name="document-text-outline" size={20} color={theme.primary} />
                       </View>
                       <View>
-                        <Text style={styles.roomCode}>Bản nháp #{draft.id}</Text>
-                        <Text style={styles.tenantName}>Đã dừng ở Bước {draft.step}</Text>
+                        <Text style={styles.roomCode}>{t("contractsMobile.draftLabel", { id: draft.id })}</Text>
+                        <Text style={styles.tenantName}>{t("contractsMobile.draftStep", { step: draft.step })}</Text>
                       </View>
                     </View>
                   </View>
@@ -485,7 +471,7 @@ export default function AdminContractsScreen({ params }: Props) {
                       draftContractService.deleteDraft(draft.id).then(loadData);
                     }}
                   >
-                    Tiếp tục tạo
+                    {t("contractsMobile.resume")}
                   </AppButton>
                 </View>
               </AnimatedEntry>
@@ -502,7 +488,7 @@ export default function AdminContractsScreen({ params }: Props) {
         previewLoading={checkoutPreviewLoading}
         onConfirm={async (data) => {
           if (!data.electricityNew || !data.waterNew) {
-            notification.error("Vui lòng nhập đủ chỉ số điện và nước cuối cùng.");
+            notification.error(t("contractsMobile.finalReadings"));
             return;
           }
           try {
@@ -516,12 +502,12 @@ export default function AdminContractsScreen({ params }: Props) {
             setCheckoutModalVisible(false);
             notification.success(
               settlement.amountDue > 0
-                ? `Đã trả phòng. Khách cần thanh toán thêm ${formatCurrency(settlement.amountDue)}.`
-                : `Đã trả phòng. Hoàn cọc ${formatCurrency(settlement.refundAmount)}.`
+                ? t("contractsMobile.extraDue", { amount: formatCurrency(settlement.amountDue) })
+                : t("contractsMobile.refund", { amount: formatCurrency(settlement.refundAmount) })
             );
             await loadData();
           } catch (error) {
-            notification.error(error instanceof Error ? error.message : "Không thể duyệt trả phòng.");
+            notification.error(error instanceof Error ? error.message : t("contractsMobile.checkoutFailed"));
           } finally {
             setCheckoutLoading(false);
           }
@@ -541,11 +527,11 @@ export default function AdminContractsScreen({ params }: Props) {
           <View accessibilityViewIsModal style={styles.wizardContent}>
             <View style={styles.wizardHeader}>
               <View style={styles.wizardHeading}>
-                <Text accessibilityRole="header" style={styles.wizardTitle}>Tạo hợp đồng mới</Text>
-                <Text style={styles.wizardSubtitle}>Hoàn tất 4 bước để lập hợp đồng thuê phòng.</Text>
+                <Text accessibilityRole="header" style={styles.wizardTitle}>{t("contractsMobile.newTitle")}</Text>
+                <Text style={styles.wizardSubtitle}>{t("contractsMobile.newSubtitle")}</Text>
               </View>
               <Pressable
-                accessibilityLabel="Đóng trình tạo hợp đồng"
+                accessibilityLabel={t("contractsMobile.closeWizard")}
                 accessibilityRole="button"
                 disabled={submitting}
                 onPress={closeWizard}
@@ -555,7 +541,7 @@ export default function AdminContractsScreen({ params }: Props) {
               </Pressable>
             </View>
             <View style={styles.stepperContainer}>
-              <ProgressStepper steps={contractSteps} currentStep={currentStep - 1} />
+              <ProgressStepper steps={[{ label: t("contractsMobile.selectRoom"), icon: "home-outline" }, { label: t("contractsMobile.tenantInfo"), icon: "person-outline" }, { label: t("contractsMobile.utilities"), icon: "flash-outline" }, { label: t("contractsMobile.sign"), icon: "create-outline" }]} currentStep={currentStep - 1} />
             </View>
 
             <ScrollView
@@ -566,9 +552,9 @@ export default function AdminContractsScreen({ params }: Props) {
             >
               {currentStep === 1 ? (
                 <View style={styles.card}>
-                  <SectionTitle icon="home-outline" title="Chọn phòng" subtitle="Chọn phòng còn trống để bắt đầu." theme={theme} />
+                  <SectionTitle icon="home-outline" title={t("contractsMobile.selectRoom")} subtitle={t("contractsMobile.selectRoomSubtitle")} theme={theme} />
                   {selectableRooms.length === 0 ? (
-                    <Text style={styles.noVacantText}>Không có phòng nào có thể chọn.</Text>
+                    <Text style={styles.noVacantText}>{t("contractsMobile.noRooms")}</Text>
                   ) : (
                     <View style={styles.selectionGrid}>
                       {selectableRooms.map((room) => {
@@ -594,9 +580,9 @@ export default function AdminContractsScreen({ params }: Props) {
               {currentStep === 2 ? (
                 <>
                   <View style={styles.card}>
-                    <SectionTitle icon="person-outline" title="Thông tin khách" subtitle="Chọn người thuê đã có trên hệ thống." theme={theme} />
+                    <SectionTitle icon="person-outline" title={t("contractsMobile.tenantInfo")} subtitle={t("contractsMobile.tenantSubtitle")} theme={theme} />
                     {tenants.length === 0 ? (
-                      <Text style={styles.noVacantText}>Không có người thuê nào trên hệ thống.</Text>
+                      <Text style={styles.noVacantText}>{t("contractsMobile.noTenants")}</Text>
                     ) : (
                       <View style={styles.selectionGrid}>
                         {tenants.map((tenant) => {
@@ -621,16 +607,16 @@ export default function AdminContractsScreen({ params }: Props) {
                     )}
                   </View>
                   <View style={styles.card}>
-                    <SectionTitle icon="document-text-outline" title="Điều khoản thuê" theme={theme} />
-                    <Field label="Giá thuê (VNĐ/tháng)" required styles={styles}>
+                    <SectionTitle icon="document-text-outline" title={t("contractsMobile.terms")} theme={theme} />
+                    <Field label={t("contractsMobile.rent")} required styles={styles}>
                       <TextInput style={styles.input} value={fixedRent} onChangeText={(value) => setFixedRent(formatNumberInput(value))} keyboardType="numeric" placeholder="VD: 3.500.000" placeholderTextColor={theme.muted} />
                     </Field>
-                    <Field label="Tiền cọc (VNĐ)" required styles={styles}>
+                    <Field label={t("contractsMobile.deposit")} required styles={styles}>
                       <TextInput style={styles.input} value={fixedDeposit} onChangeText={(value) => setFixedDeposit(formatNumberInput(value))} keyboardType="numeric" placeholder="VD: 3.500.000" placeholderTextColor={theme.muted} />
                     </Field>
                     <View style={styles.inputRow}>
                       <View style={styles.inputColumn}>
-                        <Field label="Ngày bắt đầu" required styles={styles}>
+                        <Field label={t("contractsMobile.startDate")} required styles={styles}>
                           <View style={styles.dateInputContainer}>
                             <TextInput
                               style={styles.dateInput}
@@ -645,14 +631,14 @@ export default function AdminContractsScreen({ params }: Props) {
                               placeholder="dd/mm/yyyy"
                               placeholderTextColor={theme.muted}
                             />
-                            <Pressable accessibilityLabel="Mở lịch chọn ngày bắt đầu" hitSlop={8} onPress={() => setDatePickerField("startDate")} style={styles.datePickerButton}>
+                            <Pressable accessibilityLabel={t("contractsMobile.openStartDate")} hitSlop={8} onPress={() => setDatePickerField("startDate")} style={styles.datePickerButton}>
                               <Ionicons name="calendar-outline" size={19} color={theme.primary} />
                             </Pressable>
                           </View>
                         </Field>
                       </View>
                       <View style={styles.inputColumn}>
-                        <Field label="Ngày kết thúc" required styles={styles}>
+                        <Field label={t("contractsMobile.endDate")} required styles={styles}>
                           <View style={styles.dateInputContainer}>
                             <TextInput
                               style={styles.dateInput}
@@ -666,7 +652,7 @@ export default function AdminContractsScreen({ params }: Props) {
                               placeholder="dd/mm/yyyy"
                               placeholderTextColor={theme.muted}
                             />
-                            <Pressable accessibilityLabel="Mở lịch chọn ngày kết thúc" hitSlop={8} onPress={() => setDatePickerField("endDate")} style={styles.datePickerButton}>
+                            <Pressable accessibilityLabel={t("contractsMobile.openEndDate")} hitSlop={8} onPress={() => setDatePickerField("endDate")} style={styles.datePickerButton}>
                               <Ionicons name="calendar-outline" size={19} color={theme.primary} />
                             </Pressable>
                           </View>
@@ -687,13 +673,13 @@ export default function AdminContractsScreen({ params }: Props) {
 
               {currentStep === 3 ? (
                 <View style={styles.card}>
-                  <SectionTitle icon="flash-outline" title="Điện & nước" subtitle="Thiết lập đơn giá, chỉ số đầu và dịch vụ đi kèm." theme={theme} />
+                  <SectionTitle icon="flash-outline" title={t("contractsMobile.utilities")} subtitle={t("contractsMobile.utilitiesSubtitle")} theme={theme} />
                   {[
-                    { key: "electricity", label: "Giá tiền điện", desc: "Tính theo số kWh", unit: "VNĐ/kWh", icon: "flash-outline" },
-                    { key: "water", label: "Giá tiền nước", desc: "Tính theo khối/tháng", unit: "VNĐ/m³", icon: "water-outline" },
-                    { key: "trash", label: "Rác", desc: "Phí thu gom", unit: "VNĐ/tháng", icon: "trash-outline" },
-                    { key: "internet", label: "Internet", desc: "Wi-Fi", unit: "VNĐ/tháng", icon: "wifi-outline" },
-                    { key: "management", label: "Phí quản lý", desc: "Vệ sinh chung", unit: "VNĐ/tháng", icon: "business-outline" },
+                    { key: "electricity", label: t("contractsMobile.electricity"), desc: t("contractsMobile.electricityDesc"), unit: "VNĐ/kWh", icon: "flash-outline" },
+                    { key: "water", label: t("contractsMobile.water"), desc: t("contractsMobile.waterDesc"), unit: "VNĐ/m³", icon: "water-outline" },
+                    { key: "trash", label: t("contractsMobile.trash"), desc: t("contractsMobile.trashDesc"), unit: "VNĐ/tháng", icon: "trash-outline" },
+                    { key: "internet", label: t("contractsMobile.internet"), desc: t("contractsMobile.internetDesc"), unit: "VNĐ/tháng", icon: "wifi-outline" },
+                    { key: "management", label: t("contractsMobile.management"), desc: t("contractsMobile.managementDesc"), unit: "VNĐ/tháng", icon: "business-outline" },
                   ].map((definition) => {
                     const service = services[definition.key as keyof typeof services];
                     return (
@@ -725,14 +711,14 @@ export default function AdminContractsScreen({ params }: Props) {
                         </View>
                         {definition.key === "electricity" ? (
                           <View style={styles.serviceInputRow}>
-                            <TextInput style={[styles.input, styles.serviceInput]} value={initialElectricity} onChangeText={(value) => setInitialElectricity(formatNumberInput(value))} keyboardType="numeric" placeholder="Chỉ số điện đầu" placeholderTextColor={theme.muted} />
-                            <Text style={styles.serviceUnit}>kWh đầu</Text>
+                            <TextInput style={[styles.input, styles.serviceInput]} value={initialElectricity} onChangeText={(value) => setInitialElectricity(formatNumberInput(value))} keyboardType="numeric" placeholder={t("contractsMobile.initialElectricity")} placeholderTextColor={theme.muted} />
+                            <Text style={styles.serviceUnit}>kWh</Text>
                           </View>
                         ) : null}
                         {definition.key === "water" ? (
                           <View style={styles.serviceInputRow}>
-                            <TextInput style={[styles.input, styles.serviceInput]} value={initialWater} onChangeText={(value) => setInitialWater(formatNumberInput(value))} keyboardType="numeric" placeholder="Chỉ số nước đầu" placeholderTextColor={theme.muted} />
-                            <Text style={styles.serviceUnit}>m³ đầu</Text>
+                            <TextInput style={[styles.input, styles.serviceInput]} value={initialWater} onChangeText={(value) => setInitialWater(formatNumberInput(value))} keyboardType="numeric" placeholder={t("contractsMobile.initialWater")} placeholderTextColor={theme.muted} />
+                            <Text style={styles.serviceUnit}>m³</Text>
                           </View>
                         ) : null}
                       </View>
@@ -744,17 +730,17 @@ export default function AdminContractsScreen({ params }: Props) {
               {currentStep === 4 ? (
                 <>
                   <View style={styles.previewCard}>
-                    <SectionTitle icon="create-outline" title="Ký & xác nhận" subtitle="Kiểm tra thông tin trước khi tạo bản nháp." theme={theme} />
-                    <PreviewRow label="Người thuê" value={tenants.find((item) => item._id === selectedTenantId)?.fullName || "Chưa chọn"} styles={styles} />
-                    <PreviewRow label="Phòng" value={rooms.find((item) => item._id === selectedRoomId)?.roomCode || "Chưa chọn"} styles={styles} />
-                    <PreviewRow label="Giá thuê" value={`${formatCurrency(fixedRent)}/tháng`} styles={styles} />
-                    <PreviewRow label="Tiền cọc" value={formatCurrency(fixedDeposit)} styles={styles} />
-                    <PreviewRow label="Thời hạn" value={`${startDate} → ${endDate}`} styles={styles} />
+                    <SectionTitle icon="create-outline" title={t("contractsMobile.sign")} subtitle={t("contractsMobile.signSubtitle")} theme={theme} />
+                    <PreviewRow label={t("contractsMobile.tenant")} value={tenants.find((item) => item._id === selectedTenantId)?.fullName || t("contractsMobile.notSelected")} styles={styles} />
+                    <PreviewRow label={t("contractsMobile.room", { roomCode: "" }).trim()} value={rooms.find((item) => item._id === selectedRoomId)?.roomCode || t("contractsMobile.notSelected")} styles={styles} />
+                    <PreviewRow label={t("contractsMobile.rent")} value={`${formatCurrency(fixedRent)}/${t("mobile.rooms.month")}`} styles={styles} />
+                    <PreviewRow label={t("contractsMobile.deposit")} value={formatCurrency(fixedDeposit)} styles={styles} />
+                    <PreviewRow label={t("contractsMobile.term")} value={`${startDate} → ${endDate}`} styles={styles} />
                   </View>
                   <Pressable
                     accessibilityRole="checkbox"
                     accessibilityState={{ checked: confirmed }}
-                    accessibilityLabel="Xác nhận thông tin hợp đồng chính xác"
+                    accessibilityLabel={t("contractsMobile.confirmInfo")}
                     onPress={() => setConfirmed(!confirmed)}
                     style={styles.confirmCheckbox}
                   >
@@ -762,8 +748,8 @@ export default function AdminContractsScreen({ params }: Props) {
                       {confirmed ? <Ionicons name="checkmark" size={15} color={theme.background} /> : null}
                     </View>
                     <View style={styles.confirmCopy}>
-                      <Text style={styles.confirmTitle}>Tôi xác nhận thông tin chính xác</Text>
-                      <Text style={styles.confirmDesc}>Hợp đồng nháp sẽ được tạo và chờ người thuê duyệt.</Text>
+                      <Text style={styles.confirmTitle}>{t("contractsMobile.confirmTitle")}</Text>
+                      <Text style={styles.confirmDesc}>{t("contractsMobile.confirmDesc")}</Text>
                     </View>
                   </Pressable>
                 </>
@@ -772,11 +758,11 @@ export default function AdminContractsScreen({ params }: Props) {
 
             <View style={styles.wizardFooter}>
               <AppButton variant="ghost" icon="close-outline" disabled={submitting} onPress={closeWizard} style={styles.footerButton}>
-                Hủy
+                {t("common.cancel")}
               </AppButton>
               {currentStep > 1 ? (
                 <AppButton variant="secondary" icon="chevron-back" disabled={submitting} onPress={() => setCurrentStep((step) => step - 1)} style={styles.footerButton}>
-                  Quay lại
+                  {t("contractsMobile.back")}
                 </AppButton>
               ) : null}
               <AppButton
@@ -790,7 +776,7 @@ export default function AdminContractsScreen({ params }: Props) {
                 }}
                 style={styles.primaryFooterButton}
               >
-                {currentStep < 4 ? "Tiếp tục" : "Tạo hợp đồng"}
+                {currentStep < 4 ? t("contractsMobile.continue") : t("contractsMobile.create")}
               </AppButton>
             </View>
           </View>
