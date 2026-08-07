@@ -1,6 +1,7 @@
 const Contract = require('../models/Contract');
 const Room = require('../models/Room');
 const Invoice = require('../models/Invoice');
+const Service = require('../models/Service');
 const {
     buildDepositPayment,
     signContractAndEnsureDeposit,
@@ -8,6 +9,7 @@ const {
 const {
     ContractTermsError,
     normalizeContractMeterTerms,
+    resolveUtilityPriceDefaults,
     resolveInitialContractMeterTerms,
 } = require('../services/contractTerms');
 const {
@@ -135,6 +137,12 @@ exports.createContract = async (req, res) => {
         const room = await Room.findById(roomId);
         if (!room) return res.status(404).json({ success: false, message: "Không tìm thấy phòng!" });
 
+        const utilityDefaults = resolveUtilityPriceDefaults(await Service.find({
+            landlordId: room.landlordId,
+            isActive: true,
+            type: 1,
+        }).sort({ updatedAt: -1, _id: -1 }).select('name code type defaultPrice').lean());
+
         const previousContract = await Contract.findOne({ roomId })
             .sort({ createdAt: -1 })
             .select('initialElectricity initialWater checkoutSettlement')
@@ -155,6 +163,12 @@ exports.createContract = async (req, res) => {
                 previousContract,
             }),
             ...req.body,
+            electricityPrice: req.body.electricityPrice === undefined || req.body.electricityPrice === null || req.body.electricityPrice === '' || Number(req.body.electricityPrice) === 0
+                ? utilityDefaults.electricityPrice
+                : req.body.electricityPrice,
+            waterPrice: req.body.waterPrice === undefined || req.body.waterPrice === null || req.body.waterPrice === '' || Number(req.body.waterPrice) === 0
+                ? utilityDefaults.waterPrice
+                : req.body.waterPrice,
         });
 
         // Chống spam: Kiểm tra xem Phòng hoặc Người thuê đã có hợp đồng chờ xử lý chưa
