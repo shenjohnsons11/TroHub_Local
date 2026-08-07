@@ -58,3 +58,22 @@ test('a room from another property is rejected before a contract is created', as
         (error) => error instanceof PropertyMembershipError && error.status === 404 && error.code === 'ROOM_NOT_IN_PROPERTY',
     );
 });
+
+test('accepting an invitation activates the membership once', async () => {
+    const { acceptMembership } = require('../src/services/propertyMembershipService');
+    let saveCount = 0;
+    const membership = {
+        tenantId: 'tenant-a',
+        status: 'invited',
+        joinedAt: null,
+        save: async () => { saveCount += 1; },
+    };
+    const now = new Date('2026-08-07T00:00:00.000Z');
+
+    await acceptMembership({ membership, tenantId: 'tenant-a', now });
+    await acceptMembership({ membership, tenantId: 'tenant-a', now });
+
+    assert.equal(membership.status, 'active');
+    assert.equal(membership.joinedAt.toISOString(), now.toISOString());
+    assert.equal(saveCount, 1);
+});
