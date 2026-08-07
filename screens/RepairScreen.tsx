@@ -25,10 +25,12 @@ import { useNotification } from "../hooks/useNotification";
 import { getNotificationMessage } from "../utils/notificationMessages";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
 import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
+import { useTranslation } from "../contexts/LanguageContext";
 
 export default function RepairScreen() {
   const notification = useNotification();
   const { theme } = useAppTheme();
+  const { t } = useTranslation();
   const styles = createStyles(theme);
   const [rooms, setRooms] = useState<string[]>([]);
   const [selectedRoom, setSelectedRoom] = useState("");
@@ -71,8 +73,8 @@ export default function RepairScreen() {
           setRooms(uniqueAllRooms);
           setSelectedRoom(uniqueAllRooms[0]);
         } else {
-          setRooms(["Chưa có phòng"]);
-          setSelectedRoom("Chưa có phòng");
+          setRooms([t("tenantRepair.noRoom")]);
+          setSelectedRoom(t("tenantRepair.noRoom"));
         }
       }
     } catch (error) {
@@ -98,17 +100,17 @@ export default function RepairScreen() {
     let isValid = true;
 
     if (!type.trim()) {
-      setTypeError("Vui lòng nhập loại sự cố");
+      setTypeError(t("tenantRepair.typeRequired"));
       isValid = false;
     } else {
       setTypeError("");
     }
 
     if (!description.trim()) {
-      setDescriptionError("Vui lòng nhập mô tả sự cố");
+      setDescriptionError(t("tenantRepair.descriptionRequired"));
       isValid = false;
     } else if (description.trim().length < 10) {
-      setDescriptionError("Mô tả phải có ít nhất 10 ký tự");
+      setDescriptionError(t("tenantRepair.descriptionMin"));
       isValid = false;
     } else {
       setDescriptionError("");
@@ -126,14 +128,14 @@ export default function RepairScreen() {
 
       setRequests(updatedRequests);
 
-      notification.success("Yêu cầu sửa chữa của Người thuê đã được gửi.");
+      notification.success(t("tenantRepair.submitted"));
 
       setType("");
       setDescription("");
       setImages([]);
     } catch (error) {
       console.log("Lỗi gửi yêu cầu:", error);
-      notification.error(getNotificationMessage(error, "Không thể gửi yêu cầu sửa chữa của Người thuê."));
+      notification.error(getNotificationMessage(error, t("tenantRepair.submitFailed")));
     }
   };
 
@@ -141,8 +143,8 @@ export default function RepairScreen() {
     try {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permissionResult.granted) {
-        notification.info("Bạn cần cấp quyền truy cập thư viện ảnh để tải ảnh lên.", {
-          title: "Quyền truy cập",
+        notification.info(t("tenantRepair.imagePermission"), {
+          title: t("tenantRepair.permission"),
         });
         return;
       }
@@ -161,15 +163,13 @@ export default function RepairScreen() {
       }
     } catch (error) {
       console.log("Lỗi chọn ảnh:", error);
-      notification.error(getNotificationMessage(error, "Không thể chọn ảnh."));
+      notification.error(getNotificationMessage(error, t("tenantRepair.imageFailed")));
     }
   };
 
   const handleDelete = async (id: string) => {
     const confirmed = await notification.confirm({
-      title: "Xóa yêu cầu sửa chữa",
-      message: "Bạn có chắc chắn muốn xóa yêu cầu này không?",
-      confirmText: "Xóa",
+      title: t("tenantRepair.deleteTitle"), message: t("tenantRepair.deleteMessage"), confirmText: t("common.delete"),
       destructive: true,
     });
     if (!confirmed) return;
@@ -177,10 +177,10 @@ export default function RepairScreen() {
       setIsLoading(true);
       await repairService.deleteRequest(id);
       await loadRequests();
-      notification.success("Yêu cầu sửa chữa của Người thuê đã được xóa.");
+      notification.success(t("tenantRepair.deleted"));
     } catch (error) {
       console.log("Lỗi xóa yêu cầu:", error);
-      notification.error(getNotificationMessage(error, "Không thể xóa yêu cầu sửa chữa."));
+      notification.error(getNotificationMessage(error, t("tenantRepair.deleteFailed")));
       setIsLoading(false);
     }
   };
@@ -203,9 +203,7 @@ export default function RepairScreen() {
     if (selectedIds.length === 0) return;
     const count = selectedIds.length;
     const confirmed = await notification.confirm({
-      title: "Xóa các yêu cầu sửa chữa",
-      message: `Bạn có chắc chắn muốn xóa ${count} yêu cầu đã chọn không?`,
-      confirmText: "Xóa",
+      title: t("tenantRepair.deleteManyTitle"), message: t("tenantRepair.deleteManyMessage", { count }), confirmText: t("common.delete"),
       destructive: true,
     });
     if (!confirmed) return;
@@ -214,9 +212,9 @@ export default function RepairScreen() {
       await Promise.all(selectedIds.map(id => repairService.deleteRequest(id)));
       setSelectedIds([]);
       await loadRequests();
-      notification.success(`Đã xóa ${count} yêu cầu sửa chữa của Người thuê.`);
+      notification.success(t("tenantRepair.deletedMany", { count }));
     } catch (error) {
-      notification.error(getNotificationMessage(error, "Không thể xóa một số yêu cầu."));
+      notification.error(getNotificationMessage(error, t("tenantRepair.deleteManyFailed")));
       setIsLoading(false);
     }
   };
@@ -229,9 +227,9 @@ export default function RepairScreen() {
   };
 
   const getStatusText = (status: RepairStatus) => {
-    if (status === "pending") return "Chờ tiếp nhận";
-    if (status === "processing") return "Đang xử lý";
-    return "Đã hoàn thành";
+    if (status === "pending") return t("tenantRepair.pending");
+    if (status === "processing") return t("tenantRepair.processing");
+    return t("tenantRepair.done");
   };
 
   const getStatusStyle = (status: RepairStatus) => {
@@ -258,16 +256,16 @@ export default function RepairScreen() {
       keyboardShouldPersistTaps="handled"
       ListHeaderComponent={
       <>
-      <Text style={styles.title}>Yêu cầu sửa chữa</Text>
+      <Text style={styles.title}>{t("tenantRepair.title")}</Text>
       <Text style={styles.subtitle}>
-        Gửi thông tin sự cố để chủ trọ xử lý nhanh hơn.
+        {t("tenantRepair.subtitle")}
       </Text>
 
       <AnimatedEntry>
       <Card style={styles.formCard}>
-        <Text style={styles.sectionTitle}>Tạo yêu cầu mới</Text>
+        <Text style={styles.sectionTitle}>{t("tenantRepair.new")}</Text>
 
-        <Text style={styles.label}>Phòng</Text>
+        <Text style={styles.label}>{t("tenantRepair.room")}</Text>
         {rooms.length <= 1 ? (
           <TextInput style={styles.inputDisabled} value={selectedRoom} editable={false} />
         ) : (
@@ -287,7 +285,7 @@ export default function RepairScreen() {
                       active && styles.roomTextActive,
                     ]}
                   >
-                    Phòng {roomCode}
+                    {t("tenantRepair.room", { roomCode })}
                   </Text>
                 </Pressable>
               );
@@ -295,7 +293,7 @@ export default function RepairScreen() {
           </View>
         )}
 
-        <Text style={styles.label}>Loại sự cố</Text>
+        <Text style={styles.label}>{t("tenantRepair.type")}</Text>
         <TextInput
           style={[styles.input, typeError ? styles.inputError : null]}
           value={type}
@@ -303,12 +301,12 @@ export default function RepairScreen() {
             setType(value);
             if (typeError) setTypeError("");
           }}
-          placeholder="Điện, nước, internet, máy lạnh..."
+          placeholder={t("tenantRepair.typePlaceholder")}
           placeholderTextColor={theme.muted}
         />
         {typeError ? <Text style={styles.errorText}>{typeError}</Text> : null}
 
-        <Text style={styles.label}>Mô tả</Text>
+        <Text style={styles.label}>{t("tenantRepair.description")}</Text>
         <TextInput
           style={[
             styles.input,
@@ -320,7 +318,7 @@ export default function RepairScreen() {
             setDescription(value);
             if (descriptionError) setDescriptionError("");
           }}
-          placeholder="Ví dụ: Máy lạnh không hoạt động, nước chảy yếu..."
+          placeholder={t("tenantRepair.descriptionPlaceholder")}
           placeholderTextColor={theme.muted}
           multiline
         />
@@ -330,8 +328,8 @@ export default function RepairScreen() {
 
         <Pressable style={styles.uploadBox} onPress={pickImage}>
           <View style={styles.uploadIcon}><Ionicons name="images-outline" size={25} color={theme.primary} /></View>
-          <Text style={styles.uploadText}>Upload ảnh sự cố</Text>
-          <Text style={styles.uploadHint}>PNG, JPG hoặc JPEG ({images.length} ảnh đã chọn)</Text>
+          <Text style={styles.uploadText}>{t("tenantRepair.upload")}</Text>
+          <Text style={styles.uploadHint}>{t("tenantRepair.uploadHint", { count: images.length })}</Text>
         </Pressable>
 
         {images.length > 0 && (
@@ -340,7 +338,7 @@ export default function RepairScreen() {
               <View key={idx} style={styles.imagePreviewBox}>
                 <Image source={{ uri: img }} style={styles.previewImage} />
                 <Pressable
-                  accessibilityLabel={`Xóa ảnh ${idx + 1}`}
+                  accessibilityLabel={t("tenantRepair.removeImage", { index: idx + 1 })}
                   accessibilityRole="button"
                   style={styles.removeImageBtn}
                   onPress={() => setImages(prev => prev.filter((_, i) => i !== idx))}
@@ -354,20 +352,20 @@ export default function RepairScreen() {
 
         <Pressable style={styles.submitButton} onPress={handleSubmit}>
           <Ionicons name="paper-plane-outline" size={18} color={theme.background} />
-          <Text style={styles.submitText}>Gửi yêu cầu</Text>
+          <Text style={styles.submitText}>{t("tenantRepair.submit")}</Text>
         </Pressable>
       </Card>
       </AnimatedEntry>
 
-      <Text style={styles.historyTitle}>Yêu cầu đã gửi</Text>
+      <Text style={styles.historyTitle}>{t("tenantRepair.history")}</Text>
 
       {/* Hành động hàng loạt */}
       {selectedIds.length > 0 && (
         <View style={styles.bulkActionContainer}>
-          <Text style={styles.bulkText}>Đã chọn {selectedIds.length}</Text>
+          <Text style={styles.bulkText}>{t("tenantRepair.selected", { count: selectedIds.length })}</Text>
           <Pressable style={styles.bulkDeleteButton} onPress={handleBulkDelete}>
             <Ionicons name="trash-outline" size={16} color="#FFF" />
-            <Text style={styles.bulkDeleteText}>Xóa tất cả</Text>
+            <Text style={styles.bulkDeleteText}>{t("tenantRepair.deleteAll")}</Text>
           </Pressable>
         </View>
       )}
@@ -375,7 +373,7 @@ export default function RepairScreen() {
       {/* Tùy chọn chọn tất cả */}
       {requests.length > 0 && (
         <Pressable
-          accessibilityLabel="Chọn tất cả yêu cầu sửa chữa"
+          accessibilityLabel={t("tenantRepair.selectAll")}
           accessibilityRole="checkbox"
           accessibilityState={{ checked: selectedIds.length === requests.length }}
           style={styles.selectAllContainer}
@@ -386,16 +384,16 @@ export default function RepairScreen() {
             size={22} 
             color={selectedIds.length === requests.length ? theme.primary : theme.muted}
           />
-          <Text style={styles.selectAllText}>Chọn tất cả</Text>
+          <Text style={styles.selectAllText}>{t("tenantRepair.selectAll")}</Text>
         </Pressable>
       )}
       </>
       }
       ListEmptyComponent={
         <IllustratedEmptyState
-          description="Các yêu cầu đã gửi sẽ xuất hiện tại đây."
+          description={t("tenantRepair.emptyDescription")}
           kind="repair"
-          title="Chưa có yêu cầu sửa chữa"
+          title={t("tenantRepair.empty")}
         />
       }
       renderItem={({ item, index }) => (
@@ -416,7 +414,7 @@ export default function RepairScreen() {
               <View style={styles.requestHeader}>
                 <View style={styles.requestLeft}>
                   <Pressable
-                    accessibilityLabel={`Chọn yêu cầu ${item.type}`}
+                    accessibilityLabel={t("tenantRepair.select", { type: item.type })}
                     accessibilityRole="checkbox"
                     accessibilityState={{ checked: selectedIds.includes(item.id) }}
                     onPress={() => toggleSelection(item.id)}
@@ -431,7 +429,7 @@ export default function RepairScreen() {
                   <View>
                     <Text style={styles.requestTitle}>{item.type}</Text>
                 <Text style={styles.requestDate}>
-                  Phòng {item.room} • {item.createdAt}
+                  {t("tenantRepair.roomDate", { room: item.room, date: item.createdAt })}
                 </Text>
                   </View>
                 </View>
@@ -463,7 +461,7 @@ export default function RepairScreen() {
 
               <Pressable onPress={() => handleDelete(item.id)} style={styles.deleteButton}>
                 <Ionicons name="trash-outline" size={17} color={theme.danger} />
-                <Text style={styles.deleteText}>Xóa</Text>
+                <Text style={styles.deleteText}>{t("common.delete")}</Text>
               </Pressable>
             </View>
             </Card>
