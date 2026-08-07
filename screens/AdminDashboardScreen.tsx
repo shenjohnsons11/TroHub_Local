@@ -8,16 +8,16 @@ import AppLoadingScreen from "../components/AppLoadingScreen";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
 import GradientHero from "../components/ui/GradientHero";
 import PriorityCard from "../components/calm-ops/PriorityCard";
-import { getRealtimeGreeting } from "../utils/dateHelpers";
 import MiniCalendarPopover from "../components/MiniCalendarPopover";
-import TroHubWidgetView from "../components/widgets/TroHubWidgetView";
 import { notificationService } from "../services/notificationService";
 import { formatCurrency } from "../utils/formatters";
+import { useLanguage } from "../contexts/LanguageContext";
 
 type Props = { profile?: UserProfile; refreshKey?: number; onNavigate: (tab: any, params?: any) => void; onLogout: () => void };
 
 export default function AdminDashboardScreen({ profile, refreshKey = 0, onNavigate }: Props) {
   const { theme } = useAppTheme();
+  const { t } = useLanguage();
   const [stats, setStats] = useState<AdminDashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -35,25 +35,31 @@ export default function AdminDashboardScreen({ profile, refreshKey = 0, onNaviga
   useEffect(() => { void loadStats(); }, [refreshKey]);
   if (loading) return <AppLoadingScreen />;
 
-  const name = profile?.fullName || (profile as any)?.name || "Chủ trọ";
-  const occupancyRate = stats?.totalRooms ? Math.round((stats.occupiedRooms / stats.totalRooms) * 100) : 0;
+  const name = profile?.fullName || (profile as any)?.name || t("dashboard.greetingFallback");
+  const hour = new Date().getHours();
+  const greetingKey = hour >= 5 && hour < 12 ? "dashboard.morning" : hour >= 12 && hour < 18 ? "dashboard.afternoon" : "dashboard.evening";
+  const totalRooms = stats?.totalRooms || 0;
+  const occupiedRooms = stats?.occupiedRooms || 0;
+  const vacantRooms = stats?.vacantRooms || Math.max(0, totalRooms - occupiedRooms);
+  const maintenanceRooms = stats?.maintenanceRooms || 0;
+  const occupancyRate = totalRooms ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
   const quickActions = [
-    ["Trợ lý AI 🤖", "sparkles-outline", () => onNavigate("ai_chat")],
-    ["Thêm phòng", "add-circle-outline", () => onNavigate("rooms", { action: "create" })],
-    ["Người thuê", "people-outline", () => onNavigate("tenants")],
-    ["Tạo hợp đồng", "document-text-outline", () => onNavigate("contract", { action: "create" })],
-    ["Xử lý sự cố", "construct-outline", () => onNavigate("repair")],
+    [`${t("dashboard.aiAssistant")} 🤖`, "sparkles-outline", () => onNavigate("ai_chat")],
+    [t("dashboard.addRoom"), "add-circle-outline", () => onNavigate("rooms", { action: "create" })],
+    [t("dashboard.tenantList"), "people-outline", () => onNavigate("tenants")],
+    [t("dashboard.createContract"), "document-text-outline", () => onNavigate("contract", { action: "create" })],
+    [t("dashboard.handleRepair"), "construct-outline", () => onNavigate("repair")],
   ] as const;
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: theme.background }]} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void loadStats(); }} colors={[theme.primary]} tintColor={theme.primary} />}>
       <View style={styles.heading}>
         <View style={{ flex: 1, paddingRight: 10 }}>
-          <Text style={[styles.eyebrow, { color: theme.primary }]}>TỔNG QUAN VẬN HÀNH</Text>
+          <Text style={[styles.eyebrow, { color: theme.primary }]}>{t("dashboard.eyebrow")}</Text>
           <Text style={[styles.title, { color: theme.text }]}>
-            {getRealtimeGreeting().slice(0, -1)} {name},
+            {t(greetingKey)} {name},
           </Text>
-          <Text style={[styles.subtitle, { color: theme.muted }]}>{stats?.pendingRepairs || 0} việc cần xem hôm nay.</Text>
+          <Text style={[styles.subtitle, { color: theme.muted }]}>{t("dashboard.pendingToday", { count: stats?.pendingRepairs || 0 })}</Text>
           <MiniCalendarPopover />
         </View>
 
@@ -61,7 +67,7 @@ export default function AdminDashboardScreen({ profile, refreshKey = 0, onNaviga
           {/* Trợ lý AI */}
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Trợ lý AI"
+            accessibilityLabel={t("dashboard.aiAssistant")}
             style={[styles.headerBtn, { backgroundColor: "#064E3B" }]}
             onPress={() => onNavigate("ai_chat")}
           >
@@ -71,7 +77,7 @@ export default function AdminDashboardScreen({ profile, refreshKey = 0, onNaviga
           {/* Quả chuông Thông báo */}
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Thông báo"
+            accessibilityLabel={t("nav.notifications")}
             style={[styles.headerBtn, { backgroundColor: theme.surfaceElevated, shadowColor: theme.text }]}
             onPress={() => onNavigate("notifications")}
           >
@@ -88,7 +94,7 @@ export default function AdminDashboardScreen({ profile, refreshKey = 0, onNaviga
           {/* Bánh răng Cài đặt */}
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Mở cài đặt"
+            accessibilityLabel={t("nav.settings")}
             style={[styles.headerBtn, { backgroundColor: theme.surfaceElevated, shadowColor: theme.text }]}
             onPress={() => onNavigate("settings")}
           >
@@ -101,51 +107,41 @@ export default function AdminDashboardScreen({ profile, refreshKey = 0, onNaviga
         <View style={[styles.propertyBanner, { backgroundColor: theme.primarySoft }]}>
           <Ionicons name="location-outline" size={18} color={theme.primary} />
           <View style={{ flex: 1 }}>
-            <Text style={[styles.propertyTitle, { color: theme.text }]}>🏠 Nhà trọ TroHub</Text>
+            <Text style={[styles.propertyTitle, { color: theme.text }]}>{t("dashboard.property")}</Text>
             <Text style={[styles.propertyAddress, { color: theme.muted }]}>{profile.propertyAddress}</Text>
           </View>
         </View>
       ) : null}
 
       <AnimatedEntry>
-        <GradientHero icon="wallet-outline" label="DOANH THU ĐÃ THU TRONG KỲ" value={formatCurrency(stats?.totalRevenue)} detail={`${stats?.occupiedRooms || 0}/${stats?.totalRooms || 0} phòng đang được thuê · ${occupancyRate}% lấp đầy`} />
+        <GradientHero icon="wallet-outline" label={t("dashboard.revenue")} value={formatCurrency(stats?.totalRevenue)} detail={`${occupiedRooms}/${totalRooms} ${t("dashboard.occupied").toLowerCase()} · ${occupancyRate}%`} />
       </AnimatedEntry>
 
-      <Text style={[styles.sectionTitle, { color: theme.text }]}>Native Home Widget (4x2)</Text>
-      <TroHubWidgetView
-        size="medium"
-        data={{
-          totalRevenue: stats?.totalRevenue || 186883000,
-          occupancyRate,
-          occupiedRooms: stats?.occupiedRooms || 8,
-          totalRooms: stats?.totalRooms || 10,
-          outstandingDebt: 12500000,
-          utilityReadingProgress: `${(stats?.occupiedRooms || 8) - 2}/${stats?.occupiedRooms || 8} phòng`,
-          openRepairsCount: stats?.pendingRepairs || 2,
-          lastSyncedAt: new Date().toISOString(),
-        }}
-        onNavigate={onNavigate}
-        onScanCamera={() => onNavigate("scan_meter")}
-      />
+      <View style={styles.kpiGrid}>
+        <Metric theme={theme} label={t("dashboard.debt")} value={formatCurrency(stats?.outstandingDebt)} detail={t("dashboard.today")} icon="wallet-outline" urgent danger />
+        <Metric theme={theme} label={t("dashboard.contracts")} value={stats?.pendingContracts || 0} detail={t("dashboard.today")} icon="document-text-outline" urgent={Boolean(stats?.pendingContracts)} />
+        <Metric theme={theme} label={t("dashboard.vacant")} value={vacantRooms} detail={t("dashboard.rooms")} icon="home-outline" />
+        <Metric theme={theme} label={t("dashboard.maintenance")} value={maintenanceRooms} detail={t("dashboard.rooms")} icon="construct-outline" urgent={Boolean(maintenanceRooms)} />
+      </View>
 
-      <Text style={[styles.sectionTitle, { color: theme.text }]}>Cần xử lý</Text>
-      <PriorityCard title="sửa chữa đang mở" count={stats?.pendingRepairs || 0} description="Tiếp nhận và cập nhật tiến độ cho người thuê." urgent={Boolean(stats?.pendingRepairs)} onPress={() => onNavigate("repair")} />
+      <Text style={[styles.sectionTitle, { color: theme.text }]}>{t("dashboard.today")}</Text>
+      <PriorityCard title={t("dashboard.repairs")} count={stats?.pendingRepairs || 0} description={t("dashboard.repairHint")} urgent={Boolean(stats?.pendingRepairs)} onPress={() => onNavigate("repair")} />
 
-      <Text style={[styles.sectionTitle, { color: theme.text }]}>Thao tác nhanh</Text>
+      <Text style={[styles.sectionTitle, { color: theme.text }]}>{t("dashboard.quickActions")}</Text>
       <View style={styles.quickRow}>{quickActions.map(([label, icon, onPress], index) => <AnimatedEntry key={label} delay={index * 45} style={styles.quickWrap}><Pressable accessibilityRole="button" onPress={onPress} style={[styles.quick, { backgroundColor: theme.surfaceElevated, shadowColor: theme.text }]}><View style={[styles.quickIcon, { backgroundColor: theme.primarySoft }]}><Ionicons name={icon} size={22} color={theme.primary} /></View><Text style={[styles.quickText, { color: theme.text }]}>{label}</Text></Pressable></AnimatedEntry>)}</View>
 
-      <Text style={[styles.sectionTitle, { color: theme.text }]}>Tổng quan</Text>
+      <Text style={[styles.sectionTitle, { color: theme.text }]}>{t("dashboard.rooms")}</Text>
       <View style={styles.grid}>
-        <Metric theme={theme} label="Phòng trọ" value={`${stats?.occupiedRooms || 0}/${stats?.totalRooms || 0}`} detail={`${occupancyRate}% lấp đầy`} icon="home-outline" />
-        <Metric theme={theme} label="Người thuê" value={stats?.totalTenants || 0} detail="Đang hoạt động" icon="people-outline" />
-        <Metric theme={theme} label="Sửa chữa" value={stats?.pendingRepairs || 0} detail="Đang mở" icon="construct-outline" urgent />
+        <Metric theme={theme} label={t("dashboard.occupied")} value={occupiedRooms} detail={`${occupancyRate}%`} icon="home-outline" />
+        <Metric theme={theme} label={t("dashboard.tenants")} value={stats?.totalTenants || 0} detail={t("dashboard.active")} icon="people-outline" />
+        <Metric theme={theme} label={t("dashboard.repairs")} value={stats?.pendingRepairs || 0} detail={t("dashboard.today")} icon="construct-outline" urgent />
       </View>
     </ScrollView>
   );
 }
 
-function Metric({ theme, label, value, detail, icon, urgent = false }: { theme: any; label: string; value: React.ReactNode; detail: string; icon: React.ComponentProps<typeof Ionicons>["name"]; urgent?: boolean }) {
-  const accent = urgent ? theme.warning : theme.primary;
+function Metric({ theme, label, value, detail, icon, urgent = false, danger = false }: { theme: any; label: string; value: React.ReactNode; detail: string; icon: React.ComponentProps<typeof Ionicons>["name"]; urgent?: boolean; danger?: boolean }) {
+  const accent = danger ? theme.danger : urgent ? theme.warning : theme.primary;
   return <AnimatedEntry style={styles.metricWrap}><View style={[styles.metric, { backgroundColor: theme.surfaceElevated, shadowColor: theme.text }]}><View style={[styles.metricIcon, { backgroundColor: urgent ? theme.warningSoft : theme.primarySoft }]}><Ionicons name={icon} size={20} color={accent} /></View><Text style={[styles.metricValue, { color: theme.text }]}>{value}</Text><Text style={[styles.metricLabel, { color: theme.text }]}>{label}</Text><Text style={[styles.metricDetail, { color: urgent ? accent : theme.muted }]}>{detail}</Text></View></AnimatedEntry>;
 }
 
@@ -170,6 +166,7 @@ const styles = StyleSheet.create({
   quickIcon: { width: 44, height: 44, borderRadius: 15, alignItems: "center", justifyContent: "center" },
   quickText: { fontSize: 11, lineHeight: 15, fontWeight: "800", textAlign: "center", marginTop: 8 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  kpiGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   metricWrap: { width: "48%" },
   metric: { minHeight: 154, padding: 16, borderRadius: 22, elevation: 3, shadowOpacity: .09, shadowOffset: { width: 0, height: 5 }, shadowRadius: 11 },
   metricIcon: { width: 40, height: 40, alignItems: "center", justifyContent: "center", borderRadius: 14 },

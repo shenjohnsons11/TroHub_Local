@@ -3,11 +3,13 @@ import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "../contexts/ThemeContext";
 import { getFormattedDateWidget } from "../utils/dateHelpers";
+import { useLanguage } from "../contexts/LanguageContext";
 
-const DAYS_OF_WEEK = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
+const DAYS_OF_WEEK = { vi: ["T2", "T3", "T4", "T5", "T6", "T7", "CN"], en: ["M", "T", "W", "T", "F", "S", "S"] };
 
 export default function MiniCalendarPopover() {
   const { theme } = useAppTheme();
+  const { language } = useLanguage();
   const [modalVisible, setModalVisible] = useState(false);
   const [viewDate, setViewDate] = useState(() => new Date());
 
@@ -21,7 +23,8 @@ export default function MiniCalendarPopover() {
   // Monday-start calculations
   const firstDayIndex = (new Date(year, month, 1).getDay() + 6) % 7;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const monthLabel = `THÁNG ${month + 1} | ${year}`;
+  const locale = language === "en" ? "en-US" : "vi-VN";
+  const monthLabel = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(viewDate);
 
   // Hardcoded operational event days for demonstration/reminder
   const eventDays: { [day: number]: "invoice" | "contract" | "both" } = {
@@ -46,7 +49,7 @@ export default function MiniCalendarPopover() {
       >
         <Ionicons name="calendar-outline" size={13} color={theme.primary} />
         <Text style={[styles.pillText, { color: theme.primary }]}>
-          {getFormattedDateWidget()}
+          {getFormattedDateWidget(locale)}
         </Text>
       </Pressable>
 
@@ -93,7 +96,7 @@ export default function MiniCalendarPopover() {
 
             {/* Weekdays Row */}
             <View style={styles.weekRow}>
-              {DAYS_OF_WEEK.map((d, idx) => (
+              {DAYS_OF_WEEK[language].map((d, idx) => (
                 <Text
                   key={d}
                   style={[
@@ -160,15 +163,15 @@ export default function MiniCalendarPopover() {
             <View style={[styles.legendRow, { borderTopColor: theme.border }]}>
               <View style={styles.legendItem}>
                 <View style={[styles.legendDot, { backgroundColor: theme.primary }]} />
-                <Text style={[styles.legendText, { color: theme.muted }]}>Hôm nay</Text>
+                <Text style={[styles.legendText, { color: theme.muted }]}>{language === "en" ? "Today" : "Hôm nay"}</Text>
               </View>
               <View style={styles.legendItem}>
                 <View style={[styles.legendDot, { backgroundColor: "#f59e0b" }]} />
-                <Text style={[styles.legendText, { color: theme.muted }]}>Hạn hóa đơn</Text>
+                <Text style={[styles.legendText, { color: theme.muted }]}>{language === "en" ? "Invoice due" : "Hạn hóa đơn"}</Text>
               </View>
               <View style={styles.legendItem}>
                 <View style={[styles.legendDot, { backgroundColor: "#6366f1" }]} />
-                <Text style={[styles.legendText, { color: theme.muted }]}>Hạn hợp đồng</Text>
+                <Text style={[styles.legendText, { color: theme.muted }]}>{language === "en" ? "Contract due" : "Hạn hợp đồng"}</Text>
               </View>
             </View>
 
@@ -178,7 +181,7 @@ export default function MiniCalendarPopover() {
               onPress={() => setModalVisible(false)}
               style={[styles.closeBtn, { backgroundColor: theme.surface }]}
             >
-              <Text style={[styles.closeBtnText, { color: theme.text }]}>Đóng lịch</Text>
+              <Text style={[styles.closeBtnText, { color: theme.text }]}>{language === "en" ? "Close calendar" : "Đóng lịch"}</Text>
             </Pressable>
           </Pressable>
         </Pressable>
