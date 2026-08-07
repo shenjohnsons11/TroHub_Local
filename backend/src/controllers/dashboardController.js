@@ -24,6 +24,8 @@ exports.getStats = async (req, res) => {
 
         const totalRooms = await Room.countDocuments(roomQuery);
         const occupiedRooms = await Room.countDocuments({ ...roomQuery, status: 1 });
+        const vacantRooms = await Room.countDocuments({ ...roomQuery, status: 0 });
+        const maintenanceRooms = await Room.countDocuments({ ...roomQuery, status: 2 });
 
         let tenantQuery = { role: 2 };
         if (landlordId) {
@@ -42,6 +44,10 @@ exports.getStats = async (req, res) => {
             };
         }
         const pendingRepairs = await RepairRequest.countDocuments({ ...repairQuery, status: { $in: [0, 1] } }); // 0: Mới, 1: Đang xử lý
+        const pendingContracts = await Contract.countDocuments({
+            ...(landlordId ? { roomId: { $in: (await Room.find({ landlordId }).select('_id')).map((room) => room._id) } } : {}),
+            status: { $in: [0, 4, 5] },
+        });
 
         // Tính doanh thu tháng hiện tại
         const currentMonth = new Date().getMonth() + 1;
@@ -74,8 +80,11 @@ exports.getStats = async (req, res) => {
             data: {
                 totalRooms,
                 occupiedRooms,
+                vacantRooms,
+                maintenanceRooms,
                 totalTenants,
                 pendingRepairs,
+                pendingContracts,
                 totalRevenue,
                 outstandingDebt,
                 utilityReadingProgress: null

@@ -120,7 +120,7 @@ export default function ForgotPasswordPage() {
             <>
               <p className="text-sm font-bold text-primary">Bước {stepNumber} / 3</p>
               <h1 className="mt-2 text-3xl font-black tracking-[-0.025em]">
-                {step === "identifier" ? "Khôi phục tài khoản" : step === "otp" ? "Nhập mã xác minh" : "Tạo mật khẩu mới"}
+                {step === "identifier" ? t("auth.forgotPasswordTitle") : step === "otp" ? t("auth.verifyOtp") : t("auth.newPassword")}
               </h1>
               <div className="mt-7 space-y-5">
                 {step === "identifier" && (
@@ -192,7 +192,7 @@ export default function ForgotPasswordPage() {
                   className="h-12 w-full font-bold"
                 >
                   {loading
-                    ? "Đang xử lý..."
+                    ? t("common.loading")
                     : step === "identifier"
                     ? "Gửi mã xác minh"
                     : step === "otp"

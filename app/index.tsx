@@ -40,13 +40,11 @@ import { resolveNotificationTarget } from "../utils/notificationNavigation";
 import { API_BASE_URL } from "../constants/api";
 import * as Linking from "expo-linking";
 import { resolveAppDeepLink } from "../utils/deepLinks";
-import { registerAndroidLandlordWidgetTasks } from "../components/widgets/androidLandlordWidget";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({ shouldShowAlert: true, shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: true }),
 });
 
-registerAndroidLandlordWidgetTasks();
 
 type Tab =
   | "home"

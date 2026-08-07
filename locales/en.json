@@ -63,6 +63,37 @@
     "debts": "Outstanding Debts",
     "notifications": "Notifications"
   },
+  "dashboard": {
+    "eyebrow": "OPERATIONS OVERVIEW",
+    "greetingFallback": "Landlord",
+    "pendingToday": "{count} items need review today.",
+    "property": "🏠 TroHub property",
+    "revenue": "Total revenue collected",
+    "debt": "Outstanding debt",
+    "rooms": "Rooms",
+    "occupied": "Occupied",
+    "vacant": "Vacant",
+    "maintenance": "Maintenance",
+    "contracts": "Contracts awaiting action",
+    "repairs": "Repairs awaiting action",
+    "tenants": "Tenants",
+    "active": "Active",
+    "today": "Needs attention today",
+    "viewAll": "View all",
+    "openRequests": "open repair requests",
+    "repairHint": "Receive and update the status for tenants.",
+    "quickActions": "Quick actions",
+    "addRoom": "Add room",
+    "tenantList": "Tenants",
+    "createContract": "Create contract",
+    "handleRepair": "Handle repair",
+    "aiAssistant": "AI assistant",
+    "occupancy": "Occupancy rate",
+    "noData": "No data yet"
+    ,"morning": "Good morning"
+    ,"afternoon": "Good afternoon"
+    ,"evening": "Good evening"
+  },
   "rooms": {
     "title": "Room Management",
     "subtitle": "Track room status, rental prices, and room list by floor",

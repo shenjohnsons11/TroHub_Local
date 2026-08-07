@@ -1,6 +1,5 @@
 import { authService } from "./authService";
 import { apiClient } from "./apiClient";
-import { widgetSyncService } from "./widgetSyncService";
 
 export type AdminRoom = {
   _id: string;
@@ -148,8 +147,11 @@ export type AdminRepair = {
 export type AdminDashboardStats = {
   totalRooms: number;
   occupiedRooms: number;
+  vacantRooms?: number;
+  maintenanceRooms?: number;
   totalTenants: number;
   pendingRepairs: number;
+  pendingContracts?: number;
   totalRevenue: number;
   outstandingDebt?: number;
   utilityReadingProgress?: string;
@@ -321,19 +323,32 @@ export const adminService = {
     try {
       const response = await apiClient.get<{ success: boolean; data: AdminDashboardStats }>("/landlord/stats");
       const data = response.data || (response as unknown as AdminDashboardStats);
-      void widgetSyncService.syncWidgetData(data);
-      return data;
+      return {
+        totalRooms: data.totalRooms || 0,
+        occupiedRooms: data.occupiedRooms || 0,
+        vacantRooms: data.vacantRooms || 0,
+        maintenanceRooms: data.maintenanceRooms || 0,
+        totalTenants: data.totalTenants || 0,
+        pendingRepairs: data.pendingRepairs || 0,
+        pendingContracts: data.pendingContracts || 0,
+        totalRevenue: data.totalRevenue || 0,
+        outstandingDebt: data.outstandingDebt || 0,
+        utilityReadingProgress: data.utilityReadingProgress || "0/0",
+      };
     } catch (error) {
       console.log("Lỗi tải thống kê admin:", error);
-      const fallback = {
-        totalRooms: 10,
-        occupiedRooms: 8,
-        totalTenants: 12,
-        pendingRepairs: 2,
-        totalRevenue: 186883000,
+      return {
+        totalRooms: 0,
+        occupiedRooms: 0,
+        vacantRooms: 0,
+        maintenanceRooms: 0,
+        totalTenants: 0,
+        pendingRepairs: 0,
+        pendingContracts: 0,
+        totalRevenue: 0,
+        outstandingDebt: 0,
+        utilityReadingProgress: "0/0",
       };
-      void widgetSyncService.syncWidgetData(fallback);
-      return fallback;
     }
   }
 };

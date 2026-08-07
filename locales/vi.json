@@ -63,6 +63,37 @@
     "debts": "Công nợ",
     "notifications": "Thông báo"
   },
+  "dashboard": {
+    "eyebrow": "TỔNG QUAN VẬN HÀNH",
+    "greetingFallback": "Chủ trọ",
+    "pendingToday": "{count} việc cần xem hôm nay.",
+    "property": "🏠 Nhà trọ TroHub",
+    "revenue": "Tổng doanh thu đã thu",
+    "debt": "Tổng công nợ còn nợ",
+    "rooms": "Phòng trọ",
+    "occupied": "Đang thuê",
+    "vacant": "Còn trống",
+    "maintenance": "Bảo trì",
+    "contracts": "Hợp đồng chờ xử lý",
+    "repairs": "Sự cố đang chờ xử lý",
+    "tenants": "Người thuê",
+    "active": "Đang hoạt động",
+    "today": "Cần xử lý hôm nay",
+    "viewAll": "Xem tất cả",
+    "openRequests": "yêu cầu sửa chữa đang mở",
+    "repairHint": "Tiếp nhận và cập nhật trạng thái cho Người thuê.",
+    "quickActions": "Thao tác nhanh",
+    "addRoom": "Thêm phòng",
+    "tenantList": "Người thuê",
+    "createContract": "Tạo hợp đồng",
+    "handleRepair": "Xử lý sự cố",
+    "aiAssistant": "Trợ lý AI",
+    "occupancy": "Tỷ lệ lấp đầy",
+    "noData": "Chưa có dữ liệu"
+    ,"morning": "Chào buổi sáng"
+    ,"afternoon": "Chào buổi chiều"
+    ,"evening": "Chào buổi tối"
+  },
   "rooms": {
     "title": "Quản lý Phòng trọ",
     "subtitle": "Theo dõi trạng thái, giá thuê và danh sách phòng theo tầng",
