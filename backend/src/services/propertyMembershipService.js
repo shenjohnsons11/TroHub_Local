@@ -65,9 +65,26 @@ async function assertContractEligibility({
     return room;
 }
 
+async function acceptMembership({ membership, tenantId, now = new Date() }) {
+    if (!membership || String(membership.tenantId) !== String(tenantId)) {
+        throw new PropertyMembershipError('Không tìm thấy lời mời nhà trọ.', 404, 'MEMBERSHIP_NOT_FOUND');
+    }
+    if (membership.status === 'active') return membership;
+    if (membership.status !== 'invited') {
+        throw new PropertyMembershipError('Lời mời này không còn hiệu lực.', 409, 'MEMBERSHIP_NOT_INVITED');
+    }
+
+    membership.status = 'active';
+    membership.joinedAt = now;
+    membership.leftAt = null;
+    await membership.save();
+    return membership;
+}
+
 module.exports = {
     OPEN_CONTRACT_STATUSES,
     PropertyMembershipError,
     assertOwnedProperty,
     assertContractEligibility,
+    acceptMembership,
 };

@@ -51,6 +51,8 @@ overdueTimer.unref();
 const notificationRoutes = require('./src/routes/notificationRoutes');
 const aiRoutes = require('./src/routes/aiRoutes');
 const adminAccountRoutes = require('./src/routes/adminAccountRoutes');
+const propertyRoutes = require('./src/routes/propertyRoutes');
+const tenantDashboardRoutes = require('./src/routes/tenantDashboardRoutes');
 
 // 4. Đăng ký các Routes
 app.use('/api/rooms', roomRoutes);
@@ -74,6 +76,8 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/landlord', dashboardRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/admin/accounts', adminAccountRoutes);
+app.use('/api/properties', propertyRoutes);
+app.use('/api/tenant', tenantDashboardRoutes);
 
 // 5. Global Error Handling (Trả về JSON thay vì HTML)
 app.use((req, res, next) => {
