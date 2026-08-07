@@ -116,3 +116,15 @@ test('inviting a tenant creates membership without creating a contract', async (
     assert.equal(memberships.length, 1);
     assert.equal('contract' in result, false);
 });
+
+test('tenant dashboard returns a valid empty state instead of fake data', async () => {
+    const { buildTenantDashboard } = require('../src/services/tenantDashboardService');
+    const emptyQuery = { populate: () => emptyQuery, sort: () => emptyQuery, lean: async () => [] };
+    const dashboard = await buildTenantDashboard('tenant-a', {
+        MembershipModel: { find: () => emptyQuery },
+    });
+
+    assert.deepEqual(dashboard.totals, { unpaidAmount: 0, dueInvoiceCount: 0, openContracts: 0, openRepairCount: 0 });
+    assert.deepEqual(dashboard.invitations, []);
+    assert.deepEqual(dashboard.properties, []);
+});
