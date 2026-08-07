@@ -1,33 +1,49 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { translations, type TranslationKey } from "@/lib/translations";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { translate, type Language } from "@/lib/translations";
 
-export type Language = "vi" | "en";
-type LanguageContextValue = { language: Language; setLanguage: (language: Language) => void; t: (key: TranslationKey, params?: Record<string, string | number>) => string };
+export type { Language };
+
+type LanguageContextValue = {
+  language: Language;
+  setLanguage: (language: Language) => void;
+  t: (key: string, params?: Record<string, string | number>) => string;
+};
+
 const LanguageContext = createContext<LanguageContextValue | undefined>(undefined);
-const storageKey = "trohub_language";
+const STORAGE_KEY = "trohub_lang";
+const FALLBACK_KEY = "trohub_language";
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Language>("vi");
 
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(storageKey);
-      if (stored === "vi" || stored === "en") setLanguageState(stored);
+      const stored = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(FALLBACK_KEY);
+      if (stored === "vi" || stored === "en") setLanguageState(stored as Language);
     } catch {}
   }, []);
 
-  useEffect(() => { document.documentElement.lang = language; }, [language]);
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
+
   const setLanguage = useCallback((next: Language) => {
     setLanguageState(next);
-    try { localStorage.setItem(storageKey, next); } catch {}
+    try {
+      localStorage.setItem(STORAGE_KEY, next);
+      localStorage.setItem(FALLBACK_KEY, next);
+    } catch {}
   }, []);
-  const t = useCallback((key: TranslationKey, params?: Record<string, string | number>) => {
-    let value: string = translations[language][key] || translations.vi[key];
-    for (const [name, replacement] of Object.entries(params || {})) value = value.replaceAll(`{${name}}`, String(replacement));
-    return value;
-  }, [language]);
+
+  const t = useCallback(
+    (key: string, params?: Record<string, string | number>) => {
+      return translate(language, key, params);
+    },
+    [language]
+  );
+
   const value = useMemo(() => ({ language, setLanguage, t }), [language, setLanguage, t]);
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }

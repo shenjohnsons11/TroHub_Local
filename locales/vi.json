@@ -1,0 +1,169 @@
+{
+  "common": {
+    "all": "Tất cả",
+    "search": "Tìm kiếm...",
+    "filter": "Bộ lọc",
+    "status": "Trạng thái",
+    "action": "Thao tác",
+    "save": "Lưu lại",
+    "cancel": "Hủy bỏ",
+    "confirm": "Xác nhận",
+    "delete": "Xóa",
+    "edit": "Chỉnh sửa",
+    "add": "Thêm mới",
+    "loading": "Đang tải...",
+    "success": "Thành công",
+    "error": "Lỗi hệ thống",
+    "back": "Quay lại",
+    "close": "Đóng",
+    "details": "Xem chi tiết",
+    "floor": "Tầng {number}",
+    "unitVnd": "đ",
+    "unitKwh": "kWh",
+    "unitM3": "m³"
+  },
+  "auth": {
+    "login": "Đăng nhập",
+    "loginTitle": "Chào mừng trở lại",
+    "loginDescription": "Đăng nhập tài khoản Quản trị nhà trọ TroHub.",
+    "register": "Đăng ký",
+    "registerLandlord": "Đăng ký Chủ trọ",
+    "registerDescription": "Tự tạo tài khoản quản trị dãy trọ của bạn.",
+    "forgotPassword": "Quên mật khẩu?",
+    "forgotPasswordTitle": "Khôi phục mật khẩu",
+    "forgotPasswordDesc": "Nhập Email hoặc SĐT đã đăng ký để nhận mã xác minh OTP.",
+    "verifyOtp": "Xác minh mã OTP",
+    "enterOtp": "Nhập mã OTP 6 chữ số",
+    "resetPassword": "Đặt lại mật khẩu",
+    "newPassword": "Mật khẩu mới",
+    "confirmPassword": "Xác nhận mật khẩu mới",
+    "sendOtp": "Gửi mã OTP",
+    "resendOtp": "Gửi lại OTP ({seconds}s)",
+    "phoneOrEmail": "Số điện thoại hoặc Email",
+    "password": "Mật khẩu",
+    "fullName": "Họ và tên",
+    "email": "Địa chỉ Email",
+    "phone": "Số điện thoại",
+    "idCard": "Số CCCD (12 chữ số)",
+    "inviteCode": "Mã mời đăng ký (6 số)",
+    "tenantRegister": "Đăng ký tài khoản Người thuê",
+    "tenantMobileOnly": "Tài khoản Người thuê vui lòng đăng nhập trên ứng dụng di động TroHub.",
+    "logout": "Đăng xuất"
+  },
+  "nav": {
+    "overview": "Tổng quan",
+    "rooms": "Quản lý Phòng",
+    "tenants": "Người thuê",
+    "contracts": "Hợp đồng",
+    "invoices": "Hóa đơn",
+    "utilities": "Điện & Nước",
+    "repairs": "Sửa chữa & Sự cố",
+    "settings": "Cài đặt",
+    "payments": "Cổng thanh toán",
+    "debts": "Công nợ",
+    "notifications": "Thông báo"
+  },
+  "rooms": {
+    "title": "Quản lý Phòng trọ",
+    "subtitle": "Theo dõi trạng thái, giá thuê và danh sách phòng theo tầng",
+    "addRoom": "Thêm phòng mới",
+    "editRoom": "Chỉnh sửa thông tin phòng",
+    "roomCode": "Mã phòng",
+    "price": "Giá thuê hàng tháng",
+    "deposit": "Tiền đặt cọc",
+    "area": "Diện tích (m²)",
+    "maxTenants": "Sức chứa tối đa",
+    "status": {
+      "rented": "Đang thuê",
+      "available": "Còn trống",
+      "maintenance": "Đang bảo trì"
+    },
+    "filterStatus": "Trạng thái phòng",
+    "filterFloor": "Lọc theo tầng",
+    "searchPlaceholder": "Tìm theo mã phòng...",
+    "emptyRooms": "Chưa có phòng nào được tạo."
+  },
+  "tenants": {
+    "title": "Quản lý Người thuê",
+    "subtitle": "Danh sách khách thuê trọ và phân phòng hiện tại",
+    "addTenant": "Thêm người thuê mới",
+    "unassigned": "Chưa xếp phòng",
+    "assigned": "Đã có phòng",
+    "fullName": "Họ và tên",
+    "phone": "Số điện thoại",
+    "idCard": "Số CCCD",
+    "currentRoom": "Phòng hiện tại",
+    "startDate": "Ngày chuyển vào",
+    "emptyTenants": "Chưa có người thuê nào."
+  },
+  "contracts": {
+    "title": "Quản lý Hợp đồng",
+    "subtitle": "Tạo mới, gia hạn và thanh lý hợp đồng thuê trọ",
+    "createContract": "Tạo hợp đồng mới",
+    "checkout": "Duyệt trả phòng",
+    "settleDeposit": "Quyết toán tiền cọc",
+    "contractCode": "Mã hợp đồng",
+    "room": "Phòng thuê",
+    "tenant": "Người đại diện thuê",
+    "startDate": "Ngày bắt đầu",
+    "endDate": "Ngày hết hạn",
+    "depositAmount": "Tiền cọc đã thu",
+    "rentalPrice": "Giá thuê chốt",
+    "status": {
+      "active": "Đang hiệu lực",
+      "expired": "Đã hết hạn",
+      "terminated": "Đã thanh lý"
+    }
+  },
+  "invoices": {
+    "title": "Quản lý Hóa đơn",
+    "subtitle": "Chốt chỉ số điện nước, lập hóa đơn và theo dõi thanh toán",
+    "createInvoice": "Lập hóa đơn mới",
+    "recordMeter": "Chốt chỉ số điện nước",
+    "printInvoice": "In hóa đơn PDF",
+    "electricIndex": "Chỉ số điện (cũ -> mới)",
+    "waterIndex": "Chỉ số nước (cũ -> mới)",
+    "totalAmount": "Tổng tiền cần thanh toán",
+    "dueDate": "Hạn thanh toán",
+    "status": {
+      "unpaid": "Chưa thanh toán",
+      "paid": "Đã thanh toán",
+      "overdue": "Quá hạn"
+    },
+    "payNow": "Thanh toán ngay"
+  },
+  "repairs": {
+    "title": "Báo sự cố & Sửa chữa",
+    "subtitle": "Tiếp nhận phản ánh sự cố từ người thuê và theo dõi tiến độ",
+    "reportIssue": "Báo sự cố mới",
+    "issueTitle": "Tên sự cố / Hỏng hóc",
+    "description": "Mô tả chi tiết",
+    "priority": "Mức độ ưu tiên",
+    "progress": "Tiến độ xử lý",
+    "status": {
+      "pending": "Chờ tiếp nhận",
+      "processing": "Đang xử lý",
+      "completed": "Đã hoàn thành",
+      "cancelled": "Đã hủy"
+    }
+  },
+  "notifications": {
+    "title": "Thông báo hệ thống",
+    "bell": "Thông báo 🔔",
+    "markAllRead": "Đánh dấu đã đọc tất cả",
+    "noNotifications": "Không có thông báo mới.",
+    "categories": {
+      "invoice": "Hóa đơn & Thanh toán",
+      "contract": "Hợp đồng",
+      "repair": "Sự cố sửa chữa",
+      "system": "Hệ thống"
+    }
+  },
+  "ai": {
+    "title": "Trợ lý AI TroHub Co-pilot",
+    "subtitle": "Hỏi đáp thông minh, tự động phân tích doanh thu và gợi ý quản lý",
+    "inputPlaceholder": "Hỏi AI TroHub (Ví dụ: Danh sách phòng chưa đóng tiền điện tháng này...)",
+    "send": "Gửi câu hỏi",
+    "suggested": "Gợi ý câu hỏi"
+  }
+}

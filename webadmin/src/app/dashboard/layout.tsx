@@ -26,9 +26,11 @@ import { MiniCalendarPopover } from "@/components/mini-calendar-popover";
 import { LanguageToggle } from "@/components/language-toggle";
 import { fetchAPI } from "@/lib/api";
 import AIChatWidget from "@/components/AIChatWidget";
+import { useLanguage } from "@/components/language-provider";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { t } = useLanguage();
   const [user, setUser] = useState<{ fullName?: string; propertyAddress?: string } | null>(null);
 
   useEffect(() => {
@@ -54,27 +56,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   const navGroups = [
-    { label: "Vận hành", items: [
-      { name: "Tổng quan", href: "/dashboard", icon: LayoutDashboard },
-      { name: "Quản lý Phòng", href: "/dashboard/rooms", icon: Home },
-      { name: "Người thuê", href: "/dashboard/tenants", icon: Users },
-      { name: "Hợp đồng", href: "/dashboard/contracts", icon: FileText },
-      { name: "Điện nước", href: "/dashboard/utilities", icon: Droplet },
+    { label: t("common.status") === "Trạng thái" ? "Vận hành" : "Operations", items: [
+      { key: "nav.overview", fallback: "Tổng quan", href: "/dashboard", icon: LayoutDashboard },
+      { key: "nav.rooms", fallback: "Quản lý Phòng", href: "/dashboard/rooms", icon: Home },
+      { key: "nav.tenants", fallback: "Người thuê", href: "/dashboard/tenants", icon: Users },
+      { key: "nav.contracts", fallback: "Hợp đồng", href: "/dashboard/contracts", icon: FileText },
+      { key: "nav.utilities", fallback: "Điện nước", href: "/dashboard/utilities", icon: Droplet },
     ] },
-    { label: "Tài chính", items: [
-      { name: "Hóa đơn", href: "/dashboard/invoices", icon: Receipt },
-      { name: "Công nợ", href: "/dashboard/debts", icon: Wallet },
-      { name: "Thanh toán", href: "/dashboard/payments", icon: CreditCard },
-      { name: "Quản lý dịch vụ", href: "/dashboard/services", icon: Settings2 },
+    { label: t("common.status") === "Trạng thái" ? "Tài chính" : "Finance", items: [
+      { key: "nav.invoices", fallback: "Hóa đơn", href: "/dashboard/invoices", icon: Receipt },
+      { key: "nav.debts", fallback: "Công nợ", href: "/dashboard/debts", icon: Wallet },
+      { key: "nav.payments", fallback: "Thanh toán", href: "/dashboard/payments", icon: CreditCard },
+      { key: "nav.services", fallback: "Quản lý dịch vụ", href: "/dashboard/services", icon: Settings2 },
     ] },
-    { label: "Hỗ trợ", items: [
-      { name: "Sửa chữa", href: "/dashboard/repairs", icon: Wrench },
-      { name: "Cài đặt", href: "/dashboard/settings", icon: SlidersHorizontal },
+    { label: t("common.status") === "Trạng thái" ? "Hỗ trợ" : "Support", items: [
+      { key: "nav.repairs", fallback: "Sửa chữa", href: "/dashboard/repairs", icon: Wrench },
+      { key: "nav.settings", fallback: "Cài đặt", href: "/dashboard/settings", icon: SlidersHorizontal },
     ] },
   ];
   const navItems = navGroups.flatMap((group) => group.items);
 
-  if (!user) return <AppLoading message="Đang mở bảng điều khiển" />;
+  if (!user) return <AppLoading message={t("common.loading")} />;
 
   return (
     <div className="calm-admin flex min-h-[100dvh] bg-background">
@@ -93,9 +95,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 {group.items.map((item) => {
                   const isActive = pathname === item.href || (pathname.startsWith(item.href) && item.href !== "/dashboard");
                   const Icon = item.icon;
+                  const title = t(item.key) || item.fallback;
                   return (
                     <Link
-                      key={item.name}
+                      key={item.key}
                       href={item.href}
                       aria-current={isActive ? "page" : undefined}
                       className={`group flex min-h-11 items-center gap-3 rounded-[16px] px-3 py-2.5 text-sm font-bold transition-[background-color,color,transform] duration-200 active:scale-[.98] ${
@@ -107,7 +110,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       <span className={`grid size-8 place-items-center rounded-xl ${isActive ? "bg-white/14" : "bg-accent group-hover:bg-card"}`}>
                         <Icon className="size-[18px]" aria-hidden="true" />
                       </span>
-                      {item.name}
+                      {title}
                     </Link>
                   );
                 })}
@@ -123,18 +126,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
             <div className="flex-1 overflow-hidden">
               <p className="truncate text-sm font-extrabold text-foreground">{user.fullName || "Chủ trọ"}</p>
-              <p className="truncate text-xs text-muted-foreground">Chủ trọ</p>
+              <p className="truncate text-xs text-muted-foreground">{t("auth.registerLandlord")}</p>
             </div>
           </div>
           <button
             type="button"
             onClick={handleLogout}
-            aria-label="Đăng xuất"
-            title="Đăng xuất"
+            aria-label={t("auth.logout")}
+            title={t("auth.logout")}
             className="flex min-h-10 w-full items-center justify-center gap-2 rounded-[12px] text-sm font-bold text-destructive hover:bg-destructive/10"
           >
             <LogOut className="size-4" aria-hidden="true" />
-            Đăng xuất
+            {t("auth.logout")}
           </button>
         </div>
       </aside>
@@ -144,15 +147,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="flex min-h-[76px] items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
             <div className="md:hidden"><TroHubLogo compact /></div>
             <div className="hidden sm:block">
-              <p className="text-xs font-bold text-muted-foreground">Không gian vận hành</p>
+              <p className="text-xs font-bold text-muted-foreground">{t("nav.overview")}</p>
               <h2 className="text-xl font-black tracking-[-.025em] text-foreground">
-                {navItems.find(item => pathname === item.href || (pathname.startsWith(item.href) && item.href !== "/dashboard"))?.name || "Dashboard"}
+                {t(navItems.find(item => pathname === item.href || (pathname.startsWith(item.href) && item.href !== "/dashboard"))?.key || "nav.overview")}
               </h2>
             </div>
             {user.propertyAddress ? (
               <div className="hidden min-w-0 flex-1 rounded-xl bg-primary/8 px-3 py-2 lg:flex lg:items-center lg:gap-2" title={user.propertyAddress}>
                 <MapPin className="size-4 shrink-0 text-primary" aria-hidden="true" />
-                <span className="truncate text-sm font-bold text-foreground">🏠 Nhà trọ TroHub - {user.propertyAddress}</span>
+                <span className="truncate text-sm font-bold text-foreground">🏠 TroHub - {user.propertyAddress}</span>
               </div>
             ) : <div className="hidden flex-1 lg:block" />}
             <div className="flex items-center gap-2">
@@ -165,8 +168,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <button
                 type="button"
                 onClick={handleLogout}
-                aria-label="Đăng xuất"
-                title="Đăng xuất"
+                aria-label={t("auth.logout")}
+                title={t("auth.logout")}
                 className="grid size-10 place-items-center rounded-[14px] text-destructive hover:bg-destructive/10"
               >
                 <LogOut className="size-4" aria-hidden="true" />
@@ -187,7 +190,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   }`}
                 >
                   <Icon className="size-4" aria-hidden="true" />
-                  {item.name}
+                  {t(item.key)}
                 </Link>
               );
             })}
