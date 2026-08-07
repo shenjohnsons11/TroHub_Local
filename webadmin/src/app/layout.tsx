@@ -6,8 +6,9 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { NotificationProvider } from "@/providers/notification-provider";
 import { LanguageProvider } from "@/components/language-provider";
+import { ExtensionNoiseFilter } from "@/components/extension-noise-filter";
 
-const themeScript = `(function(){var t;try{t=localStorage.getItem("trohub_theme")}catch(e){}var d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d)})()`;
+const themeScript = `(function(){var t;try{t=localStorage.getItem("trohub_theme");if(t==="undefined"||t==="null")t=null}catch(e){}var d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d)})()`;
 
 export const metadata: Metadata = {
   title: "TRO HUB - Quản lý nhà trọ",
@@ -25,6 +26,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="min-h-full flex flex-col">
+        <ExtensionNoiseFilter />
         <NextTopLoader color="#0e806d" showSpinner={false} />
         <LanguageProvider>
           <ThemeProvider>

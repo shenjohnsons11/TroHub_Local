@@ -1,3 +1,5 @@
+import { safeStorageString } from "@/lib/client-storage";
+
 export const API_BASE_URL = "/api";
 
 type ApiError = Error & {
@@ -7,7 +9,9 @@ type ApiError = Error & {
 };
 
 export const fetchAPI = async (endpoint: string, options: RequestInit = {}) => {
-  const token = typeof window !== "undefined" ? localStorage.getItem("trohub_token") : null;
+  const token = typeof window !== "undefined"
+    ? safeStorageString(localStorage.getItem("trohub_token"))
+    : null;
   
   const headers: HeadersInit = {
     "Content-Type": "application/json",
@@ -20,14 +24,6 @@ export const fetchAPI = async (endpoint: string, options: RequestInit = {}) => {
     headers,
   });
 
-  if (response.status === 401) {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("trohub_token");
-      localStorage.removeItem("trohub_user");
-      window.location.href = "/";
-    }
-  }
-
   const contentType = response.headers.get("content-type") || "";
   if (!contentType.includes("application/json")) {
     const connectionError = new Error(
@@ -38,13 +34,21 @@ export const fetchAPI = async (endpoint: string, options: RequestInit = {}) => {
     throw connectionError;
   }
 
-  const data = await response.json();
+  let data: any;
+  try {
+    data = await response.json();
+  } catch {
+    const parseError = new Error("Máy chủ trả về dữ liệu không hợp lệ. Vui lòng thử lại.") as ApiError;
+    parseError.code = "INVALID_API_RESPONSE";
+    parseError.status = response.status;
+    throw parseError;
+  }
   if (!response.ok) {
     const apiError = new Error(
-      data.message || "Có lỗi xảy ra khi kết nối API.",
+      typeof data.message === "string" ? data.message : "Có lỗi xảy ra khi kết nối API.",
     ) as ApiError;
-    apiError.code = data.code;
-    apiError.field = data.field;
+    apiError.code = typeof data.code === "string" ? data.code : undefined;
+    apiError.field = typeof data.field === "string" ? data.field : undefined;
     apiError.status = response.status;
     throw apiError;
   }
