@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { translations, type TranslationKey } from "@/lib/translations";
+import { safeStorageString } from "@/lib/client-storage";
 
 export type Language = "vi" | "en";
 type LanguageContextValue = { language: Language; setLanguage: (language: Language) => void; t: (key: TranslationKey, params?: Record<string, string | number>) => string };
@@ -13,7 +14,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(storageKey);
+      const stored = safeStorageString(localStorage.getItem(storageKey));
       if (stored === "vi" || stored === "en") setLanguageState(stored);
     } catch {}
   }, []);

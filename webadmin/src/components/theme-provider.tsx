@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { safeStorageString } from "@/lib/client-storage";
 
 export type ThemeMode = "light" | "dark" | "system";
 
@@ -59,7 +60,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     let mode: ThemeMode = "system";
 
     try {
-      const stored = localStorage.getItem(storageKey);
+      const stored = safeStorageString(localStorage.getItem(storageKey));
       if (stored === "light" || stored === "dark" || stored === "system") {
         mode = stored as ThemeMode;
       }
