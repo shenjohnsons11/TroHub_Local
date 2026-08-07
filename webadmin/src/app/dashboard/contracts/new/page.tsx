@@ -26,6 +26,7 @@ import {
   validateContractDateRange,
 } from "../../../../../../utils/contractDate";
 import { consumePendingAIAction } from "@/lib/ai-actions";
+import { safeJsonParse } from "@/lib/client-storage";
 
 type Option = {
   _id?: string;
@@ -57,7 +58,11 @@ export default function NewContractPage() {
   const [services, setServices] = useState<Option[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
-  const adminId = useMemo(() => { if (typeof window === "undefined") return "unknown"; try { return JSON.parse(localStorage.getItem("trohub_user") || "{}").id || JSON.parse(localStorage.getItem("trohub_user") || "{}")._id || "unknown"; } catch { return "unknown"; } }, []);
+  const adminId = useMemo(() => {
+    if (typeof window === "undefined") return "unknown";
+    const user = safeJsonParse<{ id?: string; _id?: string }>(localStorage.getItem("trohub_user"), {});
+    return user.id || user._id || "unknown";
+  }, []);
   const draftKey = buildContractDraftKey(adminId);
 
   useEffect(() => {
@@ -70,34 +75,38 @@ export default function NewContractPage() {
       .catch((error) => notification.error(getNotificationMessage(error, "Không thể tải dữ liệu tạo hợp đồng.")));
     const saved = localStorage.getItem(draftKey);
     if (saved) {
-      try {
-        const savedDraft = JSON.parse(saved) as Partial<ContractDraft>;
-        const defaults = defaultContractDates();
-        setDraft({
-          ...createContractDraft(),
-          ...savedDraft,
-          fixedRentPrice: formatNumberInput(savedDraft.fixedRentPrice),
-          fixedDeposit: formatNumberInput(savedDraft.fixedDeposit),
-          electricityPrice: formatNumberInput(savedDraft.electricityPrice ?? 3500),
-          waterPrice: formatNumberInput(savedDraft.waterPrice ?? 15000),
-          initialElectricity: formatNumberInput(savedDraft.initialElectricity),
-          initialWater: formatNumberInput(savedDraft.initialWater),
-          services: (savedDraft.services || []).map((item) => ({
-            ...item,
-            fixedPrice: formatNumberInput(item.fixedPrice),
-          })),
-          startDate:
-            formatIsoToDisplay(savedDraft.startDate || "") ||
-            savedDraft.startDate ||
-            defaults.startDate,
-          endDate:
-            formatIsoToDisplay(savedDraft.endDate || "") ||
-            savedDraft.endDate ||
-            defaults.endDate,
-        });
-        setEndDateWasEdited(Boolean(savedDraft.endDate));
-        notification.info("Đã khôi phục bản nháp hợp đồng.");
-      } catch {
+      const savedDraft = safeJsonParse<Partial<ContractDraft> | null>(saved, null);
+      if (savedDraft) {
+        try {
+          const defaults = defaultContractDates();
+          setDraft({
+            ...createContractDraft(),
+            ...savedDraft,
+            fixedRentPrice: formatNumberInput(savedDraft.fixedRentPrice),
+            fixedDeposit: formatNumberInput(savedDraft.fixedDeposit),
+            electricityPrice: formatNumberInput(savedDraft.electricityPrice ?? 3500),
+            waterPrice: formatNumberInput(savedDraft.waterPrice ?? 15000),
+            initialElectricity: formatNumberInput(savedDraft.initialElectricity),
+            initialWater: formatNumberInput(savedDraft.initialWater),
+            services: (savedDraft.services || []).map((item) => ({
+              ...item,
+              fixedPrice: formatNumberInput(item.fixedPrice),
+            })),
+            startDate:
+              formatIsoToDisplay(savedDraft.startDate || "") ||
+              savedDraft.startDate ||
+              defaults.startDate,
+            endDate:
+              formatIsoToDisplay(savedDraft.endDate || "") ||
+              savedDraft.endDate ||
+              defaults.endDate,
+          });
+          setEndDateWasEdited(Boolean(savedDraft.endDate));
+          notification.info("Đã khôi phục bản nháp hợp đồng.");
+        } catch {
+          localStorage.removeItem(draftKey);
+        }
+      } else {
         localStorage.removeItem(draftKey);
       }
     }

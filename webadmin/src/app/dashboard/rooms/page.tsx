@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { DoorOpen, Edit, Plus, Search, Trash2, Settings } from "lucide-react";
 import { PageHeader } from "@/components/calm-ops/page-header";
+import { safeJsonParse } from "@/lib/client-storage";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -65,13 +66,14 @@ export default function RoomsPage() {
   const handleSaveRoom = async (event: React.FormEvent) => {
     event.preventDefault();
     try {
+      const storedUser = safeJsonParse<{ id?: string }>(localStorage.getItem("trohub_user"), {});
       const payload = {
         roomCode,
         rent: unformatNumber(price),
         deposit: unformatNumber(price),
         area: parseInt(area),
         floor: Number(floor),
-        landlordId: JSON.parse(localStorage.getItem("trohub_user") || "{}").id,
+        landlordId: storedUser.id,
       };
       if (editingRoomId) {
         await fetchAPI(`/rooms/${editingRoomId}`, { method: "PUT", body: JSON.stringify(payload) });

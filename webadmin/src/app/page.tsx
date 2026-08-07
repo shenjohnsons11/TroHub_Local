@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Building2, KeyRound, LoaderCircle, LogIn, ShieldCheck, UserPlus, ExternalLink, MapPin } from "lucide-react";
 
@@ -15,6 +16,7 @@ import { useNotification } from "@/hooks/use-notification";
 import { getNotificationMessage } from "@/lib/notification-messages";
 import { LanguageToggle } from "@/components/language-toggle";
 import { useLanguage } from "@/components/language-provider";
+import { normalizeWebAdminSession } from "@/lib/client-storage";
 
 // Vietnamese identifier label: Số điện thoại hoặc Email.
 import {
@@ -30,6 +32,7 @@ import {
 const SUPER_ADMIN_ZALO = "0584085384";
 
 export default function LoginPage() {
+  const router = useRouter();
   const notification = useNotification();
   const { t } = useLanguage();
   const [mode, setMode] = useState<"login" | "register">("login");
@@ -56,45 +59,27 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
-    // Check mock admin database in localStorage first
     try {
-      const mockAdmins = JSON.parse(localStorage.getItem("@mock_admins") || "[]");
-      const matched = mockAdmins.find(
-        (u: any) =>
-          (u.username === identifier.trim() || u.phone === identifier.trim() || u.email === identifier.trim()) &&
-          u.password === password
-      );
-
-      if (matched) {
-        const user = { id: matched.id, username: matched.username, fullName: matched.fullName, role: 1 };
-        localStorage.setItem("trohub_token", "mock-token-" + matched.id);
-        localStorage.setItem("trohub_user", JSON.stringify(user));
-        notification.success("Đăng nhập thành công (Simulated).");
-        window.location.href = "/dashboard";
-        return;
-      }
-    } catch {}
-
-    try {
-      const data = await fetchAPI("/auth/login", {
+      const response = await fetchAPI("/auth/login", {
         method: "POST",
         body: JSON.stringify({ identifier: identifier.trim(), password }),
       });
+      const session = normalizeWebAdminSession(response);
 
-      if (data.success) {
-        const user = data.user || data.data;
-        if (user.role === 2) {
-          const message = t("tenantMobileOnly");
-          setError(message);
-          notification.info(message);
-          return;
-        }
-
-        localStorage.setItem("trohub_token", data.token);
-        localStorage.setItem("trohub_user", JSON.stringify(user));
-        notification.success(t("loginSuccess"));
-        window.location.href = "/dashboard";
+      if (!session) {
+        throw new Error("Phản hồi đăng nhập không hợp lệ. Vui lòng thử lại.");
       }
+      if (session.user.role !== 1) {
+        const message = t("tenantMobileOnly");
+        setError(message);
+        notification.info(message);
+        return;
+      }
+
+      localStorage.setItem("trohub_token", session.token);
+      localStorage.setItem("trohub_user", JSON.stringify(session.user));
+      notification.success(t("loginSuccess"));
+      router.replace("/dashboard");
     } catch (caughtError: unknown) {
       const message = getNotificationMessage(
         caughtError,
@@ -123,7 +108,7 @@ export default function LoginPage() {
       if (!propertyAddress.trim()) throw new Error(t("propertyAddress"));
       if (!inviteCode.trim()) throw new Error(t("invalidInvite"));
 
-      const data = await fetchAPI("/auth/register", {
+      await fetchAPI("/auth/register", {
         method: "POST",
         body: JSON.stringify({
           role: 1,
@@ -138,8 +123,6 @@ export default function LoginPage() {
           propertyLongitude,
         }),
       });
-      localStorage.setItem("trohub_token", data.token);
-      localStorage.setItem("trohub_user", JSON.stringify(data.user));
       notification.success(t("registerSuccess"));
       setMode("login");
       setIdentifier(phoneClean);
