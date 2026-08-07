@@ -17,6 +17,7 @@ import { authService } from "../services/authService";
 import { useAppTheme } from "../contexts/ThemeContext";
 import { useNotification } from "../hooks/useNotification";
 import { getNotificationMessage } from "../utils/notificationMessages";
+import { useLanguage } from "../contexts/LanguageContext";
 import AppButton from "./ui/AppButton";
 
 type Props = {
@@ -28,8 +29,10 @@ type Step = "request" | "verify" | "reset";
 
 export default function ForgotPasswordModal({ visible, onClose }: Props) {
   const { theme } = useAppTheme();
+  const { t } = useLanguage();
   const notification = useNotification();
   const styles = createStyles(theme);
+
   const [step, setStep] = useState<Step>("request");
   const [identifier, setIdentifier] = useState("");
   const [otp, setOtp] = useState("");
@@ -39,7 +42,9 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [secondsUntilResend, setSecondsUntilResend] = useState(0);
+
   const titleRef = useRef<Text>(null);
+  const newPasswordRef = useRef<TextInput>(null);
 
   useEffect(() => {
     if (!visible) return;
@@ -49,6 +54,15 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
     }, 300);
     return () => clearTimeout(timer);
   }, [visible, step]);
+
+  useEffect(() => {
+    if (step === "reset") {
+      const focusTimer = setTimeout(() => {
+        newPasswordRef.current?.focus();
+      }, 200);
+      return () => clearTimeout(focusTimer);
+    }
+  }, [step]);
 
   useEffect(() => {
     if (!secondsUntilResend) return;
@@ -104,7 +118,7 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
         setStep("reset");
       } else {
         await authService.resetPassword(resetToken, newPassword);
-        notification.success("Đặt lại mật khẩu thành công.", { title: "Thành công" });
+        notification.success("Đặt lại mật khẩu thành công. Vui lòng đăng nhập bằng mật khẩu mới.", { title: "Thành công" });
         handleClose();
       }
     } catch (caughtError) {
@@ -117,15 +131,10 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
     }
   };
 
-  const value = step === "request" ? identifier : step === "verify" ? otp : newPassword;
-  const label = step === "request"
-    ? "Số điện thoại hoặc Email"
-    : step === "verify"
-      ? "Mã OTP"
-      : "Mật khẩu mới";
-  const subtitle = step === "request"
-    ? "Nhập SĐT hoặc Email để nhận mã OTP qua Email đã đăng ký."
-    : step === "verify"
+  const subtitle =
+    step === "request"
+      ? "Nhập SĐT hoặc Email để nhận mã OTP qua Email đã đăng ký."
+      : step === "verify"
       ? "Nhập mã OTP 6 số đã được gửi đến Email của bạn."
       : "Tạo mật khẩu mới cho tài khoản TroHub.";
 
@@ -155,7 +164,7 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
                     accessibilityRole="header"
                     accessibilityLiveRegion="polite"
                   >
-                    Quên mật khẩu
+                    {t("auth.forgotPasswordTitle") || "Quên mật khẩu"}
                   </Text>
                   <Text style={styles.subtitle}>{subtitle}</Text>
                 </View>
@@ -164,50 +173,102 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
                   onPress={handleClose}
                   disabled={isSubmitting}
                   accessibilityRole="button"
-                  accessibilityLabel="Đóng quên mật khẩu"
+                  accessibilityLabel="Đóng"
                 >
                   <Ionicons name="close" size={22} color={theme.text} />
                 </Pressable>
               </View>
 
-              <Text style={styles.label}>{label}</Text>
-              <TextInput
-                style={[styles.input, error ? styles.inputError : null]}
-                value={value}
-                onChangeText={(text) => {
-                  setError("");
-                  if (step === "request") setIdentifier(text);
-                  else if (step === "verify") setOtp(text.replace(/\D/g, "").slice(0, 6));
-                  else setNewPassword(text);
-                }}
-                keyboardType={step === "verify" ? "number-pad" : "email-address"}
-                autoCapitalize="none"
-                secureTextEntry={step === "reset"}
-                maxLength={step === "verify" ? 6 : undefined}
-                placeholderTextColor={theme.muted}
-                editable={!isSubmitting}
-              />
-
-              {step === "reset" ? (
-                <>
-                  <Text style={styles.label}>Xác nhận mật khẩu mới</Text>
+              {/* STEP 1: REQUEST OTP */}
+              {step === "request" && (
+                <View key="step-request" pointerEvents={isSubmitting ? "none" : "auto"}>
+                  <Text style={styles.label}>{t("auth.phoneOrEmail") || "Số điện thoại hoặc Email"}</Text>
                   <TextInput
+                    key="input-identifier"
                     style={[styles.input, error ? styles.inputError : null]}
-                    value={confirmPassword}
+                    value={identifier}
                     onChangeText={(text) => {
-                      setConfirmPassword(text);
                       setError("");
+                      setIdentifier(text);
                     }}
-                    secureTextEntry
+                    keyboardType="email-address"
                     autoCapitalize="none"
+                    placeholder="Nhập SĐT hoặc Email"
                     placeholderTextColor={theme.muted}
                     editable={!isSubmitting}
                   />
-                </>
-              ) : null}
+                </View>
+              )}
+
+              {/* STEP 2: VERIFY OTP */}
+              {step === "verify" && (
+                <View key="step-verify" pointerEvents={isSubmitting ? "none" : "auto"}>
+                  <Text style={styles.label}>Mã OTP 6 số</Text>
+                  <TextInput
+                    key="input-otp"
+                    style={[styles.input, error ? styles.inputError : null]}
+                    value={otp}
+                    onChangeText={(text) => {
+                      setError("");
+                      setOtp(text.replace(/\D/g, "").slice(0, 6));
+                    }}
+                    keyboardType="number-pad"
+                    autoCapitalize="none"
+                    maxLength={6}
+                    placeholder="******"
+                    placeholderTextColor={theme.muted}
+                    editable={!isSubmitting}
+                  />
+                  {secondsUntilResend > 0 ? (
+                    <Text style={styles.resendText}>
+                      Gửi lại mã sau {secondsUntilResend}s
+                    </Text>
+                  ) : null}
+                </View>
+              )}
+
+              {/* STEP 3: RESET NEW PASSWORD */}
+              {step === "reset" && (
+                <View key="step-reset" pointerEvents={isSubmitting ? "none" : "auto"}>
+                  <Text style={styles.label}>{t("auth.newPassword") || "Mật khẩu mới"}</Text>
+                  <TextInput
+                    key="input-new-password"
+                    ref={newPasswordRef}
+                    style={[styles.input, error ? styles.inputError : null]}
+                    value={newPassword}
+                    onChangeText={(text) => {
+                      setError("");
+                      setNewPassword(text);
+                    }}
+                    secureTextEntry
+                    autoCapitalize="none"
+                    placeholder="Nhập mật khẩu mới (tối thiểu 6 ký tự)"
+                    placeholderTextColor={theme.muted}
+                    editable={!isSubmitting}
+                  />
+
+                  <Text style={styles.label}>{t("auth.confirmPassword") || "Xác nhận mật khẩu mới"}</Text>
+                  <TextInput
+                    key="input-confirm-password"
+                    style={[styles.input, error ? styles.inputError : null]}
+                    value={confirmPassword}
+                    onChangeText={(text) => {
+                      setError("");
+                      setConfirmPassword(text);
+                    }}
+                    secureTextEntry
+                    autoCapitalize="none"
+                    placeholder="Nhập lại mật khẩu mới"
+                    placeholderTextColor={theme.muted}
+                    editable={!isSubmitting}
+                  />
+                </View>
+              )}
 
               {error ? (
-                <Text accessibilityLiveRegion="polite" style={styles.errorText}>{error}</Text>
+                <Text accessibilityLiveRegion="polite" style={styles.errorText}>
+                  {error}
+                </Text>
               ) : null}
 
               <AppButton
@@ -217,7 +278,11 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
                 icon={step === "reset" ? "lock-closed-outline" : "send-outline"}
                 style={styles.button}
               >
-                {step === "request" ? "Gửi mã OTP" : step === "verify" ? "Xác minh OTP" : "Đặt lại mật khẩu"}
+                {step === "request"
+                  ? "Gửi mã OTP"
+                  : step === "verify"
+                  ? "Xác minh OTP"
+                  : "🔒 Đặt lại mật khẩu"}
               </AppButton>
             </View>
           </ScrollView>
@@ -227,43 +292,45 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
   );
 }
 
-const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: theme.overlay, justifyContent: "flex-end" },
-  keyboard: { flex: 1, justifyContent: "flex-end" },
-  formScroll: { flex: 1, flexShrink: 1 },
-  scroll: { flexGrow: 1, justifyContent: "flex-end" },
-  box: {
-    backgroundColor: theme.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 22,
-    paddingTop: 22,
-    paddingBottom: 32,
-  },
-  header: { flexDirection: "row", justifyContent: "space-between", gap: 14, marginBottom: 18 },
-  headerText: { flex: 1 },
-  title: { fontSize: 22, fontWeight: "900", color: theme.text },
-  subtitle: { color: theme.muted, fontSize: 13, marginTop: 5, lineHeight: 20 },
-  closeButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: theme.surfaceElevated,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  label: { fontSize: 13, color: theme.muted, marginBottom: 8, marginTop: 10, fontWeight: "700" },
-  input: {
-    height: 48,
-    backgroundColor: theme.surfaceElevated,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    borderWidth: 1,
-    borderColor: theme.border,
-    color: theme.text,
-    fontSize: 14,
-  },
-  inputError: { borderColor: theme.danger, backgroundColor: theme.warningSoft },
-  errorText: { color: theme.danger, fontSize: 12, fontWeight: "600", marginTop: 6 },
-  button: { marginTop: 22 },
-});
+const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) =>
+  StyleSheet.create({
+    overlay: { flex: 1, backgroundColor: theme.overlay, justifyContent: "flex-end" },
+    keyboard: { flex: 1, justifyContent: "flex-end" },
+    formScroll: { flex: 1, flexShrink: 1 },
+    scroll: { flexGrow: 1, justifyContent: "flex-end" },
+    box: {
+      backgroundColor: theme.surface,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      paddingHorizontal: 22,
+      paddingTop: 22,
+      paddingBottom: 32,
+    },
+    header: { flexDirection: "row", justifyContent: "space-between", gap: 14, marginBottom: 18 },
+    headerText: { flex: 1 },
+    title: { fontSize: 22, fontWeight: "900", color: theme.text },
+    subtitle: { color: theme.muted, fontSize: 13, marginTop: 5, lineHeight: 20 },
+    closeButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: theme.surfaceElevated,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    label: { fontSize: 13, color: theme.muted, marginBottom: 8, marginTop: 12, fontWeight: "700" },
+    input: {
+      height: 48,
+      backgroundColor: theme.surfaceElevated,
+      borderRadius: 10,
+      paddingHorizontal: 14,
+      borderWidth: 1,
+      borderColor: theme.border,
+      color: theme.text,
+      fontSize: 14,
+    },
+    inputError: { borderColor: theme.danger, backgroundColor: theme.warningSoft },
+    resendText: { fontSize: 12, color: theme.primary, fontWeight: "700", marginTop: 6, textAlign: "right" },
+    errorText: { color: theme.danger, fontSize: 12, fontWeight: "600", marginTop: 6 },
+    button: { marginTop: 22 },
+  });
