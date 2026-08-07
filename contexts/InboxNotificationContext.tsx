@@ -24,6 +24,9 @@ export function InboxNotificationProvider({ children }: PropsWithChildren) {
       const [items, count] = await Promise.all([notificationApi.list(), notificationApi.unreadCount()]);
       setNotifications(items);
       setUnreadCount(count);
+    } catch {
+      setNotifications([]);
+      setUnreadCount(0);
     } finally {
       setLoading(false);
     }

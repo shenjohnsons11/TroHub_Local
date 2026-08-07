@@ -78,8 +78,8 @@ export function NotificationBell() {
     try {
       const response = await fetchAPI("/notifications");
       setNotifications((response.data || []).map(mapNotification));
-    } catch (error) {
-      console.error("Lỗi tải thông báo chuông:", error);
+    } catch {
+      setNotifications([]);
     }
   };
 
