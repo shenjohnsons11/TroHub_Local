@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { FlatList, StyleSheet, View, Pressable, ActivityIndicator } from "react-native";
+import { FlatList, StyleSheet, View, Pressable } from "react-native";
 import { AppText } from "@/components/ui/typography";
 import Card from "../components/Card";
 import { useAppTheme } from "../contexts/ThemeContext";
@@ -12,6 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import GradientHero from "../components/ui/GradientHero";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
 import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
+import { ContentSkeleton } from "../components/ui/content-skeleton";
 import { calculateUnpaidTotal } from "../utils/invoicePresentation";
 import { formatCurrency } from "../utils/formatters";
 import { useLanguage } from "../contexts/LanguageContext";
@@ -87,11 +88,7 @@ export default function InvoiceScreen({ params }: Props) {
   };
 
   if (isLoading) {
-    return (
-      <View style={styles.loadingBox}>
-        <ActivityIndicator size="large" color={theme.primary} />
-      </View>
-    );
+    return <ContentSkeleton rows={3} />;
   }
 
   return (

@@ -7,7 +7,7 @@ import { apiClient } from "../services/apiClient";
 import { authService } from "../services/authService";
 import { useAppTheme } from "../contexts/ThemeContext";
 import { useNotification } from "../hooks/useNotification";
-import AppLoadingScreen from "../components/AppLoadingScreen";
+import { ContentSkeleton } from "../components/ui/content-skeleton";
 import AppButton from "../components/ui/AppButton";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
 import GradientHero from "../components/ui/GradientHero";
@@ -100,7 +100,7 @@ export default function AdminRoomsScreen({ params }: Props) {
     return matchesStatus && (selectedFloor === "all" || (room.floor || 1) === selectedFloor);
   });
   const roomsByFloor = useMemo(() => floors.filter((value) => selectedFloor === "all" || value === selectedFloor).map((value) => ({ floor: value, rooms: filteredRooms.filter((room) => (room.floor || 1) === value) })).filter((group) => group.rooms.length), [floors, filteredRooms, selectedFloor]);
-  if (loading) return <AppLoadingScreen />;
+  if (loading) return <ContentSkeleton rows={4} />;
 
   const inputStyle = [styles.input, { backgroundColor: theme.background, color: theme.text }];
   return (
