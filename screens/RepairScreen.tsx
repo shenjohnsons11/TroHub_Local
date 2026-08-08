@@ -1,15 +1,6 @@
 import React, { useEffect, useState } from "react";
-import {
-  FlatList,
-  ScrollView,
-  Text,
-  StyleSheet,
-  TextInput,
-  Pressable,
-  View,
-  ActivityIndicator,
-  Image,
-} from "react-native";
+import { FlatList, ScrollView, StyleSheet, Pressable, View, ActivityIndicator, Image } from "react-native";
+import { AppText, AppTextInput } from "@/components/ui/typography";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import Card from "../components/Card";
@@ -256,18 +247,18 @@ export default function RepairScreen() {
       keyboardShouldPersistTaps="handled"
       ListHeaderComponent={
       <>
-      <Text style={styles.title}>{t("tenantRepair.title")}</Text>
-      <Text style={styles.subtitle}>
+      <AppText style={styles.title}>{t("tenantRepair.title")}</AppText>
+      <AppText style={styles.subtitle}>
         {t("tenantRepair.subtitle")}
-      </Text>
+      </AppText>
 
       <AnimatedEntry>
       <Card style={styles.formCard}>
-        <Text style={styles.sectionTitle}>{t("tenantRepair.new")}</Text>
+        <AppText style={styles.sectionTitle}>{t("tenantRepair.new")}</AppText>
 
-        <Text style={styles.label}>{t("tenantRepair.room")}</Text>
+        <AppText style={styles.label}>{t("tenantRepair.room")}</AppText>
         {rooms.length <= 1 ? (
-          <TextInput style={styles.inputDisabled} value={selectedRoom} editable={false} />
+          <AppTextInput style={styles.inputDisabled} value={selectedRoom} editable={false} />
         ) : (
           <View style={styles.roomSelectRow}>
             {rooms.map((roomCode) => {
@@ -279,22 +270,22 @@ export default function RepairScreen() {
                   style={[styles.roomButton, active && styles.roomActive]}
                   onPress={() => setSelectedRoom(roomCode)}
                 >
-                  <Text
+                  <AppText
                     style={[
                       styles.roomText,
                       active && styles.roomTextActive,
                     ]}
                   >
                     {t("tenantRepair.room", { roomCode })}
-                  </Text>
+                  </AppText>
                 </Pressable>
               );
             })}
           </View>
         )}
 
-        <Text style={styles.label}>{t("tenantRepair.type")}</Text>
-        <TextInput
+        <AppText style={styles.label}>{t("tenantRepair.type")}</AppText>
+        <AppTextInput
           style={[styles.input, typeError ? styles.inputError : null]}
           value={type}
           onChangeText={(value) => {
@@ -304,10 +295,10 @@ export default function RepairScreen() {
           placeholder={t("tenantRepair.typePlaceholder")}
           placeholderTextColor={theme.muted}
         />
-        {typeError ? <Text style={styles.errorText}>{typeError}</Text> : null}
+        {typeError ? <AppText style={styles.errorText}>{typeError}</AppText> : null}
 
-        <Text style={styles.label}>{t("tenantRepair.description")}</Text>
-        <TextInput
+        <AppText style={styles.label}>{t("tenantRepair.description")}</AppText>
+        <AppTextInput
           style={[
             styles.input,
             styles.textArea,
@@ -323,13 +314,13 @@ export default function RepairScreen() {
           multiline
         />
         {descriptionError ? (
-          <Text style={styles.errorText}>{descriptionError}</Text>
+          <AppText style={styles.errorText}>{descriptionError}</AppText>
         ) : null}
 
         <Pressable style={styles.uploadBox} onPress={pickImage}>
           <View style={styles.uploadIcon}><Ionicons name="images-outline" size={25} color={theme.primary} /></View>
-          <Text style={styles.uploadText}>{t("tenantRepair.upload")}</Text>
-          <Text style={styles.uploadHint}>{t("tenantRepair.uploadHint", { count: images.length })}</Text>
+          <AppText style={styles.uploadText}>{t("tenantRepair.upload")}</AppText>
+          <AppText style={styles.uploadHint}>{t("tenantRepair.uploadHint", { count: images.length })}</AppText>
         </Pressable>
 
         {images.length > 0 && (
@@ -343,7 +334,7 @@ export default function RepairScreen() {
                   style={styles.removeImageBtn}
                   onPress={() => setImages(prev => prev.filter((_, i) => i !== idx))}
                 >
-                  <Text style={styles.removeImageText}>×</Text>
+                  <AppText style={styles.removeImageText}>×</AppText>
                 </Pressable>
               </View>
             ))}
@@ -352,20 +343,20 @@ export default function RepairScreen() {
 
         <Pressable style={styles.submitButton} onPress={handleSubmit}>
           <Ionicons name="paper-plane-outline" size={18} color={theme.background} />
-          <Text style={styles.submitText}>{t("tenantRepair.submit")}</Text>
+          <AppText style={styles.submitText}>{t("tenantRepair.submit")}</AppText>
         </Pressable>
       </Card>
       </AnimatedEntry>
 
-      <Text style={styles.historyTitle}>{t("tenantRepair.history")}</Text>
+      <AppText style={styles.historyTitle}>{t("tenantRepair.history")}</AppText>
 
       {/* Hành động hàng loạt */}
       {selectedIds.length > 0 && (
         <View style={styles.bulkActionContainer}>
-          <Text style={styles.bulkText}>{t("tenantRepair.selected", { count: selectedIds.length })}</Text>
+          <AppText style={styles.bulkText}>{t("tenantRepair.selected", { count: selectedIds.length })}</AppText>
           <Pressable style={styles.bulkDeleteButton} onPress={handleBulkDelete}>
             <Ionicons name="trash-outline" size={16} color="#FFF" />
-            <Text style={styles.bulkDeleteText}>{t("tenantRepair.deleteAll")}</Text>
+            <AppText style={styles.bulkDeleteText}>{t("tenantRepair.deleteAll")}</AppText>
           </Pressable>
         </View>
       )}
@@ -384,7 +375,7 @@ export default function RepairScreen() {
             size={22} 
             color={selectedIds.length === requests.length ? theme.primary : theme.muted}
           />
-          <Text style={styles.selectAllText}>{t("tenantRepair.selectAll")}</Text>
+          <AppText style={styles.selectAllText}>{t("tenantRepair.selectAll")}</AppText>
         </Pressable>
       )}
       </>
@@ -427,22 +418,22 @@ export default function RepairScreen() {
                     />
                   </Pressable>
                   <View>
-                    <Text style={styles.requestTitle}>{item.type}</Text>
-                <Text style={styles.requestDate}>
+                    <AppText style={styles.requestTitle}>{item.type}</AppText>
+                <AppText style={styles.requestDate}>
                   {t("tenantRepair.roomDate", { room: item.room, date: item.createdAt })}
-                </Text>
+                </AppText>
                   </View>
                 </View>
 
               <View style={[styles.statusBadge, getStatusStyle(item.status)]}>
                 <Ionicons name="ellipse" size={8} color={theme.primary} />
-                <Text style={styles.statusText}>
+                <AppText style={styles.statusText}>
                   {getStatusText(item.status)}
-                </Text>
+                </AppText>
               </View>
             </View>
 
-            <Text style={styles.requestDesc}>{item.description}</Text>
+            <AppText style={styles.requestDesc}>{item.description}</AppText>
 
             {item.images && item.images.length > 0 && (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.historyImagesContainer}>
@@ -456,12 +447,12 @@ export default function RepairScreen() {
               <View
                 style={[styles.priorityBadge, getPriorityStyle(item.priority)]}
               >
-                <Text style={styles.priorityBadgeText}>{item.priority}</Text>
+                <AppText style={styles.priorityBadgeText}>{item.priority}</AppText>
               </View>
 
               <Pressable onPress={() => handleDelete(item.id)} style={styles.deleteButton}>
                 <Ionicons name="trash-outline" size={17} color={theme.danger} />
-                <Text style={styles.deleteText}>{t("common.delete")}</Text>
+                <AppText style={styles.deleteText}>{t("common.delete")}</AppText>
               </Pressable>
             </View>
             </Card>

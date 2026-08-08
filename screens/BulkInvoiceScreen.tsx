@@ -1,15 +1,6 @@
 import React, { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, View } from "react-native";
+import { AppText, AppTextInput } from "@/components/ui/typography";
 import { Ionicons } from "@expo/vector-icons";
 import { invoiceService } from "../services/invoiceService";
 import { useNotification } from "../hooks/useNotification";
@@ -165,7 +156,7 @@ export default function BulkInvoiceScreen({ onNavigate, params }: { onNavigate: 
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={theme.primary} />
-        <Text style={styles.loadingText}>Đang chuẩn bị kỳ hóa đơn...</Text>
+        <AppText style={styles.loadingText}>Đang chuẩn bị kỳ hóa đơn...</AppText>
       </View>
     );
   }
@@ -177,8 +168,8 @@ export default function BulkInvoiceScreen({ onNavigate, params }: { onNavigate: 
           <Ionicons name="arrow-back" size={22} color={theme.text} />
         </Pressable>
         <View style={styles.headerCopy}>
-          <Text accessibilityRole="header" style={styles.title}>Lập hóa đơn hàng loạt</Text>
-          <Text style={styles.headerSubtitle}>Kỳ hiện tại đã được hệ thống chuẩn bị.</Text>
+          <AppText accessibilityRole="header" style={styles.title}>Lập hóa đơn hàng loạt</AppText>
+          <AppText style={styles.headerSubtitle}>Kỳ hiện tại đã được hệ thống chuẩn bị.</AppText>
         </View>
         <Pressable
           accessibilityLabel={allSelected ? "Bỏ chọn tất cả phòng" : "Chọn tất cả phòng"}
@@ -211,8 +202,8 @@ export default function BulkInvoiceScreen({ onNavigate, params }: { onNavigate: 
               />
             </AnimatedEntry>
             <View style={styles.sectionHeading}>
-              <Text style={styles.sectionTitle}>Chốt điện & nước</Text>
-              <Text style={styles.sectionSubtitle}>Nhập chỉ số mới cho từng phòng được chọn.</Text>
+              <AppText style={styles.sectionTitle}>Chốt điện & nước</AppText>
+              <AppText style={styles.sectionSubtitle}>Nhập chỉ số mới cho từng phòng được chọn.</AppText>
             </View>
           </View>
         }
@@ -240,19 +231,19 @@ export default function BulkInvoiceScreen({ onNavigate, params }: { onNavigate: 
                       <Ionicons name={item.selected ? "checkbox" : "square-outline"} size={23} color={item.selected ? theme.primary : theme.muted} />
                     </View>
                     <View>
-                      <Text style={styles.roomText}>Phòng {item.room}</Text>
-                      <Text style={styles.tenantText}>{item.tenant}</Text>
+                      <AppText style={styles.roomText}>Phòng {item.room}</AppText>
+                      <AppText style={styles.tenantText}>{item.tenant}</AppText>
                     </View>
                   </Pressable>
                 </View>
 
-                <Text style={styles.totalValue}>{formatCurrency(total)}</Text>
-                <Text style={styles.totalLabel}>Tổng dự kiến</Text>
+                <AppText style={styles.totalValue}>{formatCurrency(total)}</AppText>
+                <AppText style={styles.totalLabel}>Tổng dự kiến</AppText>
 
                 <View style={styles.tintedSection}>
                   <View style={styles.inputRow}>
                     <InvoiceField label="Tiền phòng" iconColor={theme.primary} styles={styles}>
-                      <TextInput
+                      <AppTextInput
                         style={styles.input}
                         placeholder="Tiền phòng"
                         placeholderTextColor={theme.muted}
@@ -262,7 +253,7 @@ export default function BulkInvoiceScreen({ onNavigate, params }: { onNavigate: 
                       />
                     </InvoiceField>
                     <InvoiceField label="Phí dịch vụ" iconColor={theme.primary} styles={styles}>
-                      <TextInput
+                      <AppTextInput
                         style={styles.input}
                         placeholder="Dịch vụ"
                         placeholderTextColor={theme.muted}
@@ -273,9 +264,9 @@ export default function BulkInvoiceScreen({ onNavigate, params }: { onNavigate: 
                     </InvoiceField>
                   </View>
                   <View style={styles.inputRow}>
-                    <InvoiceField label={`Điện cũ · ${formatNumberInput(item.electricityOld) || "0"}`} icon="flash-outline" iconColor={theme.primary} styles={styles} accessory={<Pressable accessibilityRole="button" accessibilityLabel={`Quét đồng hồ điện phòng ${item.room}`} disabled={!item.selected || submitting || item.electricityPrice <= 0} onPress={() => setScanTarget({ index, roomCode: item.room, meterType: "electricity" })} style={styles.scanInline}><Ionicons name="camera-outline" size={14} color={theme.primary} /><Text style={styles.scanInlineText}>Quét</Text></Pressable>}>
+                    <InvoiceField label={`Điện cũ · ${formatNumberInput(item.electricityOld) || "0"}`} icon="flash-outline" iconColor={theme.primary} styles={styles} accessory={<Pressable accessibilityRole="button" accessibilityLabel={`Quét đồng hồ điện phòng ${item.room}`} disabled={!item.selected || submitting || item.electricityPrice <= 0} onPress={() => setScanTarget({ index, roomCode: item.room, meterType: "electricity" })} style={styles.scanInline}><Ionicons name="camera-outline" size={14} color={theme.primary} /><AppText style={styles.scanInlineText}>Quét</AppText></Pressable>}>
                       {item.electricityPrice > 0 ? (
-                        <TextInput
+                        <AppTextInput
                           style={styles.input}
                           placeholder="Điện mới"
                           placeholderTextColor={theme.muted}
@@ -284,12 +275,12 @@ export default function BulkInvoiceScreen({ onNavigate, params }: { onNavigate: 
                           onChangeText={(value) => handleInputChange(index, "electricityNew", value)}
                         />
                       ) : (
-                        <Text style={styles.noMeterText}>Không tính theo khối</Text>
+                        <AppText style={styles.noMeterText}>Không tính theo khối</AppText>
                       )}
                     </InvoiceField>
-                    <InvoiceField label={`Nước cũ · ${formatNumberInput(item.waterOld) || "0"}`} icon="water-outline" iconColor={theme.primary} styles={styles} accessory={<Pressable accessibilityRole="button" accessibilityLabel={`Quét đồng hồ nước phòng ${item.room}`} disabled={!item.selected || submitting || item.waterPrice <= 0} onPress={() => setScanTarget({ index, roomCode: item.room, meterType: "water" })} style={styles.scanInline}><Ionicons name="camera-outline" size={14} color={theme.primary} /><Text style={styles.scanInlineText}>Quét</Text></Pressable>}>
+                    <InvoiceField label={`Nước cũ · ${formatNumberInput(item.waterOld) || "0"}`} icon="water-outline" iconColor={theme.primary} styles={styles} accessory={<Pressable accessibilityRole="button" accessibilityLabel={`Quét đồng hồ nước phòng ${item.room}`} disabled={!item.selected || submitting || item.waterPrice <= 0} onPress={() => setScanTarget({ index, roomCode: item.room, meterType: "water" })} style={styles.scanInline}><Ionicons name="camera-outline" size={14} color={theme.primary} /><AppText style={styles.scanInlineText}>Quét</AppText></Pressable>}>
                       {item.waterPrice > 0 ? (
-                        <TextInput
+                        <AppTextInput
                           style={styles.input}
                           placeholder="Nước mới"
                           placeholderTextColor={theme.muted}
@@ -298,7 +289,7 @@ export default function BulkInvoiceScreen({ onNavigate, params }: { onNavigate: 
                           onChangeText={(value) => handleInputChange(index, "waterNew", value)}
                         />
                       ) : (
-                        <Text style={styles.noMeterText}>Không tính theo khối</Text>
+                        <AppText style={styles.noMeterText}>Không tính theo khối</AppText>
                       )}
                     </InvoiceField>
                   </View>
@@ -340,7 +331,7 @@ function InvoiceField({ label, icon, iconColor, children, styles, accessory }: {
     <View style={styles.inputGroup}>
       <View style={styles.inputLabelRow}>
         {icon ? <Ionicons name={icon} size={15} color={iconColor} /> : null}
-        <Text style={styles.inputLabel}>{label}</Text>
+        <AppText style={styles.inputLabel}>{label}</AppText>
         {accessory}
       </View>
       {children}

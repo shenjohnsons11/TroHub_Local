@@ -1,17 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import {
-  AccessibilityInfo,
-  ActivityIndicator,
-  findNodeHandle,
-  Image,
-  Linking,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { AccessibilityInfo, ActivityIndicator, findNodeHandle, Image, Linking, Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { AppText } from "@/components/ui/typography";
 import { WebView } from "react-native-webview";
 import { invoiceService } from "../services/invoiceService";
 import { Invoice } from "../types/Invoice";
@@ -74,7 +63,7 @@ export default function PaymentModal({
   const [vnpayUrl, setVnpayUrl] = useState<string | null>(null);
   const [isCreatingVNPay, setIsCreatingVNPay] = useState(false);
   const [vnpayError, setVnpayError] = useState("");
-  const titleRef = useRef<Text>(null);
+  const titleRef = useRef<React.ElementRef<typeof AppText>>(null);
   const paymentBusy = isCreatingQR || isCreatingVNPay || isChecking;
   const handleClose = () => {
     if (paymentBusy) return;
@@ -295,18 +284,18 @@ export default function PaymentModal({
         <View style={styles.box} accessibilityViewIsModal>
           <View style={styles.header}>
             <View>
-              <Text
+              <AppText
                 ref={titleRef}
                 style={styles.title}
                 accessibilityRole="header"
                 accessibilityLiveRegion="polite"
               >
                 Thanh toán
-              </Text>
-              <Text style={styles.subtitle}>
+              </AppText>
+              <AppText style={styles.subtitle}>
                 Hóa đơn tháng {currentInvoice.month} • Phòng{" "}
                 {currentInvoice.room}
-              </Text>
+              </AppText>
             </View>
 
             <Pressable
@@ -326,8 +315,8 @@ export default function PaymentModal({
             showsVerticalScrollIndicator={false}
           >
           <View style={styles.amountBox}>
-            <Text style={styles.amountLabel}>Tổng tiền thanh toán</Text>
-            <Text style={styles.amount}>{currentInvoice.amount}</Text>
+            <AppText style={styles.amountLabel}>Tổng tiền thanh toán</AppText>
+            <AppText style={styles.amount}>{currentInvoice.amount}</AppText>
           </View>
 
           <View style={styles.methodRow}>
@@ -345,14 +334,14 @@ export default function PaymentModal({
                 size={17}
                 color={method === "vnpay" ? theme.background : theme.muted}
               />
-              <Text
+              <AppText
                 style={[
                   styles.methodText,
                   method === "vnpay" && styles.methodTextActive,
                 ]}
               >
                 VNPay
-              </Text>
+              </AppText>
             </Pressable>
 
             <Pressable
@@ -369,14 +358,14 @@ export default function PaymentModal({
                 size={17}
                 color={method === "bank" ? theme.background : theme.muted}
               />
-              <Text
+              <AppText
                 style={[
                   styles.methodText,
                   method === "bank" && styles.methodTextActive,
                 ]}
               >
                 QR ngân hàng
-              </Text>
+              </AppText>
             </Pressable>
 
             <Pressable
@@ -393,14 +382,14 @@ export default function PaymentModal({
                 size={17}
                 color={method === "zalopay" ? theme.background : theme.muted}
               />
-              <Text
+              <AppText
                 style={[
                   styles.methodText,
                   method === "zalopay" && styles.methodTextActive,
                 ]}
               >
                 ZaloPay
-              </Text>
+              </AppText>
             </Pressable>
           </View>
 
@@ -409,14 +398,14 @@ export default function PaymentModal({
               {isCreatingQR ? (
                 <View style={styles.loadingQRBox}>
                   <ActivityIndicator size="large" color={theme.primary} />
-                  <Text style={styles.loadingText}>Đang tạo mã VietQR...</Text>
+                  <AppText style={styles.loadingText}>Đang tạo mã VietQR...</AppText>
                 </View>
               ) : errorMessage ? (
                 <View style={styles.warningBox}>
-                  <Text style={styles.warningTitle}>
+                  <AppText style={styles.warningTitle}>
                     Không tạo được mã thanh toán
-                  </Text>
-                  <Text style={styles.warningText}>{errorMessage}</Text>
+                  </AppText>
+                  <AppText style={styles.warningText}>{errorMessage}</AppText>
 
                   <AppButton icon="refresh-outline" onPress={createVietQRPayment}>
                     Tạo lại mã QR
@@ -433,39 +422,39 @@ export default function PaymentModal({
                   </View>
 
                   <View style={styles.bankInfoBox}>
-                    <Text style={styles.bankInfo}>
+                    <AppText style={styles.bankInfo}>
                       Ngân hàng: {bankInfo.bankId.toUpperCase()}
-                    </Text>
+                    </AppText>
 
-                    <Text style={styles.bankInfo}>
+                    <AppText style={styles.bankInfo}>
                       STK: {bankInfo.bankAccountNo}
-                    </Text>
+                    </AppText>
 
-                    <Text style={styles.bankInfo}>
+                    <AppText style={styles.bankInfo}>
                       Chủ TK: {bankInfo.bankAccountName}
-                    </Text>
+                    </AppText>
 
-                    <Text style={styles.note}>
+                    <AppText style={styles.note}>
                       Nội dung CK: {paymentData.description}
-                    </Text>
+                    </AppText>
 
-                    <Text style={styles.transactionText}>
+                    <AppText style={styles.transactionText}>
                       Mã GD: {paymentData.transactionId}
-                    </Text>
+                    </AppText>
 
-                    <Text style={styles.pendingText}>
+                    <AppText style={styles.pendingText}>
                       Trạng thái: Đang chờ thanh toán
-                    </Text>
+                    </AppText>
                   </View>
                 </>
               ) : (
                 <View style={styles.warningBox}>
-                  <Text style={styles.warningTitle}>
+                  <AppText style={styles.warningTitle}>
                     Chưa có mã thanh toán
-                  </Text>
-                  <Text style={styles.warningText}>
+                  </AppText>
+                  <AppText style={styles.warningText}>
                     Vui lòng bấm tạo lại mã QR.
-                  </Text>
+                  </AppText>
 
                   <AppButton icon="qr-code-outline" onPress={createVietQRPayment}>
                     Tạo mã QR
@@ -480,12 +469,12 @@ export default function PaymentModal({
               {isCreatingVNPay ? (
                 <View style={styles.loadingQRBox}>
                   <ActivityIndicator size="large" color={theme.primary} />
-                  <Text style={styles.loadingText}>Đang tạo liên kết VNPay...</Text>
+                  <AppText style={styles.loadingText}>Đang tạo liên kết VNPay...</AppText>
                 </View>
               ) : vnpayError ? (
                 <View style={styles.warningBox}>
-                  <Text style={styles.warningTitle}>Không tạo được liên kết VNPay</Text>
-                  <Text style={styles.warningText}>{vnpayError}</Text>
+                  <AppText style={styles.warningTitle}>Không tạo được liên kết VNPay</AppText>
+                  <AppText style={styles.warningText}>{vnpayError}</AppText>
                   <AppButton icon="refresh-outline" onPress={createVNPayPayment}>
                     Thử lại
                   </AppButton>
@@ -503,7 +492,7 @@ export default function PaymentModal({
                 </View>
               ) : (
                 <View style={styles.warningBox}>
-                  <Text style={styles.warningTitle}>Chưa có liên kết thanh toán</Text>
+                  <AppText style={styles.warningTitle}>Chưa có liên kết thanh toán</AppText>
                   <AppButton icon="link-outline" onPress={createVNPayPayment}>
                     Tạo liên kết VNPay
                   </AppButton>
@@ -514,10 +503,10 @@ export default function PaymentModal({
 
           {method === "zalopay" && (
             <View style={styles.infoBox}>
-              <Text style={styles.infoTitle}>Thanh toán qua ZaloPay</Text>
-              <Text style={styles.infoDesc}>
+              <AppText style={styles.infoTitle}>Thanh toán qua ZaloPay</AppText>
+              <AppText style={styles.infoDesc}>
                 Chức năng ZaloPay sẽ được tích hợp sau.
-              </Text>
+              </AppText>
             </View>
           )}
           </ScrollView>

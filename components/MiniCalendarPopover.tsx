@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, StyleSheet, View } from "react-native";
+import { AppText } from "@/components/ui/typography";
 import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "../contexts/ThemeContext";
 import { getFormattedDateWidget } from "../utils/dateHelpers";
@@ -48,9 +49,9 @@ export default function MiniCalendarPopover() {
         ]}
       >
         <Ionicons name="calendar-outline" size={13} color={theme.primary} />
-        <Text style={[styles.pillText, { color: theme.primary }]}>
+        <AppText style={[styles.pillText, { color: theme.primary }]}>
           {getFormattedDateWidget(locale)}
-        </Text>
+        </AppText>
       </Pressable>
 
       {/* Modal Dropdown */}
@@ -73,9 +74,9 @@ export default function MiniCalendarPopover() {
           >
             {/* Header */}
             <View style={styles.header}>
-              <Text style={[styles.monthLabel, { color: theme.text }]}>
+              <AppText style={[styles.monthLabel, { color: theme.text }]}>
                 {monthLabel}
-              </Text>
+              </AppText>
               <View style={styles.navRow}>
                 <Pressable
                   accessibilityRole="button"
@@ -97,7 +98,7 @@ export default function MiniCalendarPopover() {
             {/* Weekdays Row */}
             <View style={styles.weekRow}>
               {DAYS_OF_WEEK[language].map((d, idx) => (
-                <Text
+                <AppText
                   key={d}
                   style={[
                     styles.weekCell,
@@ -105,7 +106,7 @@ export default function MiniCalendarPopover() {
                   ]}
                 >
                   {d}
-                </Text>
+                </AppText>
               ))}
             </View>
 
@@ -133,14 +134,14 @@ export default function MiniCalendarPopover() {
                         isToday && { backgroundColor: theme.primary },
                       ]}
                     >
-                      <Text
+                      <AppText
                         style={[
                           styles.dayText,
                           { color: isToday ? "#ffffff" : theme.text },
                         ]}
                       >
                         {dayNum}
-                      </Text>
+                      </AppText>
                     </View>
 
                     {/* Dot Indicator */}
@@ -163,15 +164,15 @@ export default function MiniCalendarPopover() {
             <View style={[styles.legendRow, { borderTopColor: theme.border }]}>
               <View style={styles.legendItem}>
                 <View style={[styles.legendDot, { backgroundColor: theme.primary }]} />
-                <Text style={[styles.legendText, { color: theme.muted }]}>{language === "en" ? "Today" : "Hôm nay"}</Text>
+                <AppText style={[styles.legendText, { color: theme.muted }]}>{language === "en" ? "Today" : "Hôm nay"}</AppText>
               </View>
               <View style={styles.legendItem}>
                 <View style={[styles.legendDot, { backgroundColor: "#f59e0b" }]} />
-                <Text style={[styles.legendText, { color: theme.muted }]}>{language === "en" ? "Invoice due" : "Hạn hóa đơn"}</Text>
+                <AppText style={[styles.legendText, { color: theme.muted }]}>{language === "en" ? "Invoice due" : "Hạn hóa đơn"}</AppText>
               </View>
               <View style={styles.legendItem}>
                 <View style={[styles.legendDot, { backgroundColor: "#6366f1" }]} />
-                <Text style={[styles.legendText, { color: theme.muted }]}>{language === "en" ? "Contract due" : "Hạn hợp đồng"}</Text>
+                <AppText style={[styles.legendText, { color: theme.muted }]}>{language === "en" ? "Contract due" : "Hạn hợp đồng"}</AppText>
               </View>
             </View>
 
@@ -181,7 +182,7 @@ export default function MiniCalendarPopover() {
               onPress={() => setModalVisible(false)}
               style={[styles.closeBtn, { backgroundColor: theme.surface }]}
             >
-              <Text style={[styles.closeBtnText, { color: theme.text }]}>{language === "en" ? "Close calendar" : "Đóng lịch"}</Text>
+              <AppText style={[styles.closeBtnText, { color: theme.text }]}>{language === "en" ? "Close calendar" : "Đóng lịch"}</AppText>
             </Pressable>
           </Pressable>
         </Pressable>

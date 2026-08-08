@@ -1,5 +1,6 @@
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { AppText } from "@/components/ui/typography";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useAppTheme } from "../../contexts/ThemeContext";
@@ -42,8 +43,8 @@ export default function IllustratedEmptyState({
           style={[styles.illustration, { left: positions[kind] }]}
         />
       </View>
-      <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
-      <Text style={[styles.description, { color: theme.muted }]}>{description}</Text>
+      <AppText style={[styles.title, { color: theme.text }]}>{title}</AppText>
+      <AppText style={[styles.description, { color: theme.muted }]}>{description}</AppText>
       {actionLabel && onAction ? (
         <AppButton icon={actionIcon} onPress={onAction} style={styles.action}>
           {actionLabel}

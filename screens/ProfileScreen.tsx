@@ -1,12 +1,6 @@
 import React, { useState } from "react";
-import {
-  ScrollView,
-  Text,
-  StyleSheet,
-  View,
-  TextInput,
-  Pressable,
-} from "react-native";
+import { ScrollView, StyleSheet, View, Pressable } from "react-native";
+import { AppText, AppTextInput } from "@/components/ui/typography";
 import Card from "../components/Card";
 import { UserProfile } from "../types/UserProfile";
 import { useAppTheme } from "../contexts/ThemeContext";
@@ -87,30 +81,30 @@ export default function ProfileScreen({ profile, onSave, onBack, onLogout }: Pro
     >
       <Pressable style={styles.backButton} onPress={onBack}>
         <Ionicons name="chevron-back" size={18} color={theme.primary} />
-        <Text style={styles.backText}>Quay lại</Text>
+        <AppText style={styles.backText}>Quay lại</AppText>
       </Pressable>
 
-      <Text style={styles.title}>Thông tin cá nhân</Text>
-      <Text style={styles.subtitle}>
+      <AppText style={styles.title}>Thông tin cá nhân</AppText>
+      <AppText style={styles.subtitle}>
         Xem và cập nhật thông tin người thuê phòng.
-      </Text>
+      </AppText>
 
       <Card style={[styles.card, styles.avatarCard]}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
+          <AppText style={styles.avatarText}>
             {fullName ? fullName.charAt(0).toUpperCase() : "A"}
-          </Text>
+          </AppText>
         </View>
 
-        <Text style={styles.name}>{fullName || "Người thuê"}</Text>
-        <Text style={styles.roomText}>Phòng {room}</Text>
+        <AppText style={styles.name}>{fullName || "Người thuê"}</AppText>
+        <AppText style={styles.roomText}>Phòng {room}</AppText>
       </Card>
 
       <Card style={[styles.card, styles.formCard]}>
-        <Text style={styles.sectionTitle}>Thông tin người thuê</Text>
+        <AppText style={styles.sectionTitle}>Thông tin người thuê</AppText>
 
-        <Text style={styles.label}>Họ và tên</Text>
-        <TextInput
+        <AppText style={styles.label}>Họ và tên</AppText>
+        <AppTextInput
           style={[styles.input, fullNameError ? styles.inputError : null]}
           value={fullName}
           onChangeText={(value) => {
@@ -121,12 +115,12 @@ export default function ProfileScreen({ profile, onSave, onBack, onLogout }: Pro
           placeholderTextColor={theme.muted}
         />
         {fullNameError ? (
-          <Text style={styles.errorText}>{fullNameError}</Text>
+          <AppText style={styles.errorText}>{fullNameError}</AppText>
         ) : null}
 
-        <Text style={styles.groupTitle}>Liên hệ</Text>
-        <Text style={styles.label}>Số điện thoại</Text>
-        <TextInput
+        <AppText style={styles.groupTitle}>Liên hệ</AppText>
+        <AppText style={styles.label}>Số điện thoại</AppText>
+        <AppTextInput
           style={[styles.input, phoneError ? styles.inputError : null]}
           value={phone}
           onChangeText={handlePhoneChange}
@@ -135,10 +129,10 @@ export default function ProfileScreen({ profile, onSave, onBack, onLogout }: Pro
           placeholder="Nhập số điện thoại"
           placeholderTextColor={theme.muted}
         />
-        {phoneError ? <Text style={styles.errorText}>{phoneError}</Text> : null}
+        {phoneError ? <AppText style={styles.errorText}>{phoneError}</AppText> : null}
 
-        <Text style={styles.label}>Email</Text>
-        <TextInput
+        <AppText style={styles.label}>Email</AppText>
+        <AppTextInput
           style={styles.input}
           value={email}
           onChangeText={setEmail}
@@ -148,8 +142,8 @@ export default function ProfileScreen({ profile, onSave, onBack, onLogout }: Pro
           placeholderTextColor={theme.muted}
         />
 
-        <Text style={styles.label}>CMND/CCCD</Text>
-        <TextInput
+        <AppText style={styles.label}>CMND/CCCD</AppText>
+        <AppTextInput
           style={styles.input}
           value={cccd}
           onChangeText={(value) => setCccd(formatCCCD(value))}
@@ -159,12 +153,12 @@ export default function ProfileScreen({ profile, onSave, onBack, onLogout }: Pro
           placeholderTextColor={theme.muted}
         />
 
-        <Text style={styles.groupTitle}>Thông tin thuê phòng</Text>
-        <Text style={styles.label}>Phòng</Text>
-        <TextInput style={styles.inputDisabled} value={room} editable={false} />
+        <AppText style={styles.groupTitle}>Thông tin thuê phòng</AppText>
+        <AppText style={styles.label}>Phòng</AppText>
+        <AppTextInput style={styles.inputDisabled} value={room} editable={false} />
 
-        <Text style={styles.label}>Ngày bắt đầu thuê</Text>
-        <TextInput
+        <AppText style={styles.label}>Ngày bắt đầu thuê</AppText>
+        <AppTextInput
           style={styles.inputDisabled}
           value={startDate}
           editable={false}

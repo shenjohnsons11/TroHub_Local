@@ -2,7 +2,8 @@ import { useEffect, useRef } from "react";
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from "expo-camera";
 import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
-import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { Modal, Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
+import { AppText } from "@/components/ui/typography";
 import { useTranslation } from "../contexts/LanguageContext";
 
 type Props = {
@@ -85,12 +86,12 @@ export default function CCCDScannerModal({ visible, onClose, onScan }: Props) {
           />
         ) : (
           <View style={styles.permission}>
-            <Text style={styles.message}>
+            <AppText style={styles.message}>
               {permission ? t("mobile.camera.idPermission") : t("mobile.camera.initializing")}
-            </Text>
+            </AppText>
             {permission ? (
               <Pressable accessibilityRole="button" style={styles.permissionButton} onPress={requestPermission}>
-                <Text style={styles.permissionText}>{t("mobile.camera.allow")}</Text>
+                <AppText style={styles.permissionText}>{t("mobile.camera.allow")}</AppText>
               </Pressable>
             ) : null}
           </View>
@@ -110,17 +111,17 @@ export default function CCCDScannerModal({ visible, onClose, onScan }: Props) {
               <View style={[styles.corner, styles.cornerBottomRight]} />
             </View>
 
-            <Text style={[styles.hint, { top: frameBottom + 20 }]}>
+            <AppText style={[styles.hint, { top: frameBottom + 20 }]}>
               {t("mobile.camera.idHint")}
-            </Text>
+            </AppText>
           </View>
         ) : null}
 
         <View style={styles.header}>
-          <Text style={styles.title}>{t("mobile.camera.idTitle")}</Text>
+          <AppText style={styles.title}>{t("mobile.camera.idTitle")}</AppText>
           <Pressable accessibilityRole="button" accessibilityLabel={t("mobile.camera.idClose")} onPress={onClose} style={styles.close}>
             <Ionicons name="close" size={20} color="#ffffff" />
-            <Text style={styles.closeText}>{t("common.close")}</Text>
+            <AppText style={styles.closeText}>{t("common.close")}</AppText>
           </Pressable>
         </View>
       </View>

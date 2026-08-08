@@ -1,17 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
-import {
-  AccessibilityInfo,
-  findNodeHandle,
-  Modal,
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-} from "react-native";
+import { AccessibilityInfo, findNodeHandle, Modal, View, Pressable, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { AppText, AppTextInput } from "@/components/ui/typography";
 import { authService } from "../services/authService";
 import { useAppTheme } from "../contexts/ThemeContext";
 import { useNotification } from "../hooks/useNotification";
@@ -36,7 +25,7 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
   const [confirmError, setConfirmError] = useState("");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const titleRef = useRef<Text>(null);
+  const titleRef = useRef<React.ElementRef<typeof AppText>>(null);
 
   useEffect(() => {
     if (!visible) return;
@@ -132,17 +121,17 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
         <View style={styles.box} accessibilityViewIsModal>
           <View style={styles.header}>
             <View style={styles.headerText}>
-              <Text
+              <AppText
                 ref={titleRef}
                 style={styles.title}
                 accessibilityRole="header"
                 accessibilityLiveRegion="polite"
               >
                 Đổi mật khẩu
-              </Text>
-              <Text style={styles.subtitle}>
+              </AppText>
+              <AppText style={styles.subtitle}>
                 Cập nhật mật khẩu đăng nhập tài khoản
-              </Text>
+              </AppText>
             </View>
 
             <Pressable
@@ -156,8 +145,8 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
             </Pressable>
           </View>
 
-          <Text style={styles.label}>Mật khẩu hiện tại</Text>
-          <TextInput
+          <AppText style={styles.label}>Mật khẩu hiện tại</AppText>
+          <AppTextInput
             style={[styles.input, oldError ? styles.inputError : null]}
             value={oldPassword}
             onChangeText={(value) => {
@@ -169,10 +158,10 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
             placeholderTextColor={theme.muted}
             editable={!isSubmitting}
           />
-          {oldError ? <Text style={styles.errorText}>{oldError}</Text> : null}
+          {oldError ? <AppText style={styles.errorText}>{oldError}</AppText> : null}
 
-          <Text style={styles.label}>Mật khẩu mới</Text>
-          <TextInput
+          <AppText style={styles.label}>Mật khẩu mới</AppText>
+          <AppTextInput
             style={[styles.input, newError ? styles.inputError : null]}
             value={newPassword}
             onChangeText={(value) => {
@@ -184,10 +173,10 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
             placeholderTextColor={theme.muted}
             editable={!isSubmitting}
           />
-          {newError ? <Text style={styles.errorText}>{newError}</Text> : null}
+          {newError ? <AppText style={styles.errorText}>{newError}</AppText> : null}
 
-          <Text style={styles.label}>Xác nhận mật khẩu mới</Text>
-          <TextInput
+          <AppText style={styles.label}>Xác nhận mật khẩu mới</AppText>
+          <AppTextInput
             style={[styles.input, confirmError ? styles.inputError : null]}
             value={confirmPassword}
             onChangeText={(value) => {
@@ -200,7 +189,7 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
             editable={!isSubmitting}
           />
           {confirmError ? (
-            <Text style={styles.errorText}>{confirmError}</Text>
+            <AppText style={styles.errorText}>{confirmError}</AppText>
           ) : null}
 
           <AppButton

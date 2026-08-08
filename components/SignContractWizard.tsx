@@ -1,14 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
-import {
-  AccessibilityInfo,
-  findNodeHandle,
-  View,
-  Text,
-  StyleSheet,
-  Modal,
-  Pressable,
-  ScrollView,
-} from "react-native";
+import { AccessibilityInfo, findNodeHandle, View, StyleSheet, Modal, Pressable, ScrollView } from "react-native";
+import { AppText } from "@/components/ui/typography";
 import { Ionicons } from "@expo/vector-icons";
 import { Contract } from "../types/Contract";
 import { useAppTheme } from "../contexts/ThemeContext";
@@ -35,7 +27,7 @@ export default function SignContractWizard({ visible, contract, onClose, onSign 
   const [currentStep, setCurrentStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [agreed, setAgreed] = useState(false);
-  const titleRef = useRef<Text>(null);
+  const titleRef = useRef<React.ElementRef<typeof AppText>>(null);
 
   useEffect(() => {
     if (!visible) return;
@@ -64,75 +56,75 @@ export default function SignContractWizard({ visible, contract, onClose, onSign 
       case 1:
         return (
           <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
-            <Text style={styles.sectionTitle}>Thông tin Phòng & Tiền thuê</Text>
+            <AppText style={styles.sectionTitle}>Thông tin Phòng & Tiền thuê</AppText>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Phòng:</Text>
-              <Text style={styles.infoValue}>{contract.room}</Text>
+              <AppText style={styles.infoLabel}>Phòng:</AppText>
+              <AppText style={styles.infoValue}>{contract.room}</AppText>
             </View>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Tiền thuê hàng tháng:</Text>
-              <Text style={styles.infoValue}>{contract.rentFee}</Text>
+              <AppText style={styles.infoLabel}>Tiền thuê hàng tháng:</AppText>
+              <AppText style={styles.infoValue}>{contract.rentFee}</AppText>
             </View>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Tiền cọc:</Text>
-              <Text style={styles.infoValue}>{contract.deposit}</Text>
+              <AppText style={styles.infoLabel}>Tiền cọc:</AppText>
+              <AppText style={styles.infoValue}>{contract.deposit}</AppText>
             </View>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Thời hạn hợp đồng:</Text>
-              <Text style={styles.infoValue}>{contract.startDate} - {contract.endDate}</Text>
+              <AppText style={styles.infoLabel}>Thời hạn hợp đồng:</AppText>
+              <AppText style={styles.infoValue}>{contract.startDate} - {contract.endDate}</AppText>
             </View>
           </ScrollView>
         );
       case 2:
         return (
           <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
-            <Text style={styles.sectionTitle}>Phí Dịch vụ</Text>
+            <AppText style={styles.sectionTitle}>Phí Dịch vụ</AppText>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Tiền điện:</Text>
-              <Text style={styles.infoValue}>{contract.serviceFees.electric}</Text>
+              <AppText style={styles.infoLabel}>Tiền điện:</AppText>
+              <AppText style={styles.infoValue}>{contract.serviceFees.electric}</AppText>
             </View>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Chỉ số điện đầu:</Text>
-              <Text style={styles.infoValue}>{contract.meterTerms.initialElectricity}</Text>
+              <AppText style={styles.infoLabel}>Chỉ số điện đầu:</AppText>
+              <AppText style={styles.infoValue}>{contract.meterTerms.initialElectricity}</AppText>
             </View>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Tiền nước:</Text>
-              <Text style={styles.infoValue}>{contract.serviceFees.water}</Text>
+              <AppText style={styles.infoLabel}>Tiền nước:</AppText>
+              <AppText style={styles.infoValue}>{contract.serviceFees.water}</AppText>
             </View>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Chỉ số nước đầu:</Text>
-              <Text style={styles.infoValue}>{contract.meterTerms.initialWater}</Text>
+              <AppText style={styles.infoLabel}>Chỉ số nước đầu:</AppText>
+              <AppText style={styles.infoValue}>{contract.meterTerms.initialWater}</AppText>
             </View>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Gửi xe:</Text>
-              <Text style={styles.infoValue}>{contract.serviceFees.parking}</Text>
+              <AppText style={styles.infoLabel}>Gửi xe:</AppText>
+              <AppText style={styles.infoValue}>{contract.serviceFees.parking}</AppText>
             </View>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Internet:</Text>
-              <Text style={styles.infoValue}>{contract.serviceFees.internet}</Text>
+              <AppText style={styles.infoLabel}>Internet:</AppText>
+              <AppText style={styles.infoValue}>{contract.serviceFees.internet}</AppText>
             </View>
           </ScrollView>
         );
       case 3:
         return (
           <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
-            <Text style={styles.sectionTitle}>Điều khoản Hợp đồng</Text>
-            <Text style={styles.termsText}>
+            <AppText style={styles.sectionTitle}>Điều khoản Hợp đồng</AppText>
+            <AppText style={styles.termsText}>
               1. Bên thuê cam kết thanh toán đầy đủ tiền thuê và phí dịch vụ đúng hạn.{"\n\n"}
               2. Không sử dụng phòng cho các mục đích vi phạm pháp luật.{"\n\n"}
               3. Giữ gìn vệ sinh chung, không làm ồn ào ảnh hưởng đến người khác.{"\n\n"}
               4. Bồi thường nếu làm hư hỏng tài sản trong phòng.{"\n\n"}
               5. Báo trước ít nhất 30 ngày nếu muốn chấm dứt hợp đồng trước hạn.
-            </Text>
+            </AppText>
           </ScrollView>
         );
       case 4:
         return (
           <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
-            <Text style={styles.sectionTitle}>Ký xác nhận</Text>
-            <Text style={styles.confirmText}>
+            <AppText style={styles.sectionTitle}>Ký xác nhận</AppText>
+            <AppText style={styles.confirmText}>
               Tôi, {contract.tenantName}, đã đọc và đồng ý với tất cả các điều khoản trong hợp đồng thuê phòng {contract.room}.
-            </Text>
+            </AppText>
             <Pressable 
               style={[styles.checkboxContainer, agreed && styles.checkboxActive]} 
               onPress={() => setAgreed(!agreed)}
@@ -140,11 +132,11 @@ export default function SignContractWizard({ visible, contract, onClose, onSign 
               <View style={[styles.checkbox, agreed && styles.checkboxChecked]}>
                 {agreed && <Ionicons name="checkmark" size={14} color={theme.background} />}
               </View>
-              <Text style={styles.checkboxLabel}>Tôi đồng ý ký kết hợp đồng này</Text>
+              <AppText style={styles.checkboxLabel}>Tôi đồng ý ký kết hợp đồng này</AppText>
             </Pressable>
-            <Text style={styles.warningText}>
+            <AppText style={styles.warningText}>
               Lưu ý: Sau khi ký xác nhận, hệ thống sẽ tạo một hóa đơn Tiền Cọc. Hợp đồng chỉ có hiệu lực khi bạn hoàn tất thanh toán hóa đơn cọc.
-            </Text>
+            </AppText>
           </ScrollView>
         );
       default:
@@ -164,15 +156,15 @@ export default function SignContractWizard({ visible, contract, onClose, onSign 
           {/* Header */}
           <View style={styles.wizardHeader}>
             <View>
-              <Text
+              <AppText
                 ref={titleRef}
                 style={styles.wizardTitle}
                 accessibilityRole="header"
                 accessibilityLiveRegion="polite"
               >
                 Ký hợp đồng thuê phòng
-              </Text>
-              <Text style={styles.wizardSubtitle}>Đọc kỹ thông tin trước khi xác nhận.</Text>
+              </AppText>
+              <AppText style={styles.wizardSubtitle}>Đọc kỹ thông tin trước khi xác nhận.</AppText>
             </View>
             <Pressable
               onPress={onClose}

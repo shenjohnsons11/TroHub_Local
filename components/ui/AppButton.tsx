@@ -1,12 +1,6 @@
 import React from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  PressableProps,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { ActivityIndicator, Pressable, PressableProps, StyleSheet, View } from "react-native";
+import { AppText } from "@/components/ui/typography";
 import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "../../contexts/ThemeContext";
 
@@ -69,7 +63,7 @@ export default function AppButton({
       ) : (
         <View style={styles.content}>
           {iconPosition === "left" ? glyph : null}
-          <Text style={[styles.label, { color: palette.foreground }]}>{children}</Text>
+          <AppText style={[styles.label, { color: palette.foreground }]}>{children}</AppText>
           {iconPosition === "right" ? glyph : null}
         </View>
       )}

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
-import { AccessibilityInfo, Animated, StyleSheet, Text, View } from "react-native";
+import { AccessibilityInfo, Animated, StyleSheet, View } from "react-native";
+import { AppText } from "@/components/ui/typography";
 import { Image } from "expo-image";
 import { useAppTheme } from "../contexts/ThemeContext";
 import TroHubLogo from "./TroHubLogo";
@@ -50,7 +51,7 @@ export default function AppLoadingScreen({ message = "Đang tải dữ liệu kh
         />
         <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: theme.overlay, opacity: themeMode === "dark" ? 0.24 : 0.06 }]} />
       </Animated.View>
-      <Text style={[styles.message, { color: theme.muted }]}>{message}</Text>
+      <AppText style={[styles.message, { color: theme.muted }]}>{message}</AppText>
     </View>
   );
 }

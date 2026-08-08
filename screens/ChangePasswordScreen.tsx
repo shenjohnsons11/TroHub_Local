@@ -1,14 +1,6 @@
 import React, { useState } from "react";
-import {
-  SafeAreaView,
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-} from "react-native";
+import { SafeAreaView, View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { AppText, AppTextInput } from "@/components/ui/typography";
 import { authService } from "../services/authService";
 import { useAppTheme } from "../contexts/ThemeContext";
 import { useNotification } from "../hooks/useNotification";
@@ -67,15 +59,15 @@ export default function ChangePasswordScreen({ onSuccess, onLogout }: Props) {
               <View style={styles.securityIcon}>
                 <Ionicons name="shield-checkmark-outline" size={30} color={theme.primary} />
               </View>
-              <Text style={styles.title}>Đổi mật khẩu bắt buộc</Text>
-              <Text style={styles.subtitle}>
+              <AppText style={styles.title}>Đổi mật khẩu bắt buộc</AppText>
+              <AppText style={styles.subtitle}>
                 Để bảo mật tài khoản, bạn vui lòng đổi mật khẩu trước khi sử dụng hệ thống.
-              </Text>
+              </AppText>
             </View>
 
             <View style={styles.form}>
-              <Text style={styles.label}>Mật khẩu hiện tại</Text>
-              <TextInput
+              <AppText style={styles.label}>Mật khẩu hiện tại</AppText>
+              <AppTextInput
                 style={styles.input}
                 value={currentPassword}
                 onChangeText={setCurrentPassword}
@@ -85,8 +77,8 @@ export default function ChangePasswordScreen({ onSuccess, onLogout }: Props) {
                 editable={!isSubmitting}
               />
 
-              <Text style={styles.label}>Mật khẩu mới</Text>
-              <TextInput
+              <AppText style={styles.label}>Mật khẩu mới</AppText>
+              <AppTextInput
                 style={styles.input}
                 value={newPassword}
                 onChangeText={setNewPassword}
@@ -96,8 +88,8 @@ export default function ChangePasswordScreen({ onSuccess, onLogout }: Props) {
                 editable={!isSubmitting}
               />
 
-              <Text style={styles.label}>Xác nhận mật khẩu mới</Text>
-              <TextInput
+              <AppText style={styles.label}>Xác nhận mật khẩu mới</AppText>
+              <AppTextInput
                 style={styles.input}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}

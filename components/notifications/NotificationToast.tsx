@@ -1,13 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useRef } from "react";
 import {
-  AccessibilityInfo,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+  AccessibilityInfo, Platform, Pressable, StyleSheet, View } from "react-native";
+import { AppText } from "@/components/ui/typography";
 import Toast, {
   ToastConfig,
   ToastConfigParams,
@@ -53,10 +48,10 @@ function ToastSurface({
       ) : null}
       <View style={[styles.copy, variant === "info" && styles.infoCopy]}>
         {text1 ? (
-          <Text style={[styles.title, { color: theme.text }]}>{text1}</Text>
+          <AppText style={[styles.title, { color: theme.text }]}>{text1}</AppText>
         ) : null}
         {text2 ? (
-          <Text style={[styles.message, { color: theme.muted }]}>{text2}</Text>
+          <AppText style={[styles.message, { color: theme.muted }]}>{text2}</AppText>
         ) : null}
       </View>
       <Pressable
@@ -107,13 +102,13 @@ const styles = StyleSheet.create({
     marginLeft: 0,
   },
   title: {
-    fontFamily: FONT_FAMILIES.sans,
+    fontFamily: FONT_FAMILIES.regular,
     fontSize: 14,
     fontWeight: "800",
     lineHeight: 19,
   },
   message: {
-    fontFamily: FONT_FAMILIES.sans,
+    fontFamily: FONT_FAMILIES.regular,
     fontSize: 13,
     lineHeight: 19,
     marginTop: 2,

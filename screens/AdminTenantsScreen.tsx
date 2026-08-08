@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, FlatList, Pressable, TextInput, Linking } from "react-native";
+import { View, StyleSheet, FlatList, Pressable, Linking } from "react-native";
+import { AppText, AppTextInput } from "@/components/ui/typography";
 import { Ionicons } from "@expo/vector-icons";
 import { adminService, AdminTenant, AdminRoom } from "../services/adminService";
 import { useAppTheme } from "../contexts/ThemeContext";
@@ -83,15 +84,15 @@ export default function AdminTenantsScreen() {
 
             <View style={styles.sectionRow}>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.sectionTitle, { color: theme.text }]}>{t("mobile.tenants.title")}</Text>
-                <Text style={[styles.sectionSub, { color: theme.muted }]}>{t("mobile.tenants.subtitle")}</Text>
+                <AppText style={[styles.sectionTitle, { color: theme.text }]}>{t("mobile.tenants.title")}</AppText>
+                <AppText style={[styles.sectionSub, { color: theme.muted }]}>{t("mobile.tenants.subtitle")}</AppText>
               </View>
             </View>
 
             {/* Ô Tìm Kiếm Người Thuê */}
             <View style={[styles.searchBox, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
               <Ionicons name="search-outline" size={18} color={theme.muted} />
-              <TextInput
+              <AppTextInput
                 style={[styles.searchInput, { color: theme.text }]}
                 placeholder={t("mobile.tenants.search")}
                 placeholderTextColor={theme.muted}
@@ -124,25 +125,25 @@ export default function AdminTenantsScreen() {
             <AnimatedEntry delay={Math.min(index, 6) * 45}>
               <View style={[styles.card, { backgroundColor: theme.surfaceElevated, shadowColor: theme.text }]}>
                 <View style={[styles.avatar, { backgroundColor: theme.primarySoft }]}>
-                  <Text style={[styles.avatarText, { color: theme.primary }]}>
+                  <AppText style={[styles.avatarText, { color: theme.primary }]}>
                     {item.fullName ? item.fullName.slice(0, 2).toUpperCase() : "KT"}
-                  </Text>
+                  </AppText>
                 </View>
 
                 <View style={styles.info}>
-                  <Text style={[styles.name, { color: theme.text }]}>{item.fullName}</Text>
-                  <Text style={[styles.sub, { color: theme.muted }]}>
+                  <AppText style={[styles.name, { color: theme.text }]}>{item.fullName}</AppText>
+                  <AppText style={[styles.sub, { color: theme.muted }]}>
                     <Ionicons name="call-outline" size={12} /> {formattedPhone}
-                  </Text>
+                  </AppText>
                   {item.email ? (
-                    <Text style={[styles.sub, { color: theme.muted }]}>
+                    <AppText style={[styles.sub, { color: theme.muted }]}>
                       <Ionicons name="mail-outline" size={12} /> {item.email}
-                    </Text>
+                    </AppText>
                   ) : null}
                   {item.idCard ? (
-                    <Text style={[styles.sub, { color: theme.muted }]}>
+                    <AppText style={[styles.sub, { color: theme.muted }]}>
                       <Ionicons name="card-outline" size={12} /> {t("mobile.tenants.idCard")}: {formatCCCD(item.idCard)}
-                    </Text>
+                    </AppText>
                   ) : null}
 
                   {/* App Link Status Badge */}
@@ -163,7 +164,7 @@ export default function AdminTenantsScreen() {
                         size={12}
                         color={isLinked ? "#10b981" : "#f59e0b"}
                       />
-                      <Text
+                      <AppText
                         style={{
                           fontSize: 11,
                           fontWeight: "800",
@@ -171,7 +172,7 @@ export default function AdminTenantsScreen() {
                         }}
                       >
                         {isLinked ? t("mobile.tenants.linked") : t("mobile.tenants.notLinked")}
-                      </Text>
+                      </AppText>
                     </View>
                   </View>
                 </View>
@@ -184,7 +185,7 @@ export default function AdminTenantsScreen() {
                     onPress={() => handleSendInvite(item)}
                   >
                     <Ionicons name="paper-plane-outline" size={14} color="#ffffff" />
-                    <Text style={styles.inviteBtnText}>{t("mobile.tenants.invite")}</Text>
+                    <AppText style={styles.inviteBtnText}>{t("mobile.tenants.invite")}</AppText>
                   </Pressable>
                 )}
               </View>
@@ -195,7 +196,7 @@ export default function AdminTenantsScreen() {
 
       <Pressable accessibilityRole="button" accessibilityLabel={t("mobile.tenants.add")} onPress={openCreateModal} style={styles.fab}>
         <Ionicons name="person-add-outline" size={20} color="#b8f5da" />
-        <Text style={styles.fabText}>{t("mobile.tenants.add")}</Text>
+        <AppText style={styles.fabText}>{t("mobile.tenants.add")}</AppText>
       </Pressable>
 
       <AddTenantModal visible={modalVisible} rooms={rooms} onClose={() => setModalVisible(false)} onSuccess={() => { void loadData(); }} />

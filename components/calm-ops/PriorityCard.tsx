@@ -1,5 +1,6 @@
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
+import { AppText } from "@/components/ui/typography";
 import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "../../contexts/ThemeContext";
 
@@ -20,8 +21,8 @@ export default function PriorityCard({ title, description, count, urgent = false
         <Ionicons name={urgent ? "alert-circle-outline" : "checkmark-circle-outline"} size={24} color={color} />
       </View>
       <View style={styles.copy}>
-        <Text style={[styles.title, { color }]}>{count !== undefined ? `${count} ` : ""}{title}</Text>
-        <Text style={[styles.description, { color: theme.muted }]}>{description}</Text>
+        <AppText style={[styles.title, { color }]}>{count !== undefined ? `${count} ` : ""}{title}</AppText>
+        <AppText style={[styles.description, { color: theme.muted }]}>{description}</AppText>
       </View>
       <Ionicons name="chevron-forward" size={20} color={theme.muted} />
     </Pressable>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { ActivityIndicator, Modal, ScrollView, Switch, Text, StyleSheet, View, Pressable } from "react-native";
+import { ActivityIndicator, Modal, ScrollView, Switch, StyleSheet, View, Pressable } from "react-native";
+import { AppText } from "@/components/ui/typography";
 import Card from "../components/Card";
 import ThemeToggle from "../components/ThemeToggle";
 import { useAppTheme } from "../contexts/ThemeContext";
@@ -151,7 +152,7 @@ export default function AccountScreen({
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.titleRow}>
-          <Text style={[styles.title, { color: theme.text }]}>Tài khoản</Text>
+          <AppText style={[styles.title, { color: theme.text }]}>Tài khoản</AppText>
           <Pressable accessibilityRole="button" accessibilityLabel="Mở cài đặt" onPress={() => void openSettings()} style={[styles.settingsButton, { backgroundColor: theme.primarySoft }]}>
             <Ionicons name="settings-outline" size={22} color={theme.primary} />
           </Pressable>
@@ -159,41 +160,41 @@ export default function AccountScreen({
 
         <View style={styles.profileCard}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
+            <AppText style={styles.avatarText}>
               {profile.fullName.charAt(0).toUpperCase()}
-            </Text>
+            </AppText>
           </View>
 
-          <Text style={styles.name}>{profile.fullName}</Text>
-          <Text style={styles.phone}>{formatPhone(profile.phone)}</Text>
+          <AppText style={styles.name}>{profile.fullName}</AppText>
+          <AppText style={styles.phone}>{formatPhone(profile.phone)}</AppText>
 
           <View style={styles.roomBadge}>
-            <Text style={styles.roomText}>
+            <AppText style={styles.roomText}>
               {stats.hasContract ? `Phòng ${profile.room}` : "Chưa có phòng"}
-            </Text>
+            </AppText>
           </View>
         </View>
 
         {stats.hasContract && (
           <View style={styles.statRow}>
             <Card style={[styles.card, styles.statCard]}>
-              <Text style={styles.statNumber}>{stats.invoices}</Text>
-              <Text style={styles.statLabel}>Hóa đơn</Text>
+              <AppText style={styles.statNumber}>{stats.invoices}</AppText>
+              <AppText style={styles.statLabel}>Hóa đơn</AppText>
             </Card>
 
             <Card style={[styles.card, styles.statCard]}>
-              <Text style={styles.statNumber}>{stats.repairs}</Text>
-              <Text style={styles.statLabel}>Sửa chữa</Text>
+              <AppText style={styles.statNumber}>{stats.repairs}</AppText>
+              <AppText style={styles.statLabel}>Sửa chữa</AppText>
             </Card>
 
             <Card style={[styles.card, styles.statCard]}>
-              <Text style={styles.statNumber}>{stats.months}</Text>
-              <Text style={styles.statLabel}>Tháng thuê</Text>
+              <AppText style={styles.statNumber}>{stats.months}</AppText>
+              <AppText style={styles.statLabel}>Tháng thuê</AppText>
             </Card>
           </View>
         )}
 
-        <Text style={[styles.sectionTitle, { color: theme.text }]}>Cài đặt tài khoản</Text>
+        <AppText style={[styles.sectionTitle, { color: theme.text }]}>Cài đặt tài khoản</AppText>
         <ThemeToggle />
 
         {menuItems.map((item) => (
@@ -203,8 +204,8 @@ export default function AccountScreen({
                 <Ionicons name={item.icon as any} size={20} color={theme.primary} />
               </View>
               <View style={styles.menuInfo}>
-                <Text style={styles.menuTitle}>{item.title}</Text>
-                <Text style={styles.menuDesc}>{item.desc}</Text>
+                <AppText style={styles.menuTitle}>{item.title}</AppText>
+                <AppText style={styles.menuDesc}>{item.desc}</AppText>
               </View>
 
               <Ionicons name="chevron-forward" size={20} color={theme.muted} />
@@ -219,20 +220,20 @@ export default function AccountScreen({
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setSettingsVisible(false)} />
           <View style={styles.drawer}>
             <View style={styles.drawerHandle} />
-            <Text style={styles.drawerTitle}>Cài đặt</Text>
+            <AppText style={styles.drawerTitle}>Cài đặt</AppText>
             <Pressable style={styles.drawerRow} onPress={() => { setSettingsVisible(false); onNavigate?.("profile"); }}>
-              <Ionicons name="person-outline" size={21} color="#CFEDE1" /><Text style={styles.drawerText}>Thông tin cá nhân</Text><Ionicons name="chevron-forward" size={19} color="#9BC9B7" />
+              <Ionicons name="person-outline" size={21} color="#CFEDE1" /><AppText style={styles.drawerText}>Thông tin cá nhân</AppText><Ionicons name="chevron-forward" size={19} color="#9BC9B7" />
             </Pressable>
             <Pressable style={styles.drawerRow} onPress={() => { setSettingsVisible(false); setPasswordVisible(true); }}>
-              <Ionicons name="lock-closed-outline" size={21} color="#CFEDE1" /><Text style={styles.drawerText}>Đổi mật khẩu</Text><Ionicons name="chevron-forward" size={19} color="#9BC9B7" />
+              <Ionicons name="lock-closed-outline" size={21} color="#CFEDE1" /><AppText style={styles.drawerText}>Đổi mật khẩu</AppText><Ionicons name="chevron-forward" size={19} color="#9BC9B7" />
             </Pressable>
             <View style={styles.drawerRow}>
-              <Ionicons name="notifications-outline" size={21} color="#CFEDE1" /><Text style={styles.drawerText}>Bật thông báo</Text>
+              <Ionicons name="notifications-outline" size={21} color="#CFEDE1" /><AppText style={styles.drawerText}>Bật thông báo</AppText>
               {pushLoading ? <ActivityIndicator color="#CFEDE1" /> : <Switch value={pushEnabled} onValueChange={(next) => void handlePushChange(next)} trackColor={{ false: "#3A685A", true: "#22C55E" }} thumbColor="#F8FFFB" />}
             </View>
-            {!!pushError && <View style={styles.pushError}><Text style={styles.pushErrorText}>{pushError}</Text><Pressable onPress={() => void openNotificationSettings()}><Text style={styles.openSettingsText}>Mở Cài đặt iPhone</Text></Pressable></View>}
+            {!!pushError && <View style={styles.pushError}><AppText style={styles.pushErrorText}>{pushError}</AppText><Pressable onPress={() => void openNotificationSettings()}><AppText style={styles.openSettingsText}>Mở Cài đặt iPhone</AppText></Pressable></View>}
             <Pressable style={styles.logoutAction} onPress={() => { setSettingsVisible(false); onLogout(); }}>
-              <Ionicons name="log-out-outline" size={20} color="#FFE2E5" /><Text style={styles.logoutActionText}>Đăng xuất</Text>
+              <Ionicons name="log-out-outline" size={20} color="#FFE2E5" /><AppText style={styles.logoutActionText}>Đăng xuất</AppText>
             </Pressable>
           </View>
         </View>

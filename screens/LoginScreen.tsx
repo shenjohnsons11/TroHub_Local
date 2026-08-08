@@ -1,16 +1,6 @@
 import React, { useState } from "react";
-import {
-  KeyboardAvoidingView,
-  ImageBackground,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-  Pressable,
-} from "react-native";
+import { KeyboardAvoidingView, ImageBackground, Platform, SafeAreaView, ScrollView, StyleSheet, View, Pressable } from "react-native";
+import { AppText, AppTextInput } from "@/components/ui/typography";
 import ForgotPasswordModal from "../components/ForgotPasswordModal";
 import TroHubLogo from "../components/TroHubLogo";
 import AppButton from "../components/ui/AppButton";
@@ -174,11 +164,11 @@ export default function LoginScreen({ onLogin }: Props) {
               <View style={styles.brandOverlay} />
               <TroHubLogo size="large" inverted />
               <View style={styles.brandCopy}>
-                <Text style={styles.brandTitle}>Mọi việc ở trọ, rõ ràng hơn.</Text>
-                <Text style={styles.brandDescription}>
+                <AppText style={styles.brandTitle}>Mọi việc ở trọ, rõ ràng hơn.</AppText>
+                <AppText style={styles.brandDescription}>
                   Theo dõi hợp đồng, hóa đơn và yêu cầu sửa chữa trong một ứng
                   dụng thống nhất.
-                </Text>
+                </AppText>
               </View>
               <View style={styles.brandRule}>
                 <View style={[styles.rulePrimary, { backgroundColor: theme.primary }]} />
@@ -193,20 +183,20 @@ export default function LoginScreen({ onLogin }: Props) {
               ]}
             >
               <View style={{ alignItems: "flex-end", marginBottom: 14 }}><LanguageToggle /></View>
-              <Text style={[styles.eyebrow, { color: theme.primary }]}>TRO HUB</Text>
-              <Text style={[styles.title, { color: theme.text }]}>
+              <AppText style={[styles.eyebrow, { color: theme.primary }]}>TRO HUB</AppText>
+              <AppText style={[styles.title, { color: theme.text }]}>
                 {mode === "login" ? t("login") : t("register")}
-              </Text>
-              <Text style={[styles.subtitle, { color: theme.muted }]}>
+              </AppText>
+              <AppText style={[styles.subtitle, { color: theme.muted }]}>
                 {mode === "login"
                   ? t("loginDescription")
                   : t("registerDescription")}
-              </Text>
+              </AppText>
 
               {mode === "register" && (
                 <View style={styles.field}>
-                  <Text style={[styles.label, { color: theme.text }]}>{t("fullName")}</Text>
-                  <TextInput
+                  <AppText style={[styles.label, { color: theme.text }]}>{t("fullName")}</AppText>
+                  <AppTextInput
                     editable={!isSubmitting}
                     onChangeText={(value) => {
                       setFullName(value);
@@ -225,16 +215,16 @@ export default function LoginScreen({ onLogin }: Props) {
                     value={fullName}
                   />
                   {fullNameError ? (
-                    <Text style={[styles.errorText, { color: theme.danger }]}>{fullNameError}</Text>
+                    <AppText style={[styles.errorText, { color: theme.danger }]}>{fullNameError}</AppText>
                   ) : null}
                 </View>
               )}
 
               <View style={styles.field}>
-                <Text style={[styles.label, { color: theme.text }]}>
+                <AppText style={[styles.label, { color: theme.text }]}>
                   {mode === "login" ? t("phoneOrEmail") : t("phone")}
-                </Text>
-                <TextInput
+                </AppText>
+                <AppTextInput
                   accessibilityLabel={mode === "login" ? t("phoneOrEmail") : t("phone")}
                   keyboardType={mode === "login" ? "email-address" : "phone-pad"}
                   autoCapitalize={mode === "login" ? "none" : undefined}
@@ -260,15 +250,15 @@ export default function LoginScreen({ onLogin }: Props) {
                   value={identifier}
                 />
                 {identifierError ? (
-                  <Text style={[styles.errorText, { color: theme.danger }]}>{identifierError}</Text>
+                  <AppText style={[styles.errorText, { color: theme.danger }]}>{identifierError}</AppText>
                 ) : null}
               </View>
 
               {mode === "register" && (
                 <>
                   <View style={styles.field}>
-                    <Text style={[styles.label, { color: theme.text }]}>{t("email")}</Text>
-                    <TextInput
+                    <AppText style={[styles.label, { color: theme.text }]}>{t("email")}</AppText>
+                    <AppTextInput
                       keyboardType="email-address"
                       autoCapitalize="none"
                       editable={!isSubmitting}
@@ -289,14 +279,14 @@ export default function LoginScreen({ onLogin }: Props) {
                       value={email}
                     />
                     {emailError ? (
-                      <Text style={[styles.errorText, { color: theme.danger }]}>{emailError}</Text>
+                      <AppText style={[styles.errorText, { color: theme.danger }]}>{emailError}</AppText>
                     ) : null}
                   </View>
 
                   <View style={styles.field}>
-                    <Text style={[styles.label, { color: theme.text }]}>{t("idCard")}</Text>
+                    <AppText style={[styles.label, { color: theme.text }]}>{t("idCard")}</AppText>
                     <View style={styles.identityRow}>
-                      <TextInput
+                      <AppTextInput
                         keyboardType="numeric"
                         editable={!isSubmitting}
                         onChangeText={(value) => {
@@ -309,19 +299,19 @@ export default function LoginScreen({ onLogin }: Props) {
                         value={idCard}
                       />
                       <Pressable accessibilityRole="button" accessibilityLabel="Quét CCCD bằng camera" disabled={isSubmitting} onPress={() => setScannerVisible(true)} style={[styles.scanButton, { backgroundColor: theme.primarySoft }]}>
-                        <Text style={[styles.scanButtonText, { color: theme.primary }]}>📷 Quét CCCD (Camera)</Text>
+                        <AppText style={[styles.scanButtonText, { color: theme.primary }]}>📷 Quét CCCD (Camera)</AppText>
                       </Pressable>
                     </View>
                     {idCardError ? (
-                      <Text style={[styles.errorText, { color: theme.danger }]}>{idCardError}</Text>
+                      <AppText style={[styles.errorText, { color: theme.danger }]}>{idCardError}</AppText>
                     ) : null}
                   </View>
                 </>
               )}
 
               <View style={styles.field}>
-                <Text style={[styles.label, { color: theme.text }]}>{t("password")}</Text>
-                <TextInput
+                <AppText style={[styles.label, { color: theme.text }]}>{t("password")}</AppText>
+                <AppTextInput
                   accessibilityLabel={t("password")}
                   editable={!isSubmitting}
                   onChangeText={(value) => {
@@ -343,7 +333,7 @@ export default function LoginScreen({ onLogin }: Props) {
                   value={password}
                 />
                 {passwordError ? (
-                  <Text style={[styles.errorText, { color: theme.danger }]}>{passwordError}</Text>
+                  <AppText style={[styles.errorText, { color: theme.danger }]}>{passwordError}</AppText>
                 ) : null}
               </View>
 
@@ -372,11 +362,11 @@ export default function LoginScreen({ onLogin }: Props) {
               <View style={styles.toggleContainer}>
                 {mode === "login" ? (
                   <Pressable onPress={() => { setMode("register"); setIdentifierError(""); setPasswordError(""); }}>
-                    <Text style={[styles.toggleText, { color: theme.primary }]}>{t("tenantRegister")}</Text>
+                    <AppText style={[styles.toggleText, { color: theme.primary }]}>{t("tenantRegister")}</AppText>
                   </Pressable>
                 ) : (
                   <Pressable onPress={() => { setMode("login"); setIdentifierError(""); setPasswordError(""); }}>
-                    <Text style={[styles.toggleText, { color: theme.primary }]}>{t("backToLogin")}</Text>
+                    <AppText style={[styles.toggleText, { color: theme.primary }]}>{t("backToLogin")}</AppText>
                   </Pressable>
                 )}
               </View>
@@ -387,11 +377,11 @@ export default function LoginScreen({ onLogin }: Props) {
                   { backgroundColor: theme.primarySoft },
                 ]}
               >
-                <Text style={[styles.accountNoticeText, { color: theme.text }]}>
+                <AppText style={[styles.accountNoticeText, { color: theme.text }]}>
                   {mode === "login" 
                     ? "Chưa có tài khoản? Người thuê có thể tự đăng ký ở trên, hoặc được tạo bởi Chủ trọ."
                     : "Hệ thống bảo mật dữ liệu Người thuê theo tiêu chuẩn mã hóa SSL/TLS."}
-                </Text>
+                </AppText>
               </View>
             </View>
           </View>
@@ -449,7 +439,7 @@ const styles = StyleSheet.create({
   },
   brandTitle: {
     color: "#F4F5F3",
-    fontFamily: FONT_FAMILIES.sans,
+    fontFamily: FONT_FAMILIES.regular,
     fontSize: 27,
     fontWeight: "900",
     letterSpacing: -0.5,
@@ -457,7 +447,7 @@ const styles = StyleSheet.create({
   },
   brandDescription: {
     color: "#C8CDD0",
-    fontFamily: FONT_FAMILIES.sans,
+    fontFamily: FONT_FAMILIES.regular,
     fontSize: 15,
     lineHeight: 23,
     marginTop: 10,
@@ -491,13 +481,13 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   eyebrow: {
-    fontFamily: FONT_FAMILIES.sans,
+    fontFamily: FONT_FAMILIES.regular,
     fontSize: 12,
     fontWeight: "900",
     letterSpacing: 1.2,
   },
   title: {
-    fontFamily: FONT_FAMILIES.sans,
+    fontFamily: FONT_FAMILIES.regular,
     fontSize: 30,
     fontWeight: "900",
     letterSpacing: -0.6,
@@ -505,7 +495,7 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   subtitle: {
-    fontFamily: FONT_FAMILIES.sans,
+    fontFamily: FONT_FAMILIES.regular,
     fontSize: 15,
     lineHeight: 22,
     marginBottom: 22,
@@ -515,7 +505,7 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   label: {
-    fontFamily: FONT_FAMILIES.sans,
+    fontFamily: FONT_FAMILIES.regular,
     fontSize: 14,
     fontWeight: "700",
     marginBottom: 8,
@@ -523,13 +513,13 @@ const styles = StyleSheet.create({
   input: {
     borderRadius: 16,
     borderWidth: 1,
-    fontFamily: FONT_FAMILIES.sans,
+    fontFamily: FONT_FAMILIES.regular,
     fontSize: 16,
     height: 52,
     paddingHorizontal: 15,
   },
   errorText: {
-    fontFamily: FONT_FAMILIES.sans,
+    fontFamily: FONT_FAMILIES.regular,
     fontSize: 12,
     fontWeight: "600",
     lineHeight: 18,
@@ -548,7 +538,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   accountNoticeText: {
-    fontFamily: FONT_FAMILIES.sans,
+    fontFamily: FONT_FAMILIES.regular,
     fontSize: 13,
     fontWeight: "600",
     lineHeight: 20,
@@ -559,7 +549,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   toggleText: {
-    fontFamily: FONT_FAMILIES.sans,
+    fontFamily: FONT_FAMILIES.regular,
     fontSize: 14,
     fontWeight: "800",
   },

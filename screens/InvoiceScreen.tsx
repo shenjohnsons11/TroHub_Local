@@ -1,12 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
-import {
-  FlatList,
-  Text,
-  StyleSheet,
-  View,
-  Pressable,
-  ActivityIndicator,
-} from "react-native";
+import { FlatList, StyleSheet, View, Pressable, ActivityIndicator } from "react-native";
+import { AppText } from "@/components/ui/typography";
 import Card from "../components/Card";
 import { useAppTheme } from "../contexts/ThemeContext";
 import { useNotification } from "../hooks/useNotification";
@@ -110,7 +104,7 @@ export default function InvoiceScreen({ params }: Props) {
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <>
-            <Text style={styles.title}>{t("invoices")}</Text>
+            <AppText style={styles.title}>{t("invoices")}</AppText>
             {unpaidInvoices.length > 0 ? (
               <AnimatedEntry>
                 <GradientHero
@@ -133,9 +127,9 @@ export default function InvoiceScreen({ params }: Props) {
                   onPress={() => setFilter(value)}
                   style={[styles.filterButton, filter === value && styles.filterActive]}
                 >
-                  <Text style={[styles.filterText, filter === value && styles.filterTextActive]}>
+                  <AppText style={[styles.filterText, filter === value && styles.filterTextActive]}>
                     {value === "all" ? t("all") : value === "unpaid" ? t("unpaid") : t("paid")}
-                  </Text>
+                  </AppText>
                 </Pressable>
               ))}
             </View>
@@ -151,7 +145,7 @@ export default function InvoiceScreen({ params }: Props) {
           ) : (
             <View style={styles.filterEmpty}>
               <Ionicons name="filter-outline" size={22} color={theme.muted} />
-              <Text style={styles.filterEmptyText}>{t("noMatchingInvoices")}</Text>
+              <AppText style={styles.filterEmptyText}>{t("noMatchingInvoices")}</AppText>
             </View>
           )
         }
@@ -160,30 +154,30 @@ export default function InvoiceScreen({ params }: Props) {
           return (
             <AnimatedEntry delay={Math.min(index, 5) * 35}>
               <Card style={styles.invoiceCard}>
-                <Text style={styles.amount}>{invoice.amount}</Text>
+                <AppText style={styles.amount}>{invoice.amount}</AppText>
                 <View style={styles.cardHeader}>
                   <View style={styles.cardLeft}>
-                    <Text style={{ fontSize: 11, fontWeight: '800', color: theme.primary, marginBottom: 2 }}>Mã HD: HD-{(invoice.month || "").replace("/", "")}-{(invoice.id || "000").substring(0, 3).toUpperCase()}</Text>
-                    <Text style={styles.cardTitle}>Hóa đơn tháng {invoice.month}</Text>
-                    <Text style={styles.room}>Phòng {invoice.room}</Text>
+                    <AppText style={{ fontSize: 11, fontWeight: '800', color: theme.primary, marginBottom: 2 }}>Mã HD: HD-{(invoice.month || "").replace("/", "")}-{(invoice.id || "000").substring(0, 3).toUpperCase()}</AppText>
+                    <AppText style={styles.cardTitle}>Hóa đơn tháng {invoice.month}</AppText>
+                    <AppText style={styles.room}>Phòng {invoice.room}</AppText>
                   </View>
                   <View style={[styles.statusBadge, isClosed ? styles.paidBadge : styles.unpaidBadge]}>
-                    <Text style={[styles.statusText, isClosed ? styles.paidText : styles.unpaidText]}>
+                    <AppText style={[styles.statusText, isClosed ? styles.paidText : styles.unpaidText]}>
                       {invoice.statusText}
-                    </Text>
+                    </AppText>
                   </View>
                 </View>
-                <Text style={styles.dueDate}>Hạn thanh toán: {invoice.dueDate}</Text>
+                <AppText style={styles.dueDate}>Hạn thanh toán: {invoice.dueDate}</AppText>
                 <View style={styles.actionRow}>
                   {!isClosed ? (
                     <Pressable style={styles.payButton} onPress={() => openPaymentModal(invoice)}>
                       <Ionicons name="card-outline" size={18} color={theme.background} />
-                      <Text style={styles.payText}>{t("pay")}</Text>
+                      <AppText style={styles.payText}>{t("pay")}</AppText>
                     </Pressable>
                   ) : null}
                   <Pressable style={styles.detailButton} onPress={() => setSelectedInvoice(invoice)}>
                     <Ionicons name="eye-outline" size={18} color={theme.primary} />
-                    <Text style={styles.detailText}>{t("details")}</Text>
+                    <AppText style={styles.detailText}>{t("details")}</AppText>
                   </Pressable>
                 </View>
               </Card>

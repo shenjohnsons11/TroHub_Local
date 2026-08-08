@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, FlatList, Pressable, TextInput, Modal, KeyboardAvoidingView, Platform } from "react-native";
+import { View, StyleSheet, FlatList, Pressable, Modal, KeyboardAvoidingView, Platform } from "react-native";
+import { AppText, AppTextInput } from "@/components/ui/typography";
 import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "../contexts/ThemeContext";
 import { useNotification } from "../hooks/useNotification";
@@ -383,7 +384,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>{t("mobile.invoices.title")}</Text>
+        <AppText style={styles.title}>{t("mobile.invoices.title")}</AppText>
       </View>
 
       <FlatList
@@ -398,17 +399,17 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
             {/* Section Header Row — Tầng 3 */}
             <View style={styles.sectionRow}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.sectionTitle}>{t("mobile.invoices.title")}</Text>
-                <Text style={styles.sectionSub}>{t("mobile.invoices.subtitle")}</Text>
+                <AppText style={styles.sectionTitle}>{t("mobile.invoices.title")}</AppText>
+                <AppText style={styles.sectionSub}>{t("mobile.invoices.subtitle")}</AppText>
               </View>
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <Pressable accessibilityRole="button" style={[styles.sectionBtn, { backgroundColor: theme.primarySoft }]} onPress={() => onNavigate && onNavigate('invoice_bulk')}>
                   <Ionicons name="documents-outline" size={16} color={theme.primary} />
-                  <Text style={[styles.sectionBtnText, { color: theme.primary }]}>{t("mobile.invoices.bulk")}</Text>
+                  <AppText style={[styles.sectionBtnText, { color: theme.primary }]}>{t("mobile.invoices.bulk")}</AppText>
                 </Pressable>
                 <Pressable accessibilityRole="button" style={[styles.sectionBtn, { backgroundColor: theme.primary }]} onPress={() => setModalVisible(true)}>
                   <Ionicons name="add" size={16} color={theme.background} />
-                  <Text style={[styles.sectionBtnText, { color: theme.background }]}>{t("mobile.invoices.create")}</Text>
+                  <AppText style={[styles.sectionBtnText, { color: theme.background }]}>{t("mobile.invoices.create")}</AppText>
                 </Pressable>
               </View>
             </View>
@@ -421,7 +422,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
                 style={[styles.filterButton, filter === "all" && styles.filterActive]}
                 onPress={() => setFilter("all")}
               >
-                <Text style={[styles.filterText, filter === "all" && styles.filterTextActive]}>{t("common.all")}</Text>
+                <AppText style={[styles.filterText, filter === "all" && styles.filterTextActive]}>{t("common.all")}</AppText>
               </Pressable>
               <Pressable
                 accessibilityRole="button"
@@ -429,7 +430,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
                 style={[styles.filterButton, filter === "unpaid" && styles.filterActive]}
                 onPress={() => setFilter("unpaid")}
               >
-                <Text style={[styles.filterText, filter === "unpaid" && styles.filterTextActive]}>{t("mobile.invoices.unpaidFilter")}</Text>
+                <AppText style={[styles.filterText, filter === "unpaid" && styles.filterTextActive]}>{t("mobile.invoices.unpaidFilter")}</AppText>
               </Pressable>
               <Pressable
                 accessibilityRole="button"
@@ -437,7 +438,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
                 style={[styles.filterButton, filter === "paid" && styles.filterActive]}
                 onPress={() => setFilter("paid")}
               >
-                <Text style={[styles.filterText, filter === "paid" && styles.filterTextActive]}>{t("mobile.invoices.paidFilter")}</Text>
+                <AppText style={[styles.filterText, filter === "paid" && styles.filterTextActive]}>{t("mobile.invoices.paidFilter")}</AppText>
               </Pressable>
             </View>
           </>
@@ -446,15 +447,15 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
         renderItem={({ item, index }) => (
           <AnimatedEntry delay={Math.min(index, 6) * 45}><Pressable accessibilityRole="button" accessibilityLabel={t("mobile.invoices.open", { roomCode: item.room || item.contractId?.roomId?.roomCode || "N/A" })} style={styles.invoiceCard} onPress={() => handleOpenDetail(item)}>
             <View style={styles.invoiceInfo}>
-              <Text style={styles.invoicePeriod}>{t("mobile.invoices.code", { code: item.invoiceCode || `HD-${(item.period || "").replace("/", "")}-${(item._id || "000").substring(0, 3).toUpperCase()}` })}</Text>
-              <Text style={styles.roomCode}>{t("mobile.invoices.room", { roomCode: item.roomCode || item.room || item.contractId?.roomId?.roomCode || "N/A" })}</Text>
-              <Text style={styles.invoicePeriod}>{t("mobile.invoices.period", { period: item.period || "" })}</Text>
-              <Text style={styles.invoiceAmount}>{t("mobile.invoices.total", { amount: formatCurrency(item.totalAmount) })}</Text>
-              <Text style={styles.invoiceSub}>{t("mobile.invoices.tenant", { name: item.nguoiThue || item.tenant || item.contractId?.tenantId?.fullName || "N/A" })}</Text>
+              <AppText style={styles.invoicePeriod}>{t("mobile.invoices.code", { code: item.invoiceCode || `HD-${(item.period || "").replace("/", "")}-${(item._id || "000").substring(0, 3).toUpperCase()}` })}</AppText>
+              <AppText style={styles.roomCode}>{t("mobile.invoices.room", { roomCode: item.roomCode || item.room || item.contractId?.roomId?.roomCode || "N/A" })}</AppText>
+              <AppText style={styles.invoicePeriod}>{t("mobile.invoices.period", { period: item.period || "" })}</AppText>
+              <AppText style={styles.invoiceAmount}>{t("mobile.invoices.total", { amount: formatCurrency(item.totalAmount) })}</AppText>
+              <AppText style={styles.invoiceSub}>{t("mobile.invoices.tenant", { name: item.nguoiThue || item.tenant || item.contractId?.tenantId?.fullName || "N/A" })}</AppText>
             </View>
             <View style={{ alignItems: "flex-end" }}>
               <View style={[styles.statusBadge, { backgroundColor: getStatusBg(item.status) }]}>
-                <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>{item.statusLabel || getStatusText(item.status)}</Text>
+                <AppText style={[styles.statusText, { color: getStatusColor(item.status) }]}>{item.statusLabel || getStatusText(item.status)}</AppText>
               </View>
               {((item.status as any) === 1 || (item.status as any) === "UNPAID" || (item.status as any) === "Chưa thanh toán") && (
                 <AppButton
@@ -476,7 +477,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === "ios" ? "padding" : undefined}>
           <View accessibilityViewIsModal style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text accessibilityRole="header" style={styles.modalTitle}>{t("mobile.invoices.newTitle")}</Text>
+              <AppText accessibilityRole="header" style={styles.modalTitle}>{t("mobile.invoices.newTitle")}</AppText>
               <Pressable accessibilityRole="button" accessibilityLabel={t("mobile.invoices.closeNew")} disabled={submitting} onPress={() => setModalVisible(false)}>
                 <Ionicons name="close" size={24} color={theme.text} />
               </Pressable>
@@ -489,10 +490,10 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
               keyboardShouldPersistTaps="handled"
               renderItem={() => (
                 <View style={styles.form}>
-                  <Text style={styles.label}>{t("mobile.invoices.selectRoom")}</Text>
+                  <AppText style={styles.label}>{t("mobile.invoices.selectRoom")}</AppText>
                   <View style={styles.roomSelectGrid}>
                     {occupiedRooms.length === 0 ? (
-                      <Text style={styles.noOccupiedText}>{t("mobile.invoices.noOccupied")}</Text>
+                      <AppText style={styles.noOccupiedText}>{t("mobile.invoices.noOccupied")}</AppText>
                     ) : (
                       occupiedRooms.map((room) => (
                         <Pressable
@@ -506,29 +507,29 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
                           ]}
                           onPress={() => handleSelectRoom(room._id)}
                         >
-                          <Text
+                          <AppText
                             style={[
                               styles.roomSelectText,
                               selectedRoomId === room._id && styles.roomSelectTextActive
                             ]}
                           >
                             {room.roomCode}
-                          </Text>
+                          </AppText>
                         </Pressable>
                       ))
                     )}
                   </View>
 
-                  <Text style={styles.label}>{t("mobile.invoices.periodInput")}</Text>
-                  <TextInput
+                  <AppText style={styles.label}>{t("mobile.invoices.periodInput")}</AppText>
+                  <AppTextInput
                     style={styles.input}
                     value={period}
                     onChangeText={setPeriod}
                     placeholder="MM/YYYY"
                   />
 
-                  <Text style={styles.label}>{t("mobile.invoices.dueDate")}</Text>
-                  <TextInput
+                  <AppText style={styles.label}>{t("mobile.invoices.dueDate")}</AppText>
+                  <AppTextInput
                     style={styles.input}
                     value={dueDate}
                     onChangeText={setDueDate}
@@ -538,8 +539,8 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
                   {/* Chỉ số điện */}
                   <View style={styles.indexRow}>
                     <View style={styles.indexCol}>
-                      <Text style={styles.label}>{t("mobile.invoices.electricityOld")}</Text>
-                      <TextInput
+                      <AppText style={styles.label}>{t("mobile.invoices.electricityOld")}</AppText>
+                      <AppTextInput
                         style={styles.input}
                         value={elecOld}
                         onChangeText={(value) => setElecOld(formatNumberInput(value))}
@@ -547,8 +548,8 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
                       />
                     </View>
                     <View style={styles.indexCol}>
-                      <Text style={styles.label}>{t("mobile.invoices.electricityNew")}</Text>
-                      <TextInput
+                      <AppText style={styles.label}>{t("mobile.invoices.electricityNew")}</AppText>
+                      <AppTextInput
                         style={styles.input}
                         value={elecNew}
                         onChangeText={(value) => setElecNew(formatNumberInput(value))}
@@ -560,8 +561,8 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
                   {/* Chỉ số nước */}
                   <View style={styles.indexRow}>
                     <View style={styles.indexCol}>
-                      <Text style={styles.label}>{t("mobile.invoices.waterOld")}</Text>
-                      <TextInput
+                      <AppText style={styles.label}>{t("mobile.invoices.waterOld")}</AppText>
+                      <AppTextInput
                         style={styles.input}
                         value={waterOld}
                         onChangeText={(value) => setWaterOld(formatNumberInput(value))}
@@ -569,8 +570,8 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
                       />
                     </View>
                     <View style={styles.indexCol}>
-                      <Text style={styles.label}>{t("mobile.invoices.waterNew")}</Text>
-                      <TextInput
+                      <AppText style={styles.label}>{t("mobile.invoices.waterNew")}</AppText>
+                      <AppTextInput
                         style={styles.input}
                         value={waterNew}
                         onChangeText={(value) => setWaterNew(formatNumberInput(value))}

@@ -1,16 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  Animated,
-  Image,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { ActivityIndicator, Animated, Image, Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { AppText, AppTextInput } from "@/components/ui/typography";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useAppTheme } from "../contexts/ThemeContext";
@@ -170,9 +160,9 @@ export default function MeterScannerScreen({ onBack, onSuccess }: Props) {
               ]}
             >
               <Ionicons name="flash" size={14} color={meterType === "electricity" ? "#ffffff" : "#cbd5e1"} />
-              <Text style={[styles.typeTabText, { color: meterType === "electricity" ? "#ffffff" : "#cbd5e1" }]}>
+              <AppText style={[styles.typeTabText, { color: meterType === "electricity" ? "#ffffff" : "#cbd5e1" }]}>
                 Điện
-              </Text>
+              </AppText>
             </Pressable>
 
             <Pressable
@@ -184,9 +174,9 @@ export default function MeterScannerScreen({ onBack, onSuccess }: Props) {
               ]}
             >
               <Ionicons name="water" size={14} color={meterType === "water" ? "#ffffff" : "#cbd5e1"} />
-              <Text style={[styles.typeTabText, { color: meterType === "water" ? "#ffffff" : "#cbd5e1" }]}>
+              <AppText style={[styles.typeTabText, { color: meterType === "water" ? "#ffffff" : "#cbd5e1" }]}>
                 Nước
-              </Text>
+              </AppText>
             </Pressable>
           </View>
 
@@ -202,9 +192,9 @@ export default function MeterScannerScreen({ onBack, onSuccess }: Props) {
 
         {/* Viewfinder Bounding Box with Laser Line */}
         <View style={styles.viewfinderContainer}>
-          <Text style={styles.instructionText}>
+          <AppText style={styles.instructionText}>
             Căn chỉnh mặt đồng hồ {meterType === "electricity" ? "ĐIỆN" : "NƯỚC"} vào khung ngắm
-          </Text>
+          </AppText>
 
           <View style={styles.boundingBox}>
             {/* Corner Bracket Decorations */}
@@ -230,7 +220,7 @@ export default function MeterScannerScreen({ onBack, onSuccess }: Props) {
         <View style={styles.footerControls}>
           <Pressable accessibilityRole="button" onPress={handlePickFromGallery} style={styles.galleryBtn}>
             <Ionicons name="images-outline" size={24} color="#ffffff" />
-            <Text style={styles.galleryBtnText}>Thư viện</Text>
+            <AppText style={styles.galleryBtnText}>Thư viện</AppText>
           </Pressable>
 
           <Pressable
@@ -264,7 +254,7 @@ export default function MeterScannerScreen({ onBack, onSuccess }: Props) {
 
           <View style={[styles.sheetContent, { backgroundColor: theme.surfaceElevated }]}>
             <View style={styles.sheetHeader}>
-              <Text style={[styles.sheetTitle, { color: theme.text }]}>Đối Soát & Xác Nhận Chỉ Số</Text>
+              <AppText style={[styles.sheetTitle, { color: theme.text }]}>Đối Soát & Xác Nhận Chỉ Số</AppText>
               <Pressable accessibilityRole="button" onPress={() => setModalVisible(false)}>
                 <Ionicons name="close-circle-outline" size={26} color={theme.muted} />
               </Pressable>
@@ -274,12 +264,12 @@ export default function MeterScannerScreen({ onBack, onSuccess }: Props) {
               {/* Output Result Card */}
               <AnimatedEntry>
                 <View style={[styles.resultCard, { backgroundColor: theme.surface }]}>
-                  <Text style={[styles.resultLabel, { color: theme.muted }]}>
+                  <AppText style={[styles.resultLabel, { color: theme.muted }]}>
                     CHỈ SỐ {meterType === "electricity" ? "ĐIỆN" : "NƯỚC"} TRÍCH XUẤT (OCR):
-                  </Text>
+                  </AppText>
 
                   <View style={styles.digitsRow}>
-                    <TextInput
+                    <AppTextInput
                       style={[styles.digitsInput, { color: theme.primary }]}
                       value={scannedDigits}
                       onChangeText={setScannedDigits}
@@ -289,15 +279,15 @@ export default function MeterScannerScreen({ onBack, onSuccess }: Props) {
                     <Ionicons name="create-outline" size={20} color={theme.muted} />
                   </View>
 
-                  <Text style={[styles.accuracyTag, { color: "#10b981" }]}>
+                  <AppText style={[styles.accuracyTag, { color: "#10b981" }]}>
                     ✓ Nhận diện chính xác 96%
-                  </Text>
+                  </AppText>
                 </View>
               </AnimatedEntry>
 
               {/* Room Selection */}
               <View style={styles.roomSelectSection}>
-                <Text style={[styles.fieldLabel, { color: theme.text }]}>Chọn phòng để ghi nhận *</Text>
+                <AppText style={[styles.fieldLabel, { color: theme.text }]}>Chọn phòng để ghi nhận *</AppText>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.roomChipsRow}>
                   {rooms.map((rm) => {
                     const selected = rm._id === selectedRoomId;
@@ -312,9 +302,9 @@ export default function MeterScannerScreen({ onBack, onSuccess }: Props) {
                           selected && { backgroundColor: theme.primary, borderColor: theme.primary },
                         ]}
                       >
-                        <Text style={[styles.roomChipText, { color: selected ? "#ffffff" : theme.text }]}>
+                        <AppText style={[styles.roomChipText, { color: selected ? "#ffffff" : theme.text }]}>
                           Phòng {rm.roomCode}
-                        </Text>
+                        </AppText>
                       </Pressable>
                     );
                   })}
@@ -324,7 +314,7 @@ export default function MeterScannerScreen({ onBack, onSuccess }: Props) {
               {/* Image Preview Thumbnail */}
               {capturedImage && (
                 <View style={styles.previewContainer}>
-                  <Text style={[styles.fieldLabel, { color: theme.muted }]}>Ảnh đối soát công tơ:</Text>
+                  <AppText style={[styles.fieldLabel, { color: theme.muted }]}>Ảnh đối soát công tơ:</AppText>
                   <Image source={{ uri: capturedImage }} style={styles.previewImg} />
                 </View>
               )}
@@ -341,7 +331,7 @@ export default function MeterScannerScreen({ onBack, onSuccess }: Props) {
                 ) : (
                   <>
                     <Ionicons name="checkmark-circle-outline" size={20} color="#ffffff" />
-                    <Text style={styles.saveBtnText}>Xác nhận & Lưu chỉ số</Text>
+                    <AppText style={styles.saveBtnText}>Xác nhận & Lưu chỉ số</AppText>
                   </>
                 )}
               </Pressable>

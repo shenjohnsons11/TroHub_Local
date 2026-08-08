@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, View, Text, StyleSheet, Modal, TextInput, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { ActivityIndicator, View, StyleSheet, Modal, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { AppText, AppTextInput } from "@/components/ui/typography";
 import AppButton from "../ui/AppButton";
 import { useAppTheme } from "../../contexts/ThemeContext";
 import { useTranslation } from "../../contexts/LanguageContext";
@@ -58,7 +59,7 @@ export default function CheckoutModal({ visible, onClose, onConfirm, loading, pr
         <View style={styles.backdrop} />
         <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
           <ScrollView>
-            <Text style={[styles.title, { color: theme.text }]}>{t("mobile.checkout.title")}</Text>
+            <AppText style={[styles.title, { color: theme.text }]}>{t("mobile.checkout.title")}</AppText>
 
             {previewLoading ? (
               <ActivityIndicator color={theme.primary} />
@@ -69,16 +70,16 @@ export default function CheckoutModal({ visible, onClose, onConfirm, loading, pr
                 <SummaryRow label={t("mobile.checkout.utilities")} value={formatCurrency(utilitiesAmount)} color={theme.text} />
                 <SummaryRow label={t("mobile.checkout.damage")} value={formatCurrency(unformatNumber(damage))} color={theme.text} />
                 <SummaryRow label={t("mobile.checkout.totalDebt")} value={formatCurrency(totalDebt)} color={theme.text} strong />
-                <Text style={[styles.result, { color: balance < 0 ? theme.danger : theme.positive }]}>
+                <AppText style={[styles.result, { color: balance < 0 ? theme.danger : theme.positive }]}>
                   {balance < 0
                     ? t("mobile.checkout.extraDebt", { amount: formatCurrency(-balance) })
                     : t("mobile.checkout.refund", { amount: formatCurrency(balance) })}
-                </Text>
+                </AppText>
               </View>
             ) : null}
             
-            <Text style={[styles.label, { color: theme.text }]}>{t("mobile.checkout.electricity")}</Text>
-            <TextInput
+            <AppText style={[styles.label, { color: theme.text }]}>{t("mobile.checkout.electricity")}</AppText>
+            <AppTextInput
               style={[styles.input, { borderColor: theme.border, color: theme.text }]}
               keyboardType="number-pad"
               value={electricityNew}
@@ -87,8 +88,8 @@ export default function CheckoutModal({ visible, onClose, onConfirm, loading, pr
               placeholderTextColor={theme.muted}
             />
 
-            <Text style={[styles.label, { color: theme.text }]}>{t("mobile.checkout.water")}</Text>
-            <TextInput
+            <AppText style={[styles.label, { color: theme.text }]}>{t("mobile.checkout.water")}</AppText>
+            <AppTextInput
               style={[styles.input, { borderColor: theme.border, color: theme.text }]}
               keyboardType="number-pad"
               value={waterNew}
@@ -97,8 +98,8 @@ export default function CheckoutModal({ visible, onClose, onConfirm, loading, pr
               placeholderTextColor={theme.muted}
             />
 
-            <Text style={[styles.label, { color: theme.text }]}>{t("mobile.checkout.damageInput")}</Text>
-            <TextInput
+            <AppText style={[styles.label, { color: theme.text }]}>{t("mobile.checkout.damageInput")}</AppText>
+            <AppTextInput
               style={[styles.input, { borderColor: theme.border, color: theme.text }]}
               keyboardType="number-pad"
               value={damage}
@@ -107,8 +108,8 @@ export default function CheckoutModal({ visible, onClose, onConfirm, loading, pr
               placeholderTextColor={theme.muted}
             />
 
-            <Text style={[styles.label, { color: theme.text }]}>{t("mobile.checkout.note")}</Text>
-            <TextInput
+            <AppText style={[styles.label, { color: theme.text }]}>{t("mobile.checkout.note")}</AppText>
+            <AppTextInput
               style={[styles.input, { borderColor: theme.border, color: theme.text, height: 80 }]}
               multiline
               value={note}
@@ -131,8 +132,8 @@ export default function CheckoutModal({ visible, onClose, onConfirm, loading, pr
 function SummaryRow({ label, value, color, strong = false }: { label: string; value: string; color: string; strong?: boolean }) {
   return (
     <View style={styles.summaryRow}>
-      <Text style={[styles.summaryText, strong && styles.strong, { color }]}>{label}</Text>
-      <Text style={[styles.summaryText, strong && styles.strong, { color }]}>{value}</Text>
+      <AppText style={[styles.summaryText, strong && styles.strong, { color }]}>{label}</AppText>
+      <AppText style={[styles.summaryText, strong && styles.strong, { color }]}>{value}</AppText>
     </View>
   );
 }

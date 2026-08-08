@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
+import { AppText } from "@/components/ui/typography";
 import { useAppTheme } from "../contexts/ThemeContext";
 
 export default function ThemeToggle() {
@@ -8,14 +9,14 @@ export default function ThemeToggle() {
   return (
     <View style={[styles.row, { backgroundColor: theme.surface, borderColor: theme.border }]}>
       <View>
-        <Text style={[styles.title, { color: theme.text }]}>Giao diện</Text>
-        <Text style={[styles.description, { color: theme.muted }]}>
+        <AppText style={[styles.title, { color: theme.text }]}>Giao diện</AppText>
+        <AppText style={[styles.description, { color: theme.muted }]}>
           {themeMode === "light"
             ? "Chế độ sáng"
             : themeMode === "dark"
               ? "Chế độ tối"
               : "Giao diện tự động"}
-        </Text>
+        </AppText>
       </View>
       <Pressable
         accessibilityRole="button"

@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as ImageManipulator from "expo-image-manipulator";
-import { ActivityIndicator, Animated, Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { ActivityIndicator, Animated, Modal, Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
+import { AppText } from "@/components/ui/typography";
 import { Ionicons } from "@expo/vector-icons";
 import { ocrService } from "../services/ocrService";
 import type { MeterType } from "../utils/meterReadingTarget";
@@ -102,8 +103,8 @@ export default function MeterCameraModal({ visible, roomCode, initialMeterType, 
           />
         ) : (
           <View style={styles.permission}>
-            <Text style={styles.message}>{permission ? t("mobile.camera.meterPermission") : t("mobile.camera.initializing")}</Text>
-            {permission ? <Pressable accessibilityRole="button" style={styles.permissionButton} onPress={requestPermission}><Text style={styles.permissionText}>{t("mobile.camera.allow")}</Text></Pressable> : null}
+            <AppText style={styles.message}>{permission ? t("mobile.camera.meterPermission") : t("mobile.camera.initializing")}</AppText>
+            {permission ? <Pressable accessibilityRole="button" style={styles.permissionButton} onPress={requestPermission}><AppText style={styles.permissionText}>{t("mobile.camera.allow")}</AppText></Pressable> : null}
           </View>
         )}
 
@@ -120,14 +121,14 @@ export default function MeterCameraModal({ visible, roomCode, initialMeterType, 
               <View style={[styles.corner, styles.bottomRight]} />
               <Animated.View style={[styles.laser, { transform: [{ translateY: laserY }] }]} />
             </View>
-            <Text style={[styles.hint, { top: frameBottom + 18 }]}>{t("mobile.camera.meterHint")}</Text>
+            <AppText style={[styles.hint, { top: frameBottom + 18 }]}>{t("mobile.camera.meterHint")}</AppText>
           </View>
         ) : null}
 
         <View style={styles.header}>
           <View>
-            <Text style={styles.title}>{t("mobile.camera.meterTitle", { roomCode })}</Text>
-            <Text style={styles.subtitle}>{t("mobile.camera.meterSubtitle")}</Text>
+            <AppText style={styles.title}>{t("mobile.camera.meterTitle", { roomCode })}</AppText>
+            <AppText style={styles.subtitle}>{t("mobile.camera.meterSubtitle")}</AppText>
           </View>
           <View style={styles.headerActions}>
             <Pressable
@@ -148,16 +149,16 @@ export default function MeterCameraModal({ visible, roomCode, initialMeterType, 
 
         {permission?.granted ? (
           <View style={styles.controls}>
-            {error ? <Text accessibilityLiveRegion="polite" style={styles.error}>{error}</Text> : null}
+            {error ? <AppText accessibilityLiveRegion="polite" style={styles.error}>{error}</AppText> : null}
             <View style={styles.modeRow}>
               {(["electricity", "water"] as MeterType[]).map((type) => (
                 <Pressable key={type} accessibilityRole="button" accessibilityState={{ selected: meterType === type }} disabled={reading} onPress={() => setMeterType(type)} style={[styles.mode, meterType === type && styles.modeActive]}>
-                  <Text style={[styles.modeText, meterType === type && styles.modeTextActive]}>{t(type === "electricity" ? "mobile.camera.electricity" : "mobile.camera.water")}</Text>
+                  <AppText style={[styles.modeText, meterType === type && styles.modeTextActive]}>{t(type === "electricity" ? "mobile.camera.electricity" : "mobile.camera.water")}</AppText>
                 </Pressable>
               ))}
             </View>
             <Pressable accessibilityRole="button" accessibilityLabel={t("mobile.camera.captureLabel", { meterType: t(meterType === "electricity" ? "mobile.camera.electricity" : "mobile.camera.water"), roomCode })} disabled={reading} onPress={() => void capture()} style={styles.capture}>
-              {reading ? <ActivityIndicator color="#073e36" /> : <><Ionicons name="camera" size={20} color="#073e36" /><Text style={styles.captureText}>{t("mobile.camera.capture")}</Text></>}
+              {reading ? <ActivityIndicator color="#073e36" /> : <><Ionicons name="camera" size={20} color="#073e36" /><AppText style={styles.captureText}>{t("mobile.camera.capture")}</AppText></>}
             </Pressable>
           </View>
         ) : null}

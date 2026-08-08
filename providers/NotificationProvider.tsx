@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   dialogTitle: {
-    fontFamily: FONT_FAMILIES.sans,
+    fontFamily: FONT_FAMILIES.regular,
     fontSize: 20,
     fontWeight: "900",
     lineHeight: 26,
@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   dialogMessage: {
-    fontFamily: FONT_FAMILIES.sans,
+    fontFamily: FONT_FAMILIES.regular,
     fontSize: 15,
     lineHeight: 22,
     marginTop: 8,
@@ -301,14 +301,14 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   loadingTitle: {
-    fontFamily: FONT_FAMILIES.sans,
+    fontFamily: FONT_FAMILIES.regular,
     fontSize: 18,
     fontWeight: "900",
     marginTop: 16,
     textAlign: "center",
   },
   loadingMessage: {
-    fontFamily: FONT_FAMILIES.sans,
+    fontFamily: FONT_FAMILIES.regular,
     fontSize: 14,
     lineHeight: 21,
     marginTop: 6,

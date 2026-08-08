@@ -1,13 +1,6 @@
 import React, { useEffect, useState } from "react";
-import {
-  FlatList,
-  Text,
-  StyleSheet,
-  View,
-  Pressable,
-  ActivityIndicator,
-  RefreshControl,
-} from "react-native";
+import { FlatList, StyleSheet, View, Pressable, ActivityIndicator, RefreshControl } from "react-native";
+import { AppText } from "@/components/ui/typography";
 import Card from "../components/Card";
 import { useAppTheme } from "../contexts/ThemeContext";
 import { Contract, ContractStatus } from "../types/Contract";
@@ -214,8 +207,8 @@ export default function ContractScreen({ onNavigate, params }: Props) {
       }
       ListHeaderComponent={
         <>
-          <Text style={styles.title}>{t("tenantContract.title")}</Text>
-          <Text style={styles.subtitle}>{t("tenantContract.subtitle")}</Text>
+          <AppText style={styles.title}>{t("tenantContract.title")}</AppText>
+          <AppText style={styles.subtitle}>{t("tenantContract.subtitle")}</AppText>
         </>
       }
       ListEmptyComponent={
@@ -225,7 +218,7 @@ export default function ContractScreen({ onNavigate, params }: Props) {
             kind="contract"
             title={t("tenantContract.empty")}
           />
-          <Text style={styles.emptyHint}>{t("tenantContract.refresh")}</Text>
+          <AppText style={styles.emptyHint}>{t("tenantContract.refresh")}</AppText>
         </View>
       }
       renderItem={({ item: contract, index }) => {
@@ -243,34 +236,34 @@ export default function ContractScreen({ onNavigate, params }: Props) {
             {/* Header: Phòng + Badge */}
             <View style={styles.cardHeader}>
               <View style={styles.cardHeaderLeft}>
-                <Text style={styles.roomTitle}>{t("tenantContract.room", { room: contract.room })}</Text>
-                <Text style={styles.tenantText}>{contract.tenantName}</Text>
+                <AppText style={styles.roomTitle}>{t("tenantContract.room", { room: contract.room })}</AppText>
+                <AppText style={styles.tenantText}>{contract.tenantName}</AppText>
               </View>
 
               <View style={[styles.statusBadge, { backgroundColor: getStatusBg(contract.status, theme) }]}>
-                <Text style={[styles.statusText, { color: getStatusColor(contract.status, theme) }]}>
+                <AppText style={[styles.statusText, { color: getStatusColor(contract.status, theme) }]}>
                   {getStatusLabel(contract.status, t)}
-                </Text>
+                </AppText>
               </View>
             </View>
 
             {/* Thông tin chính */}
             <View style={styles.infoGrid}>
               <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>{t("tenantContract.rent")}</Text>
-                <Text style={styles.infoValue}>{contract.rentFee}</Text>
+                <AppText style={styles.infoLabel}>{t("tenantContract.rent")}</AppText>
+                <AppText style={styles.infoValue}>{contract.rentFee}</AppText>
               </View>
               <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>{t("tenantContract.deposit")}</Text>
-                <Text style={styles.infoValue}>{contract.deposit}</Text>
+                <AppText style={styles.infoLabel}>{t("tenantContract.deposit")}</AppText>
+                <AppText style={styles.infoValue}>{contract.deposit}</AppText>
               </View>
               <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>{t("tenantContract.start")}</Text>
-                <Text style={styles.infoValue}>{contract.startDate}</Text>
+                <AppText style={styles.infoLabel}>{t("tenantContract.start")}</AppText>
+                <AppText style={styles.infoValue}>{contract.startDate}</AppText>
               </View>
               <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>{t("tenantContract.end")}</Text>
-                <Text style={styles.infoValue}>{contract.endDate}</Text>
+                <AppText style={styles.infoLabel}>{t("tenantContract.end")}</AppText>
+                <AppText style={styles.infoValue}>{contract.endDate}</AppText>
               </View>
             </View>
 
@@ -286,12 +279,12 @@ export default function ContractScreen({ onNavigate, params }: Props) {
                   />
                 </View>
                 <View style={styles.progressTextRow}>
-                  <Text style={styles.progressText}>
+                  <AppText style={styles.progressText}>
                     {t("tenantContract.used", { count: contract.usedMonths })}
-                  </Text>
-                  <Text style={styles.progressText}>
+                  </AppText>
+                  <AppText style={styles.progressText}>
                     {t("tenantContract.remaining", { count: contract.remainingMonths })}
-                  </Text>
+                  </AppText>
                 </View>
               </View>
             )}
@@ -299,18 +292,18 @@ export default function ContractScreen({ onNavigate, params }: Props) {
             {/* Phí dịch vụ */}
             {(contract.status === "active" || contract.status === "pending") && (
               <View style={styles.servicesBox}>
-                <Text style={styles.servicesTitle}>{t("tenantContract.services")}</Text>
+                <AppText style={styles.servicesTitle}>{t("tenantContract.services")}</AppText>
                 <View style={styles.servicesGrid}>
-                  <Text style={styles.serviceItem}>⚡ {contract.serviceFees.electric}</Text>
-                  <Text style={styles.serviceItem}>
+                  <AppText style={styles.serviceItem}>⚡ {contract.serviceFees.electric}</AppText>
+                  <AppText style={styles.serviceItem}>
                     {t("tenantContract.initialElectricity", { value: contract.meterTerms.initialElectricity })}
-                  </Text>
-                  <Text style={styles.serviceItem}>💧 {contract.serviceFees.water}</Text>
-                  <Text style={styles.serviceItem}>
+                  </AppText>
+                  <AppText style={styles.serviceItem}>💧 {contract.serviceFees.water}</AppText>
+                  <AppText style={styles.serviceItem}>
                     {t("tenantContract.initialWater", { value: contract.meterTerms.initialWater })}
-                  </Text>
-                  <Text style={styles.serviceItem}>🅿️ {contract.serviceFees.parking}</Text>
-                  <Text style={styles.serviceItem}>🌐 {contract.serviceFees.internet}</Text>
+                  </AppText>
+                  <AppText style={styles.serviceItem}>🅿️ {contract.serviceFees.parking}</AppText>
+                  <AppText style={styles.serviceItem}>🌐 {contract.serviceFees.internet}</AppText>
                 </View>
               </View>
             )}
@@ -319,9 +312,9 @@ export default function ContractScreen({ onNavigate, params }: Props) {
             {contract.status === "pending" && (
               <View style={styles.signBox}>
                 <View style={styles.signHintBox}>
-                  <Text style={styles.signHint}>
+                  <AppText style={styles.signHint}>
                     {t("tenantContract.signHint")}
-                  </Text>
+                  </AppText>
                 </View>
                 <Pressable
                   style={[styles.signButton, isSigning && styles.signButtonDisabled]}
@@ -331,7 +324,7 @@ export default function ContractScreen({ onNavigate, params }: Props) {
                   {isSigning ? (
                     <ActivityIndicator color={theme.background} />
                   ) : (
-                    <><Ionicons name="create-outline" size={19} color={theme.background} /><Text style={styles.signButtonText}>{t("tenantContract.sign")}</Text></>
+                    <><Ionicons name="create-outline" size={19} color={theme.background} /><AppText style={styles.signButtonText}>{t("tenantContract.sign")}</AppText></>
                   )}
                 </Pressable>
               </View>
@@ -341,23 +334,23 @@ export default function ContractScreen({ onNavigate, params }: Props) {
             {contract.status === "awaiting_approval" && (
               <>
                 <View style={styles.awaitingBox}>
-                  <Text style={styles.awaitingText}>
+                  <AppText style={styles.awaitingText}>
                     {t("tenantContract.awaitingHint")}
-                  </Text>
+                  </AppText>
                 </View>
                 {contract.depositPayment?.required &&
                   contract.depositPayment.status === "unpaid" && (
                     <View style={styles.depositPaymentCard}>
                       <View style={styles.depositPaymentCopy}>
-                        <Text style={styles.depositPaymentTitle}>
+                        <AppText style={styles.depositPaymentTitle}>
                           {t("tenantContract.depositUnpaid")}
-                        </Text>
-                        <Text style={styles.depositPaymentAmount}>
+                        </AppText>
+                        <AppText style={styles.depositPaymentAmount}>
                           {contract.deposit}
-                        </Text>
-                        <Text style={styles.depositPaymentHint}>
+                        </AppText>
+                        <AppText style={styles.depositPaymentHint}>
                           {t("tenantContract.depositHint")}
-                        </Text>
+                        </AppText>
                       </View>
                       <Pressable
                         style={[
@@ -383,9 +376,9 @@ export default function ContractScreen({ onNavigate, params }: Props) {
                         contract.depositPayment.invoiceId ? (
                           <ActivityIndicator color={theme.background} size="small" />
                         ) : (
-                          <><Ionicons name="card-outline" size={18} color={theme.background} /><Text style={styles.depositPaymentButtonText}>
+                          <><Ionicons name="card-outline" size={18} color={theme.background} /><AppText style={styles.depositPaymentButtonText}>
                             {t("tenantContract.pay")}
-                          </Text></>
+                          </AppText></>
                         )}
                       </Pressable>
                     </View>
@@ -404,7 +397,7 @@ export default function ContractScreen({ onNavigate, params }: Props) {
                   {isLoading ? (
                     <ActivityIndicator color={theme.dangerForeground} />
                   ) : (
-                    <><Ionicons name="exit-outline" size={19} color={theme.dangerForeground} /><Text style={[styles.signButtonText, { color: theme.dangerForeground }]}>{t("tenantContract.terminateTitle")}</Text></>
+                    <><Ionicons name="exit-outline" size={19} color={theme.dangerForeground} /><AppText style={[styles.signButtonText, { color: theme.dangerForeground }]}>{t("tenantContract.terminateTitle")}</AppText></>
                   )}
                 </Pressable>
               </View>
@@ -413,9 +406,9 @@ export default function ContractScreen({ onNavigate, params }: Props) {
             {/* Thông báo chờ duyệt trả phòng */}
             {contract.status === "requesting_termination" && (
               <View style={styles.awaitingBox}>
-                <Text style={styles.awaitingText}>
+                <AppText style={styles.awaitingText}>
                   {t("tenantContract.terminationHint")}
-                </Text>
+                </AppText>
               </View>
             )}
           </Card>

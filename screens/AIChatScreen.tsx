@@ -1,17 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-  Clipboard,
-  Alert,
-} from "react-native";
+import { View, StyleSheet, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, ActivityIndicator, Clipboard, Alert } from "react-native";
+import { AppText, AppTextInput } from "@/components/ui/typography";
 import { Ionicons } from "@expo/vector-icons";
 import * as Speech from "expo-speech";
 import { aiService } from "../services/aiService";
@@ -166,19 +155,19 @@ export default function AIChatScreen({ onBack, onAction }: AIChatScreenProps) {
     return lines.map((line, lineIdx) => {
       const parts = line.split(/(\*\*.*?\*\*)/g);
       return (
-        <Text key={lineIdx} style={styles.messageText}>
+        <AppText key={lineIdx} style={styles.messageText}>
           {parts.map((part, partIdx) => {
             if (part.startsWith("**") && part.endsWith("**")) {
               return (
-                <Text key={partIdx} style={styles.boldText}>
+                <AppText key={partIdx} style={styles.boldText}>
                   {part.slice(2, -2)}
-                </Text>
+                </AppText>
               );
             }
             return part;
           })}
           {lineIdx < lines.length - 1 ? "\n" : ""}
-        </Text>
+        </AppText>
       );
     });
   };
@@ -195,7 +184,7 @@ export default function AIChatScreen({ onBack, onAction }: AIChatScreenProps) {
         <View style={[styles.bubble, isUser ? styles.userBubble : styles.aiBubble]}>
           {!isUser && (
             <View style={styles.aiHeader}>
-              <Text style={styles.aiTitle}>TroHub AI 🤖</Text>
+              <AppText style={styles.aiTitle}>TroHub AI 🤖</AppText>
               <TouchableOpacity onPress={() => handleCopyText(item.text)} style={styles.copyBtn}>
                 <Ionicons name="copy-outline" size={14} color="#A7F3D0" />
               </TouchableOpacity>
@@ -207,9 +196,9 @@ export default function AIChatScreen({ onBack, onAction }: AIChatScreenProps) {
 
           {renderFormattedText(item.text)}
 
-          <Text style={[styles.timestamp, isUser ? styles.userTime : styles.aiTime]}>
+          <AppText style={[styles.timestamp, isUser ? styles.userTime : styles.aiTime]}>
             {item.timestamp}
-          </Text>
+          </AppText>
         </View>
       </View>
     );
@@ -234,13 +223,13 @@ export default function AIChatScreen({ onBack, onAction }: AIChatScreenProps) {
           </View>
           <View>
             <View style={styles.titleRow}>
-              <Text style={styles.headerTitle}>Trợ lý TroHub AI</Text>
+              <AppText style={styles.headerTitle}>Trợ lý TroHub AI</AppText>
               <View style={styles.badge}>
                 <View style={styles.dot} />
-                <Text style={styles.badgeText}>Gemini 2.5</Text>
+                <AppText style={styles.badgeText}>Gemini 2.5</AppText>
               </View>
             </View>
-            <Text style={styles.headerSubtitle}>Trợ lý quản lý nhà trọ thông minh</Text>
+            <AppText style={styles.headerSubtitle}>Trợ lý quản lý nhà trọ thông minh</AppText>
           </View>
         </View>
 
@@ -264,7 +253,7 @@ export default function AIChatScreen({ onBack, onAction }: AIChatScreenProps) {
               disabled={loading}
             >
               <Ionicons name="flash-outline" size={12} color="#A7F3D0" style={{ marginRight: 4 }} />
-              <Text style={styles.promptText}>{item}</Text>
+              <AppText style={styles.promptText}>{item}</AppText>
             </TouchableOpacity>
           )}
         />
@@ -281,7 +270,7 @@ export default function AIChatScreen({ onBack, onAction }: AIChatScreenProps) {
           loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator color="#10B981" size="small" />
-              <Text style={styles.loadingText}>TroHub AI đang suy nghĩ...</Text>
+              <AppText style={styles.loadingText}>TroHub AI đang suy nghĩ...</AppText>
             </View>
           ) : null
         }
@@ -289,7 +278,7 @@ export default function AIChatScreen({ onBack, onAction }: AIChatScreenProps) {
 
       {/* Input Bar */}
       <View style={styles.inputBar}>
-        <TextInput
+        <AppTextInput
           style={styles.input}
           placeholder="Hỏi TroHub AI bất kỳ điều gì..."
           placeholderTextColor="#6EE7B7"

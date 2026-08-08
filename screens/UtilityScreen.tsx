@@ -1,17 +1,6 @@
 import React, { useEffect, useState } from "react";
-import {
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Text,
-  StyleSheet,
-  View,
-  Pressable,
-  ActivityIndicator,
-  Modal,
-  TextInput,
-} from "react-native";
+import { FlatList, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, Pressable, ActivityIndicator, Modal } from "react-native";
+import { AppText, AppTextInput } from "@/components/ui/typography";
 import Card from "../components/Card";
 import { useAppTheme } from "../contexts/ThemeContext";
 import { UtilityRecord } from "../types/UtilityRecord";
@@ -93,10 +82,10 @@ export default function UtilityScreen({ onBack }: Props) {
           <>
             <Pressable style={styles.backButton} onPress={onBack}>
               <Ionicons name="arrow-back" size={18} color={theme.primary} />
-              <Text style={styles.backText}>Quay lại</Text>
+              <AppText style={styles.backText}>Quay lại</AppText>
             </Pressable>
-            <Text style={styles.title}>Điện nước</Text>
-            <Text style={styles.subtitle}>Theo dõi chỉ số điện nước và chi phí sử dụng hằng tháng.</Text>
+            <AppText style={styles.title}>Điện nước</AppText>
+            <AppText style={styles.subtitle}>Theo dõi chỉ số điện nước và chi phí sử dụng hằng tháng.</AppText>
             {current ? (
               <>
           <AnimatedEntry>
@@ -109,59 +98,59 @@ export default function UtilityScreen({ onBack }: Props) {
               <View style={styles.meterRow}>
                 <View style={styles.meterItem}>
                   <Ionicons name="flash-outline" size={20} color="#8CF2C9" />
-                  <Text style={styles.meterValue}>{formatNumberInput(current.electricUsed)} kWh</Text>
+                  <AppText style={styles.meterValue}>{formatNumberInput(current.electricUsed)} kWh</AppText>
                 </View>
                 <View style={styles.meterItem}>
                   <Ionicons name="water-outline" size={20} color="#8CF2C9" />
-                  <Text style={styles.meterValue}>{formatNumberInput(current.waterUsed)} m³</Text>
+                  <AppText style={styles.meterValue}>{formatNumberInput(current.waterUsed)} m³</AppText>
                 </View>
               </View>
             </GradientHero>
           </AnimatedEntry>
           <View style={styles.summaryRow}>
             <Card style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>Điện đã dùng</Text>
-              <Text style={styles.summaryNumber}>{formatNumberInput(current.electricUsed)} kWh</Text>
-              <Text style={styles.summaryMoney}>{current.electricMoney}</Text>
+              <AppText style={styles.summaryLabel}>Điện đã dùng</AppText>
+              <AppText style={styles.summaryNumber}>{formatNumberInput(current.electricUsed)} kWh</AppText>
+              <AppText style={styles.summaryMoney}>{current.electricMoney}</AppText>
             </Card>
 
             <Card style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>Nước đã dùng</Text>
-              <Text style={styles.summaryNumber}>{formatNumberInput(current.waterUsed)} m³</Text>
-              <Text style={styles.summaryMoney}>{current.waterMoney}</Text>
+              <AppText style={styles.summaryLabel}>Nước đã dùng</AppText>
+              <AppText style={styles.summaryNumber}>{formatNumberInput(current.waterUsed)} m³</AppText>
+              <AppText style={styles.summaryMoney}>{current.waterMoney}</AppText>
             </Card>
           </View>
 
           <Card style={styles.currentCard}>
-            <Text style={styles.sectionTitle}>Tháng {current.month}</Text>
+            <AppText style={styles.sectionTitle}>Tháng {current.month}</AppText>
 
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Chỉ số điện cũ</Text>
-              <Text style={styles.infoValue}>{formatNumberInput(current.electricOld)}</Text>
+              <AppText style={styles.infoLabel}>Chỉ số điện cũ</AppText>
+              <AppText style={styles.infoValue}>{formatNumberInput(current.electricOld)}</AppText>
             </View>
 
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Chỉ số điện mới</Text>
-              <Text style={styles.infoValue}>{formatNumberInput(current.electricNew)}</Text>
+              <AppText style={styles.infoLabel}>Chỉ số điện mới</AppText>
+              <AppText style={styles.infoValue}>{formatNumberInput(current.electricNew)}</AppText>
             </View>
 
             <View style={styles.divider} />
 
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Chỉ số nước cũ</Text>
-              <Text style={styles.infoValue}>{formatNumberInput(current.waterOld)}</Text>
+              <AppText style={styles.infoLabel}>Chỉ số nước cũ</AppText>
+              <AppText style={styles.infoValue}>{formatNumberInput(current.waterOld)}</AppText>
             </View>
 
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Chỉ số nước mới</Text>
-              <Text style={styles.infoValue}>{formatNumberInput(current.waterNew)}</Text>
+              <AppText style={styles.infoLabel}>Chỉ số nước mới</AppText>
+              <AppText style={styles.infoValue}>{formatNumberInput(current.waterNew)}</AppText>
             </View>
 
             <View style={styles.priceNote}>
               <Ionicons name="information-circle-outline" size={19} color={theme.primary} />
-              <Text style={styles.priceNoteText}>
+              <AppText style={styles.priceNoteText}>
                 Đơn giá áp dụng được thể hiện trong chi tiết hóa đơn.
-              </Text>
+              </AppText>
             </View>
           </Card>
               </>
@@ -169,24 +158,24 @@ export default function UtilityScreen({ onBack }: Props) {
             <AppButton icon="speedometer-outline" onPress={() => setModalVisible(true)} style={styles.reportButton}>
               Chốt số điện nước tháng này
             </AppButton>
-            <Text style={styles.historyTitle}>Lịch sử điện nước</Text>
+            <AppText style={styles.historyTitle}>Lịch sử điện nước</AppText>
           </>
         }
         ListEmptyComponent={
           <Card style={styles.emptyCard}>
-            <Text style={styles.emptyText}>Chưa có dữ liệu điện nước.</Text>
+            <AppText style={styles.emptyText}>Chưa có dữ liệu điện nước.</AppText>
           </Card>
         }
         renderItem={({ item, index }) => (
           <AnimatedEntry delay={Math.min(index, 5) * 35}>
             <Card style={styles.historyCard}>
               <View style={styles.historyHeader}>
-                <Text style={styles.historyMonth}>Tháng {item.month}</Text>
-                <Text style={styles.historyTotal}>{item.electricMoney} + {item.waterMoney}</Text>
+                <AppText style={styles.historyMonth}>Tháng {item.month}</AppText>
+                <AppText style={styles.historyTotal}>{item.electricMoney} + {item.waterMoney}</AppText>
               </View>
               <View style={styles.historyRow}>
-                <Text style={styles.historyText}>Điện: {formatNumberInput(item.electricUsed)} kWh</Text>
-                <Text style={styles.historyText}>Nước: {formatNumberInput(item.waterUsed)} m³</Text>
+                <AppText style={styles.historyText}>Điện: {formatNumberInput(item.electricUsed)} kWh</AppText>
+                <AppText style={styles.historyText}>Nước: {formatNumberInput(item.waterUsed)} m³</AppText>
               </View>
             </Card>
           </AnimatedEntry>
@@ -208,9 +197,9 @@ export default function UtilityScreen({ onBack }: Props) {
             keyboardShouldPersistTaps="handled"
           >
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Báo cáo chỉ số điện nước</Text>
-            <Text style={styles.label}>Số điện mới:</Text>
-            <TextInput 
+              <AppText style={styles.modalTitle}>Báo cáo chỉ số điện nước</AppText>
+            <AppText style={styles.label}>Số điện mới:</AppText>
+            <AppTextInput
               style={styles.input} 
               keyboardType="numeric" 
               value={draftElec} 
@@ -219,8 +208,8 @@ export default function UtilityScreen({ onBack }: Props) {
               placeholderTextColor={theme.muted}
             />
             
-            <Text style={styles.label}>Số nước mới:</Text>
-            <TextInput 
+            <AppText style={styles.label}>Số nước mới:</AppText>
+            <AppTextInput
               style={styles.input} 
               keyboardType="numeric" 
               value={draftWater} 
@@ -232,11 +221,11 @@ export default function UtilityScreen({ onBack }: Props) {
               <View style={styles.modalActions}>
               <Pressable style={[styles.btn, styles.btnCancel]} onPress={() => setModalVisible(false)}>
                 <Ionicons name="close-outline" size={18} color={theme.text} />
-                <Text style={styles.btnText}>Hủy</Text>
+                <AppText style={styles.btnText}>Hủy</AppText>
               </Pressable>
               <Pressable style={[styles.btn, styles.btnSubmit]} onPress={handleReport}>
                 <Ionicons name="send-outline" size={18} color={theme.background} />
-                <Text style={[styles.btnText, { color: theme.background }]}>Gửi báo cáo</Text>
+                <AppText style={[styles.btnText, { color: theme.background }]}>Gửi báo cáo</AppText>
               </Pressable>
               </View>
             </View>

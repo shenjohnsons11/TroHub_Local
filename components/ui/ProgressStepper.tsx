@@ -1,5 +1,6 @@
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { AppText } from "@/components/ui/typography";
 import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "../../contexts/ThemeContext";
 
@@ -82,7 +83,7 @@ export default function ProgressStepper({
                 color={step.error ? theme.danger : active ? theme.background : theme.muted}
               />
             </View>
-            <Text
+            <AppText
               numberOfLines={3}
               style={[
                 styles.label,
@@ -90,7 +91,7 @@ export default function ProgressStepper({
               ]}
             >
               {step.label}
-            </Text>
+            </AppText>
           </View>
         );
       })}

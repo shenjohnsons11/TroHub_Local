@@ -1,5 +1,6 @@
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { AppText } from "@/components/ui/typography";
 import { useAppTheme } from "../../contexts/ThemeContext";
 
 export type CalmStatus = "Đúng hạn" | "Sắp đến hạn" | "Quá hạn" | "Chờ tiếp nhận" | "Đang xử lý" | "Đã hoàn thành" | "Đã thanh toán";
@@ -15,7 +16,7 @@ export default function StatusBadge({ label }: { label: CalmStatus | string }) {
       accessibilityRole="text"
       style={[styles.badge, { backgroundColor, borderColor: theme.border }]}
     >
-      <Text style={[styles.text, { color }]}>{label}</Text>
+      <AppText style={[styles.text, { color }]}>{label}</AppText>
     </View>
   );
 }
