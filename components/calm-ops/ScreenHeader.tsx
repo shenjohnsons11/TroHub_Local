@@ -1,10 +1,11 @@
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { AppText } from "@/components/ui/typography";
 import { useAppTheme } from "../../contexts/ThemeContext";
 
 export default function ScreenHeader({ eyebrow, title, description, action }: { eyebrow?: string; title: string; description?: string; action?: React.ReactNode }) {
   const { theme } = useAppTheme();
-  return <View style={styles.row}><View style={styles.copy}>{eyebrow ? <Text style={[styles.eyebrow, { color: theme.warningForeground }]}>{eyebrow}</Text> : null}<Text style={[styles.title, { color: theme.text }]}>{title}</Text>{description ? <Text style={[styles.description, { color: theme.muted }]}>{description}</Text> : null}</View>{action}</View>;
+  return <View style={styles.row}><View style={styles.copy}>{eyebrow ? <AppText style={[styles.eyebrow, { color: theme.warningForeground }]}>{eyebrow}</AppText> : null}<AppText style={[styles.title, { color: theme.text }]}>{title}</AppText>{description ? <AppText style={[styles.description, { color: theme.muted }]}>{description}</AppText> : null}</View>{action}</View>;
 }
 
 const styles = StyleSheet.create({

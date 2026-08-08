@@ -1,13 +1,6 @@
 import React, { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Linking,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { AppText } from "@/components/ui/typography";
 import Card from "../components/Card";
 import { useAppTheme } from "../contexts/ThemeContext";
 import { homeService } from "../services/homeService";
@@ -134,7 +127,7 @@ export default function HomeScreen({ profile, refreshKey, onNavigate, onLogout }
             <Ionicons name="notifications-outline" size={24} color={theme.text} />
             {unreadCount > 0 && (
               <View style={styles.bellBadge}>
-                <Text style={styles.bellBadgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+                <AppText style={styles.bellBadgeText}>{unreadCount > 99 ? '99+' : unreadCount}</AppText>
               </View>
             )}
           </Pressable>
@@ -150,23 +143,23 @@ export default function HomeScreen({ profile, refreshKey, onNavigate, onLogout }
       </View>
 
       <View style={styles.homeHero}>
-        <Text style={styles.heroKicker}>{t("mobile.home.hero")}</Text>
-        <Text style={styles.heroTitle}>
+        <AppText style={styles.heroKicker}>{t("mobile.home.hero")}</AppText>
+        <AppText style={styles.heroTitle}>
           {getRealtimeGreeting().slice(0, -1)}, {userDisplayName}
-        </Text>
-        <Text style={styles.heroRoom}>
+        </AppText>
+        <AppText style={styles.heroRoom}>
           {homeData.room === t("mobile.home.noRoom") ? t("mobile.home.noRoom") : t("mobile.home.room", { room: homeData.room })}
-        </Text>
+        </AppText>
         <MiniCalendarPopover />
       </View>
 
       {homeData.propertyAddress ? (
         <Card style={styles.propertyCard}>
-          <Text style={[styles.propertyTitle, { color: theme.text }]}>{t("property")}</Text>
-          <Text style={[styles.propertyAddress, { color: theme.muted }]}>{homeData.propertyAddress}</Text>
+          <AppText style={[styles.propertyTitle, { color: theme.text }]}>{t("property")}</AppText>
+          <AppText style={[styles.propertyAddress, { color: theme.muted }]}>{homeData.propertyAddress}</AppText>
           <Pressable accessibilityRole="button" onPress={openPropertyMap} style={[styles.mapButton, { backgroundColor: theme.primarySoft }]}>
             <Ionicons name="map-outline" size={18} color={theme.primary} />
-            <Text style={[styles.mapButtonText, { color: theme.primary }]}>{t("openMaps")}</Text>
+            <AppText style={[styles.mapButtonText, { color: theme.primary }]}>{t("openMaps")}</AppText>
           </Pressable>
         </Card>
       ) : null}
@@ -174,24 +167,24 @@ export default function HomeScreen({ profile, refreshKey, onNavigate, onLogout }
       {invites.length > 0 && invites.map((invite, index) => (
         <AnimatedEntry delay={index * 40} key={invite.id}>
         <Card style={[styles.amountCard, styles.inviteCard]}>
-          <Text style={[styles.cardTitle, { color: theme.warningForeground, marginBottom: 4 }]}>{t("mobile.home.inviteTitle")}</Text>
-          <Text style={styles.smallText}>
+          <AppText style={[styles.cardTitle, { color: theme.warningForeground, marginBottom: 4 }]}>{t("mobile.home.inviteTitle")}</AppText>
+          <AppText style={styles.smallText}>
             {t("mobile.home.inviteMessage", { name: invite.landlordName, phone: formatPhone(invite.phone) })}
-          </Text>
+          </AppText>
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
             <Pressable
               style={[styles.primaryButton, { flex: 1, marginTop: 0 }]}
               onPress={() => handleAcceptInvite(invite.id)}
             >
               <Ionicons name="checkmark-circle-outline" size={18} color={theme.background} />
-              <Text style={styles.primaryText}>{t("mobile.home.accept")}</Text>
+              <AppText style={styles.primaryText}>{t("mobile.home.accept")}</AppText>
             </Pressable>
             <Pressable
               style={[styles.secondaryButton, { flex: 1 }]}
               onPress={() => handleRejectInvite(invite.id)}
             >
               <Ionicons name="close-circle-outline" size={18} color={theme.warningForeground} />
-              <Text style={[styles.primaryText, { color: theme.warningForeground }]}>{t("mobile.home.reject")}</Text>
+              <AppText style={[styles.primaryText, { color: theme.warningForeground }]}>{t("mobile.home.reject")}</AppText>
             </Pressable>
           </View>
         </Card>
@@ -219,8 +212,8 @@ export default function HomeScreen({ profile, refreshKey, onNavigate, onLogout }
                   <Ionicons name="sparkles" size={20} color="#34D399" />
                 </View>
                 <View>
-                  <Text style={[styles.cardTitle, { color: "#ECFDF5", marginBottom: 2 }]}>{t("mobile.home.aiTitle")}</Text>
-                  <Text style={{ fontSize: 12, color: "#A7F3D0" }}>{t("mobile.home.aiDescription")}</Text>
+                  <AppText style={[styles.cardTitle, { color: "#ECFDF5", marginBottom: 2 }]}>{t("mobile.home.aiTitle")}</AppText>
+                  <AppText style={{ fontSize: 12, color: "#A7F3D0" }}>{t("mobile.home.aiDescription")}</AppText>
                 </View>
               </View>
               <Ionicons name="chevron-forward" size={20} color="#34D399" />
@@ -238,7 +231,7 @@ export default function HomeScreen({ profile, refreshKey, onNavigate, onLogout }
         >
           <Card style={styles.quickCard}>
             <View style={styles.quickIcon}><Ionicons name="document-text-outline" size={22} color={theme.primary} /></View>
-            <Text style={styles.quickText}>{t("mobile.home.contract")}</Text>
+            <AppText style={styles.quickText}>{t("mobile.home.contract")}</AppText>
           </Card>
         </Pressable>
 
@@ -248,7 +241,7 @@ export default function HomeScreen({ profile, refreshKey, onNavigate, onLogout }
         >
           <Card style={styles.quickCard}>
             <View style={styles.quickIcon}><Ionicons name="water-outline" size={22} color={theme.primary} /></View>
-            <Text style={styles.quickText}>{t("mobile.home.utility")}</Text>
+            <AppText style={styles.quickText}>{t("mobile.home.utility")}</AppText>
           </Card>
         </Pressable>
 
@@ -258,7 +251,7 @@ export default function HomeScreen({ profile, refreshKey, onNavigate, onLogout }
         >
           <Card style={styles.quickCard}>
             <View style={styles.quickIcon}><Ionicons name="construct-outline" size={22} color={theme.primary} /></View>
-            <Text style={styles.quickText}>{t("mobile.home.repair")}</Text>
+            <AppText style={styles.quickText}>{t("mobile.home.repair")}</AppText>
           </Card>
         </Pressable>
 
@@ -268,7 +261,7 @@ export default function HomeScreen({ profile, refreshKey, onNavigate, onLogout }
         >
           <Card style={styles.quickCard}>
             <View style={styles.quickIcon}><Ionicons name="receipt-outline" size={22} color={theme.primary} /></View>
-            <Text style={styles.quickText}>{t("mobile.home.invoiceShort")}</Text>
+            <AppText style={styles.quickText}>{t("mobile.home.invoiceShort")}</AppText>
           </Card>
         </Pressable>
       </AnimatedEntry>
@@ -276,10 +269,10 @@ export default function HomeScreen({ profile, refreshKey, onNavigate, onLogout }
       <AnimatedEntry delay={140}>
       <Pressable onPress={() => onNavigate("contract")}>
         <Card style={styles.infoCard}>
-          <Text style={styles.cardTitle}>{t("mobile.home.contract")}</Text>
-          <Text style={styles.cardDesc}>
+          <AppText style={styles.cardTitle}>{t("mobile.home.contract")}</AppText>
+          <AppText style={styles.cardDesc}>
             {t("mobile.home.expires", { date: homeData.contractEndDate })}
-          </Text>
+          </AppText>
         </Card>
       </Pressable>
       </AnimatedEntry>
@@ -287,7 +280,7 @@ export default function HomeScreen({ profile, refreshKey, onNavigate, onLogout }
       <AnimatedEntry delay={180}>
       <Pressable onPress={() => onNavigate("repair")}>
         <Card style={styles.infoCard}>
-          <Text style={styles.cardTitle}>{homeData.recentRepair.title}</Text>
+          <AppText style={styles.cardTitle}>{homeData.recentRepair.title}</AppText>
           <StatusBadge label={homeData.recentRepair.status || t("mobile.home.processing")} />
         </Card>
       </Pressable>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { AppText } from "@/components/ui/typography";
 import { Ionicons } from "@expo/vector-icons";
 import { adminService, AdminDashboardStats } from "../services/adminService";
 import { UserProfile } from "../types/UserProfile";
@@ -55,11 +56,11 @@ export default function AdminDashboardScreen({ profile, refreshKey = 0, onNaviga
     <ScrollView style={[styles.container, { backgroundColor: theme.background }]} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void loadStats(); }} colors={[theme.primary]} tintColor={theme.primary} />}>
       <View style={styles.heading}>
         <View style={{ flex: 1, paddingRight: 10 }}>
-          <Text style={[styles.eyebrow, { color: theme.primary }]}>{t("dashboard.eyebrow")}</Text>
-          <Text style={[styles.title, { color: theme.text }]}>
+          <AppText style={[styles.eyebrow, { color: theme.primary }]}>{t("dashboard.eyebrow")}</AppText>
+          <AppText style={[styles.title, { color: theme.text }]}>
             {t(greetingKey)} {name},
-          </Text>
-          <Text style={[styles.subtitle, { color: theme.muted }]}>{t("dashboard.pendingToday", { count: stats?.pendingRepairs || 0 })}</Text>
+          </AppText>
+          <AppText style={[styles.subtitle, { color: theme.muted }]}>{t("dashboard.pendingToday", { count: stats?.pendingRepairs || 0 })}</AppText>
           <MiniCalendarPopover />
         </View>
 
@@ -84,9 +85,9 @@ export default function AdminDashboardScreen({ profile, refreshKey = 0, onNaviga
             <Ionicons name="notifications-outline" size={22} color={theme.text} />
             {unreadCount > 0 && (
               <View style={[styles.unreadBadge, { backgroundColor: theme.danger }]}>
-                <Text style={styles.unreadBadgeText}>
+                <AppText style={styles.unreadBadgeText}>
                   {unreadCount > 99 ? "99+" : unreadCount}
-                </Text>
+                </AppText>
               </View>
             )}
           </Pressable>
@@ -107,8 +108,8 @@ export default function AdminDashboardScreen({ profile, refreshKey = 0, onNaviga
         <View style={[styles.propertyBanner, { backgroundColor: theme.primarySoft }]}>
           <Ionicons name="location-outline" size={18} color={theme.primary} />
           <View style={{ flex: 1 }}>
-            <Text style={[styles.propertyTitle, { color: theme.text }]}>{t("dashboard.property")}</Text>
-            <Text style={[styles.propertyAddress, { color: theme.muted }]}>{profile.propertyAddress}</Text>
+            <AppText style={[styles.propertyTitle, { color: theme.text }]}>{t("dashboard.property")}</AppText>
+            <AppText style={[styles.propertyAddress, { color: theme.muted }]}>{profile.propertyAddress}</AppText>
           </View>
         </View>
       ) : null}
@@ -124,13 +125,13 @@ export default function AdminDashboardScreen({ profile, refreshKey = 0, onNaviga
         <Metric theme={theme} label={t("dashboard.maintenance")} value={maintenanceRooms} detail={t("dashboard.rooms")} icon="construct-outline" urgent={Boolean(maintenanceRooms)} />
       </View>
 
-      <Text style={[styles.sectionTitle, { color: theme.text }]}>{t("dashboard.today")}</Text>
+      <AppText style={[styles.sectionTitle, { color: theme.text }]}>{t("dashboard.today")}</AppText>
       <PriorityCard title={t("dashboard.repairs")} count={stats?.pendingRepairs || 0} description={t("dashboard.repairHint")} urgent={Boolean(stats?.pendingRepairs)} onPress={() => onNavigate("repair")} />
 
-      <Text style={[styles.sectionTitle, { color: theme.text }]}>{t("dashboard.quickActions")}</Text>
-      <View style={styles.quickRow}>{quickActions.map(([label, icon, onPress], index) => <AnimatedEntry key={label} delay={index * 45} style={styles.quickWrap}><Pressable accessibilityRole="button" onPress={onPress} style={[styles.quick, { backgroundColor: theme.surfaceElevated, shadowColor: theme.text }]}><View style={[styles.quickIcon, { backgroundColor: theme.primarySoft }]}><Ionicons name={icon} size={22} color={theme.primary} /></View><Text style={[styles.quickText, { color: theme.text }]}>{label}</Text></Pressable></AnimatedEntry>)}</View>
+      <AppText style={[styles.sectionTitle, { color: theme.text }]}>{t("dashboard.quickActions")}</AppText>
+      <View style={styles.quickRow}>{quickActions.map(([label, icon, onPress], index) => <AnimatedEntry key={label} delay={index * 45} style={styles.quickWrap}><Pressable accessibilityRole="button" onPress={onPress} style={[styles.quick, { backgroundColor: theme.surfaceElevated, shadowColor: theme.text }]}><View style={[styles.quickIcon, { backgroundColor: theme.primarySoft }]}><Ionicons name={icon} size={22} color={theme.primary} /></View><AppText style={[styles.quickText, { color: theme.text }]}>{label}</AppText></Pressable></AnimatedEntry>)}</View>
 
-      <Text style={[styles.sectionTitle, { color: theme.text }]}>{t("dashboard.rooms")}</Text>
+      <AppText style={[styles.sectionTitle, { color: theme.text }]}>{t("dashboard.rooms")}</AppText>
       <View style={styles.grid}>
         <Metric theme={theme} label={t("dashboard.occupied")} value={occupiedRooms} detail={`${occupancyRate}%`} icon="home-outline" />
         <Metric theme={theme} label={t("dashboard.tenants")} value={stats?.totalTenants || 0} detail={t("dashboard.active")} icon="people-outline" />
@@ -142,7 +143,7 @@ export default function AdminDashboardScreen({ profile, refreshKey = 0, onNaviga
 
 function Metric({ theme, label, value, detail, icon, urgent = false, danger = false }: { theme: any; label: string; value: React.ReactNode; detail: string; icon: React.ComponentProps<typeof Ionicons>["name"]; urgent?: boolean; danger?: boolean }) {
   const accent = danger ? theme.danger : urgent ? theme.warning : theme.primary;
-  return <AnimatedEntry style={styles.metricWrap}><View style={[styles.metric, { backgroundColor: theme.surfaceElevated, shadowColor: theme.text }]}><View style={[styles.metricIcon, { backgroundColor: urgent ? theme.warningSoft : theme.primarySoft }]}><Ionicons name={icon} size={20} color={accent} /></View><Text style={[styles.metricValue, { color: theme.text }]}>{value}</Text><Text style={[styles.metricLabel, { color: theme.text }]}>{label}</Text><Text style={[styles.metricDetail, { color: urgent ? accent : theme.muted }]}>{detail}</Text></View></AnimatedEntry>;
+  return <AnimatedEntry style={styles.metricWrap}><View style={[styles.metric, { backgroundColor: theme.surfaceElevated, shadowColor: theme.text }]}><View style={[styles.metricIcon, { backgroundColor: urgent ? theme.warningSoft : theme.primarySoft }]}><Ionicons name={icon} size={20} color={accent} /></View><AppText style={[styles.metricValue, { color: theme.text }]}>{value}</AppText><AppText style={[styles.metricLabel, { color: theme.text }]}>{label}</AppText><AppText style={[styles.metricDetail, { color: urgent ? accent : theme.muted }]}>{detail}</AppText></View></AnimatedEntry>;
 }
 
 const styles = StyleSheet.create({

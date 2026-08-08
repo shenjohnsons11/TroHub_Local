@@ -1,17 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
-import {
-  AccessibilityInfo,
-  findNodeHandle,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { AccessibilityInfo, findNodeHandle, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { AppText, AppTextInput } from "@/components/ui/typography";
 import { Ionicons } from "@expo/vector-icons";
 import { authService } from "../services/authService";
 import { useAppTheme } from "../contexts/ThemeContext";
@@ -43,8 +32,8 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [secondsUntilResend, setSecondsUntilResend] = useState(0);
 
-  const titleRef = useRef<Text>(null);
-  const newPasswordRef = useRef<TextInput>(null);
+  const titleRef = useRef<React.ElementRef<typeof AppText>>(null);
+  const newPasswordRef = useRef<React.ElementRef<typeof AppTextInput>>(null);
 
   useEffect(() => {
     if (!visible) return;
@@ -158,15 +147,15 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
             <View style={styles.box} accessibilityViewIsModal>
               <View style={styles.header}>
                 <View style={styles.headerText}>
-                  <Text
+                  <AppText
                     ref={titleRef}
                     style={styles.title}
                     accessibilityRole="header"
                     accessibilityLiveRegion="polite"
                   >
                     {t("auth.forgotPasswordTitle") || "Quên mật khẩu"}
-                  </Text>
-                  <Text style={styles.subtitle}>{subtitle}</Text>
+                  </AppText>
+                  <AppText style={styles.subtitle}>{subtitle}</AppText>
                 </View>
                 <Pressable
                   style={styles.closeButton}
@@ -182,8 +171,8 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
               {/* STEP 1: REQUEST OTP */}
               {step === "request" && (
                 <View key="step-request" pointerEvents={isSubmitting ? "none" : "auto"}>
-                  <Text style={styles.label}>{t("auth.phoneOrEmail") || "Số điện thoại hoặc Email"}</Text>
-                  <TextInput
+                  <AppText style={styles.label}>{t("auth.phoneOrEmail") || "Số điện thoại hoặc Email"}</AppText>
+                  <AppTextInput
                     key="input-identifier"
                     style={[styles.input, error ? styles.inputError : null]}
                     value={identifier}
@@ -203,8 +192,8 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
               {/* STEP 2: VERIFY OTP */}
               {step === "verify" && (
                 <View key="step-verify" pointerEvents={isSubmitting ? "none" : "auto"}>
-                  <Text style={styles.label}>Mã OTP 6 số</Text>
-                  <TextInput
+                  <AppText style={styles.label}>Mã OTP 6 số</AppText>
+                  <AppTextInput
                     key="input-otp"
                     style={[styles.input, error ? styles.inputError : null]}
                     value={otp}
@@ -220,9 +209,9 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
                     editable={!isSubmitting}
                   />
                   {secondsUntilResend > 0 ? (
-                    <Text style={styles.resendText}>
+                    <AppText style={styles.resendText}>
                       Gửi lại mã sau {secondsUntilResend}s
-                    </Text>
+                    </AppText>
                   ) : null}
                 </View>
               )}
@@ -230,8 +219,8 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
               {/* STEP 3: RESET NEW PASSWORD */}
               {step === "reset" && (
                 <View key="step-reset" pointerEvents={isSubmitting ? "none" : "auto"}>
-                  <Text style={styles.label}>{t("auth.newPassword") || "Mật khẩu mới"}</Text>
-                  <TextInput
+                  <AppText style={styles.label}>{t("auth.newPassword") || "Mật khẩu mới"}</AppText>
+                  <AppTextInput
                     key="input-new-password"
                     ref={newPasswordRef}
                     style={[styles.input, error ? styles.inputError : null]}
@@ -247,8 +236,8 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
                     editable={!isSubmitting}
                   />
 
-                  <Text style={styles.label}>{t("auth.confirmPassword") || "Xác nhận mật khẩu mới"}</Text>
-                  <TextInput
+                  <AppText style={styles.label}>{t("auth.confirmPassword") || "Xác nhận mật khẩu mới"}</AppText>
+                  <AppTextInput
                     key="input-confirm-password"
                     style={[styles.input, error ? styles.inputError : null]}
                     value={confirmPassword}
@@ -266,9 +255,9 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
               )}
 
               {error ? (
-                <Text accessibilityLiveRegion="polite" style={styles.errorText}>
+                <AppText accessibilityLiveRegion="polite" style={styles.errorText}>
                   {error}
-                </Text>
+                </AppText>
               ) : null}
 
               <AppButton

@@ -1,5 +1,6 @@
 import React from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Pressable, StyleSheet } from "react-native";
+import { AppText } from "@/components/ui/typography";
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { useAppTheme } from "../contexts/ThemeContext";
@@ -150,9 +151,9 @@ export default function BottomNav({ activeTab, onChangeTab, role }: Props) {
                   />
                 </View>
 
-                <Text style={[styles.label, { color: theme.muted }, active && styles.activeLabel, active && { color: theme.primary }]}>
+                <AppText style={[styles.label, { color: theme.muted }, active && styles.activeLabel, active && { color: theme.primary }]}>
                   {t(tab.label)}
-                </Text>
+                </AppText>
               </Pressable>
             );
           })}

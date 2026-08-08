@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { PropsWithChildren } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
+import { AppText } from "@/components/ui/typography";
 
 type Props = PropsWithChildren<{
   icon: keyof typeof Ionicons.glyphMap;
@@ -28,14 +29,14 @@ export default function GradientHero({
       <View style={styles.iconTile}>
         <Ionicons name={icon} size={23} color="#DDFBF0" />
       </View>
-      <Text style={styles.label}>{label}</Text>
-      <Text adjustsFontSizeToFit numberOfLines={1} style={styles.value}>{value}</Text>
-      {detail ? <Text style={styles.detail}>{detail}</Text> : null}
+      <AppText style={styles.label}>{label}</AppText>
+      <AppText adjustsFontSizeToFit numberOfLines={1} style={styles.value}>{value}</AppText>
+      {detail ? <AppText style={styles.detail}>{detail}</AppText> : null}
       {children}
       {actionLabel && onAction ? (
         <Pressable accessibilityRole="button" onPress={onAction} style={styles.action}>
           <Ionicons name={actionIcon} size={18} color="#04100E" />
-          <Text style={styles.actionText}>{actionLabel}</Text>
+          <AppText style={styles.actionText}>{actionLabel}</AppText>
         </Pressable>
       ) : null}
     </LinearGradient>

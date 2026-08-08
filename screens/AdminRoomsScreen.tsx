@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, FlatList, Pressable, TextInput, Modal, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
+import { View, StyleSheet, FlatList, Pressable, Modal, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
+import { AppText, AppTextInput } from "@/components/ui/typography";
 import { Ionicons } from "@expo/vector-icons";
 import { adminService, AdminRoom } from "../services/adminService";
 import { apiClient } from "../services/apiClient";
@@ -113,25 +114,25 @@ export default function AdminRoomsScreen({ params }: Props) {
           <GradientHero icon="home-outline" label={t("mobile.rooms.heroLabel")} value={t("mobile.rooms.heroValue", { count: rooms.length })} detail={t("mobile.rooms.heroDetail", { count: rooms.filter((room) => room.status === 0).length })} />
           <View style={styles.sectionRow}>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.sectionTitle, { color: theme.text }]}>{t("mobile.rooms.listTitle")}</Text>
-              <Text style={[styles.sectionSub, { color: theme.muted }]}>{t("mobile.rooms.listSubtitle")}</Text>
+              <AppText style={[styles.sectionTitle, { color: theme.text }]}>{t("mobile.rooms.listTitle")}</AppText>
+              <AppText style={[styles.sectionSub, { color: theme.muted }]}>{t("mobile.rooms.listSubtitle")}</AppText>
             </View>
             <Pressable accessibilityRole="button" style={[styles.sectionBtn, { backgroundColor: theme.warningForeground }]} onPress={() => { setMeterReadings({}); setMeterModalVisible(true); }}>
               <Ionicons name="flash" size={16} color="#fff" />
-              <Text style={styles.sectionBtnText}>{t("mobile.rooms.recordMeter")}</Text>
+              <AppText style={styles.sectionBtnText}>{t("mobile.rooms.recordMeter")}</AppText>
             </Pressable>
             <Pressable accessibilityRole="button" style={[styles.sectionBtn, { backgroundColor: theme.primary }]} onPress={() => setModalVisible(true)}>
               <Ionicons name="add" size={16} color="#fff" />
-              <Text style={styles.sectionBtnText}>{t("mobile.rooms.add")}</Text>
+              <AppText style={styles.sectionBtnText}>{t("mobile.rooms.add")}</AppText>
             </Pressable>
           </View>
-          <View style={styles.filters}>{(["all", "empty", "occupied", "repair"] as const).map((value) => <Pressable key={value} accessibilityRole="button" accessibilityState={{ selected: filter === value }} style={[styles.filter, { backgroundColor: filter === value ? theme.primarySoft : theme.surfaceElevated }]} onPress={() => setFilter(value)}><Text style={[styles.filterText, { color: filter === value ? theme.primary : theme.muted }]}>{({ all: t("common.all"), empty: t("mobile.rooms.available"), occupied: t("mobile.rooms.occupied"), repair: t("mobile.rooms.repair") })[value]}</Text></Pressable>)}</View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.floorFilters}><Pressable accessibilityRole="button" accessibilityState={{ selected: selectedFloor === "all" }} style={[styles.filter, { backgroundColor: selectedFloor === "all" ? theme.primarySoft : theme.surfaceElevated }]} onPress={() => setSelectedFloor("all")}><Text style={[styles.filterText, { color: selectedFloor === "all" ? theme.primary : theme.muted }]}>{t("common.all")}</Text></Pressable>{floors.map((value) => <Pressable key={value} accessibilityRole="button" accessibilityState={{ selected: selectedFloor === value }} style={[styles.filter, { backgroundColor: selectedFloor === value ? theme.primarySoft : theme.surfaceElevated }]} onPress={() => setSelectedFloor(value)}><Text style={[styles.filterText, { color: selectedFloor === value ? theme.primary : theme.muted }]}>{t("common.floor", { number: value })}</Text></Pressable>)}</ScrollView>
+          <View style={styles.filters}>{(["all", "empty", "occupied", "repair"] as const).map((value) => <Pressable key={value} accessibilityRole="button" accessibilityState={{ selected: filter === value }} style={[styles.filter, { backgroundColor: filter === value ? theme.primarySoft : theme.surfaceElevated }]} onPress={() => setFilter(value)}><AppText style={[styles.filterText, { color: filter === value ? theme.primary : theme.muted }]}>{({ all: t("common.all"), empty: t("mobile.rooms.available"), occupied: t("mobile.rooms.occupied"), repair: t("mobile.rooms.repair") })[value]}</AppText></Pressable>)}</View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.floorFilters}><Pressable accessibilityRole="button" accessibilityState={{ selected: selectedFloor === "all" }} style={[styles.filter, { backgroundColor: selectedFloor === "all" ? theme.primarySoft : theme.surfaceElevated }]} onPress={() => setSelectedFloor("all")}><AppText style={[styles.filterText, { color: selectedFloor === "all" ? theme.primary : theme.muted }]}>{t("common.all")}</AppText></Pressable>{floors.map((value) => <Pressable key={value} accessibilityRole="button" accessibilityState={{ selected: selectedFloor === value }} style={[styles.filter, { backgroundColor: selectedFloor === value ? theme.primarySoft : theme.surfaceElevated }]} onPress={() => setSelectedFloor(value)}><AppText style={[styles.filterText, { color: selectedFloor === value ? theme.primary : theme.muted }]}>{t("common.floor", { number: value })}</AppText></Pressable>)}</ScrollView>
         </>}
         ListEmptyComponent={<IllustratedEmptyState kind="contract" title={rooms.length ? t("mobile.rooms.noMatch") : t("mobile.rooms.empty")} description={rooms.length ? t("mobile.rooms.tryFilter") : t("mobile.rooms.addFirst")} actionLabel={rooms.length ? undefined : t("mobile.rooms.add")} actionIcon="add" onAction={rooms.length ? undefined : () => setModalVisible(true)} />}
         renderItem={({ item: group, index }) => (
           <View style={styles.floorGroup}>
-            <Text style={[styles.floorTitle, { color: theme.text }]}>{t("common.floor", { number: group.floor }).toUpperCase()}</Text>
+            <AppText style={[styles.floorTitle, { color: theme.text }]}>{t("common.floor", { number: group.floor }).toUpperCase()}</AppText>
             <View style={styles.roomGrid}>
               {group.rooms.map((item, roomIndex) => {
                 const [label, color, background] = statusMeta(item.status);
@@ -139,9 +140,9 @@ export default function AdminRoomsScreen({ params }: Props) {
                   <Pressable accessibilityRole="button" style={[styles.card, { backgroundColor: theme.surfaceElevated, shadowColor: theme.text }]} onPress={() => { setSelectedRoom(item); setDetailVisible(true); }}>
                     <View style={{ flexDirection: "row", justifyContent: "space-between", width: "100%" }}>
                       <View style={[styles.iconTile, { backgroundColor: theme.primarySoft }]}><Ionicons name="business-outline" size={22} color={theme.primary} /></View>
-                      <View style={[styles.badge, { backgroundColor: background as string }]}><Text style={[styles.badgeText, { color: color as string }]}>{label}</Text></View>
+                      <View style={[styles.badge, { backgroundColor: background as string }]}><AppText style={[styles.badgeText, { color: color as string }]}>{label}</AppText></View>
                     </View>
-                    <View style={styles.info}><Text style={[styles.roomCode, { color: theme.text }]}>{item.roomCode}</Text><Text style={[styles.sub, { color: theme.muted }]}>{item.area}</Text><Text style={[styles.sub, { color: theme.primary }]}>{formatCurrency(item.defaultRentPrice)}/{t("mobile.rooms.month")}</Text></View>
+                    <View style={styles.info}><AppText style={[styles.roomCode, { color: theme.text }]}>{item.roomCode}</AppText><AppText style={[styles.sub, { color: theme.muted }]}>{item.area}</AppText><AppText style={[styles.sub, { color: theme.primary }]}>{formatCurrency(item.defaultRentPrice)}/{t("mobile.rooms.month")}</AppText></View>
                   </Pressable>
                 </AnimatedEntry>;
               })}
@@ -152,18 +153,18 @@ export default function AdminRoomsScreen({ params }: Props) {
 
       <Modal visible={detailVisible} transparent animationType="slide" onRequestClose={() => { if (!submitting) setDetailVisible(false); }}>
         <View style={[styles.overlay, { backgroundColor: theme.overlay }]}><View accessibilityViewIsModal style={[styles.sheet, { backgroundColor: theme.surfaceElevated }]}>
-          <View style={styles.modalHeader}><Text accessibilityRole="header" style={[styles.modalTitle, { color: theme.text }]}>{t("mobile.rooms.detailTitle", { roomCode: selectedRoom?.roomCode || "" })}</Text><Pressable accessibilityRole="button" accessibilityLabel={t("mobile.rooms.closeDetail")} onPress={() => setDetailVisible(false)}><Ionicons name="close" size={26} color={theme.text} /></Pressable></View>
-          {selectedRoom ? <View style={styles.detailBody}>{[[t("common.floor", { number: selectedRoom.floor || 1 }), selectedRoom.floor || 1], [t("mobile.rooms.area"), selectedRoom.area], [t("mobile.rooms.defaultRent"), `${formatCurrency(selectedRoom.defaultRentPrice)}/${t("mobile.rooms.month")}`], [t("mobile.rooms.defaultDeposit"), formatCurrency(selectedRoom.defaultDeposit)], [t("mobile.rooms.status"), statusMeta(selectedRoom.status)[0]]].map(([label, value]) => <View key={String(label)} style={[styles.detailRow, { backgroundColor: theme.background }]}><Text style={[styles.detailLabel, { color: theme.muted }]}>{label}</Text><Text style={[styles.detailValue, { color: theme.text }]}>{value}</Text></View>)}</View> : null}
+          <View style={styles.modalHeader}><AppText accessibilityRole="header" style={[styles.modalTitle, { color: theme.text }]}>{t("mobile.rooms.detailTitle", { roomCode: selectedRoom?.roomCode || "" })}</AppText><Pressable accessibilityRole="button" accessibilityLabel={t("mobile.rooms.closeDetail")} onPress={() => setDetailVisible(false)}><Ionicons name="close" size={26} color={theme.text} /></Pressable></View>
+          {selectedRoom ? <View style={styles.detailBody}>{[[t("common.floor", { number: selectedRoom.floor || 1 }), selectedRoom.floor || 1], [t("mobile.rooms.area"), selectedRoom.area], [t("mobile.rooms.defaultRent"), `${formatCurrency(selectedRoom.defaultRentPrice)}/${t("mobile.rooms.month")}`], [t("mobile.rooms.defaultDeposit"), formatCurrency(selectedRoom.defaultDeposit)], [t("mobile.rooms.status"), statusMeta(selectedRoom.status)[0]]].map(([label, value]) => <View key={String(label)} style={[styles.detailRow, { backgroundColor: theme.background }]}><AppText style={[styles.detailLabel, { color: theme.muted }]}>{label}</AppText><AppText style={[styles.detailValue, { color: theme.text }]}>{value}</AppText></View>)}</View> : null}
         </View></View>
       </Modal>
 
       <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => { if (!submitting) setModalVisible(false); }}>
         <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === "ios" ? "padding" : undefined}><View style={[StyleSheet.absoluteFill, { backgroundColor: theme.overlay }]} /><View accessibilityViewIsModal style={[styles.sheet, { backgroundColor: theme.surfaceElevated }]}>
-          <View style={styles.modalHeader}><Text accessibilityRole="header" style={[styles.modalTitle, { color: theme.text }]}>{t("mobile.rooms.newTitle")}</Text><Pressable accessibilityRole="button" accessibilityLabel={t("mobile.rooms.closeNew")} disabled={submitting} onPress={() => setModalVisible(false)}><Ionicons name="close" size={26} color={theme.text} /></Pressable></View>
+          <View style={styles.modalHeader}><AppText accessibilityRole="header" style={[styles.modalTitle, { color: theme.text }]}>{t("mobile.rooms.newTitle")}</AppText><Pressable accessibilityRole="button" accessibilityLabel={t("mobile.rooms.closeNew")} disabled={submitting} onPress={() => setModalVisible(false)}><Ionicons name="close" size={26} color={theme.text} /></Pressable></View>
           <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-            <View style={styles.field}><Text style={[styles.label, { color: theme.text }]}>{t("mobile.rooms.roomCode")}</Text><TextInput style={inputStyle} value={roomCode} onChangeText={setRoomCode} placeholder={t("mobile.rooms.roomCodePlaceholder")} placeholderTextColor={theme.muted} autoCapitalize="characters" /></View>
-            <View style={styles.field}><Text style={[styles.label, { color: theme.text }]}>{t("common.floor", { number: "" })}</Text><TextInput style={inputStyle} value={floor} onChangeText={setFloor} placeholder="1" placeholderTextColor={theme.muted} keyboardType="number-pad" /></View>
-            {[[t("mobile.rooms.areaInput"), area, setArea, t("mobile.rooms.areaPlaceholder"), "default"], [t("mobile.rooms.rentInput"), rentPrice, (value: string) => setRentPrice(formatNumberInput(value)), t("mobile.rooms.rentPlaceholder"), "numeric"], [t("mobile.rooms.depositInput"), deposit, (value: string) => setDeposit(formatNumberInput(value)), t("mobile.rooms.depositPlaceholder"), "numeric"]].map(([label, value, setter, placeholder, keyboard]) => <View key={label as string} style={styles.field}><Text style={[styles.label, { color: theme.text }]}>{label as string}</Text><TextInput style={inputStyle} value={value as string} onChangeText={setter as (text: string) => void} placeholder={placeholder as string} placeholderTextColor={theme.muted} keyboardType={keyboard as any} /></View>)}
+            <View style={styles.field}><AppText style={[styles.label, { color: theme.text }]}>{t("mobile.rooms.roomCode")}</AppText><AppTextInput style={inputStyle} value={roomCode} onChangeText={setRoomCode} placeholder={t("mobile.rooms.roomCodePlaceholder")} placeholderTextColor={theme.muted} autoCapitalize="characters" /></View>
+            <View style={styles.field}><AppText style={[styles.label, { color: theme.text }]}>{t("common.floor", { number: "" })}</AppText><AppTextInput style={inputStyle} value={floor} onChangeText={setFloor} placeholder="1" placeholderTextColor={theme.muted} keyboardType="number-pad" /></View>
+            {[[t("mobile.rooms.areaInput"), area, setArea, t("mobile.rooms.areaPlaceholder"), "default"], [t("mobile.rooms.rentInput"), rentPrice, (value: string) => setRentPrice(formatNumberInput(value)), t("mobile.rooms.rentPlaceholder"), "numeric"], [t("mobile.rooms.depositInput"), deposit, (value: string) => setDeposit(formatNumberInput(value)), t("mobile.rooms.depositPlaceholder"), "numeric"]].map(([label, value, setter, placeholder, keyboard]) => <View key={label as string} style={styles.field}><AppText style={[styles.label, { color: theme.text }]}>{label as string}</AppText><AppTextInput style={inputStyle} value={value as string} onChangeText={setter as (text: string) => void} placeholder={placeholder as string} placeholderTextColor={theme.muted} keyboardType={keyboard as any} /></View>)}
             <AppButton icon="add-circle-outline" loading={submitting} onPress={handleAddRoom}>{t("mobile.rooms.add")}</AppButton>
           </ScrollView>
         </View></KeyboardAvoidingView>
@@ -174,27 +175,27 @@ export default function AdminRoomsScreen({ params }: Props) {
           <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.overlay }]} />
           <View accessibilityViewIsModal style={[styles.sheet, { backgroundColor: theme.surfaceElevated, maxHeight: "90%" }]}>
             <View style={styles.modalHeader}>
-              <Text accessibilityRole="header" style={[styles.modalTitle, { color: theme.text }]}>{t("mobile.rooms.meterTitle")}</Text>
+              <AppText accessibilityRole="header" style={[styles.modalTitle, { color: theme.text }]}>{t("mobile.rooms.meterTitle")}</AppText>
               <Pressable disabled={submitting} onPress={() => setMeterModalVisible(false)}><Ionicons name="close" size={26} color={theme.text} /></Pressable>
             </View>
             <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               {rooms.filter(r => r.status === 1).length === 0 && (
-                <Text style={{ color: theme.muted, textAlign: "center", marginVertical: 40 }}>{t("mobile.rooms.noOccupied")}</Text>
+                <AppText style={{ color: theme.muted, textAlign: "center", marginVertical: 40 }}>{t("mobile.rooms.noOccupied")}</AppText>
               )}
               {rooms.filter(r => r.status === 1).map(room => (
                 <View key={room._id} style={{ marginBottom: 14, padding: 12, backgroundColor: theme.background, borderRadius: 12 }}>
-                  <View style={styles.meterCardHeader}><Text style={{ fontWeight: "800", color: theme.text }}>{t("mobile.rooms.room", { roomCode: room.roomCode })}</Text><Pressable accessibilityRole="button" accessibilityLabel={t("mobile.rooms.scanMeter", { roomCode: room.roomCode })} disabled={submitting} onPress={() => setScanTarget({ roomId: room._id, roomCode: room.roomCode, meterType: "electricity" })} style={[styles.scanMeterButton, { backgroundColor: theme.primarySoft }]}><Ionicons name="camera-outline" size={15} color={theme.primary} /><Text style={[styles.scanMeterText, { color: theme.primary }]}>{t("mobile.rooms.scan")}</Text></Pressable></View>
+                  <View style={styles.meterCardHeader}><AppText style={{ fontWeight: "800", color: theme.text }}>{t("mobile.rooms.room", { roomCode: room.roomCode })}</AppText><Pressable accessibilityRole="button" accessibilityLabel={t("mobile.rooms.scanMeter", { roomCode: room.roomCode })} disabled={submitting} onPress={() => setScanTarget({ roomId: room._id, roomCode: room.roomCode, meterType: "electricity" })} style={[styles.scanMeterButton, { backgroundColor: theme.primarySoft }]}><Ionicons name="camera-outline" size={15} color={theme.primary} /><AppText style={[styles.scanMeterText, { color: theme.primary }]}>{t("mobile.rooms.scan")}</AppText></Pressable></View>
                   <View style={{ flexDirection: "row", gap: 10 }}>
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.label, { color: theme.muted }]}>{t("mobile.rooms.newElectricity")}</Text>
-                      <TextInput style={inputStyle} keyboardType="numeric" placeholder={t("mobile.rooms.electricityPlaceholder")} placeholderTextColor={theme.muted}
+                      <AppText style={[styles.label, { color: theme.muted }]}>{t("mobile.rooms.newElectricity")}</AppText>
+                      <AppTextInput style={inputStyle} keyboardType="numeric" placeholder={t("mobile.rooms.electricityPlaceholder")} placeholderTextColor={theme.muted}
                         value={meterReadings[room._id]?.electricity || ""}
                         onChangeText={(value) => setMeterReadings(prev => ({ ...prev, [room._id]: { ...prev[room._id], electricity: formatNumberInput(value), water: prev[room._id]?.water || "" } }))}
                       />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.label, { color: theme.muted }]}>{t("mobile.rooms.newWater")}</Text>
-                      <TextInput style={inputStyle} keyboardType="numeric" placeholder={t("mobile.rooms.waterPlaceholder")} placeholderTextColor={theme.muted}
+                      <AppText style={[styles.label, { color: theme.muted }]}>{t("mobile.rooms.newWater")}</AppText>
+                      <AppTextInput style={inputStyle} keyboardType="numeric" placeholder={t("mobile.rooms.waterPlaceholder")} placeholderTextColor={theme.muted}
                         value={meterReadings[room._id]?.water || ""}
                         onChangeText={(value) => setMeterReadings(prev => ({ ...prev, [room._id]: { ...prev[room._id], water: formatNumberInput(value), electricity: prev[room._id]?.electricity || "" } }))}
                       />

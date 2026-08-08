@@ -1,18 +1,6 @@
 import React, { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  FlatList,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { ActivityIndicator, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
+import { AppText, AppTextInput } from "@/components/ui/typography";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker, {
   DateTimePickerEvent,
@@ -314,7 +302,7 @@ export default function AdminContractsScreen({ params }: Props) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={theme.primary} />
-        <Text style={styles.loadingText}>{t("contractsMobile.loading")}</Text>
+        <AppText style={styles.loadingText}>{t("contractsMobile.loading")}</AppText>
       </View>
     );
   }
@@ -326,7 +314,7 @@ export default function AdminContractsScreen({ params }: Props) {
       onPress={() => setFilter(value)}
       style={[styles.filterButton, filter === value && styles.filterActive]}
     >
-      <Text style={[styles.filterText, filter === value && styles.filterTextActive]}>{label}</Text>
+      <AppText style={[styles.filterText, filter === value && styles.filterTextActive]}>{label}</AppText>
     </Pressable>
   );
 
@@ -349,8 +337,8 @@ export default function AdminContractsScreen({ params }: Props) {
             </AnimatedEntry>
             <View style={styles.headingRow}>
               <View>
-                <Text style={styles.title}>{t("contractsMobile.title")}</Text>
-                <Text style={styles.subtitle}>{t("contractsMobile.subtitle")}</Text>
+                <AppText style={styles.title}>{t("contractsMobile.title")}</AppText>
+                <AppText style={styles.subtitle}>{t("contractsMobile.subtitle")}</AppText>
               </View>
               <AppButton icon="add-circle-outline" onPress={() => setModalVisible(true)} style={styles.addButton}>
                 {t("contractsMobile.create")}
@@ -374,7 +362,7 @@ export default function AdminContractsScreen({ params }: Props) {
               onAction={() => setModalVisible(true)}
             />
           ) : (
-            <Text style={styles.filteredEmpty}>{t("contractsMobile.noMatch")}</Text>
+            <AppText style={styles.filteredEmpty}>{t("contractsMobile.noMatch")}</AppText>
           )
         }
         renderItem={({ item, index }) => {
@@ -392,23 +380,23 @@ export default function AdminContractsScreen({ params }: Props) {
                       <Ionicons name="home-outline" size={20} color={theme.primary} />
                     </View>
                     <View>
-                      <Text style={styles.roomCode}>{t("contractsMobile.room", { roomCode })}</Text>
-                      <Text style={styles.tenantName}>{tenantName} · {formattedPhone}</Text>
+                      <AppText style={styles.roomCode}>{t("contractsMobile.room", { roomCode })}</AppText>
+                      <AppText style={styles.tenantName}>{tenantName} · {formattedPhone}</AppText>
                     </View>
                   </View>
                   <View style={[styles.statusBadge, { backgroundColor: getStatusBg(item) }]}>
-                    <Text style={[styles.statusText, { color: getStatusColor(item) }]}>
+                    <AppText style={[styles.statusText, { color: getStatusColor(item) }]}>
                       {getStatusText(item)}
-                    </Text>
+                    </AppText>
                   </View>
                 </View>
-                <Text style={styles.money}>{formatCurrency(item.fixedRentPrice)}</Text>
-                <Text style={styles.moneyCaption}>{t("contractsMobile.rentDeposit", { deposit: formatCurrency(item.fixedDeposit) })}</Text>
+                <AppText style={styles.money}>{formatCurrency(item.fixedRentPrice)}</AppText>
+                <AppText style={styles.moneyCaption}>{t("contractsMobile.rentDeposit", { deposit: formatCurrency(item.fixedDeposit) })}</AppText>
                 <View style={styles.metaRow}>
                   <Ionicons name="calendar-outline" size={16} color={theme.muted} />
-                  <Text style={styles.contractDates}>
+                  <AppText style={styles.contractDates}>
                     {item.startDate ? new Date(item.startDate).toLocaleDateString(language === "en" ? "en-US" : "vi-VN") : ""} – {item.endDate ? new Date(item.endDate).toLocaleDateString(language === "en" ? "en-US" : "vi-VN") : ""}
-                  </Text>
+                  </AppText>
                 </View>
                 {item.status === 4 ? (
                   <AppButton
@@ -437,9 +425,9 @@ export default function AdminContractsScreen({ params }: Props) {
 
       {filter === "draft" && (
         <View style={styles.draftContainer}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>{t("contractsMobile.drafts")}</Text>
+          <AppText style={[styles.sectionTitle, { color: theme.text }]}>{t("contractsMobile.drafts")}</AppText>
           {drafts.length === 0 ? (
-            <Text style={{ color: theme.muted, marginTop: 10 }}>{t("contractsMobile.noDrafts")}</Text>
+            <AppText style={{ color: theme.muted, marginTop: 10 }}>{t("contractsMobile.noDrafts")}</AppText>
           ) : (
             drafts.map((draft, idx) => (
               <AnimatedEntry key={draft.id} delay={idx * 50}>
@@ -450,8 +438,8 @@ export default function AdminContractsScreen({ params }: Props) {
                         <Ionicons name="document-text-outline" size={20} color={theme.primary} />
                       </View>
                       <View>
-                        <Text style={styles.roomCode}>{t("contractsMobile.draftLabel", { id: draft.id })}</Text>
-                        <Text style={styles.tenantName}>{t("contractsMobile.draftStep", { step: draft.step })}</Text>
+                        <AppText style={styles.roomCode}>{t("contractsMobile.draftLabel", { id: draft.id })}</AppText>
+                        <AppText style={styles.tenantName}>{t("contractsMobile.draftStep", { step: draft.step })}</AppText>
                       </View>
                     </View>
                   </View>
@@ -527,8 +515,8 @@ export default function AdminContractsScreen({ params }: Props) {
           <View accessibilityViewIsModal style={styles.wizardContent}>
             <View style={styles.wizardHeader}>
               <View style={styles.wizardHeading}>
-                <Text accessibilityRole="header" style={styles.wizardTitle}>{t("contractsMobile.newTitle")}</Text>
-                <Text style={styles.wizardSubtitle}>{t("contractsMobile.newSubtitle")}</Text>
+                <AppText accessibilityRole="header" style={styles.wizardTitle}>{t("contractsMobile.newTitle")}</AppText>
+                <AppText style={styles.wizardSubtitle}>{t("contractsMobile.newSubtitle")}</AppText>
               </View>
               <Pressable
                 accessibilityLabel={t("contractsMobile.closeWizard")}
@@ -554,7 +542,7 @@ export default function AdminContractsScreen({ params }: Props) {
                 <View style={styles.card}>
                   <SectionTitle icon="home-outline" title={t("contractsMobile.selectRoom")} subtitle={t("contractsMobile.selectRoomSubtitle")} theme={theme} />
                   {selectableRooms.length === 0 ? (
-                    <Text style={styles.noVacantText}>{t("contractsMobile.noRooms")}</Text>
+                    <AppText style={styles.noVacantText}>{t("contractsMobile.noRooms")}</AppText>
                   ) : (
                     <View style={styles.selectionGrid}>
                       {selectableRooms.map((room) => {
@@ -568,7 +556,7 @@ export default function AdminContractsScreen({ params }: Props) {
                             style={[styles.selectionItem, selected && styles.selectionActive]}
                           >
                             <Ionicons name={selected ? "checkmark-circle" : "home-outline"} size={19} color={selected ? theme.primary : theme.muted} />
-                            <Text style={[styles.selectionText, selected && styles.selectionTextActive]}>{room.roomCode}</Text>
+                            <AppText style={[styles.selectionText, selected && styles.selectionTextActive]}>{room.roomCode}</AppText>
                           </Pressable>
                         );
                       })}
@@ -582,7 +570,7 @@ export default function AdminContractsScreen({ params }: Props) {
                   <View style={styles.card}>
                     <SectionTitle icon="person-outline" title={t("contractsMobile.tenantInfo")} subtitle={t("contractsMobile.tenantSubtitle")} theme={theme} />
                     {tenants.length === 0 ? (
-                      <Text style={styles.noVacantText}>{t("contractsMobile.noTenants")}</Text>
+                      <AppText style={styles.noVacantText}>{t("contractsMobile.noTenants")}</AppText>
                     ) : (
                       <View style={styles.selectionGrid}>
                         {tenants.map((tenant) => {
@@ -597,8 +585,8 @@ export default function AdminContractsScreen({ params }: Props) {
                             >
                               <Ionicons name={selected ? "checkmark-circle" : "person-circle-outline"} size={20} color={selected ? theme.primary : theme.muted} />
                               <View>
-                                <Text style={[styles.selectionText, selected && styles.selectionTextActive]}>{tenant.fullName}</Text>
-                                <Text style={styles.tenantPhone}>{formatPhone(tenant.phone)}</Text>
+                                <AppText style={[styles.selectionText, selected && styles.selectionTextActive]}>{tenant.fullName}</AppText>
+                                <AppText style={styles.tenantPhone}>{formatPhone(tenant.phone)}</AppText>
                               </View>
                             </Pressable>
                           );
@@ -609,16 +597,16 @@ export default function AdminContractsScreen({ params }: Props) {
                   <View style={styles.card}>
                     <SectionTitle icon="document-text-outline" title={t("contractsMobile.terms")} theme={theme} />
                     <Field label={t("contractsMobile.rent")} required styles={styles}>
-                      <TextInput style={styles.input} value={fixedRent} onChangeText={(value) => setFixedRent(formatNumberInput(value))} keyboardType="numeric" placeholder="VD: 3.500.000" placeholderTextColor={theme.muted} />
+                      <AppTextInput style={styles.input} value={fixedRent} onChangeText={(value) => setFixedRent(formatNumberInput(value))} keyboardType="numeric" placeholder="VD: 3.500.000" placeholderTextColor={theme.muted} />
                     </Field>
                     <Field label={t("contractsMobile.deposit")} required styles={styles}>
-                      <TextInput style={styles.input} value={fixedDeposit} onChangeText={(value) => setFixedDeposit(formatNumberInput(value))} keyboardType="numeric" placeholder="VD: 3.500.000" placeholderTextColor={theme.muted} />
+                      <AppTextInput style={styles.input} value={fixedDeposit} onChangeText={(value) => setFixedDeposit(formatNumberInput(value))} keyboardType="numeric" placeholder="VD: 3.500.000" placeholderTextColor={theme.muted} />
                     </Field>
                     <View style={styles.inputRow}>
                       <View style={styles.inputColumn}>
                         <Field label={t("contractsMobile.startDate")} required styles={styles}>
                           <View style={styles.dateInputContainer}>
-                            <TextInput
+                            <AppTextInput
                               style={styles.dateInput}
                               value={startDate}
                               onChangeText={(value) => {
@@ -640,7 +628,7 @@ export default function AdminContractsScreen({ params }: Props) {
                       <View style={styles.inputColumn}>
                         <Field label={t("contractsMobile.endDate")} required styles={styles}>
                           <View style={styles.dateInputContainer}>
-                            <TextInput
+                            <AppTextInput
                               style={styles.dateInput}
                               value={endDate}
                               onChangeText={(value) => {
@@ -688,8 +676,8 @@ export default function AdminContractsScreen({ params }: Props) {
                           <View style={styles.serviceIdentity}>
                             <Ionicons name={definition.icon as IconName} size={20} color={service.enabled ? theme.primary : theme.muted} />
                             <View>
-                              <Text style={styles.serviceLabel}>{definition.label}</Text>
-                              <Text style={styles.serviceDesc}>{definition.desc}</Text>
+                              <AppText style={styles.serviceLabel}>{definition.label}</AppText>
+                              <AppText style={styles.serviceDesc}>{definition.desc}</AppText>
                             </View>
                           </View>
                           <Switch
@@ -700,25 +688,25 @@ export default function AdminContractsScreen({ params }: Props) {
                           />
                         </View>
                         <View style={styles.serviceInputRow}>
-                          <TextInput
+                          <AppTextInput
                             style={[styles.input, !service.enabled && styles.inputDisabled, styles.serviceInput]}
                             value={service.price}
                             onChangeText={(value) => setServices({ ...services, [definition.key]: { ...service, price: formatNumberInput(value) } })}
                             editable={service.enabled}
                             keyboardType="numeric"
                           />
-                          <Text style={styles.serviceUnit}>{definition.unit}</Text>
+                          <AppText style={styles.serviceUnit}>{definition.unit}</AppText>
                         </View>
                         {definition.key === "electricity" ? (
                           <View style={styles.serviceInputRow}>
-                            <TextInput style={[styles.input, styles.serviceInput]} value={initialElectricity} onChangeText={(value) => setInitialElectricity(formatNumberInput(value))} keyboardType="numeric" placeholder={t("contractsMobile.initialElectricity")} placeholderTextColor={theme.muted} />
-                            <Text style={styles.serviceUnit}>kWh</Text>
+                            <AppTextInput style={[styles.input, styles.serviceInput]} value={initialElectricity} onChangeText={(value) => setInitialElectricity(formatNumberInput(value))} keyboardType="numeric" placeholder={t("contractsMobile.initialElectricity")} placeholderTextColor={theme.muted} />
+                            <AppText style={styles.serviceUnit}>kWh</AppText>
                           </View>
                         ) : null}
                         {definition.key === "water" ? (
                           <View style={styles.serviceInputRow}>
-                            <TextInput style={[styles.input, styles.serviceInput]} value={initialWater} onChangeText={(value) => setInitialWater(formatNumberInput(value))} keyboardType="numeric" placeholder={t("contractsMobile.initialWater")} placeholderTextColor={theme.muted} />
-                            <Text style={styles.serviceUnit}>m³</Text>
+                            <AppTextInput style={[styles.input, styles.serviceInput]} value={initialWater} onChangeText={(value) => setInitialWater(formatNumberInput(value))} keyboardType="numeric" placeholder={t("contractsMobile.initialWater")} placeholderTextColor={theme.muted} />
+                            <AppText style={styles.serviceUnit}>m³</AppText>
                           </View>
                         ) : null}
                       </View>
@@ -748,8 +736,8 @@ export default function AdminContractsScreen({ params }: Props) {
                       {confirmed ? <Ionicons name="checkmark" size={15} color={theme.background} /> : null}
                     </View>
                     <View style={styles.confirmCopy}>
-                      <Text style={styles.confirmTitle}>{t("contractsMobile.confirmTitle")}</Text>
-                      <Text style={styles.confirmDesc}>{t("contractsMobile.confirmDesc")}</Text>
+                      <AppText style={styles.confirmTitle}>{t("contractsMobile.confirmTitle")}</AppText>
+                      <AppText style={styles.confirmDesc}>{t("contractsMobile.confirmDesc")}</AppText>
                     </View>
                   </Pressable>
                 </>
@@ -793,8 +781,8 @@ function SectionTitle({ icon, title, subtitle, theme }: { icon: IconName; title:
         <Ionicons name={icon} size={20} color={theme.primary} />
       </View>
       <View style={base.sectionCopy}>
-        <Text style={[base.sectionTitle, { color: theme.text }]}>{title}</Text>
-        {subtitle ? <Text style={[base.sectionSubtitle, { color: theme.muted }]}>{subtitle}</Text> : null}
+        <AppText style={[base.sectionTitle, { color: theme.text }]}>{title}</AppText>
+        {subtitle ? <AppText style={[base.sectionSubtitle, { color: theme.muted }]}>{subtitle}</AppText> : null}
       </View>
     </View>
   );
@@ -803,7 +791,7 @@ function SectionTitle({ icon, title, subtitle, theme }: { icon: IconName; title:
 function Field({ label, required, children, styles }: any) {
   return (
     <View style={styles.field}>
-      <Text style={styles.label}>{label}{required ? <Text style={styles.required}> *</Text> : null}</Text>
+      <AppText style={styles.label}>{label}{required ? <AppText style={styles.required}> *</AppText> : null}</AppText>
       {children}
     </View>
   );
@@ -812,8 +800,8 @@ function Field({ label, required, children, styles }: any) {
 function PreviewRow({ label, value, styles }: { label: string; value: string; styles: any }) {
   return (
     <View style={styles.previewRow}>
-      <Text style={styles.previewLabel}>{label}</Text>
-      <Text style={styles.previewValue}>{value}</Text>
+      <AppText style={styles.previewLabel}>{label}</AppText>
+      <AppText style={styles.previewValue}>{value}</AppText>
     </View>
   );
 }

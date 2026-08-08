@@ -1,14 +1,6 @@
 import React, { useEffect, useRef } from "react";
-import {
-  AccessibilityInfo,
-  findNodeHandle,
-  Modal,
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  ScrollView,
-} from "react-native";
+import { AccessibilityInfo, findNodeHandle, Modal, View, Pressable, StyleSheet, ScrollView } from "react-native";
+import { AppText } from "@/components/ui/typography";
 import { Invoice } from "../types/Invoice";
 import { useAppTheme } from "../contexts/ThemeContext";
 import AppButton from "./ui/AppButton";
@@ -36,7 +28,7 @@ export default function InvoiceDetailModal({
   const { theme } = useAppTheme();
   const { t } = useTranslation();
   const styles = createStyles(theme);
-  const titleRef = useRef<Text>(null);
+  const titleRef = useRef<React.ElementRef<typeof AppText>>(null);
 
   useEffect(() => {
     if (!visible) return;
@@ -59,17 +51,17 @@ export default function InvoiceDetailModal({
             <>
               <View style={styles.modalHeader}>
                 <View style={styles.modalTitleBox}>
-                  <Text
+                  <AppText
                     ref={titleRef}
                     style={styles.modalTitle}
                     accessibilityRole="header"
                     accessibilityLiveRegion="polite"
                   >
                     {t("invoiceDetail.title")}
-                  </Text>
-                  <Text style={styles.modalSub}>
+                  </AppText>
+                  <AppText style={styles.modalSub}>
                     {t("invoiceDetail.subtitle", { month: invoice.month, room: invoice.room })}
-                  </Text>
+                  </AppText>
                 </View>
 
                 <Pressable
@@ -83,71 +75,71 @@ export default function InvoiceDetailModal({
               </View>
 
               <View style={styles.amountHero}>
-                <Text style={styles.amountHeroLabel}>{t("invoiceDetail.totalDue")}</Text>
-                <Text style={styles.amountHeroValue}>{invoice.amount}</Text>
+                <AppText style={styles.amountHeroLabel}>{t("invoiceDetail.totalDue")}</AppText>
+                <AppText style={styles.amountHeroValue}>{invoice.amount}</AppText>
               </View>
               <View style={styles.identityBlock}>
-                <Text style={styles.identityText}>{t("invoiceDetail.tenant", { name: invoice.tenantName || t("invoiceDetail.notUpdated") })}</Text>
-                <Text style={styles.identityText}>{t("invoiceDetail.phone", { phone: invoice.tenantPhone || t("invoiceDetail.notUpdated") })}</Text>
-                <Text style={styles.identityText}>{t("invoiceDetail.room", { room: invoice.room || t("invoiceDetail.notUpdated") })}</Text>
+                <AppText style={styles.identityText}>{t("invoiceDetail.tenant", { name: invoice.tenantName || t("invoiceDetail.notUpdated") })}</AppText>
+                <AppText style={styles.identityText}>{t("invoiceDetail.phone", { phone: invoice.tenantPhone || t("invoiceDetail.notUpdated") })}</AppText>
+                <AppText style={styles.identityText}>{t("invoiceDetail.room", { room: invoice.room || t("invoiceDetail.notUpdated") })}</AppText>
               </View>
               <ScrollView style={styles.lines} showsVerticalScrollIndicator={false}>
               {invoice.type === "deposit" ? (
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>{t("invoiceDetail.deposit")}</Text>
-                <Text style={styles.detailValue}>{formatCurrency(invoice.depositAmount ?? invoice.numericAmount ?? 0)}</Text>
+                <AppText style={styles.detailLabel}>{t("invoiceDetail.deposit")}</AppText>
+                <AppText style={styles.detailValue}>{formatCurrency(invoice.depositAmount ?? invoice.numericAmount ?? 0)}</AppText>
               </View>
               ) : (
               <>
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>{t("invoiceDetail.rent")}</Text>
-                <Text style={styles.detailValue}>{invoice.details.roomFee}</Text>
+                <AppText style={styles.detailLabel}>{t("invoiceDetail.rent")}</AppText>
+                <AppText style={styles.detailValue}>{invoice.details.roomFee}</AppText>
               </View>
 
               <View style={styles.detailRow}>
                 <View>
-                  <Text style={styles.detailLabel}>{t("invoiceDetail.electricity")}</Text>
+                  <AppText style={styles.detailLabel}>{t("invoiceDetail.electricity")}</AppText>
                   {invoice.details.electric.newIndex !== null && invoice.details.electric.oldIndex !== null && (
-                    <Text style={styles.detailSubLabel}>
+                    <AppText style={styles.detailSubLabel}>
                       {t("invoiceDetail.electricReading", { next: invoice.details.electric.newIndex, previous: invoice.details.electric.oldIndex })}
-                    </Text>
+                    </AppText>
                   )}
                 </View>
-                <Text style={styles.detailValue}>{invoice.details.electric.amount}</Text>
+                <AppText style={styles.detailValue}>{invoice.details.electric.amount}</AppText>
               </View>
 
               <View style={styles.detailRow}>
                 <View>
-                  <Text style={styles.detailLabel}>{t("invoiceDetail.water")}</Text>
+                  <AppText style={styles.detailLabel}>{t("invoiceDetail.water")}</AppText>
                   {invoice.details.water.newIndex !== null && invoice.details.water.oldIndex !== null && (
-                    <Text style={styles.detailSubLabel}>
+                    <AppText style={styles.detailSubLabel}>
                       {t("invoiceDetail.waterReading", { next: invoice.details.water.newIndex, previous: invoice.details.water.oldIndex })}
-                    </Text>
+                    </AppText>
                   )}
                 </View>
-                <Text style={styles.detailValue}>{invoice.details.water.amount}</Text>
+                <AppText style={styles.detailValue}>{invoice.details.water.amount}</AppText>
               </View>
 
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>{t("invoiceDetail.parking")}</Text>
-                <Text style={styles.detailValue}>{invoice.details.parking}</Text>
+                <AppText style={styles.detailLabel}>{t("invoiceDetail.parking")}</AppText>
+                <AppText style={styles.detailValue}>{invoice.details.parking}</AppText>
               </View>
               <View style={styles.divider} />
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Internet</Text>
-                <Text style={styles.detailValue}>{invoice.details.internet}</Text>
+                <AppText style={styles.detailLabel}>Internet</AppText>
+                <AppText style={styles.detailValue}>{invoice.details.internet}</AppText>
               </View>
               <View style={styles.divider} />
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>{t("invoiceDetail.garbage")}</Text>
-                <Text style={styles.detailValue}>{invoice.details.garbage}</Text>
+                <AppText style={styles.detailLabel}>{t("invoiceDetail.garbage")}</AppText>
+                <AppText style={styles.detailValue}>{invoice.details.garbage}</AppText>
               </View>
               {invoice.details.otherServices !== "0đ" && invoice.details.otherServices !== "0" && (
                 <>
                   <View style={styles.divider} />
                   <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>{t("invoiceDetail.other")}</Text>
-                    <Text style={styles.detailValue}>{invoice.details.otherServices}</Text>
+                    <AppText style={styles.detailLabel}>{t("invoiceDetail.other")}</AppText>
+                    <AppText style={styles.detailValue}>{invoice.details.otherServices}</AppText>
                   </View>
                 </>
               )}
@@ -155,8 +147,8 @@ export default function InvoiceDetailModal({
               )}
 
               <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>{t("invoiceDetail.total")}</Text>
-                <Text style={styles.totalValue}>{invoice.amount}</Text>
+                <AppText style={styles.totalLabel}>{t("invoiceDetail.total")}</AppText>
+                <AppText style={styles.totalValue}>{invoice.amount}</AppText>
               </View>
               </ScrollView>
 
@@ -178,7 +170,7 @@ export default function InvoiceDetailModal({
                 )
               ) : (
                 <View style={styles.paidBox}>
-                  <Text style={styles.paidBoxText}>{t("invoiceDetail.paid")}</Text>
+                  <AppText style={styles.paidBoxText}>{t("invoiceDetail.paid")}</AppText>
                 </View>
               )}
             </>

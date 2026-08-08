@@ -12,6 +12,10 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
+    "Inter-Regular": require("../assets/fonts/Inter_400Regular.ttf"),
+    "Inter-Medium": require("../assets/fonts/Inter_500Medium.ttf"),
+    "Inter-SemiBold": require("../assets/fonts/Inter_600SemiBold.ttf"),
+    "Inter-Bold": require("../assets/fonts/Inter_700Bold.ttf"),
     // Preload Ionicons.ttf trực tiếp từ local file — không tải qua HTTP
     ionicons: require("../node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons.ttf"),
   });

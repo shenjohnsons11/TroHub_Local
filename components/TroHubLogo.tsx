@@ -1,5 +1,6 @@
 import React from "react";
-import { StyleSheet, Text, View, Image } from "react-native";
+import { StyleSheet, View, Image } from "react-native";
+import { AppText } from "@/components/ui/typography";
 
 type Props = {
   compact?: boolean;
@@ -26,8 +27,8 @@ export default function TroHubLogo({ compact = false, inverted = false, size = "
       </View>
       {!compact && (
         <View style={styles.wordmark}>
-          <Text style={[styles.name, inverted && styles.inverted]}>TRO HUB</Text>
-          <Text style={[styles.tagline, inverted && styles.taglineInverted]}>QUẢN LÝ NHÀ TRỌ</Text>
+          <AppText style={[styles.name, inverted && styles.inverted]}>TRO HUB</AppText>
+          <AppText style={[styles.tagline, inverted && styles.taglineInverted]}>QUẢN LÝ NHÀ TRỌ</AppText>
         </View>
       )}
     </View>

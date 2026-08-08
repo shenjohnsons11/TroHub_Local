@@ -1,5 +1,6 @@
 import { Link } from "expo-router";
-import { SafeAreaView, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView, StyleSheet, View } from "react-native";
+import { AppText } from "@/components/ui/typography";
 import TroHubLogo from "../components/TroHubLogo";
 import AppButton from "../components/ui/AppButton";
 import { FONT_FAMILIES } from "../constants/theme";
@@ -17,14 +18,14 @@ export default function ModalScreen() {
       >
         <TroHubLogo inverted={themeMode === "dark"} />
         <View style={[styles.iconTile, { backgroundColor: theme.primarySoft }]}>
-          <Text accessibilityElementsHidden style={[styles.key, { color: theme.primary }]}>
+          <AppText accessibilityElementsHidden style={[styles.key, { color: theme.primary }]}>
             TH
-          </Text>
+          </AppText>
         </View>
-        <Text style={[styles.title, { color: theme.text }]}>Không gian TroHub</Text>
-        <Text style={[styles.message, { color: theme.muted }]}>
+        <AppText style={[styles.title, { color: theme.text }]}>Không gian TroHub</AppText>
+        <AppText style={[styles.message, { color: theme.muted }]}>
           Nội dung này chưa có thao tác riêng. Quay về trang chính để tiếp tục quản lý nhà trọ.
-        </Text>
+        </AppText>
         <Link href="/" dismissTo asChild>
           <AppButton icon="arrow-back">Về trang chính</AppButton>
         </Link>
@@ -70,19 +71,19 @@ const styles = StyleSheet.create({
     width: 76,
   },
   key: {
-    fontFamily: FONT_FAMILIES.sans,
+    fontFamily: FONT_FAMILIES.regular,
     fontSize: 24,
     fontWeight: "900",
   },
   title: {
-    fontFamily: FONT_FAMILIES.sans,
+    fontFamily: FONT_FAMILIES.regular,
     fontSize: 26,
     fontWeight: "900",
     marginTop: 22,
     textAlign: "center",
   },
   message: {
-    fontFamily: FONT_FAMILIES.sans,
+    fontFamily: FONT_FAMILIES.regular,
     fontSize: 15,
     lineHeight: 23,
     marginBottom: 26,
