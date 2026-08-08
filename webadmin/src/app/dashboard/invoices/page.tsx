@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { CalendarDays, Bell, CheckCircle, ChevronLeft, ChevronRight, Eye, Gauge, Plus, ScanSearch, Search, Send, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { formatCurrency, formatNumberInput, unformatNumber } from "@/lib/formatters";
+import { formatCurrency, formatMeterReading, parseMeterReading, unformatNumber } from "@/lib/formatters";
 import { useNotification } from "@/hooks/use-notification";
 import { getNotificationMessage } from "@/lib/notification-messages";
 import { PageHeader } from "@/components/calm-ops/page-header";
@@ -78,11 +78,11 @@ export default function InvoicesPage() {
         if (res.success) {
           const mapped = res.data.map((p: any) => ({
             ...p,
-            electricityOldInput: formatNumberInput(p.electricityOld),
-            electricityNewInput: formatNumberInput(p.electricityDraft || p.electricityOld),
+            electricityOldInput: formatMeterReading(p.electricityOld),
+            electricityNewInput: formatMeterReading(p.electricityDraft || p.electricityOld),
             electricityPrice: utilityPriceOrDefault(p.electricityPrice, DEFAULT_ELECTRICITY_PRICE),
-            waterOldInput: formatNumberInput(p.waterOld),
-            waterNewInput: formatNumberInput(p.waterDraft || p.waterOld),
+            waterOldInput: formatMeterReading(p.waterOld),
+            waterNewInput: formatMeterReading(p.waterDraft || p.waterOld),
             waterPrice: utilityPriceOrDefault(p.waterPrice, DEFAULT_WATER_PRICE),
             discountInput: "0",
             selected: true
@@ -126,11 +126,11 @@ export default function InvoicesPage() {
           contractId: item.contractId,
           room: item.room,
           tenant: item.tenant,
-          electricityOld: unformatNumber(item.electricityOldInput),
-          electricityNew: unformatNumber(item.electricityNewInput),
+          electricityOld: parseMeterReading(item.electricityOldInput),
+          electricityNew: parseMeterReading(item.electricityNewInput),
           electricityPrice: item.electricityPrice,
-          waterOld: unformatNumber(item.waterOldInput),
-          waterNew: unformatNumber(item.waterNewInput),
+          waterOld: parseMeterReading(item.waterOldInput),
+          waterNew: parseMeterReading(item.waterNewInput),
           waterPrice: item.waterPrice,
           roomAmount: item.roomAmount,
           services: item.services,
@@ -142,6 +142,9 @@ export default function InvoicesPage() {
         period: title,
         issuedAt,
       };
+      if (payload.invoices.some((item: any) => item.electricityOld === null || item.electricityNew === null || item.waterOld === null || item.waterNew === null || item.electricityNew < item.electricityOld || item.waterNew < item.waterOld)) {
+        throw new Error("Chỉ số điện nước kỳ này phải hợp lệ và không nhỏ hơn kỳ trước.");
+      }
       await fetchAPI("/invoices/bulk", {
         method: "POST",
         body: JSON.stringify(payload),
@@ -244,7 +247,7 @@ export default function InvoicesPage() {
       const result = await fetchAPI("/ocr/meter", { method: "POST", body: JSON.stringify({ image }) });
       if (!result.data?.digits) throw new Error("Không đọc được chỉ số.");
       setBulkData((current) => current.map((item) => item.contractId === target.contractId
-        ? { ...item, [target.field === "electricity" ? "electricityNewInput" : "waterNewInput"]: formatNumberInput(result.data.digits) }
+        ? { ...item, [target.field === "electricity" ? "electricityNewInput" : "waterNewInput"]: formatMeterReading(result.data.digits) }
         : item,
       ));
       notification.success(`Đã điền chỉ số ${target.field === "electricity" ? "điện" : "nước"} cho phòng ${target.room}.`);
@@ -259,7 +262,7 @@ export default function InvoicesPage() {
     event.preventDefault();
     if (!manualMeter || !manualMeterValue.trim()) return;
     setBulkData((current) => current.map((item) => item.contractId === manualMeter.contractId
-      ? { ...item, [manualMeter.field === "electricity" ? "electricityNewInput" : "waterNewInput"]: formatNumberInput(manualMeterValue) }
+      ? { ...item, [manualMeter.field === "electricity" ? "electricityNewInput" : "waterNewInput"]: formatMeterReading(manualMeterValue) }
       : item,
     ));
     setManualMeter(null);
@@ -366,12 +369,14 @@ export default function InvoicesPage() {
                       <TableRow><TableCell colSpan={7} className="text-center py-4">Không có hợp đồng nào đang hiệu lực để tạo hóa đơn.</TableCell></TableRow>
                     ) : (
                       bulkData.map((item, index) => {
-                        const eOld = unformatNumber(item.electricityOldInput);
-                        const eNew = unformatNumber(item.electricityNewInput);
-                        const eAmt = Math.max(0, eNew - eOld) * (item.electricityPrice || 0);
-                        const wOld = unformatNumber(item.waterOldInput);
-                        const wNew = unformatNumber(item.waterNewInput);
-                        const wAmt = Math.max(0, wNew - wOld) * (item.waterPrice || 0);
+                        const eOld = parseMeterReading(item.electricityOldInput) ?? 0;
+                        const eNew = parseMeterReading(item.electricityNewInput) ?? eOld;
+                        const eUsage = Math.max(0, eNew - eOld);
+                        const eAmt = Math.round(eUsage * (item.electricityPrice || 0));
+                        const wOld = parseMeterReading(item.waterOldInput) ?? 0;
+                        const wNew = parseMeterReading(item.waterNewInput) ?? wOld;
+                        const wUsage = Math.max(0, wNew - wOld);
+                        const wAmt = Math.round(wUsage * (item.waterPrice || 0));
                         const dsc = unformatNumber(item.discountInput);
                         const total = (item.roomAmount || 0) + eAmt + wAmt + (item.services || 0) + (item.parking || 0) + (item.internet || 0) + (item.garbage || 0) - dsc;
                         return (
@@ -392,25 +397,27 @@ export default function InvoicesPage() {
                             <TableCell className="font-medium">{item.room}</TableCell>
                             <TableCell>
                               <div className="flex items-center gap-1">
-                                <Input className="w-20 h-8 px-2 text-sm bg-card" inputMode="numeric" value={item.electricityOldInput} onChange={e => { const u=[...bulkData]; u[index].electricityOldInput=formatNumberInput(e.target.value); setBulkData(u); }} />
+                                <Input className="h-10 w-24 px-2 text-sm bg-card" inputMode="decimal" value={item.electricityOldInput} onChange={e => { const u=[...bulkData]; const value=e.target.value; u[index].electricityOldInput=parseMeterReading(value) === null ? value : formatMeterReading(value); setBulkData(u); }} />
                                 <Button type="button" variant="outline" size="sm" className="h-11 whitespace-nowrap px-2 text-xs" aria-label={`Chụp ảnh đồng hồ điện phòng ${item.room}`} onClick={() => beginMeterCapture(item.contractId, item.room, "electricity")}>📷 Chụp ảnh</Button>
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Input className="w-20 h-8 px-2 text-sm bg-card" inputMode="numeric" value={item.electricityNewInput} onChange={e => { const u=[...bulkData]; u[index].electricityNewInput=formatNumberInput(e.target.value); setBulkData(u); }} />
-                              <Label className="mt-1 block text-[10px] text-muted-foreground" htmlFor={`electricity-price-${item.contractId}`}>Giá điện</Label>
-                              <Input id={`electricity-price-${item.contractId}`} className="mt-1 h-8 w-20 px-2 text-xs bg-card" inputMode="numeric" value={item.electricityPrice} onChange={e => { const u=[...bulkData]; u[index].electricityPrice=utilityPriceOrDefault(unformatNumber(e.target.value), DEFAULT_ELECTRICITY_PRICE); setBulkData(u); }} aria-label={`Đơn giá điện phòng ${item.room}`} />
+                              <Input className="h-10 w-24 px-2 text-sm bg-card" inputMode="decimal" value={item.electricityNewInput} onChange={e => { const u=[...bulkData]; const value=e.target.value; u[index].electricityNewInput=parseMeterReading(value) === null ? value : formatMeterReading(value); setBulkData(u); }} />
+                              <Label className="mt-1 block text-[10px] text-muted-foreground" htmlFor={`electricity-price-${item.contractId}`}>Đơn giá · {formatCurrency(item.electricityPrice)}</Label>
+                              <Input id={`electricity-price-${item.contractId}`} className="mt-1 h-10 w-24 px-2 text-xs bg-card" inputMode="numeric" value={item.electricityPrice} onChange={e => { const u=[...bulkData]; u[index].electricityPrice=utilityPriceOrDefault(unformatNumber(e.target.value), DEFAULT_ELECTRICITY_PRICE); setBulkData(u); }} aria-label={`Đơn giá điện phòng ${item.room}`} />
+                              <p className="mt-1 text-[10px] font-semibold text-primary">{formatMeterReading(eUsage)} kWh · {formatCurrency(eAmt)}</p>
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-1">
-                                <Input className="w-20 h-8 px-2 text-sm bg-card" inputMode="numeric" value={item.waterOldInput} onChange={e => { const u=[...bulkData]; u[index].waterOldInput=formatNumberInput(e.target.value); setBulkData(u); }} />
+                                <Input className="h-10 w-24 px-2 text-sm bg-card" inputMode="decimal" value={item.waterOldInput} onChange={e => { const u=[...bulkData]; const value=e.target.value; u[index].waterOldInput=parseMeterReading(value) === null ? value : formatMeterReading(value); setBulkData(u); }} />
                                 <Button type="button" variant="outline" size="sm" className="h-11 whitespace-nowrap px-2 text-xs" aria-label={`Chụp ảnh đồng hồ nước phòng ${item.room}`} onClick={() => beginMeterCapture(item.contractId, item.room, "water")}>📷 Chụp ảnh</Button>
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Input className="w-20 h-8 px-2 text-sm bg-card" inputMode="numeric" value={item.waterNewInput} onChange={e => { const u=[...bulkData]; u[index].waterNewInput=formatNumberInput(e.target.value); setBulkData(u); }} />
-                              <Label className="mt-1 block text-[10px] text-muted-foreground" htmlFor={`water-price-${item.contractId}`}>Giá nước</Label>
-                              <Input id={`water-price-${item.contractId}`} className="mt-1 h-8 w-20 px-2 text-xs bg-card" inputMode="numeric" value={item.waterPrice} onChange={e => { const u=[...bulkData]; u[index].waterPrice=utilityPriceOrDefault(unformatNumber(e.target.value), DEFAULT_WATER_PRICE); setBulkData(u); }} aria-label={`Đơn giá nước phòng ${item.room}`} />
+                              <Input className="h-10 w-24 px-2 text-sm bg-card" inputMode="decimal" value={item.waterNewInput} onChange={e => { const u=[...bulkData]; const value=e.target.value; u[index].waterNewInput=parseMeterReading(value) === null ? value : formatMeterReading(value); setBulkData(u); }} />
+                              <Label className="mt-1 block text-[10px] text-muted-foreground" htmlFor={`water-price-${item.contractId}`}>Đơn giá · {formatCurrency(item.waterPrice)}</Label>
+                              <Input id={`water-price-${item.contractId}`} className="mt-1 h-10 w-24 px-2 text-xs bg-card" inputMode="numeric" value={item.waterPrice} onChange={e => { const u=[...bulkData]; u[index].waterPrice=utilityPriceOrDefault(unformatNumber(e.target.value), DEFAULT_WATER_PRICE); setBulkData(u); }} aria-label={`Đơn giá nước phòng ${item.room}`} />
+                              <p className="mt-1 text-[10px] font-semibold text-primary">{formatMeterReading(wUsage)} m³ · {formatCurrency(wAmt)}</p>
                             </TableCell>
                             <TableCell className="text-right font-medium text-foreground">{formatCurrency(total)}</TableCell>
                           </TableRow>
@@ -501,7 +508,7 @@ export default function InvoicesPage() {
           <DialogHeader><DialogTitle>Nhập chỉ số · Phòng {manualMeter?.room}</DialogTitle></DialogHeader>
           <form onSubmit={applyManualMeter} className="space-y-4">
             <p className="text-sm text-muted-foreground">Không thể đọc chỉ số từ ảnh. Nhập số {manualMeter?.field === "electricity" ? "điện" : "nước"} để điền vào chỉ số mới của phòng này.</p>
-            <Input autoFocus inputMode="numeric" aria-label={`Chỉ số ${manualMeter?.field === "electricity" ? "điện" : "nước"} mới phòng ${manualMeter?.room || ""}`} value={manualMeterValue} onChange={(event) => setManualMeterValue(formatNumberInput(event.target.value))} placeholder="Nhập chỉ số" required />
+            <Input autoFocus inputMode="decimal" aria-label={`Chỉ số ${manualMeter?.field === "electricity" ? "điện" : "nước"} mới phòng ${manualMeter?.room || ""}`} value={manualMeterValue} onChange={(event) => { const value = event.target.value; setManualMeterValue(parseMeterReading(value) === null ? value : formatMeterReading(value)); }} placeholder="Nhập chỉ số" required />
             <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setManualMeter(null)}>Hủy</Button><Button type="submit">Áp dụng</Button></div>
           </form>
         </DialogContent>
