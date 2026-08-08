@@ -46,12 +46,6 @@ export type SemanticInvoice = {
   }>;
 };
 
-export const invoiceCurrency = new Intl.NumberFormat("vi-VN", {
-  style: "currency",
-  currency: "VND",
-  maximumFractionDigits: 0,
-});
-
 export const formatInvoiceDate = (value: string | null) => {
   if (!value) return "Chưa xác định";
   const date = new Date(value);

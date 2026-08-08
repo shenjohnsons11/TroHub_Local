@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { useNotification } from "@/hooks/use-notification";
 import { fetchAPI } from "@/lib/api";
 import { getNotificationMessage } from "@/lib/notification-messages";
-import { formatCurrency, formatNumberInput, formatPhone, unformatNumber } from "@/lib/formatters";
+import { formatCurrency, formatMeterReading, formatNumberInput, formatPhone, parseMeterReading, unformatNumber } from "@/lib/formatters";
 import {
   CONTRACT_STEPS,
   ContractDraft,
@@ -86,8 +86,8 @@ export default function NewContractPage() {
             fixedDeposit: formatNumberInput(savedDraft.fixedDeposit),
             electricityPrice: formatNumberInput(savedDraft.electricityPrice ?? 3500),
             waterPrice: formatNumberInput(savedDraft.waterPrice ?? 15000),
-            initialElectricity: formatNumberInput(savedDraft.initialElectricity),
-            initialWater: formatNumberInput(savedDraft.initialWater),
+            initialElectricity: formatMeterReading(savedDraft.initialElectricity),
+            initialWater: formatMeterReading(savedDraft.initialWater),
             services: (savedDraft.services || []).map((item) => ({
               ...item,
               fixedPrice: formatNumberInput(item.fixedPrice),
@@ -121,7 +121,7 @@ export default function NewContractPage() {
     if (!room) { notification.warning(`Không tìm thấy phòng ${action.roomCode}.`); return; }
     const tenant = nguoiThueList.find((item) => (item.fullName || item.name)?.trim().toLowerCase() === action.tenantName.trim().toLowerCase());
     setStep(1);
-    setDraft((current) => ({ ...current, roomId: room._id || room.id || "", tenantId: tenant?._id || tenant?.id || "", fixedRentPrice: formatNumberInput(action.rentPrice), fixedDeposit: formatNumberInput(room.defaultDeposit || room.defaultRentPrice), initialElectricity: formatNumberInput(room.lastElectricityReading ?? room.draftElectricity), initialWater: formatNumberInput(room.lastWaterReading ?? room.draftWater), startDate: formatIsoToDisplay(action.startDate) }));
+    setDraft((current) => ({ ...current, roomId: room._id || room.id || "", tenantId: tenant?._id || tenant?.id || "", fixedRentPrice: formatNumberInput(action.rentPrice), fixedDeposit: formatNumberInput(room.defaultDeposit || room.defaultRentPrice), initialElectricity: formatMeterReading(room.lastElectricityReading ?? room.draftElectricity), initialWater: formatMeterReading(room.lastWaterReading ?? room.draftWater), startDate: formatIsoToDisplay(action.startDate) }));
     if (!tenant) notification.info(`Chưa có người thuê “${action.tenantName}”. Hãy chọn hoặc tạo hồ sơ.`);
   }, [rooms, nguoiThueList, notification]);
   const update = <K extends keyof ContractDraft>(key: K, value: ContractDraft[K]) => { setDraft((current) => ({ ...current, [key]: value })); setErrors((current) => ({ ...current, [key]: "" })); };
@@ -141,7 +141,7 @@ export default function NewContractPage() {
         setStep(2);
         return;
       }
-      await fetchAPI("/contracts", { method: "POST", body: JSON.stringify({ ...draft, startDate: startDateIso, endDate: endDateIso, fixedRentPrice: unformatNumber(draft.fixedRentPrice), fixedDeposit: unformatNumber(draft.fixedDeposit), electricityPrice: unformatNumber(draft.electricityPrice || formatNumberInput(3500)), waterPrice: unformatNumber(draft.waterPrice || formatNumberInput(15000)), initialElectricity: draft.initialElectricity ? unformatNumber(draft.initialElectricity) : undefined, initialWater: draft.initialWater ? unformatNumber(draft.initialWater) : undefined, services: draft.services.map((item) => ({ ...item, fixedPrice: unformatNumber(item.fixedPrice) })) }) });
+      await fetchAPI("/contracts", { method: "POST", body: JSON.stringify({ ...draft, startDate: startDateIso, endDate: endDateIso, fixedRentPrice: unformatNumber(draft.fixedRentPrice), fixedDeposit: unformatNumber(draft.fixedDeposit), electricityPrice: unformatNumber(draft.electricityPrice || formatNumberInput(3500)), waterPrice: unformatNumber(draft.waterPrice || formatNumberInput(15000)), initialElectricity: draft.initialElectricity ? parseMeterReading(draft.initialElectricity) ?? undefined : undefined, initialWater: draft.initialWater ? parseMeterReading(draft.initialWater) ?? undefined : undefined, services: draft.services.map((item) => ({ ...item, fixedPrice: unformatNumber(item.fixedPrice) })) }) });
       localStorage.removeItem(draftKey);
       notification.success("Tạo hợp đồng thành công.");
       router.push("/dashboard/contracts");
@@ -149,7 +149,7 @@ export default function NewContractPage() {
   };
 
   return <div className="mx-auto max-w-5xl space-y-6"><header className="calm-surface overflow-hidden bg-[linear-gradient(135deg,var(--primary),color-mix(in_srgb,var(--primary)_68%,#04100e))] p-6 text-primary-foreground sm:p-8"><p className="text-sm font-bold uppercase tracking-[.16em] opacity-80">Hợp đồng mới</p><h1 className="mt-2 text-3xl font-black tracking-[-.04em] sm:text-4xl">Tạo hợp đồng thuê</h1><p className="mt-2 max-w-xl opacity-80">Bản nháp được tự động lưu riêng cho tài khoản Chủ trọ.</p></header><ol aria-label="Tiến trình tạo hợp đồng" className="grid grid-cols-4 gap-2">{CONTRACT_STEPS.map((item, index) => { const Icon = STEP_ICONS[index]; return <li key={item.id} aria-current={item.id === step ? "step" : undefined} className={`relative rounded-[16px] p-3 text-center text-sm transition sm:p-4 ${item.id === step ? "bg-primary text-primary-foreground shadow-[var(--calm-shadow)]" : item.id < step ? "bg-primary/10 text-primary" : "bg-card text-muted-foreground shadow-[var(--calm-shadow)]"}`}><span className="flex flex-col items-center gap-1 font-bold sm:flex-row sm:justify-center sm:gap-2">{item.id < step ? <Check className="size-5" /> : <Icon className="size-5" />}<span className="text-[11px] leading-tight sm:text-sm">{item.label}</span></span></li>; })}</ol><section className="calm-surface min-h-[420px] p-6 sm:p-8">
-    {step === 1 && <div className="grid gap-5 md:grid-cols-2"><Field label="Phòng" error={errors.roomId}><select className="h-11 w-full rounded-[16px] border border-input bg-background px-3" value={draft.roomId} onChange={(e) => { update("roomId", e.target.value); const room = rooms.find((item) => (item._id || item.id) === e.target.value); if (room) setDraft((value) => ({ ...value, roomId: e.target.value, fixedRentPrice: formatNumberInput(room.defaultRentPrice), fixedDeposit: formatNumberInput(room.defaultDeposit || room.defaultRentPrice), initialElectricity: formatNumberInput(room.lastElectricityReading ?? room.draftElectricity), initialWater: formatNumberInput(room.lastWaterReading ?? room.draftWater) })); }}><option value="">Chọn Phòng</option>{rooms.map((room) => <option key={room._id || room.id} value={room._id || room.id}>{room.roomCode}</option>)}</select></Field><Field label="Người thuê" error={errors.tenantId}><select className="h-11 w-full rounded-[16px] border border-input bg-background px-3" value={draft.tenantId} onChange={(e) => update("tenantId", e.target.value)}><option value="">Chọn Người thuê</option>{nguoiThueList.map((item) => <option key={item._id || item.id} value={item._id || item.id}>{item.fullName || item.name} · {formatPhone(item.phone)}</option>)}</select></Field></div>}
+    {step === 1 && <div className="grid gap-5 md:grid-cols-2"><Field label="Phòng" error={errors.roomId}><select className="h-11 w-full rounded-[16px] border border-input bg-background px-3" value={draft.roomId} onChange={(e) => { update("roomId", e.target.value); const room = rooms.find((item) => (item._id || item.id) === e.target.value); if (room) setDraft((value) => ({ ...value, roomId: e.target.value, fixedRentPrice: formatNumberInput(room.defaultRentPrice), fixedDeposit: formatNumberInput(room.defaultDeposit || room.defaultRentPrice), initialElectricity: formatMeterReading(room.lastElectricityReading ?? room.draftElectricity), initialWater: formatMeterReading(room.lastWaterReading ?? room.draftWater) })); }}><option value="">Chọn Phòng</option>{rooms.map((room) => <option key={room._id || room.id} value={room._id || room.id}>{room.roomCode}</option>)}</select></Field><Field label="Người thuê" error={errors.tenantId}><select className="h-11 w-full rounded-[16px] border border-input bg-background px-3" value={draft.tenantId} onChange={(e) => update("tenantId", e.target.value)}><option value="">Chọn Người thuê</option>{nguoiThueList.map((item) => <option key={item._id || item.id} value={item._id || item.id}>{item.fullName || item.name} · {formatPhone(item.phone)}</option>)}</select></Field></div>}
     {step === 2 && <div className="grid gap-5 md:grid-cols-2">
       <Field label="Ngày bắt đầu" error={errors.startDate}>
         <DateField

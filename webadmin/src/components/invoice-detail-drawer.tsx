@@ -3,7 +3,8 @@
 import { X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { formatInvoiceDate, invoiceCurrency, SemanticInvoice } from "@/lib/invoice";
+import { formatInvoiceDate, SemanticInvoice } from "@/lib/invoice";
+import { formatCurrency, formatMeterReading, formatPhone } from "@/lib/formatters";
 
 type Props = {
   invoice: SemanticInvoice | null;
@@ -43,8 +44,8 @@ export function InvoiceDetailDrawer({ invoice, onClose }: Props) {
           <div><dt className="text-muted-foreground">Kỳ thanh toán</dt><dd className="mt-1 font-bold">{invoice.period}</dd></div>
           <div><dt className="text-muted-foreground">Hạn thanh toán</dt><dd className="mt-1 font-bold">{formatInvoiceDate(invoice.dueDate)}</dd></div>
           <div><dt className="text-muted-foreground">Trạng thái</dt><dd className="mt-1 font-bold">{invoice.statusLabel}</dd></div>
-          <div><dt className="text-muted-foreground">Số điện thoại</dt><dd className="mt-1 font-bold">{invoice.tenantPhone || "Chưa cập nhật"}</dd></div>
-          <div><dt className="text-muted-foreground">Tổng thanh toán</dt><dd className="mt-1 font-black text-primary">{invoiceCurrency.format(invoice.totalAmount)}</dd></div>
+          <div><dt className="text-muted-foreground">Số điện thoại</dt><dd className="mt-1 font-bold">{invoice.tenantPhone ? formatPhone(invoice.tenantPhone) : "Chưa cập nhật"}</dd></div>
+          <div><dt className="text-muted-foreground">Tổng thanh toán</dt><dd className="mt-1 font-black text-primary">{formatCurrency(invoice.totalAmount)}</dd></div>
         </dl>
 
         <section className="py-5">
@@ -54,21 +55,25 @@ export function InvoiceDetailDrawer({ invoice, onClose }: Props) {
               <Line label="Tiền cọc hợp đồng" amount={invoice.depositAmount} />
             ) : <>
             <Line label="Tiền phòng" amount={invoice.rent ?? invoice.roomAmount} />
-            {serviceLines.length > 0 ? serviceLines.map((line, index) => (
-              <Line
+            {serviceLines.length > 0 ? serviceLines.map((line, index) => line.billingMode === "METER" ? (
+              <MeterLine
                 key={line._id || `${line.serviceCode || line.serviceName}-${index}`}
                 label={line.serviceName || line.serviceId?.name || "Dịch vụ"}
-                detail={line.billingMode === "METER"
-                  ? `${line.oldIndex ?? 0} → ${line.newIndex ?? 0} ${line.unit || ""}`
-                  : line.billingMode === "QUANTITY"
-                    ? `${line.quantity ?? 0} ${line.unit || ""}`
-                    : line.unit}
+                unit={line.unit || line.serviceId?.unit || "đơn vị"}
+                previous={line.oldIndex ?? 0}
+                current={line.newIndex ?? 0}
+                unitPrice={line.appliedPrice ?? 0}
                 amount={line.amount}
               />
-            )) : (
+            ) : <Line
+              key={line._id || `${line.serviceCode || line.serviceName}-${index}`}
+              label={line.serviceName || line.serviceId?.name || "Dịch vụ"}
+              detail={line.billingMode === "QUANTITY" ? `${line.quantity ?? 0} ${line.unit || ""}` : line.unit}
+              amount={line.amount}
+            />) : (
               <>
-                <Line label="Điện" detail={`${invoice.electricityOld ?? 0} → ${invoice.electricityNew ?? 0}`} amount={invoice.electricity} />
-                <Line label="Nước" detail={`${invoice.waterOld ?? 0} → ${invoice.waterNew ?? 0}`} amount={invoice.water} />
+                <MeterLine label="Điện" unit="kWh" previous={invoice.electricityOld ?? 0} current={invoice.electricityNew ?? 0} amount={invoice.electricity} />
+                <MeterLine label="Nước" unit="m³" previous={invoice.waterOld ?? 0} current={invoice.waterNew ?? 0} amount={invoice.water} />
                 <Line label="Dịch vụ khác" amount={(invoice.services || 0) + (invoice.parking || 0) + (invoice.internet || 0) + (invoice.garbage || 0)} />
               </>
             )}
@@ -89,7 +94,17 @@ function Line({ label, detail, amount = 0 }: { label: string; detail?: string; a
         <p className="font-semibold">{label}</p>
         {detail && <p className="mt-0.5 text-xs text-muted-foreground">{detail}</p>}
       </div>
-      <p className="whitespace-nowrap font-bold">{invoiceCurrency.format(amount)}</p>
+      <p className="whitespace-nowrap font-bold">{formatCurrency(amount)}</p>
     </div>
   );
+}
+
+function MeterLine({ label, unit, previous, current, unitPrice = 0, amount = 0 }: { label: string; unit: string; previous: number; current: number; unitPrice?: number; amount?: number }) {
+  const usage = Math.max(0, current - previous);
+  const displayedUnitPrice = unitPrice || (usage > 0 ? Math.round(amount / usage) : 0);
+  return <div className="grid gap-2 py-3 sm:grid-cols-[1.2fr_repeat(4,minmax(0,1fr))] sm:items-end"><div><p className="font-semibold">{label}</p><p className="mt-0.5 text-xs text-muted-foreground">Chỉ số & chi phí theo kỳ</p></div><MeterValue label="Kỳ trước" value={`${formatMeterReading(previous)} ${unit}`} /><MeterValue label="Kỳ này" value={`${formatMeterReading(current)} ${unit}`} /><MeterValue label="Tiêu thụ" value={`${formatMeterReading(usage)} ${unit}`} /><MeterValue label="Thành tiền" value={formatCurrency(amount)} accent /><div className="sm:col-start-2"><p className="text-xs text-muted-foreground">Đơn giá</p><p className="mt-1 text-sm font-semibold">{formatCurrency(displayedUnitPrice)}</p></div></div>;
+}
+
+function MeterValue({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
+  return <div><p className="text-xs text-muted-foreground">{label}</p><p className={`mt-1 text-sm font-semibold ${accent ? "text-primary" : ""}`}>{value}</p></div>;
 }

@@ -13,10 +13,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { useNotification } from "@/hooks/use-notification";
 import { getNotificationMessage } from "@/lib/notification-messages";
-import { formatCurrency, formatNumberInput, formatPhone, unformatNumber } from "@/lib/formatters";
+import { formatCurrency, formatMeterReading, formatNumberInput, formatPhone, parseMeterReading, unformatNumber } from "@/lib/formatters";
 import { PageHeader } from "@/components/calm-ops/page-header";
 import { safeJsonParse } from "@/lib/client-storage";
 import { Skeleton } from "@/components/ui/skeleton";
+import { MeterLedger } from "@/components/meter-ledger";
 
 type CheckoutPreview = {
   roomCode: string;
@@ -119,8 +120,8 @@ export default function ContractsPage() {
     try {
       const response = await fetchAPI(`/contracts/${id}/checkout-preview`);
       setCheckoutPreview(response.data);
-      setFinalElectricity(formatNumberInput(response.data.electricityOld));
-      setFinalWater(formatNumberInput(response.data.waterOld));
+      setFinalElectricity(formatMeterReading(response.data.electricityOld));
+      setFinalWater(formatMeterReading(response.data.waterOld));
     } catch (error) {
       notification.error(getNotificationMessage(error, "Không thể tải bảng quyết toán."));
       setCheckoutModalOpen(false);
@@ -131,13 +132,19 @@ export default function ContractsPage() {
 
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
+    const electricity = parseMeterReading(finalElectricity);
+    const water = parseMeterReading(finalWater);
+    if (!checkoutPreview || electricity === null || water === null || electricity < checkoutPreview.electricityOld || water < checkoutPreview.waterOld) {
+      notification.error("Chỉ số cuối kỳ phải hợp lệ và không nhỏ hơn chỉ số cũ.");
+      return;
+    }
     try {
       setCheckoutSubmitting(true);
       const response = await fetchAPI(`/contracts/${checkoutContractId}/checkout`, {
         method: "PUT",
         body: JSON.stringify({
-          finalElectricity: unformatNumber(finalElectricity),
-          finalWater: unformatNumber(finalWater),
+          finalElectricity: electricity,
+          finalWater: water,
           damageAmount: unformatNumber(damageAmount),
           note: checkoutNote
         })
@@ -167,12 +174,12 @@ export default function ContractsPage() {
 
     const room = rooms.find(item => (item._id || item.id) === (contract.roomId?._id || contract.roomId?.id || contract.roomId));
     setInitialElectricity(
-      formatNumberInput(
+      formatMeterReading(
         contract.initialElectricity ?? room?.lastElectricityReading ?? room?.draftElectricity,
       )
     );
     setInitialWater(
-      formatNumberInput(
+      formatMeterReading(
         contract.initialWater ?? room?.lastWaterReading ?? room?.draftWater,
       )
     );
@@ -206,8 +213,8 @@ export default function ContractsPage() {
           serviceId: s.serviceId,
           fixedPrice: unformatNumber(s.fixedPrice)
         })),
-        initialElectricity: initialElectricity ? unformatNumber(initialElectricity) : undefined,
-        initialWater: initialWater ? unformatNumber(initialWater) : undefined,
+        initialElectricity: initialElectricity ? parseMeterReading(initialElectricity) ?? undefined : undefined,
+        initialWater: initialWater ? parseMeterReading(initialWater) ?? undefined : undefined,
         status: computedStatus === "Đang hiệu lực" ? 1 : 0 // 0 means waiting/pending
       };
       
@@ -282,11 +289,11 @@ export default function ContractsPage() {
     if (!checkoutPreview) return null;
     const electricityAmount = Math.max(
       0,
-      unformatNumber(finalElectricity) - checkoutPreview.electricityOld
+      (parseMeterReading(finalElectricity) ?? checkoutPreview.electricityOld) - checkoutPreview.electricityOld
     ) * checkoutPreview.electricityPrice;
     const waterAmount = Math.max(
       0,
-      unformatNumber(finalWater) - checkoutPreview.waterOld
+      (parseMeterReading(finalWater) ?? checkoutPreview.waterOld) - checkoutPreview.waterOld
     ) * checkoutPreview.waterPrice;
     const utilitiesAmount = electricityAmount + waterAmount;
     const damage = unformatNumber(damageAmount);
@@ -357,8 +364,8 @@ export default function ContractsPage() {
                       if (r) {
                         setRent(formatNumberInput(r.defaultRentPrice));
                         setDeposit(formatNumberInput(r.defaultDeposit || r.defaultRentPrice));
-                        setInitialElectricity(formatNumberInput(r.lastElectricityReading ?? r.draftElectricity));
-                        setInitialWater(formatNumberInput(r.lastWaterReading ?? r.draftWater));
+                        setInitialElectricity(formatMeterReading(r.lastElectricityReading ?? r.draftElectricity));
+                        setInitialWater(formatMeterReading(r.lastWaterReading ?? r.draftWater));
                       }
                     }}
                     required
@@ -438,7 +445,7 @@ export default function ContractsPage() {
                   <Label htmlFor="electricityPrice">Giá tiền điện (đ/kWh) *</Label>
                   <Input
                     id="electricityPrice"
-                    inputMode="numeric"
+                    inputMode="decimal"
                     value={electricityPrice}
                     onChange={e => setElectricityPrice(formatNumberInput(e.target.value))}
                     placeholder="VD: 3.500"
@@ -449,7 +456,7 @@ export default function ContractsPage() {
                   <Label htmlFor="waterPrice">Giá tiền nước (đ/m³) *</Label>
                   <Input
                     id="waterPrice"
-                    inputMode="numeric"
+                    inputMode="decimal"
                     value={waterPrice}
                     onChange={e => setWaterPrice(formatNumberInput(e.target.value))}
                     placeholder="VD: 15.000"
@@ -463,9 +470,9 @@ export default function ContractsPage() {
                   <Label htmlFor="initialElectricity">Chỉ số điện đầu</Label>
                   <Input
                     id="initialElectricity"
-                    inputMode="numeric"
+                    inputMode="decimal"
                     value={initialElectricity}
-                    onChange={e => setInitialElectricity(formatNumberInput(e.target.value))}
+                    onChange={e => { const value = e.target.value; setInitialElectricity(parseMeterReading(value) === null ? value : formatMeterReading(value)); }}
                     placeholder="VD: 100"
                   />
                 </div>
@@ -473,9 +480,9 @@ export default function ContractsPage() {
                   <Label htmlFor="initialWater">Chỉ số nước đầu</Label>
                   <Input
                     id="initialWater"
-                    inputMode="numeric"
+                    inputMode="decimal"
                     value={initialWater}
-                    onChange={e => setInitialWater(formatNumberInput(e.target.value))}
+                    onChange={e => { const value = e.target.value; setInitialWater(parseMeterReading(value) === null ? value : formatMeterReading(value)); }}
                     placeholder="VD: 50"
                   />
                 </div>
@@ -611,28 +618,7 @@ export default function ContractsPage() {
                   </div>
                 </div>
               ) : null}
-              <div className="space-y-2">
-                <Label htmlFor="finalElectricity">Chỉ số điện cuối cùng {checkoutPreview ? `(cũ: ${formatNumberInput(checkoutPreview.electricityOld)})` : ""}</Label>
-                <Input
-                  id="finalElectricity"
-                  inputMode="numeric"
-                  value={finalElectricity}
-                  onChange={e => setFinalElectricity(formatNumberInput(e.target.value))}
-                  placeholder="VD: 120"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="finalWater">Chỉ số nước cuối cùng {checkoutPreview ? `(cũ: ${formatNumberInput(checkoutPreview.waterOld)})` : ""}</Label>
-                <Input
-                  id="finalWater"
-                  inputMode="numeric"
-                  value={finalWater}
-                  onChange={e => setFinalWater(formatNumberInput(e.target.value))}
-                  placeholder="VD: 65"
-                  required
-                />
-              </div>
+              {checkoutPreview ? <div className="space-y-3"><MeterLedger label="Điện" unit="kWh" previous={checkoutPreview.electricityOld} current={finalElectricity} unitPrice={checkoutPreview.electricityPrice} onChange={setFinalElectricity} /><MeterLedger label="Nước" unit="m³" previous={checkoutPreview.waterOld} current={finalWater} unitPrice={checkoutPreview.waterPrice} onChange={setFinalWater} /></div> : null}
               <div className="space-y-2">
                 <Label htmlFor="damageAmount">Tiền bồi thường hư hại (VNĐ)</Label>
                 <Input

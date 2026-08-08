@@ -12,7 +12,7 @@ import { useNotification } from "@/hooks/use-notification";
 import { fetchAPI } from "@/lib/api";
 import { getNotificationMessage } from "@/lib/notification-messages";
 import { PageHeader } from "@/components/calm-ops/page-header";
-import { formatCurrency, formatNumberInput, unformatNumber } from "@/lib/formatters";
+import { formatCurrency, formatMeterReading, parseMeterReading } from "@/lib/formatters";
 import { consumePendingAIAction } from "@/lib/ai-actions";
 
 const steps = [
@@ -56,8 +56,8 @@ export default function UtilitiesPage() {
         const stateInit: Record<string, { electricity: string; water: string }> = {};
         data.data.forEach((p: any) => {
           stateInit[p.contractId] = {
-            electricity: formatNumberInput(p.electricityDraft),
-            water: formatNumberInput(p.waterDraft),
+            electricity: formatMeterReading(p.electricityDraft),
+            water: formatMeterReading(p.waterDraft),
           };
         });
         setUtilitiesState(stateInit);
@@ -79,7 +79,7 @@ export default function UtilitiesPage() {
     if (!action) return;
     const preview = previews.find((item) => item.room?.trim().toLowerCase() === action.roomCode.trim().toLowerCase());
     if (!preview) { notification.warning(`Không tìm thấy phòng ${action.roomCode}.`); return; }
-    setUtilitiesState((current) => ({ ...current, [preview.contractId]: { electricity: formatNumberInput(action.newElec), water: formatNumberInput(action.newWater) } }));
+    setUtilitiesState((current) => ({ ...current, [preview.contractId]: { electricity: formatMeterReading(action.newElec), water: formatMeterReading(action.newWater) } }));
     setHighlightedContractId(preview.contractId);
     const timer = window.setTimeout(() => setHighlightedContractId(""), 2000);
     return () => window.clearTimeout(timer);
@@ -88,7 +88,7 @@ export default function UtilitiesPage() {
   const handleUpdateInput = (contractId: string, field: "electricity" | "water", value: string) => {
     setUtilitiesState((prev) => ({
       ...prev,
-      [contractId]: { ...prev[contractId], [field]: formatNumberInput(value) },
+      [contractId]: { ...prev[contractId], [field]: parseMeterReading(value) === null ? value : formatMeterReading(value) },
     }));
   };
 
@@ -132,13 +132,15 @@ export default function UtilitiesPage() {
       const utilitiesToUpdate = previews
         .map((p) => {
           const inputState = utilitiesState[p.contractId];
+          const draftElectricity = parseMeterReading(inputState?.electricity);
+          const draftWater = parseMeterReading(inputState?.water);
           return {
             roomId: p.roomId,
-            draftElectricity: unformatNumber(inputState?.electricity),
-            draftWater: unformatNumber(inputState?.water),
+            draftElectricity: draftElectricity ?? undefined,
+            draftWater: draftWater ?? undefined,
           };
         })
-        .filter((item) => item.draftElectricity || item.draftWater);
+        .filter((item) => item.draftElectricity !== undefined || item.draftWater !== undefined);
 
       if (utilitiesToUpdate.length === 0) {
         notification.warning("Vui lòng nhập số liệu mới cho ít nhất 1 phòng.");
@@ -266,26 +268,26 @@ export default function UtilitiesPage() {
                     </div>
                   </TableCell>
                   <TableCell className="font-bold">{formatCurrency(p.roomAmount)}</TableCell>
-                  <TableCell className="text-muted-foreground">{p.electricityOld}</TableCell>
+                  <TableCell className="text-muted-foreground">{formatMeterReading(p.electricityOld)} kWh</TableCell>
                   <TableCell>
                     <Input
                       aria-label={`Số điện mới phòng ${p.room}`}
-                      className="h-9 w-28 bg-accent/45"
+                      className="h-12 w-28 bg-accent/45"
                       style={highlightedContractId === p.contractId ? { outline: "2px solid #b8f5da", outlineOffset: 2, boxShadow: "0 0 8px #b8f5da" } : undefined}
                       placeholder="Số mới"
-                      inputMode="numeric"
+                      inputMode="decimal"
                       value={utilitiesState[p.contractId]?.electricity || ""}
                       onChange={(event) => handleUpdateInput(p.contractId, "electricity", event.target.value)}
                     />
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{p.waterOld}</TableCell>
+                  <TableCell className="text-muted-foreground">{formatMeterReading(p.waterOld)} m³</TableCell>
                   <TableCell>
                     <Input
                       aria-label={`Số nước mới phòng ${p.room}`}
-                      className="h-9 w-28 bg-accent/45"
+                      className="h-12 w-28 bg-accent/45"
                       style={highlightedContractId === p.contractId ? { outline: "2px solid #b8f5da", outlineOffset: 2, boxShadow: "0 0 8px #b8f5da" } : undefined}
                       placeholder="Số mới"
-                      inputMode="numeric"
+                      inputMode="decimal"
                       value={utilitiesState[p.contractId]?.water || ""}
                       onChange={(event) => handleUpdateInput(p.contractId, "water", event.target.value)}
                     />
@@ -313,7 +315,7 @@ export default function UtilitiesPage() {
           <DialogHeader><DialogTitle>Nhập chỉ số · Phòng {manualMeter?.room}</DialogTitle></DialogHeader>
           <form onSubmit={applyManualMeter} className="space-y-4">
             <p className="text-sm text-muted-foreground">Không thể đọc chỉ số từ ảnh. Nhập số {manualMeter?.field === "electricity" ? "điện" : "nước"} để điền vào chỉ số mới của phòng này.</p>
-            <Input autoFocus inputMode="numeric" aria-label={`Chỉ số ${manualMeter?.field === "electricity" ? "điện" : "nước"} mới phòng ${manualMeter?.room || ""}`} value={manualMeterValue} onChange={(event) => setManualMeterValue(formatNumberInput(event.target.value))} placeholder="Nhập chỉ số" required />
+            <Input autoFocus inputMode="decimal" aria-label={`Chỉ số ${manualMeter?.field === "electricity" ? "điện" : "nước"} mới phòng ${manualMeter?.room || ""}`} value={manualMeterValue} onChange={(event) => { const value = event.target.value; setManualMeterValue(parseMeterReading(value) === null ? value : formatMeterReading(value)); }} placeholder="Nhập chỉ số" required />
             <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setManualMeter(null)}>Hủy</Button><Button type="submit">Áp dụng</Button></div>
           </form>
         </DialogContent>
