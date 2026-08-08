@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
+import { FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
 import { AppText, AppTextInput } from "@/components/ui/typography";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker, {
@@ -20,6 +20,7 @@ import AnimatedEntry from "../components/ui/AnimatedEntry";
 import AppButton from "../components/ui/AppButton";
 import GradientHero from "../components/ui/GradientHero";
 import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
+import { ContentSkeleton } from "../components/ui/content-skeleton";
 import ProgressStepper from "../components/ui/ProgressStepper";
 import { draftContractService, DraftContract } from "../services/draftContractService";
 import CheckoutModal from "../components/modals/CheckoutModal";
@@ -299,12 +300,7 @@ export default function AdminContractsScreen({ params }: Props) {
   const styles = createStyles(theme);
 
   if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.primary} />
-        <AppText style={styles.loadingText}>{t("contractsMobile.loading")}</AppText>
-      </View>
-    );
+    return <ContentSkeleton rows={4} />;
   }
 
   const filterButton = (value: typeof filter, label: string) => (

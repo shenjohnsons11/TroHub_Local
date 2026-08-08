@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { FlatList, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, Pressable, ActivityIndicator, Modal } from "react-native";
+import { FlatList, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, Pressable, Modal } from "react-native";
 import { AppText, AppTextInput } from "@/components/ui/typography";
 import Card from "../components/Card";
 import { useAppTheme } from "../contexts/ThemeContext";
@@ -11,6 +11,7 @@ import { Ionicons } from "@expo/vector-icons";
 import GradientHero from "../components/ui/GradientHero";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
 import AppButton from "../components/ui/AppButton";
+import { ContentSkeleton } from "../components/ui/content-skeleton";
 import { formatNumberInput, unformatNumber } from "../utils/formatters";
 
 type Props = {
@@ -61,11 +62,7 @@ export default function UtilityScreen({ onBack }: Props) {
   };
 
   if (isLoading) {
-    return (
-      <View style={styles.loadingBox}>
-        <ActivityIndicator size="large" color={theme.primary} />
-      </View>
-    );
+    return <ContentSkeleton rows={3} />;
   }
 
   const current = utilityHistory[0];

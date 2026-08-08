@@ -16,6 +16,7 @@ import { getNotificationMessage } from "@/lib/notification-messages";
 import { formatCurrency, formatNumberInput, formatPhone, unformatNumber } from "@/lib/formatters";
 import { PageHeader } from "@/components/calm-ops/page-header";
 import { safeJsonParse } from "@/lib/client-storage";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type CheckoutPreview = {
   roomCode: string;
@@ -707,7 +708,7 @@ export default function ContractsPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-40 text-center text-muted-foreground"><FileSignature className="mx-auto mb-2 size-8 animate-pulse text-primary" />Đang tải hợp đồng…</TableCell>
+                <TableCell colSpan={5} className="p-4"><div className="space-y-3">{Array.from({ length: 3 }, (_, index) => <Skeleton key={index} className="h-12 w-full" />)}</div></TableCell>
               </TableRow>
             ) : filteredContracts.length === 0 ? (
               <TableRow>

@@ -11,7 +11,7 @@ import { PageHeader } from "@/components/calm-ops/page-header";
 import { PriorityPanel } from "@/components/calm-ops/priority-panel";
 import { StatCard } from "@/components/calm-ops/stat-card";
 import { StatusBadge } from "@/components/calm-ops/status-badge";
-import { AppLoading } from "@/components/app-loading";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useLanguage } from "@/components/language-provider";
 
 
@@ -34,7 +34,7 @@ export default function DashboardPage() {
 
   useEffect(() => { void load(); }, [load]);
 
-  if (!stats) return <AppLoading message={t("common.loading")} />;
+  if (!stats) return <div className="space-y-6" aria-label={t("common.loading")}><Skeleton className="h-28 w-full" /><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{Array.from({ length: 8 }, (_, index) => <Skeleton key={index} className="h-36 w-full" />)}</div></div>;
 
   const vacantRooms = stats.vacantRooms || Math.max(0, stats.totalRooms - stats.occupiedRooms);
   const occupancyRate = Math.round((stats.occupiedRooms / Math.max(stats.totalRooms, 1)) * 100);

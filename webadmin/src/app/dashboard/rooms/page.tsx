@@ -15,6 +15,7 @@ import { fetchAPI } from "@/lib/api";
 import { getNotificationMessage } from "@/lib/notification-messages";
 import { formatCurrency, formatNumberInput, unformatNumber } from "@/lib/formatters";
 import { useLanguage } from "@/components/language-provider";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function RoomsPage() {
   const notification = useNotification();
@@ -198,7 +199,7 @@ export default function RoomsPage() {
       </div>
 
       {loading ? (
-        <div className="calm-surface grid min-h-64 place-items-center p-8 text-center"><div><DoorOpen className="mx-auto size-9 animate-pulse text-primary" /><p className="mt-3 font-bold">Đang mở danh mục phòng…</p></div></div>
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3" aria-label="Đang tải danh mục phòng">{Array.from({ length: 6 }, (_, index) => <Skeleton key={index} className="h-48 w-full" />)}</div>
       ) : filteredRooms.length === 0 ? (
         <div className="calm-surface grid min-h-72 place-items-center overflow-hidden p-8 text-center">
           <div><Image src="/trohub-empty-states.png" alt="" width={190} height={120} className="mx-auto h-28 w-44 rounded-[20px] object-cover object-left" /><h2 className="mt-4 text-xl font-black">Không tìm thấy phòng nào</h2><p className="mt-1 text-sm text-muted-foreground">Thử từ khóa khác hoặc thêm phòng đầu tiên.</p></div>

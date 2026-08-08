@@ -14,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import GradientHero from "../components/ui/GradientHero";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
 import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
+import { ContentSkeleton } from "../components/ui/content-skeleton";
 import { useTranslation } from "../contexts/LanguageContext";
 
 const getStatusLabel = (status: ContractStatus, t: (key: string) => string): string => {
@@ -187,11 +188,7 @@ export default function ContractScreen({ onNavigate, params }: Props) {
   };
 
   if (isLoading) {
-    return (
-      <View style={styles.loadingBox}>
-        <ActivityIndicator size="large" color={theme.primary} />
-      </View>
-    );
+    return <ContentSkeleton rows={3} />;
   }
 
   return (

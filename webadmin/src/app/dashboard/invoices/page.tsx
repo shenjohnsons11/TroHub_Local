@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Bell, CheckCircle, ChevronLeft, ChevronRight, Eye, FileText, Gauge, Plus, ScanSearch, Search, Send, Trash2 } from "lucide-react";
+import { CalendarDays, Bell, CheckCircle, ChevronLeft, ChevronRight, Eye, Gauge, Plus, ScanSearch, Search, Send, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { formatCurrency, formatNumberInput, unformatNumber } from "@/lib/formatters";
@@ -16,6 +16,7 @@ import { getNotificationMessage } from "@/lib/notification-messages";
 import { PageHeader } from "@/components/calm-ops/page-header";
 import { useLanguage } from "@/components/language-provider";
 import { InvoiceDetailDrawer } from "@/components/invoice-detail-drawer";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const INVOICE_STEPS = [
   { label: "Chọn kỳ", icon: CalendarDays },
@@ -452,7 +453,7 @@ export default function InvoicesPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-40 text-center text-muted-foreground"><FileText className="mx-auto mb-2 size-8 animate-pulse text-primary" />Đang tải hóa đơn…</TableCell>
+                <TableCell colSpan={6} className="p-4"><div className="space-y-3">{Array.from({ length: 3 }, (_, index) => <Skeleton key={index} className="h-12 w-full" />)}</div></TableCell>
               </TableRow>
             ) : filteredInvoices.length === 0 ? (
               <TableRow>

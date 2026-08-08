@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { CalendarRange, Eye, Gauge, Search, Send, Save } from "lucide-react";
-import { AppLoading } from "@/components/app-loading";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -245,7 +245,7 @@ export default function UtilitiesPage() {
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={6} className="py-8"><AppLoading message="Đang tải bản xem trước điện nước" /></TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="p-4"><div className="space-y-3">{Array.from({ length: 3 }, (_, index) => <Skeleton key={index} className="h-12 w-full" />)}</div></TableCell></TableRow>
             ) : filteredPreviews.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="h-64 text-center">

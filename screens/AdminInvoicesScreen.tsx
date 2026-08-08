@@ -4,7 +4,7 @@ import { AppText, AppTextInput } from "@/components/ui/typography";
 import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "../contexts/ThemeContext";
 import { useNotification } from "../hooks/useNotification";
-import AppLoadingScreen from "../components/AppLoadingScreen";
+import { ContentSkeleton } from "../components/ui/content-skeleton";
 import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
 import GradientHero from "../components/ui/GradientHero";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
@@ -379,7 +379,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
 
   const occupiedRooms = rooms.filter(room => room.status === 1);
 
-  if (loading) return <AppLoadingScreen />;
+  if (loading) return <ContentSkeleton rows={4} />;
 
   return (
     <View style={styles.container}>
