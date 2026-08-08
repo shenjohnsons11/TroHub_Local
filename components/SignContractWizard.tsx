@@ -6,6 +6,7 @@ import { Contract } from "../types/Contract";
 import { useAppTheme } from "../contexts/ThemeContext";
 import ProgressStepper from "./ui/ProgressStepper";
 import AppButton from "./ui/AppButton";
+import { formatCurrency, formatMeterReading, unformatNumber } from "../utils/formatters";
 
 const steps = [
   { label: "Thông tin", icon: "home-outline" as const },
@@ -63,11 +64,11 @@ export default function SignContractWizard({ visible, contract, onClose, onSign 
             </View>
             <View style={styles.infoRow}>
               <AppText style={styles.infoLabel}>Tiền thuê hàng tháng:</AppText>
-              <AppText style={styles.infoValue}>{contract.rentFee}</AppText>
+              <AppText style={styles.infoValue}>{formatCurrency(unformatNumber(contract.rentFee))}</AppText>
             </View>
             <View style={styles.infoRow}>
               <AppText style={styles.infoLabel}>Tiền cọc:</AppText>
-              <AppText style={styles.infoValue}>{contract.deposit}</AppText>
+              <AppText style={styles.infoValue}>{formatCurrency(unformatNumber(contract.deposit))}</AppText>
             </View>
             <View style={styles.infoRow}>
               <AppText style={styles.infoLabel}>Thời hạn hợp đồng:</AppText>
@@ -81,27 +82,27 @@ export default function SignContractWizard({ visible, contract, onClose, onSign 
             <AppText style={styles.sectionTitle}>Phí Dịch vụ</AppText>
             <View style={styles.infoRow}>
               <AppText style={styles.infoLabel}>Tiền điện:</AppText>
-              <AppText style={styles.infoValue}>{contract.serviceFees.electric}</AppText>
+              <AppText style={styles.infoValue}>{formatCurrency(unformatNumber(contract.serviceFees.electric))}</AppText>
             </View>
             <View style={styles.infoRow}>
               <AppText style={styles.infoLabel}>Chỉ số điện đầu:</AppText>
-              <AppText style={styles.infoValue}>{contract.meterTerms.initialElectricity}</AppText>
+              <AppText style={styles.infoValue}>{formatMeterReading(contract.meterTerms.initialElectricity)} kWh</AppText>
             </View>
             <View style={styles.infoRow}>
               <AppText style={styles.infoLabel}>Tiền nước:</AppText>
-              <AppText style={styles.infoValue}>{contract.serviceFees.water}</AppText>
+              <AppText style={styles.infoValue}>{formatCurrency(unformatNumber(contract.serviceFees.water))}</AppText>
             </View>
             <View style={styles.infoRow}>
               <AppText style={styles.infoLabel}>Chỉ số nước đầu:</AppText>
-              <AppText style={styles.infoValue}>{contract.meterTerms.initialWater}</AppText>
+              <AppText style={styles.infoValue}>{formatMeterReading(contract.meterTerms.initialWater)} m³</AppText>
             </View>
             <View style={styles.infoRow}>
               <AppText style={styles.infoLabel}>Gửi xe:</AppText>
-              <AppText style={styles.infoValue}>{contract.serviceFees.parking}</AppText>
+              <AppText style={styles.infoValue}>{formatCurrency(unformatNumber(contract.serviceFees.parking))}</AppText>
             </View>
             <View style={styles.infoRow}>
               <AppText style={styles.infoLabel}>Internet:</AppText>
-              <AppText style={styles.infoValue}>{contract.serviceFees.internet}</AppText>
+              <AppText style={styles.infoValue}>{formatCurrency(unformatNumber(contract.serviceFees.internet))}</AppText>
             </View>
           </ScrollView>
         );

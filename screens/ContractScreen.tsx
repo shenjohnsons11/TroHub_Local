@@ -16,6 +16,7 @@ import AnimatedEntry from "../components/ui/AnimatedEntry";
 import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
 import { ContentSkeleton } from "../components/ui/content-skeleton";
 import { useTranslation } from "../contexts/LanguageContext";
+import { formatCurrency, formatMeterReading, unformatNumber } from "../utils/formatters";
 
 const getStatusLabel = (status: ContractStatus, t: (key: string) => string): string => {
   switch (status) {
@@ -227,7 +228,7 @@ export default function ContractScreen({ onNavigate, params }: Props) {
             detail={`${getStatusLabel(contract.status, t)} · ${contract.startDate} — ${contract.endDate}`}
             icon="document-text-outline"
             label={t("tenantContract.hero", { room: contract.room })}
-            value={contract.rentFee}
+            value={formatCurrency(unformatNumber(contract.rentFee))}
           />
           <Card style={styles.contractCard}>
             {/* Header: Phòng + Badge */}
@@ -248,11 +249,11 @@ export default function ContractScreen({ onNavigate, params }: Props) {
             <View style={styles.infoGrid}>
               <View style={styles.infoItem}>
                 <AppText style={styles.infoLabel}>{t("tenantContract.rent")}</AppText>
-                <AppText style={styles.infoValue}>{contract.rentFee}</AppText>
+                <AppText style={styles.infoValue}>{formatCurrency(unformatNumber(contract.rentFee))}</AppText>
               </View>
               <View style={styles.infoItem}>
                 <AppText style={styles.infoLabel}>{t("tenantContract.deposit")}</AppText>
-                <AppText style={styles.infoValue}>{contract.deposit}</AppText>
+                <AppText style={styles.infoValue}>{formatCurrency(unformatNumber(contract.deposit))}</AppText>
               </View>
               <View style={styles.infoItem}>
                 <AppText style={styles.infoLabel}>{t("tenantContract.start")}</AppText>
@@ -291,16 +292,16 @@ export default function ContractScreen({ onNavigate, params }: Props) {
               <View style={styles.servicesBox}>
                 <AppText style={styles.servicesTitle}>{t("tenantContract.services")}</AppText>
                 <View style={styles.servicesGrid}>
-                  <AppText style={styles.serviceItem}>⚡ {contract.serviceFees.electric}</AppText>
+                  <AppText style={styles.serviceItem}>⚡ {formatCurrency(unformatNumber(contract.serviceFees.electric))}</AppText>
                   <AppText style={styles.serviceItem}>
-                    {t("tenantContract.initialElectricity", { value: contract.meterTerms.initialElectricity })}
+                    {t("tenantContract.initialElectricity", { value: `${formatMeterReading(contract.meterTerms.initialElectricity)} kWh` })}
                   </AppText>
-                  <AppText style={styles.serviceItem}>💧 {contract.serviceFees.water}</AppText>
+                  <AppText style={styles.serviceItem}>💧 {formatCurrency(unformatNumber(contract.serviceFees.water))}</AppText>
                   <AppText style={styles.serviceItem}>
-                    {t("tenantContract.initialWater", { value: contract.meterTerms.initialWater })}
+                    {t("tenantContract.initialWater", { value: `${formatMeterReading(contract.meterTerms.initialWater)} m³` })}
                   </AppText>
-                  <AppText style={styles.serviceItem}>🅿️ {contract.serviceFees.parking}</AppText>
-                  <AppText style={styles.serviceItem}>🌐 {contract.serviceFees.internet}</AppText>
+                  <AppText style={styles.serviceItem}>🅿️ {formatCurrency(unformatNumber(contract.serviceFees.parking))}</AppText>
+                  <AppText style={styles.serviceItem}>🌐 {formatCurrency(unformatNumber(contract.serviceFees.internet))}</AppText>
                 </View>
               </View>
             )}
@@ -343,7 +344,7 @@ export default function ContractScreen({ onNavigate, params }: Props) {
                           {t("tenantContract.depositUnpaid")}
                         </AppText>
                         <AppText style={styles.depositPaymentAmount}>
-                          {contract.deposit}
+                          {formatCurrency(unformatNumber(contract.deposit))}
                         </AppText>
                         <AppText style={styles.depositPaymentHint}>
                           {t("tenantContract.depositHint")}

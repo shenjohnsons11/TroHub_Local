@@ -14,7 +14,7 @@ import AnimatedEntry from "../components/ui/AnimatedEntry";
 import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
 import { ContentSkeleton } from "../components/ui/content-skeleton";
 import { calculateUnpaidTotal } from "../utils/invoicePresentation";
-import { formatCurrency } from "../utils/formatters";
+import { formatCurrency, unformatNumber } from "../utils/formatters";
 import { useLanguage } from "../contexts/LanguageContext";
 
 type FilterType = "all" | "unpaid" | "paid";
@@ -151,7 +151,7 @@ export default function InvoiceScreen({ params }: Props) {
           return (
             <AnimatedEntry delay={Math.min(index, 5) * 35}>
               <Card style={styles.invoiceCard}>
-                <AppText style={styles.amount}>{invoice.amount}</AppText>
+                <AppText style={styles.amount}>{formatCurrency(invoice.numericAmount ?? unformatNumber(invoice.amount))}</AppText>
                 <View style={styles.cardHeader}>
                   <View style={styles.cardLeft}>
                     <AppText style={{ fontSize: 11, fontWeight: '800', color: theme.primary, marginBottom: 2 }}>Mã HD: HD-{(invoice.month || "").replace("/", "")}-{(invoice.id || "000").substring(0, 3).toUpperCase()}</AppText>

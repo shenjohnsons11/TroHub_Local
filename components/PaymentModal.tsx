@@ -8,6 +8,7 @@ import { useAppTheme } from "../contexts/ThemeContext";
 import { useNotification } from "../hooks/useNotification";
 import AppButton from "./ui/AppButton";
 import { Ionicons } from "@expo/vector-icons";
+import { formatCurrency, unformatNumber } from "../utils/formatters";
 
 type PaymentMethod = "bank" | "vnpay" | "zalopay";
 
@@ -316,7 +317,7 @@ export default function PaymentModal({
           >
           <View style={styles.amountBox}>
             <AppText style={styles.amountLabel}>Tổng tiền thanh toán</AppText>
-            <AppText style={styles.amount}>{currentInvoice.amount}</AppText>
+            <AppText style={styles.amount}>{formatCurrency(currentInvoice.numericAmount ?? unformatNumber(currentInvoice.amount))}</AppText>
           </View>
 
           <View style={styles.methodRow}>
