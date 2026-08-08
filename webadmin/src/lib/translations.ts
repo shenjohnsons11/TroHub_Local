@@ -1,12 +1,13 @@
 import vi from "../locales/vi.json";
 import en from "../locales/en.json";
+import type { Language } from "./language";
 
 export const translations = {
   vi,
   en,
 } as const;
 
-export type Language = "vi" | "en";
+export type { Language } from "./language";
 
 function getNestedValue(obj: any, path: string): string | undefined {
   if (!obj || !path) return undefined;
