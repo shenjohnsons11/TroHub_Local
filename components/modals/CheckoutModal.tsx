@@ -4,7 +4,9 @@ import { AppText, AppTextInput } from "@/components/ui/typography";
 import AppButton from "../ui/AppButton";
 import { useAppTheme } from "../../contexts/ThemeContext";
 import { useTranslation } from "../../contexts/LanguageContext";
-import { formatCurrency, formatNumberInput, unformatNumber } from "../../utils/formatters";
+import { formatCurrency, formatMeterReading, formatNumberInput, parseMeterReading, unformatNumber } from "../../utils/formatters";
+import { getMeterPreview } from "../../utils/meter-reading";
+import { MeterReadingCard } from "../ui/meter-reading-card";
 import type { CheckoutPreview } from "../../services/adminService";
 
 type CheckoutModalProps = {
@@ -23,29 +25,35 @@ export default function CheckoutModal({ visible, onClose, onConfirm, loading, pr
   const [waterNew, setWaterNew] = useState("");
   const [damage, setDamage] = useState("0");
   const [note, setNote] = useState("");
+  const [meterError, setMeterError] = useState("");
 
   useEffect(() => {
     if (!visible || !preview) return;
-    setElectricityNew(formatNumberInput(preview.electricityOld));
-    setWaterNew(formatNumberInput(preview.waterOld));
+    setElectricityNew(formatMeterReading(preview.electricityOld));
+    setWaterNew(formatMeterReading(preview.waterOld));
     setDamage("0");
     setNote("");
+    setMeterError("");
   }, [preview, visible]);
 
-  const electricityAmount = preview
-    ? Math.max(0, unformatNumber(electricityNew) - preview.electricityOld) * preview.electricityPrice
-    : 0;
-  const waterAmount = preview
-    ? Math.max(0, unformatNumber(waterNew) - preview.waterOld) * preview.waterPrice
-    : 0;
+  const electricityReading = parseMeterReading(electricityNew);
+  const waterReading = parseMeterReading(waterNew);
+  const electricityPreview = preview && electricityReading !== null ? getMeterPreview(preview.electricityOld, electricityReading, preview.electricityPrice) : null;
+  const waterPreview = preview && waterReading !== null ? getMeterPreview(preview.waterOld, waterReading, preview.waterPrice) : null;
+  const electricityAmount = electricityPreview?.amount || 0;
+  const waterAmount = waterPreview?.amount || 0;
   const utilitiesAmount = electricityAmount + waterAmount;
   const totalDebt = (preview?.unpaidAmount || 0) + utilitiesAmount + unformatNumber(damage);
   const balance = (preview?.depositAmount || 0) - totalDebt;
 
   const handleConfirm = () => {
+    if (!preview || electricityReading === null || electricityReading < preview.electricityOld || waterReading === null || waterReading < preview.waterOld) {
+      setMeterError("Chỉ số kỳ này phải hợp lệ và không nhỏ hơn chỉ số kỳ trước.");
+      return;
+    }
     onConfirm({
-      electricityNew: electricityNew.trim() ? String(unformatNumber(electricityNew)) : "",
-      waterNew: waterNew.trim() ? String(unformatNumber(waterNew)) : "",
+      electricityNew: String(electricityReading),
+      waterNew: String(waterReading),
       damage: String(unformatNumber(damage)),
       note,
     });
@@ -78,25 +86,11 @@ export default function CheckoutModal({ visible, onClose, onConfirm, loading, pr
               </View>
             ) : null}
             
-            <AppText style={[styles.label, { color: theme.text }]}>{t("mobile.checkout.electricity")}</AppText>
-            <AppTextInput
-              style={[styles.input, { borderColor: theme.border, color: theme.text }]}
-              keyboardType="number-pad"
-              value={electricityNew}
-              onChangeText={(value) => setElectricityNew(formatNumberInput(value))}
-              placeholder="VD: 1542"
-              placeholderTextColor={theme.muted}
-            />
-
-            <AppText style={[styles.label, { color: theme.text }]}>{t("mobile.checkout.water")}</AppText>
-            <AppTextInput
-              style={[styles.input, { borderColor: theme.border, color: theme.text }]}
-              keyboardType="number-pad"
-              value={waterNew}
-              onChangeText={(value) => setWaterNew(formatNumberInput(value))}
-              placeholder="VD: 341"
-              placeholderTextColor={theme.muted}
-            />
+            {preview ? <View style={styles.meterCards}>
+              <MeterReadingCard icon="flash-outline" label={t("mobile.checkout.electricity")} unit="kWh" previous={preview.electricityOld} current={electricityReading ?? preview.electricityOld} unitPrice={preview.electricityPrice} editable currentInput={electricityNew} onChangeCurrent={(value) => { setMeterError(""); setElectricityNew(value); }} />
+              <MeterReadingCard icon="water-outline" label={t("mobile.checkout.water")} unit="m³" previous={preview.waterOld} current={waterReading ?? preview.waterOld} unitPrice={preview.waterPrice} editable currentInput={waterNew} onChangeCurrent={(value) => { setMeterError(""); setWaterNew(value); }} />
+            </View> : null}
+            {meterError ? <AppText accessibilityLiveRegion="polite" style={[styles.meterError, { color: theme.danger }]}>{meterError}</AppText> : null}
 
             <AppText style={[styles.label, { color: theme.text }]}>{t("mobile.checkout.damageInput")}</AppText>
             <AppTextInput
@@ -120,7 +114,7 @@ export default function CheckoutModal({ visible, onClose, onConfirm, loading, pr
 
             <View style={styles.actions}>
               <AppButton variant="secondary" onPress={onClose} style={styles.btn}>{t("common.cancel")}</AppButton>
-              <AppButton loading={loading || previewLoading} disabled={!preview} onPress={handleConfirm} style={styles.btn}>{t("mobile.checkout.approve")}</AppButton>
+              <AppButton loading={loading || previewLoading} disabled={!preview || !electricityPreview || !waterPreview} onPress={handleConfirm} style={styles.btn}>{t("mobile.checkout.approve")}</AppButton>
             </View>
           </ScrollView>
         </View>
@@ -150,6 +144,8 @@ const styles = StyleSheet.create({
   result: { marginTop: 4, textAlign: "center", fontSize: 14, fontWeight: "900" },
   label: { fontSize: 13, fontWeight: "700", marginBottom: 8, marginTop: 16 },
   input: { borderWidth: 1, borderRadius: 12, padding: 14, fontSize: 15 },
+  meterCards: { gap: 12, marginTop: 16 },
+  meterError: { fontSize: 12, fontWeight: "700", lineHeight: 18, marginTop: 10 },
   actions: { flexDirection: "row", gap: 12, marginTop: 30, marginBottom: 20 },
   btn: { flex: 1 },
 });

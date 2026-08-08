@@ -5,8 +5,9 @@ import { Invoice } from "../types/Invoice";
 import { useAppTheme } from "../contexts/ThemeContext";
 import AppButton from "./ui/AppButton";
 import { Ionicons } from "@expo/vector-icons";
-import { formatCurrency } from "../utils/formatters";
+import { formatCurrency, formatPhone, unformatNumber } from "../utils/formatters";
 import { useTranslation } from "../contexts/LanguageContext";
+import { MeterReadingCard } from "./ui/meter-reading-card";
 
 type Props = {
   visible: boolean;
@@ -29,6 +30,15 @@ export default function InvoiceDetailModal({
   const { t } = useTranslation();
   const styles = createStyles(theme);
   const titleRef = useRef<React.ElementRef<typeof AppText>>(null);
+  const currency = (value: unknown) => formatCurrency(unformatNumber(value));
+  const electricUsage = invoice && invoice.details.electric.newIndex !== null && invoice.details.electric.oldIndex !== null
+    ? invoice.details.electric.newIndex - invoice.details.electric.oldIndex
+    : 0;
+  const waterUsage = invoice && invoice.details.water.newIndex !== null && invoice.details.water.oldIndex !== null
+    ? invoice.details.water.newIndex - invoice.details.water.oldIndex
+    : 0;
+  const electricityPrice = invoice && electricUsage > 0 ? Math.round(unformatNumber(invoice.details.electric.amount) / electricUsage) : 0;
+  const waterPrice = invoice && waterUsage > 0 ? Math.round(unformatNumber(invoice.details.water.amount) / waterUsage) : 0;
 
   useEffect(() => {
     if (!visible) return;
@@ -76,11 +86,11 @@ export default function InvoiceDetailModal({
 
               <View style={styles.amountHero}>
                 <AppText style={styles.amountHeroLabel}>{t("invoiceDetail.totalDue")}</AppText>
-                <AppText style={styles.amountHeroValue}>{invoice.amount}</AppText>
+                <AppText style={styles.amountHeroValue}>{formatCurrency(invoice.numericAmount ?? unformatNumber(invoice.amount))}</AppText>
               </View>
               <View style={styles.identityBlock}>
                 <AppText style={styles.identityText}>{t("invoiceDetail.tenant", { name: invoice.tenantName || t("invoiceDetail.notUpdated") })}</AppText>
-                <AppText style={styles.identityText}>{t("invoiceDetail.phone", { phone: invoice.tenantPhone || t("invoiceDetail.notUpdated") })}</AppText>
+                <AppText style={styles.identityText}>{t("invoiceDetail.phone", { phone: invoice.tenantPhone ? formatPhone(invoice.tenantPhone) : t("invoiceDetail.notUpdated") })}</AppText>
                 <AppText style={styles.identityText}>{t("invoiceDetail.room", { room: invoice.room || t("invoiceDetail.notUpdated") })}</AppText>
               </View>
               <ScrollView style={styles.lines} showsVerticalScrollIndicator={false}>
@@ -93,53 +103,34 @@ export default function InvoiceDetailModal({
               <>
               <View style={styles.detailRow}>
                 <AppText style={styles.detailLabel}>{t("invoiceDetail.rent")}</AppText>
-                <AppText style={styles.detailValue}>{invoice.details.roomFee}</AppText>
+                <AppText style={styles.detailValue}>{currency(invoice.details.roomFee)}</AppText>
               </View>
 
-              <View style={styles.detailRow}>
-                <View>
-                  <AppText style={styles.detailLabel}>{t("invoiceDetail.electricity")}</AppText>
-                  {invoice.details.electric.newIndex !== null && invoice.details.electric.oldIndex !== null && (
-                    <AppText style={styles.detailSubLabel}>
-                      {t("invoiceDetail.electricReading", { next: invoice.details.electric.newIndex, previous: invoice.details.electric.oldIndex })}
-                    </AppText>
-                  )}
-                </View>
-                <AppText style={styles.detailValue}>{invoice.details.electric.amount}</AppText>
-              </View>
-
-              <View style={styles.detailRow}>
-                <View>
-                  <AppText style={styles.detailLabel}>{t("invoiceDetail.water")}</AppText>
-                  {invoice.details.water.newIndex !== null && invoice.details.water.oldIndex !== null && (
-                    <AppText style={styles.detailSubLabel}>
-                      {t("invoiceDetail.waterReading", { next: invoice.details.water.newIndex, previous: invoice.details.water.oldIndex })}
-                    </AppText>
-                  )}
-                </View>
-                <AppText style={styles.detailValue}>{invoice.details.water.amount}</AppText>
+              <View style={styles.meterCards}>
+                {invoice.details.electric.newIndex !== null && invoice.details.electric.oldIndex !== null ? <MeterReadingCard icon="flash-outline" label={t("invoiceDetail.electricity")} unit="kWh" previous={invoice.details.electric.oldIndex} current={invoice.details.electric.newIndex} unitPrice={electricityPrice} /> : <DetailRow label={t("invoiceDetail.electricity")} value={currency(invoice.details.electric.amount)} styles={styles} />}
+                {invoice.details.water.newIndex !== null && invoice.details.water.oldIndex !== null ? <MeterReadingCard icon="water-outline" label={t("invoiceDetail.water")} unit="m³" previous={invoice.details.water.oldIndex} current={invoice.details.water.newIndex} unitPrice={waterPrice} /> : <DetailRow label={t("invoiceDetail.water")} value={currency(invoice.details.water.amount)} styles={styles} />}
               </View>
 
               <View style={styles.detailRow}>
                 <AppText style={styles.detailLabel}>{t("invoiceDetail.parking")}</AppText>
-                <AppText style={styles.detailValue}>{invoice.details.parking}</AppText>
+                <AppText style={styles.detailValue}>{currency(invoice.details.parking)}</AppText>
               </View>
               <View style={styles.divider} />
               <View style={styles.detailRow}>
                 <AppText style={styles.detailLabel}>Internet</AppText>
-                <AppText style={styles.detailValue}>{invoice.details.internet}</AppText>
+                <AppText style={styles.detailValue}>{currency(invoice.details.internet)}</AppText>
               </View>
               <View style={styles.divider} />
               <View style={styles.detailRow}>
                 <AppText style={styles.detailLabel}>{t("invoiceDetail.garbage")}</AppText>
-                <AppText style={styles.detailValue}>{invoice.details.garbage}</AppText>
+                <AppText style={styles.detailValue}>{currency(invoice.details.garbage)}</AppText>
               </View>
               {invoice.details.otherServices !== "0đ" && invoice.details.otherServices !== "0" && (
                 <>
                   <View style={styles.divider} />
                   <View style={styles.detailRow}>
                     <AppText style={styles.detailLabel}>{t("invoiceDetail.other")}</AppText>
-                    <AppText style={styles.detailValue}>{invoice.details.otherServices}</AppText>
+                    <AppText style={styles.detailValue}>{currency(invoice.details.otherServices)}</AppText>
                   </View>
                 </>
               )}
@@ -148,7 +139,7 @@ export default function InvoiceDetailModal({
 
               <View style={styles.totalRow}>
                 <AppText style={styles.totalLabel}>{t("invoiceDetail.total")}</AppText>
-                <AppText style={styles.totalValue}>{invoice.amount}</AppText>
+                <AppText style={styles.totalValue}>{formatCurrency(invoice.numericAmount ?? unformatNumber(invoice.amount))}</AppText>
               </View>
               </ScrollView>
 
@@ -179,6 +170,10 @@ export default function InvoiceDetailModal({
       </View>
     </Modal>
   );
+}
+
+function DetailRow({ label, value, styles }: { label: string; value: string; styles: ReturnType<typeof createStyles> }) {
+  return <View style={styles.detailRow}><AppText style={styles.detailLabel}>{label}</AppText><AppText style={styles.detailValue}>{value}</AppText></View>;
 }
 
 const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSheet.create({
@@ -220,6 +215,7 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSh
   amountHeroLabel: { color: theme.muted, fontSize: 12, fontWeight: "700" },
   amountHeroValue: { color: theme.primary, fontSize: 28, fontWeight: "900", marginTop: 5 },
   lines: { flexShrink: 1, flexGrow: 0 },
+  meterCards: { gap: 10, marginTop: 10 },
   identityBlock: {
     paddingVertical: 12,
     borderBottomWidth: 1,
