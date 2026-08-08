@@ -12,7 +12,8 @@ import GradientHero from "../components/ui/GradientHero";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
 import AppButton from "../components/ui/AppButton";
 import { ContentSkeleton } from "../components/ui/content-skeleton";
-import { formatNumberInput, unformatNumber } from "../utils/formatters";
+import { MeterReadingCard } from "../components/ui/meter-reading-card";
+import { formatCurrency, formatMeterReading, parseMeterReading, unformatNumber } from "../utils/formatters";
 
 type Props = {
   onBack: () => void;
@@ -49,8 +50,14 @@ export default function UtilityScreen({ onBack }: Props) {
       notification.warning("Vui lòng nhập đầy đủ chỉ số điện và nước.");
       return;
     }
+    const electricity = parseMeterReading(draftElec);
+    const water = parseMeterReading(draftWater);
+    if (electricity === null || water === null) {
+      notification.warning("Chỉ số điện nước không hợp lệ.");
+      return;
+    }
     try {
-      const res = await utilityService.reportUtility(unformatNumber(draftElec), unformatNumber(draftWater));
+      const res = await utilityService.reportUtility(electricity, water);
       if (!res.success) throw new Error(res.message || "Có lỗi xảy ra");
       notification.success("Đã gửi số liệu điện nước cho chủ trọ chờ duyệt.");
       setModalVisible(false);
@@ -66,6 +73,8 @@ export default function UtilityScreen({ onBack }: Props) {
   }
 
   const current = utilityHistory[0];
+  const electricUnitPrice = current && current.electricUsed > 0 ? Math.round(unformatNumber(current.electricMoney) / current.electricUsed) : 0;
+  const waterUnitPrice = current && current.waterUsed > 0 ? Math.round(unformatNumber(current.waterMoney) / current.waterUsed) : 0;
 
   return (
     <>
@@ -89,17 +98,17 @@ export default function UtilityScreen({ onBack }: Props) {
             <GradientHero
               icon="speedometer-outline"
               label={`CHỈ SỐ THÁNG ${current.month}`}
-              value={`${current.electricMoney} + ${current.waterMoney}`}
+              value={`${formatCurrency(unformatNumber(current.electricMoney))} + ${formatCurrency(unformatNumber(current.waterMoney))}`}
               detail="Chi phí điện nước hiện tại"
             >
               <View style={styles.meterRow}>
                 <View style={styles.meterItem}>
                   <Ionicons name="flash-outline" size={20} color="#8CF2C9" />
-                  <AppText style={styles.meterValue}>{formatNumberInput(current.electricUsed)} kWh</AppText>
+                  <AppText style={styles.meterValue}>{formatMeterReading(current.electricUsed)} kWh</AppText>
                 </View>
                 <View style={styles.meterItem}>
                   <Ionicons name="water-outline" size={20} color="#8CF2C9" />
-                  <AppText style={styles.meterValue}>{formatNumberInput(current.waterUsed)} m³</AppText>
+                  <AppText style={styles.meterValue}>{formatMeterReading(current.waterUsed)} m³</AppText>
                 </View>
               </View>
             </GradientHero>
@@ -107,49 +116,21 @@ export default function UtilityScreen({ onBack }: Props) {
           <View style={styles.summaryRow}>
             <Card style={styles.summaryCard}>
               <AppText style={styles.summaryLabel}>Điện đã dùng</AppText>
-              <AppText style={styles.summaryNumber}>{formatNumberInput(current.electricUsed)} kWh</AppText>
-              <AppText style={styles.summaryMoney}>{current.electricMoney}</AppText>
+              <AppText style={styles.summaryNumber}>{formatMeterReading(current.electricUsed)} kWh</AppText>
+              <AppText style={styles.summaryMoney}>{formatCurrency(unformatNumber(current.electricMoney))}</AppText>
             </Card>
 
             <Card style={styles.summaryCard}>
               <AppText style={styles.summaryLabel}>Nước đã dùng</AppText>
-              <AppText style={styles.summaryNumber}>{formatNumberInput(current.waterUsed)} m³</AppText>
-              <AppText style={styles.summaryMoney}>{current.waterMoney}</AppText>
+              <AppText style={styles.summaryNumber}>{formatMeterReading(current.waterUsed)} m³</AppText>
+              <AppText style={styles.summaryMoney}>{formatCurrency(unformatNumber(current.waterMoney))}</AppText>
             </Card>
           </View>
 
-          <Card style={styles.currentCard}>
-            <AppText style={styles.sectionTitle}>Tháng {current.month}</AppText>
-
-            <View style={styles.infoRow}>
-              <AppText style={styles.infoLabel}>Chỉ số điện cũ</AppText>
-              <AppText style={styles.infoValue}>{formatNumberInput(current.electricOld)}</AppText>
-            </View>
-
-            <View style={styles.infoRow}>
-              <AppText style={styles.infoLabel}>Chỉ số điện mới</AppText>
-              <AppText style={styles.infoValue}>{formatNumberInput(current.electricNew)}</AppText>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.infoRow}>
-              <AppText style={styles.infoLabel}>Chỉ số nước cũ</AppText>
-              <AppText style={styles.infoValue}>{formatNumberInput(current.waterOld)}</AppText>
-            </View>
-
-            <View style={styles.infoRow}>
-              <AppText style={styles.infoLabel}>Chỉ số nước mới</AppText>
-              <AppText style={styles.infoValue}>{formatNumberInput(current.waterNew)}</AppText>
-            </View>
-
-            <View style={styles.priceNote}>
-              <Ionicons name="information-circle-outline" size={19} color={theme.primary} />
-              <AppText style={styles.priceNoteText}>
-                Đơn giá áp dụng được thể hiện trong chi tiết hóa đơn.
-              </AppText>
-            </View>
-          </Card>
+          <View style={styles.meterCards}>
+            <MeterReadingCard icon="flash-outline" label="Điện" unit="kWh" previous={current.electricOld} current={current.electricNew} unitPrice={electricUnitPrice} />
+            <MeterReadingCard icon="water-outline" label="Nước" unit="m³" previous={current.waterOld} current={current.waterNew} unitPrice={waterUnitPrice} />
+          </View>
               </>
             ) : null}
             <AppButton icon="speedometer-outline" onPress={() => setModalVisible(true)} style={styles.reportButton}>
@@ -160,7 +141,9 @@ export default function UtilityScreen({ onBack }: Props) {
         }
         ListEmptyComponent={
           <Card style={styles.emptyCard}>
+            <Ionicons name="speedometer-outline" size={34} color={theme.primary} />
             <AppText style={styles.emptyText}>Chưa có dữ liệu điện nước.</AppText>
+            <AppText style={styles.emptyHint}>Hãy gửi chỉ số đầu tiên để bắt đầu theo dõi.</AppText>
           </Card>
         }
         renderItem={({ item, index }) => (
@@ -168,11 +151,11 @@ export default function UtilityScreen({ onBack }: Props) {
             <Card style={styles.historyCard}>
               <View style={styles.historyHeader}>
                 <AppText style={styles.historyMonth}>Tháng {item.month}</AppText>
-                <AppText style={styles.historyTotal}>{item.electricMoney} + {item.waterMoney}</AppText>
+                <AppText style={styles.historyTotal}>{formatCurrency(unformatNumber(item.electricMoney))} + {formatCurrency(unformatNumber(item.waterMoney))}</AppText>
               </View>
               <View style={styles.historyRow}>
-                <AppText style={styles.historyText}>Điện: {formatNumberInput(item.electricUsed)} kWh</AppText>
-                <AppText style={styles.historyText}>Nước: {formatNumberInput(item.waterUsed)} m³</AppText>
+                <AppText style={styles.historyText}>Điện: {formatMeterReading(item.electricUsed)} kWh</AppText>
+                <AppText style={styles.historyText}>Nước: {formatMeterReading(item.waterUsed)} m³</AppText>
               </View>
             </Card>
           </AnimatedEntry>
@@ -198,9 +181,9 @@ export default function UtilityScreen({ onBack }: Props) {
             <AppText style={styles.label}>Số điện mới:</AppText>
             <AppTextInput
               style={styles.input} 
-              keyboardType="numeric" 
+              keyboardType="decimal-pad"
               value={draftElec} 
-              onChangeText={(value) => setDraftElec(formatNumberInput(value))}
+              onChangeText={(value) => setDraftElec(parseMeterReading(value) === null ? value : formatMeterReading(value))}
               placeholder="Nhập số điện trên đồng hồ..." 
               placeholderTextColor={theme.muted}
             />
@@ -208,9 +191,9 @@ export default function UtilityScreen({ onBack }: Props) {
             <AppText style={styles.label}>Số nước mới:</AppText>
             <AppTextInput
               style={styles.input} 
-              keyboardType="numeric" 
+              keyboardType="decimal-pad"
               value={draftWater} 
-              onChangeText={(value) => setDraftWater(formatNumberInput(value))}
+              onChangeText={(value) => setDraftWater(parseMeterReading(value) === null ? value : formatMeterReading(value))}
               placeholder="Nhập số nước trên đồng hồ..." 
               placeholderTextColor={theme.muted}
             />
@@ -305,6 +288,7 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSh
     fontWeight: "900",
     marginTop: 6,
   },
+  meterCards: { gap: 12, marginBottom: 20 },
   currentCard: {
     marginBottom: 20,
     backgroundColor: theme.surface,
@@ -358,7 +342,9 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSh
     color: theme.muted,
     fontSize: 13,
     fontWeight: "700",
+    marginTop: 10,
   },
+  emptyHint: { color: theme.muted, fontSize: 12, lineHeight: 18, marginTop: 4, textAlign: "center" },
   historyTitle: {
     fontSize: 16,
     fontWeight: "900",

@@ -13,7 +13,7 @@ import AnimatedEntry from "../components/ui/AnimatedEntry";
 import GradientHero from "../components/ui/GradientHero";
 import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
 import MeterCameraModal from "../components/MeterCameraModal";
-import { formatCurrency, formatNumberInput, unformatNumber } from "../utils/formatters";
+import { formatCurrency, formatMeterReading, formatNumberInput, parseMeterReading, unformatNumber } from "../utils/formatters";
 import { useLanguage } from "../contexts/LanguageContext";
 import { applyMeterReading, type MeterType } from "../utils/meterReadingTarget";
 
@@ -54,8 +54,8 @@ export default function AdminRoomsScreen({ params }: Props) {
         .filter(([, data]) => data.electricity.trim() !== "" || data.water.trim() !== "")
         .map(([roomId, data]) => ({
           roomId,
-          electricity: data.electricity ? unformatNumber(data.electricity) : undefined,
-          water: data.water ? unformatNumber(data.water) : undefined,
+          electricity: data.electricity ? parseMeterReading(data.electricity) ?? undefined : undefined,
+          water: data.water ? parseMeterReading(data.water) ?? undefined : undefined,
         }));
       if (payload.length === 0) { notification.error(t("mobile.rooms.requiredMeter")); return; }
       const token = await authService.getToken();
@@ -188,16 +188,16 @@ export default function AdminRoomsScreen({ params }: Props) {
                   <View style={{ flexDirection: "row", gap: 10 }}>
                     <View style={{ flex: 1 }}>
                       <AppText style={[styles.label, { color: theme.muted }]}>{t("mobile.rooms.newElectricity")}</AppText>
-                      <AppTextInput style={inputStyle} keyboardType="numeric" placeholder={t("mobile.rooms.electricityPlaceholder")} placeholderTextColor={theme.muted}
+                      <AppTextInput style={inputStyle} keyboardType="decimal-pad" placeholder={t("mobile.rooms.electricityPlaceholder")} placeholderTextColor={theme.muted}
                         value={meterReadings[room._id]?.electricity || ""}
-                        onChangeText={(value) => setMeterReadings(prev => ({ ...prev, [room._id]: { ...prev[room._id], electricity: formatNumberInput(value), water: prev[room._id]?.water || "" } }))}
+                        onChangeText={(value) => setMeterReadings(prev => ({ ...prev, [room._id]: { ...prev[room._id], electricity: parseMeterReading(value) === null ? value : formatMeterReading(value), water: prev[room._id]?.water || "" } }))}
                       />
                     </View>
                     <View style={{ flex: 1 }}>
                       <AppText style={[styles.label, { color: theme.muted }]}>{t("mobile.rooms.newWater")}</AppText>
-                      <AppTextInput style={inputStyle} keyboardType="numeric" placeholder={t("mobile.rooms.waterPlaceholder")} placeholderTextColor={theme.muted}
+                      <AppTextInput style={inputStyle} keyboardType="decimal-pad" placeholder={t("mobile.rooms.waterPlaceholder")} placeholderTextColor={theme.muted}
                         value={meterReadings[room._id]?.water || ""}
-                        onChangeText={(value) => setMeterReadings(prev => ({ ...prev, [room._id]: { ...prev[room._id], water: formatNumberInput(value), electricity: prev[room._id]?.electricity || "" } }))}
+                        onChangeText={(value) => setMeterReadings(prev => ({ ...prev, [room._id]: { ...prev[room._id], water: parseMeterReading(value) === null ? value : formatMeterReading(value), electricity: prev[room._id]?.electricity || "" } }))}
                       />
                     </View>
                   </View>
@@ -215,7 +215,7 @@ export default function AdminRoomsScreen({ params }: Props) {
         onClose={() => setScanTarget(null)}
         onRead={(meterType, digits) => {
           if (!scanTarget) return;
-          setMeterReadings((current) => applyMeterReading(current, scanTarget.roomId, meterType, formatNumberInput(digits)));
+          setMeterReadings((current) => applyMeterReading(current, scanTarget.roomId, meterType, formatMeterReading(digits)));
           notification.success(t("mobile.rooms.meterFilled", { meterType: t(meterType === "electricity" ? "mobile.camera.electricity" : "mobile.camera.water"), roomCode: scanTarget.roomCode }));
         }}
       />

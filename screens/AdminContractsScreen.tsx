@@ -26,7 +26,9 @@ import { draftContractService, DraftContract } from "../services/draftContractSe
 import CheckoutModal from "../components/modals/CheckoutModal";
 import {
   formatCurrency,
+  formatMeterReading,
   formatNumberInput,
+  parseMeterReading,
   formatPhone,
   unformatNumber,
 } from "../utils/formatters";
@@ -141,8 +143,8 @@ export default function AdminContractsScreen({ params }: Props) {
     if (room) {
       setFixedRent(formatNumberInput(room.defaultRentPrice));
       setFixedDeposit(formatNumberInput(room.defaultDeposit));
-      setInitialElectricity(formatNumberInput(room.lastElectricityReading ?? room.draftElectricity));
-      setInitialWater(formatNumberInput(room.lastWaterReading ?? room.draftWater));
+      setInitialElectricity(formatMeterReading(room.lastElectricityReading ?? room.draftElectricity));
+      setInitialWater(formatMeterReading(room.lastWaterReading ?? room.draftWater));
     }
   };
 
@@ -166,8 +168,8 @@ export default function AdminContractsScreen({ params }: Props) {
     const meterTerms = {
       electricityPrice: unformatNumber(services.electricity.price),
       waterPrice: unformatNumber(services.water.price),
-      initialElectricity: unformatNumber(initialElectricity),
-      initialWater: unformatNumber(initialWater),
+      initialElectricity: parseMeterReading(initialElectricity) ?? 0,
+      initialWater: parseMeterReading(initialWater) ?? 0,
     };
     if (Object.values(meterTerms).some((value) => !Number.isFinite(value) || value < 0)) {
       notification.error(t("contractsMobile.invalidMeter"), { title: t("common.error") });
@@ -695,13 +697,13 @@ export default function AdminContractsScreen({ params }: Props) {
                         </View>
                         {definition.key === "electricity" ? (
                           <View style={styles.serviceInputRow}>
-                            <AppTextInput style={[styles.input, styles.serviceInput]} value={initialElectricity} onChangeText={(value) => setInitialElectricity(formatNumberInput(value))} keyboardType="numeric" placeholder={t("contractsMobile.initialElectricity")} placeholderTextColor={theme.muted} />
+                            <AppTextInput style={[styles.input, styles.serviceInput]} value={initialElectricity} onChangeText={(value) => setInitialElectricity(parseMeterReading(value) === null ? value : formatMeterReading(value))} keyboardType="decimal-pad" placeholder={t("contractsMobile.initialElectricity")} placeholderTextColor={theme.muted} />
                             <AppText style={styles.serviceUnit}>kWh</AppText>
                           </View>
                         ) : null}
                         {definition.key === "water" ? (
                           <View style={styles.serviceInputRow}>
-                            <AppTextInput style={[styles.input, styles.serviceInput]} value={initialWater} onChangeText={(value) => setInitialWater(formatNumberInput(value))} keyboardType="numeric" placeholder={t("contractsMobile.initialWater")} placeholderTextColor={theme.muted} />
+                            <AppTextInput style={[styles.input, styles.serviceInput]} value={initialWater} onChangeText={(value) => setInitialWater(parseMeterReading(value) === null ? value : formatMeterReading(value))} keyboardType="decimal-pad" placeholder={t("contractsMobile.initialWater")} placeholderTextColor={theme.muted} />
                             <AppText style={styles.serviceUnit}>m³</AppText>
                           </View>
                         ) : null}

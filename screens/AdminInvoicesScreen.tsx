@@ -12,7 +12,7 @@ import AppButton from "../components/ui/AppButton";
 import { adminService, AdminInvoice, AdminRoom, AdminContract } from "../services/adminService";
 import InvoiceDetailModal from "../components/InvoiceDetailModal";
 import { Invoice } from "../types/Invoice";
-import { formatCurrency, formatNumberInput, unformatNumber } from "../utils/formatters";
+import { formatCurrency, formatMeterReading, formatNumberInput, parseMeterReading, unformatNumber } from "../utils/formatters";
 import { useTranslation } from "../contexts/LanguageContext";
 type Props = {
   params?: any;
@@ -69,21 +69,21 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
         const lastInv = sortedInvoices[0];
         
         // Auto fill indexes
-        setElecOld(formatNumberInput(room?.lastElectricityReading ?? lastInv.electricityNew));
-        setWaterOld(formatNumberInput(room?.lastWaterReading ?? lastInv.waterNew));
-        setElecNew(formatNumberInput(room?.lastElectricityReading ?? lastInv.electricityNew));
-        setWaterNew(formatNumberInput(room?.lastWaterReading ?? lastInv.waterNew));
+        setElecOld(formatMeterReading(room?.lastElectricityReading ?? lastInv.electricityNew));
+        setWaterOld(formatMeterReading(room?.lastWaterReading ?? lastInv.waterNew));
+        setElecNew(formatMeterReading(room?.lastElectricityReading ?? lastInv.electricityNew));
+        setWaterNew(formatMeterReading(room?.lastWaterReading ?? lastInv.waterNew));
       } else {
-        setElecOld(formatNumberInput(room?.lastElectricityReading));
-        setWaterOld(formatNumberInput(room?.lastWaterReading));
-        setElecNew(formatNumberInput(room?.lastElectricityReading));
-        setWaterNew(formatNumberInput(room?.lastWaterReading));
+        setElecOld(formatMeterReading(room?.lastElectricityReading));
+        setWaterOld(formatMeterReading(room?.lastWaterReading));
+        setElecNew(formatMeterReading(room?.lastElectricityReading));
+        setWaterNew(formatMeterReading(room?.lastWaterReading));
       }
     } else {
-      setElecOld(formatNumberInput(room?.lastElectricityReading));
-      setWaterOld(formatNumberInput(room?.lastWaterReading));
-      setElecNew(formatNumberInput(room?.lastElectricityReading));
-      setWaterNew(formatNumberInput(room?.lastWaterReading));
+      setElecOld(formatMeterReading(room?.lastElectricityReading));
+      setWaterOld(formatMeterReading(room?.lastWaterReading));
+      setElecNew(formatMeterReading(room?.lastElectricityReading));
+      setWaterNew(formatMeterReading(room?.lastWaterReading));
     }
   };
 
@@ -132,6 +132,15 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
       return;
     }
 
+    const electricityOld = parseMeterReading(elecOld);
+    const electricityNew = parseMeterReading(elecNew);
+    const waterPrevious = parseMeterReading(waterOld);
+    const waterCurrent = parseMeterReading(waterNew);
+    if (electricityOld === null || electricityNew === null || waterPrevious === null || waterCurrent === null || electricityNew < electricityOld || waterCurrent < waterPrevious) {
+      notification.error("Chỉ số kỳ này phải hợp lệ và không nhỏ hơn chỉ số kỳ trước.");
+      return;
+    }
+
     try {
       setSubmitting(true);
       const roomCode = (roomContract.roomId && typeof roomContract.roomId === "object") ? roomContract.roomId.roomCode : "";
@@ -172,8 +181,8 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
         }
       }
       
-      const electricityAmount = Math.max(0, unformatNumber(elecNew) - unformatNumber(elecOld)) * electricityPrice;
-      const waterAmount = Math.max(0, unformatNumber(waterNew) - unformatNumber(waterOld)) * waterPrice;
+      const electricityAmount = Math.round((electricityNew - electricityOld) * electricityPrice);
+      const waterAmount = Math.round((waterCurrent - waterPrevious) * waterPrice);
       const totalAmount = rentPrice + electricityAmount + waterAmount + servicesFee;
 
       const rId = typeof roomContract.roomId === "string" ? roomContract.roomId : roomContract.roomId._id;
@@ -190,11 +199,11 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
         room: roomCode,
         tenant: tenantName,
         roomAmount: rentPrice,
-        electricityOld: unformatNumber(elecOld),
-        electricityNew: unformatNumber(elecNew),
+        electricityOld,
+        electricityNew,
         electricityPrice: electricityPrice,
-        waterOld: unformatNumber(waterOld),
-        waterNew: unformatNumber(waterNew),
+        waterOld: waterPrevious,
+        waterNew: waterCurrent,
         waterPrice: waterPrice,
         services: servicesFee,
         discount: 0,
@@ -378,6 +387,9 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
   });
 
   const occupiedRooms = rooms.filter(room => room.status === 1);
+  const invalidMeterReading = [parseMeterReading(elecOld), parseMeterReading(elecNew), parseMeterReading(waterOld), parseMeterReading(waterNew)].some((value) => value === null)
+    || (parseMeterReading(elecNew) ?? 0) < (parseMeterReading(elecOld) ?? 0)
+    || (parseMeterReading(waterNew) ?? 0) < (parseMeterReading(waterOld) ?? 0);
 
   if (loading) return <ContentSkeleton rows={4} />;
 
@@ -543,8 +555,8 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
                       <AppTextInput
                         style={styles.input}
                         value={elecOld}
-                        onChangeText={(value) => setElecOld(formatNumberInput(value))}
-                        keyboardType="numeric"
+                        onChangeText={(value) => setElecOld(parseMeterReading(value) === null ? value : formatMeterReading(value))}
+                        keyboardType="decimal-pad"
                       />
                     </View>
                     <View style={styles.indexCol}>
@@ -552,8 +564,8 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
                       <AppTextInput
                         style={styles.input}
                         value={elecNew}
-                        onChangeText={(value) => setElecNew(formatNumberInput(value))}
-                        keyboardType="numeric"
+                        onChangeText={(value) => setElecNew(parseMeterReading(value) === null ? value : formatMeterReading(value))}
+                        keyboardType="decimal-pad"
                       />
                     </View>
                   </View>
@@ -565,8 +577,8 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
                       <AppTextInput
                         style={styles.input}
                         value={waterOld}
-                        onChangeText={(value) => setWaterOld(formatNumberInput(value))}
-                        keyboardType="numeric"
+                        onChangeText={(value) => setWaterOld(parseMeterReading(value) === null ? value : formatMeterReading(value))}
+                        keyboardType="decimal-pad"
                       />
                     </View>
                     <View style={styles.indexCol}>
@@ -574,16 +586,18 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
                       <AppTextInput
                         style={styles.input}
                         value={waterNew}
-                        onChangeText={(value) => setWaterNew(formatNumberInput(value))}
-                        keyboardType="numeric"
+                        onChangeText={(value) => setWaterNew(parseMeterReading(value) === null ? value : formatMeterReading(value))}
+                        keyboardType="decimal-pad"
                       />
                     </View>
                   </View>
 
+                  {invalidMeterReading ? <AppText style={styles.meterError}>Chỉ số mới phải lớn hơn hoặc bằng chỉ số cũ.</AppText> : null}
                   <AppButton
                     icon="receipt-outline"
                     loading={submitting}
                     onPress={handleCreateInvoice}
+                    disabled={invalidMeterReading}
                   >
                     {t("mobile.invoices.createInvoice")}
                   </AppButton>
@@ -616,6 +630,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     alignItems: "center",
     backgroundColor: theme.background,
   },
+  meterError: { color: theme.danger, fontSize: 12, fontWeight: "700", lineHeight: 18, marginTop: 12 },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",

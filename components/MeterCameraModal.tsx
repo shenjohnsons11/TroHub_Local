@@ -2,11 +2,12 @@ import React, { useEffect, useRef, useState } from "react";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as ImageManipulator from "expo-image-manipulator";
 import { ActivityIndicator, Animated, Modal, Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
-import { AppText } from "@/components/ui/typography";
+import { AppText, AppTextInput } from "@/components/ui/typography";
 import { Ionicons } from "@expo/vector-icons";
 import { ocrService } from "../services/ocrService";
 import type { MeterType } from "../utils/meterReadingTarget";
 import { useTranslation } from "../contexts/LanguageContext";
+import { formatMeterReading, parseMeterReading } from "../utils/formatters";
 
 type Props = {
   visible: boolean;
@@ -39,6 +40,7 @@ export default function MeterCameraModal({ visible, roomCode, initialMeterType, 
   const [reading, setReading] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
   const [error, setError] = useState("");
+  const [recognizedReading, setRecognizedReading] = useState("");
   const { width, height } = useWindowDimensions();
   const frameLeft = Math.max(0, (width - FRAME_WIDTH) / 2);
   const frameTop = Math.max(132, (height - FRAME_HEIGHT) / 2);
@@ -48,6 +50,7 @@ export default function MeterCameraModal({ visible, roomCode, initialMeterType, 
   useEffect(() => {
     if (!visible) {
       setTorchOn(false);
+      setRecognizedReading("");
       return;
     }
     const animation = Animated.loop(
@@ -64,6 +67,7 @@ export default function MeterCameraModal({ visible, roomCode, initialMeterType, 
     if (visible) {
       setMeterType(initialMeterType);
       setError("");
+      setRecognizedReading("");
     }
   }, [visible, initialMeterType]);
 
@@ -81,13 +85,22 @@ export default function MeterCameraModal({ visible, roomCode, initialMeterType, 
         { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG },
       );
       const result = await ocrService.recognizeMeterReading(cropped.uri, meterType);
-      onRead(meterType, result.digits);
-      onClose();
+      setRecognizedReading(result.digits);
     } catch {
       setError(t("mobile.camera.readError"));
     } finally {
       setReading(false);
     }
+  };
+
+  const confirmReading = () => {
+    const parsed = parseMeterReading(recognizedReading);
+    if (parsed === null) {
+      setError("Vui lòng kiểm tra và nhập lại chỉ số hợp lệ.");
+      return;
+    }
+    onRead(meterType, formatMeterReading(parsed));
+    onClose();
   };
 
   return (
@@ -135,7 +148,7 @@ export default function MeterCameraModal({ visible, roomCode, initialMeterType, 
               accessibilityRole="button"
               accessibilityLabel={t(torchOn ? "mobile.camera.flashOff" : "mobile.camera.flashOn")}
               accessibilityState={{ selected: torchOn }}
-              disabled={reading}
+              disabled={reading || Boolean(recognizedReading)}
               onPress={() => setTorchOn((current) => !current)}
               style={[styles.flash, torchOn && styles.flashActive]}
             >
@@ -147,7 +160,27 @@ export default function MeterCameraModal({ visible, roomCode, initialMeterType, 
           </View>
         </View>
 
-        {permission?.granted ? (
+        {permission?.granted && recognizedReading ? (
+          <View style={styles.confirmation}>
+            <AppText style={styles.confirmationTitle}>Xác nhận chỉ số {meterType === "electricity" ? "điện" : "nước"}</AppText>
+            <AppText style={styles.confirmationHint}>OCR chỉ gợi ý kết quả. Bạn có thể chỉnh sửa trước khi áp dụng.</AppText>
+            <AppTextInput
+              accessibilityLabel="Chỉ số đồng hồ đã nhận diện"
+              autoFocus
+              keyboardType="decimal-pad"
+              onChangeText={(value) => {
+                const parsed = parseMeterReading(value);
+                setRecognizedReading(parsed === null ? value : formatMeterReading(parsed));
+              }}
+              style={styles.confirmationInput}
+              value={recognizedReading}
+            />
+            <View style={styles.confirmationActions}>
+              <Pressable accessibilityRole="button" onPress={() => { setRecognizedReading(""); setError(""); }} style={styles.retakeButton}><AppText style={styles.retakeText}>Chụp lại</AppText></Pressable>
+              <Pressable accessibilityRole="button" onPress={confirmReading} style={styles.confirmButton}><Ionicons name="checkmark" size={18} color="#073e36" /><AppText style={styles.confirmText}>Áp dụng chỉ số</AppText></Pressable>
+            </View>
+          </View>
+        ) : permission?.granted ? (
           <View style={styles.controls}>
             {error ? <AppText accessibilityLiveRegion="polite" style={styles.error}>{error}</AppText> : null}
             <View style={styles.modeRow}>
@@ -198,4 +231,13 @@ const styles = StyleSheet.create({
   modeTextActive: { color: "#073e36" },
   capture: { minHeight: 52, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 16, backgroundColor: "#b8f5da" },
   captureText: { color: "#073e36", fontSize: 15, fontWeight: "900" },
+  confirmation: { position: "absolute", bottom: 28, left: 20, right: 20, gap: 10, borderRadius: 20, backgroundColor: "#f4f8f5", padding: 16 },
+  confirmationTitle: { color: "#1a202c", fontSize: 16, fontWeight: "900" },
+  confirmationHint: { color: "#52635c", fontSize: 12, lineHeight: 18 },
+  confirmationInput: { minHeight: 50, borderRadius: 12, backgroundColor: "#ffffff", color: "#1a202c", fontSize: 20, fontWeight: "800", paddingHorizontal: 14 },
+  confirmationActions: { flexDirection: "row", gap: 10 },
+  retakeButton: { alignItems: "center", flex: 1, justifyContent: "center", minHeight: 48, borderRadius: 12, backgroundColor: "#dff1e7" },
+  retakeText: { color: "#0f5247", fontWeight: "800" },
+  confirmButton: { alignItems: "center", flex: 1.4, flexDirection: "row", gap: 6, justifyContent: "center", minHeight: 48, borderRadius: 12, backgroundColor: "#b8f5da" },
+  confirmText: { color: "#073e36", fontWeight: "900" },
 });
