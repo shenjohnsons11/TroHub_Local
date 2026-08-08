@@ -15,7 +15,7 @@ import GradientHero from "../components/ui/GradientHero";
 import { getRealtimeGreeting } from "../utils/dateHelpers";
 import MiniCalendarPopover from "../components/MiniCalendarPopover";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
-import { formatPhone } from "../utils/formatters";
+import { formatCurrency, formatPhone, unformatNumber } from "../utils/formatters";
 import { useLanguage } from "../contexts/LanguageContext";
 
 import { UserProfile } from "../types/UserProfile";
@@ -199,7 +199,7 @@ export default function HomeScreen({ profile, refreshKey, onNavigate, onLogout }
           icon="wallet-outline"
           label={t("mobile.home.invoice")}
           onAction={isUnpaid ? () => onNavigate("invoice") : undefined}
-          value={homeData.totalAmount}
+          value={formatCurrency(unformatNumber(homeData.totalAmount))}
         />
       </AnimatedEntry>
 
