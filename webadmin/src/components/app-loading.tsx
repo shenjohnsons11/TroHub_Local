@@ -16,7 +16,7 @@ export function AppLoading({ message = "Đang tải dữ liệu không gian số
         />
       </div>
       <div className="app-loading-track flex flex-col items-center gap-3">
-        <Loader2 className="size-6 animate-spin text-emerald-500" />
+        <Loader2 className="size-6 animate-spin text-primary motion-reduce:animate-none" />
         <p className="text-sm font-semibold text-muted-foreground">{message}</p>
       </div>
     </div>

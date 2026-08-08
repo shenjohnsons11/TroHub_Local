@@ -1,3 +1,4 @@
+@import "@fontsource-variable/inter/wght.css";
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -7,7 +8,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Arial, sans-serif;
+  --font-sans: "Inter Variable", "Inter", sans-serif;
   --font-app: var(--font-sans);
   --font-mono: "SFMono-Regular", Consolas, monospace;
   --font-heading: var(--font-sans);
@@ -55,106 +56,114 @@
 
 :root {
   color-scheme: light;
-  --background: #f8f6ef;
-  --foreground: #123a33;
-  --card: #fffdf8;
-  --card-foreground: #123a33;
-  --popover: #fffdf8;
-  --popover-foreground: #123a33;
-  --primary: #075e54;
-  --primary-foreground: #fffcf7;
-  --secondary: #ebe7dd;
-  --secondary-foreground: #173f37;
-  --muted: #eeeae1;
-  --muted-foreground: #596d65;
-  --accent: #ddefe8;
-  --accent-foreground: #123a33;
+  --background: #f4f8f5;
+  --foreground: #1a202c;
+  --card: #ffffff;
+  --card-foreground: #1a202c;
+  --popover: #ffffff;
+  --popover-foreground: #1a202c;
+  --primary: #0f5247;
+  --primary-foreground: #ffffff;
+  --secondary: #edf3ef;
+  --secondary-foreground: #1a202c;
+  --muted: #edf3ef;
+  --muted-foreground: #52635c;
+  --accent: #dff1e7;
+  --accent-foreground: #1a202c;
   --destructive: #b93a32;
   --destructive-foreground: #ffffff;
-  --coral: #ff6b52;
-  --warning: #ff6b52;
-  --warning-foreground: #a33a27;
-  --warning-soft: #ffe8e1;
-  --border: #ded8cc;
-  --input: #ded8cc;
-  --ring: #075e54;
-  --chart-1: #075e54;
-  --chart-2: #d55a43;
-  --chart-3: #387f72;
+  --coral: #d0604c;
+  --warning: #b95643;
+  --warning-foreground: #ffffff;
+  --warning-soft: #fde9e4;
+  --border: #d7e5dc;
+  --input: #d7e5dc;
+  --ring: #0f5247;
+  --chart-1: #0f5247;
+  --chart-2: #d0604c;
+  --chart-3: #0f6b57;
   --chart-4: #b58745;
   --chart-5: #6e8d84;
-  --radius: 1rem;
-  --calm-ink: #123a33;
-  --calm-forest: #075e54;
-  --calm-forest-soft: #ddefe8;
-  --calm-terracotta: #a33a27;
-  --calm-terracotta-soft: #ffe8e1;
-  --calm-paper: #f8f6ef;
-  --calm-line: #ded8cc;
-  --calm-muted: #596d65;
-  --calm-shadow: 0 2px 8px rgb(18 58 51 / 8%);
-  --sidebar: rgb(255 253 248 / 82%);
-  --sidebar-foreground: #123a33;
-  --sidebar-primary: #075e54;
-  --sidebar-primary-foreground: #fffdf8;
-  --sidebar-accent: #ddefe8;
-  --sidebar-accent-foreground: #123a33;
-  --sidebar-border: rgb(18 58 51 / 8%);
-  --sidebar-ring: #075e54;
+  --radius: 0.875rem;
+  --calm-ink: #1a202c;
+  --calm-forest: #0f5247;
+  --calm-forest-soft: #dff1e7;
+  --calm-terracotta: #b95643;
+  --calm-terracotta-soft: #fde9e4;
+  --calm-paper: #f4f8f5;
+  --calm-line: #d7e5dc;
+  --calm-muted: #52635c;
+  --calm-shadow: 0 2px 8px rgb(15 82 71 / 8%);
+  --sidebar: rgb(255 255 255 / 86%);
+  --sidebar-foreground: #1a202c;
+  --sidebar-primary: #0f5247;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #dff1e7;
+  --sidebar-accent-foreground: #1a202c;
+  --sidebar-border: rgb(15 82 71 / 8%);
+  --sidebar-ring: #0f5247;
 }
 
 .dark {
   color-scheme: dark;
   --background: #04100e;
-  --foreground: #ddfbf0;
+  --foreground: #e4f7ee;
   --card: #0b211d;
-  --card-foreground: #ddfbf0;
-  --popover: #10302a;
-  --popover-foreground: #ddfbf0;
-  --primary: #8cf2c9;
+  --card-foreground: #e4f7ee;
+  --popover: #073e36;
+  --popover-foreground: #e4f7ee;
+  --primary: #b8f5da;
   --primary-foreground: #04100e;
-  --secondary: #14302a;
-  --secondary-foreground: #ddfbf0;
+  --secondary: #143a31;
+  --secondary-foreground: #e4f7ee;
   --muted: #122a25;
-  --muted-foreground: #9db9af;
+  --muted-foreground: #a5bcb1;
   --accent: #143a31;
-  --accent-foreground: #ddfbf0;
+  --accent-foreground: #e4f7ee;
   --destructive: #ff836f;
   --destructive-foreground: #04100e;
-  --coral: #ff6b52;
-  --warning: #ff6b52;
-  --warning-foreground: #ffd9d2;
+  --coral: #ff9a87;
+  --warning: #ff9a87;
+  --warning-foreground: #04100e;
   --warning-soft: #3a2a1d;
-  --border: rgba(140, 242, 201, 0.16);
-  --input: rgba(140, 242, 201, 0.16);
-  --ring: #8cf2c9;
-  --chart-1: #8cf2c9;
+  --border: rgb(255 255 255 / 8%);
+  --input: rgb(255 255 255 / 8%);
+  --ring: #b8f5da;
+  --chart-1: #b8f5da;
   --chart-2: #ff836f;
   --chart-3: #5ccaaa;
   --chart-4: #d7b270;
   --chart-5: #75a397;
-  --sidebar: rgb(11 33 29 / 82%);
-  --sidebar-foreground: #ddfbf0;
-  --sidebar-primary: #8cf2c9;
+  --sidebar: rgb(7 62 54 / 84%);
+  --sidebar-foreground: #e4f7ee;
+  --sidebar-primary: #b8f5da;
   --sidebar-primary-foreground: #04100e;
   --sidebar-accent: #143a31;
-  --sidebar-accent-foreground: #ddfbf0;
-  --sidebar-border: rgb(140 242 201 / 14%);
-  --sidebar-ring: #8cf2c9;
-  --calm-ink: #ddfbf0;
-  --calm-forest: #8cf2c9;
+  --sidebar-accent-foreground: #e4f7ee;
+  --sidebar-border: rgb(255 255 255 / 8%);
+  --sidebar-ring: #b8f5da;
+  --calm-ink: #e4f7ee;
+  --calm-forest: #b8f5da;
   --calm-forest-soft: #143a31;
   --calm-terracotta: #ffd9d2;
   --calm-terracotta-soft: #3a2a1d;
   --calm-paper: #04100e;
-  --calm-line: rgba(140, 242, 201, 0.16);
-  --calm-muted: #90aaa1;
+  --calm-line: rgb(255 255 255 / 8%);
+  --calm-muted: #a5bcb1;
   --calm-shadow: 0 2px 8px rgb(0 0 0 / 30%);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
+  }
+  html,
+  body,
+  button,
+  input,
+  select,
+  textarea {
+    font-family: var(--font-sans);
   }
   body {
     @apply bg-background text-foreground antialiased;
@@ -177,8 +186,12 @@
     background: var(--card);
     box-shadow: var(--calm-shadow);
   }
-  .calm-workbench {
+  .calm-workbench,
+  [data-slot="table-container"] {
     overflow-x: auto;
+    overscroll-behavior-inline: contain;
+  }
+  .calm-workbench {
     border: 0;
     border-radius: 1.25rem;
     background: var(--card);
@@ -202,9 +215,6 @@
   }
   .calm-admin table {
     min-width: 720px;
-  }
-  .calm-admin [data-slot="table-container"] {
-    overflow-x: auto;
   }
   .calm-admin [data-slot="table-row"] {
     transition: background-color 180ms cubic-bezier(.16, 1, .3, 1);
@@ -300,6 +310,11 @@
 
 @media (prefers-reduced-motion: reduce) {
   .app-loading-frame { animation: none; }
+}
+
+@media (max-width: 640px) {
+  .calm-admin main { padding-inline: 1rem; }
+  .calm-admin [data-slot="table"] { min-width: 680px; }
 }
 
 .login-form-panel {
