@@ -3,12 +3,23 @@ const Room = require('../models/Room');
 const Contract = require('../models/Contract');
 const Invoice = require('../models/Invoice');
 const Account = require('../models/Account');
+const {
+    normalizeRole,
+    classifyAIIntent,
+    authorizeAIAction,
+    getRolePresentation,
+} = require('./aiPolicy');
 
 const apiKey = process.env.GEMINI_API_KEY;
 const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 const isNonNegativeNumber = (value) => Number.isFinite(value) && value >= 0;
 const isNonEmptyString = (value) => typeof value === 'string' && value.trim().length > 0;
+const isValidISODate = (value) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+    const date = new Date(`${value}T00:00:00Z`);
+    return date.toISOString().slice(0, 10) === value;
+};
 
 function parseAIResponse(rawText) {
     const fallback = typeof rawText === 'string' ? rawText.trim() : '';
@@ -23,7 +34,7 @@ function parseAIResponse(rawText) {
             && isNonEmptyString(action.roomCode)
             && isNonEmptyString(action.tenantName)
             && isNonNegativeNumber(action.rentPrice)
-            && /^\d{4}-\d{2}-\d{2}$/.test(action.startDate)) {
+            && isValidISODate(action.startDate)) {
             return {
                 reply,
                 action: {
@@ -58,12 +69,13 @@ function parseAIResponse(rawText) {
 }
 
 async function getUserContext(userId, role) {
+    const normalizedRole = normalizeRole(role);
     try {
         const mongoose = require('mongoose');
         if (mongoose.connection.readyState !== 1) {
-            return { role: role === 1 ? 'Chủ trọ' : 'Người thuê', status: 'DB disconnected' };
+            return { role: normalizedRole === 'landlord' ? 'Chủ trọ' : 'Người thuê', status: 'DB disconnected' };
         }
-        if (role === 1) { // Landlord / Admin
+        if (normalizedRole === 'landlord') { // Landlord / Admin
             const rooms = await Room.find({ landlordId: userId }).lean();
             const roomIds = rooms.map(r => r._id);
             
@@ -145,7 +157,7 @@ async function getUserContext(userId, role) {
         }
     } catch (err) {
         console.error('[AI_SERVICE_CONTEXT_ERROR]', err);
-        return { role: role === 1 ? 'Chủ trọ' : 'Người thuê' };
+        return { role: normalizedRole === 'landlord' ? 'Chủ trọ' : 'Người thuê' };
     }
 }
 
@@ -154,23 +166,51 @@ async function askTroHubAI(message, userId, role) {
         throw new Error('Câu hỏi không được để trống.');
     }
 
-    const context = await getUserContext(userId, role);
-    
+    const normalizedRole = normalizeRole(role);
+    const presentation = getRolePresentation(normalizedRole);
+    const intent = classifyAIIntent(message);
+    if (normalizedRole === 'tenant'
+        && (intent === 'landlord_financials' || intent === 'landlord_contract_action')) {
+        return {
+            reply: intent === 'landlord_financials' ? presentation.deniedMessage : presentation.adminDeniedMessage,
+            action: null,
+            role: normalizedRole,
+            presentation,
+            denied: true,
+        };
+    }
+
+    const context = await getUserContext(userId, normalizedRole);
+    const roleInstructions = normalizedRole === 'landlord' ? `
+Bạn đang hỗ trợ Chủ trọ. Có thể sử dụng số liệu toàn bộ bất động sản, doanh thu, công nợ và hợp đồng trong bối cảnh.
+Khi Chủ trọ yêu cầu tạo hợp đồng hoặc chốt điện nước với đủ dữ liệu, có thể trả về action điền biểu mẫu tương ứng.
+` : `
+Bạn đang hỗ trợ Cư dân. Chỉ được sử dụng dữ liệu phòng đang thuê, hóa đơn của chính người dùng và hướng dẫn báo sửa chữa.
+Không tiết lộ hoặc hướng dẫn các thao tác quản trị của Chủ trọ; luôn trả về action là null.
+`;
+    const roleGuidance = normalizedRole === 'landlord' ? `
+1. Nếu người dùng hỏi về thống kê phòng, doanh thu, nợ nần hoặc hợp đồng, hãy dùng số liệu bối cảnh thực tế.
+2. Nếu người dùng hỏi "Soạn tin nhắn nhắc nợ", hãy dùng debtDetails và thông tin ngân hàng để soạn tin nhắn lịch sự.
+3. Nếu người dùng hỏi cách sử dụng ứng dụng TroHub, hãy đưa ra các bước ngắn gọn, rõ ràng.
+4. Trả về duy nhất JSON hợp lệ theo cấu trúc {"reply":"...", "action":null}; reply có thể dùng Markdown.
+5. Khi đủ dữ liệu tạo hợp đồng, action là {"type":"FILL_CONTRACT_FORM","roomCode":"...","tenantName":"...","rentPrice":0,"startDate":"YYYY-MM-DD"}.
+6. Khi đủ dữ liệu chốt điện nước, action là {"type":"FILL_UTILITY_READING","roomCode":"...","newElec":0,"newWater":0}.
+` : `
+1. Chỉ dùng dữ liệu phòng và hóa đơn của chính người dùng để trả lời.
+2. Với câu hỏi về sửa chữa hoặc cách dùng ứng dụng, đưa ra hướng dẫn ngắn gọn, rõ ràng.
+3. Trả về duy nhất JSON hợp lệ theo cấu trúc {"reply":"...", "action":null}; action luôn phải là null.
+`;
     const systemInstruction = `
 Bạn là TroHub AI - Trợ lý AI thông minh tích hợp trên ứng dụng quản lý nhà trọ TroHub.
 Hãy trả lời bằng tiếng Việt một cách chuyên nghiệp, ngắn gọn, lịch sự, thân thiện và hữu ích.
+
+${roleInstructions}
 
 Dữ liệu bối cảnh thời gian thực của người dùng hiện tại:
 ${JSON.stringify(context, null, 2)}
 
 HƯỚNG DẪN TRẢ LỜI:
-1. Nếu người dùng hỏi về thống kê phòng, doanh thu, nợ nần, hợp đồng: Hãy sử dụng số liệu bối cảnh thực tế ở trên để trả lời chính xác.
-2. Nếu người dùng hỏi "Soạn tin nhắn nhắc nợ": Kiểm tra danh sách nợ (debtDetails), soạn mẫu tin nhắn nhắc nợ hoàn chỉnh, lịch sự, thân thiện sẵn sàng copy gửi Zalo/SMS cho người thuê, bao gồm thông tin STK ngân hàng nhận tiền nếu có.
-3. Nếu người dùng hỏi "Hướng dẫn tạo hợp đồng mới" hoặc cách sử dụng ứng dụng TroHub: Hãy đưa ra danh sách các bước ngắn gọn, rõ ràng.
-4. Trả về duy nhất JSON hợp lệ theo cấu trúc {"reply":"...", "action":null}. reply có thể dùng Markdown.
-5. Khi Chủ trọ yêu cầu tạo hợp đồng với phòng, tên người thuê, giá thuê và ngày bắt đầu, action là {"type":"FILL_CONTRACT_FORM","roomCode":"...","tenantName":"...","rentPrice":0,"startDate":"YYYY-MM-DD"}.
-6. Khi Chủ trọ yêu cầu chốt điện nước với mã phòng và chỉ số mới, action là {"type":"FILL_UTILITY_READING","roomCode":"...","newElec":0,"newWater":0}.
-7. Không đủ dữ liệu, không phải lệnh hành động, hoặc người dùng là Người thuê thì action phải là null.
+${roleGuidance}
 `;
 
     const candidateModels = ['gemini-2.5-flash', 'gemini-3.5-flash', 'gemini-3.6-flash', 'gemini-flash-latest'];
@@ -191,7 +231,13 @@ HƯỚNG DẪN TRẢ LỜI:
             });
             if (response && response.text) {
                 const result = parseAIResponse(response.text);
-                return role === 1 ? result : { ...result, action: null };
+                return {
+                    ...result,
+                    action: authorizeAIAction(normalizedRole, result.action),
+                    role: normalizedRole,
+                    presentation,
+                    denied: false,
+                };
             }
         } catch (err) {
             console.warn(`[AI_SERVICE_WARN] Model ${modelName} encountered issue:`, err.message);
