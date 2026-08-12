@@ -275,6 +275,7 @@ export default function AIChatWidget() {
             setIsOpen(true);
             setIsMinimized(false);
           }}
+          aria-label="Mở Trợ lý TroHub AI"
           className="fixed bottom-6 right-6 z-50 group flex items-center gap-3 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white px-4 py-3.5 rounded-full shadow-2xl shadow-emerald-900/50 border border-emerald-400/30 transition-all duration-300 hover:scale-105 active:scale-95"
           title="Mở Trợ lý TroHub AI"
         >
@@ -343,7 +344,7 @@ export default function AIChatWidget() {
           {!isMinimized && (
             <>
               {/* Message List */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs sm:text-sm bg-gradient-to-b from-slate-950 via-emerald-950/30 to-slate-950 scrollbar-thin scrollbar-thumb-emerald-800">
+              <div aria-live="polite" className="flex-1 overflow-y-auto p-4 space-y-4 text-xs sm:text-sm bg-gradient-to-b from-slate-950 via-emerald-950/30 to-slate-950 scrollbar-thin scrollbar-thumb-emerald-800">
                 {messages.map((msg) => (
                   <div
                     key={msg.id}
@@ -445,11 +446,12 @@ export default function AIChatWidget() {
                   disabled={loading}
                   className="flex-1 bg-slate-900/90 text-emerald-50 placeholder-emerald-500/50 text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-emerald-500/20 focus:outline-none focus:border-emerald-400/60 focus:ring-1 focus:ring-emerald-400/50 transition disabled:opacity-50"
                 />
-                <button type="button" onClick={handleVoiceInput} disabled={loading || listening} aria-pressed={listening} className="p-2.5 text-emerald-200 hover:bg-emerald-900/40 rounded-xl disabled:opacity-40" title="Nhập bằng giọng nói">
+                <button type="button" onClick={handleVoiceInput} disabled={loading || listening} aria-label="Nhập bằng giọng nói" aria-pressed={listening} className="p-2.5 text-emerald-200 hover:bg-emerald-900/40 rounded-xl disabled:opacity-40" title="Nhập bằng giọng nói">
                   <Mic className="w-4 h-4" />
                 </button>
                 <button
                   type="submit"
+                  aria-label="Gửi câu hỏi"
                   disabled={!inputMessage.trim() || loading}
                   className="p-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl shadow-md shadow-emerald-950/50 disabled:opacity-40 disabled:cursor-not-allowed transition transform hover:scale-105 active:scale-95 flex items-center justify-center"
                   title="Gửi câu hỏi"
