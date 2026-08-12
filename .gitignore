@@ -34,10 +34,12 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files (keep .env.example tracked)
+# Secrets & Môi trường
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+*.key
+*.pem
 
 # typescript
 *.tsbuildinfo
@@ -51,11 +53,15 @@ app-example
 # Agent, AI and Skills
 GEMINI.md
 .agents/
-.gemini/
 .codex/
+.gemini/
 .superpowers/
+skills/
 .worktrees/
 docs/superpowers/
+scratch/
+design-demos/
+design-references/
 
 # Personal IDE configuration
 .vscode/
