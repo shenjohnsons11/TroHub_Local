@@ -5,7 +5,7 @@ async function chatWithAI(req, res, next) {
         const { message } = req.body;
         const { id: userId, role } = req.auth;
 
-        if (!message) {
+        if (typeof message !== 'string' || !message.trim()) {
             return res.status(400).json({
                 success: false,
                 code: 'INVALID_INPUT',
@@ -13,12 +13,11 @@ async function chatWithAI(req, res, next) {
             });
         }
 
-        const { reply, action } = await askTroHubAI(message, userId, role);
+        const result = await askTroHubAI(message, userId, role);
 
         return res.json({
             success: true,
-            reply,
-            action,
+            ...result,
             timestamp: new Date().toISOString()
         });
     } catch (error) {
