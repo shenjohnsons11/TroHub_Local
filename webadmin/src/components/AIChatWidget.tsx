@@ -59,21 +59,25 @@ const QUICK_PROMPTS: Record<AIRole, string[]> = {
     "Hướng dẫn tạo hợp đồng mới",
   ],
   tenant: [
-    "Xem hóa đơn của tôi",
-    "Báo hỏng / yêu cầu sửa chữa",
-    "Hướng dẫn sử dụng TroHub",
+    "Hóa đơn của tôi tháng này",
+    "Báo hỏng thiết bị",
+    "Xem lịch thanh toán",
   ],
 };
 
 function normalizeRole(value: unknown): AIRole | null {
-  if (value === "landlord" || value === "tenant") return value;
-  if (typeof value === "number") return value === 1 ? "landlord" : "tenant";
+  if (value === "landlord" || value === 1) return "landlord";
+  if (value === "tenant" || value === 2) return "tenant";
   return null;
 }
 
 function readStoredRole(): AIRole | null {
-  const user = safeJsonParse<WebAdminUser | null>(localStorage.getItem("trohub_user"), null);
-  return normalizeRole(user?.role);
+  try {
+    const user = safeJsonParse<WebAdminUser | null>(localStorage.getItem("trohub_user"), null);
+    return normalizeRole(user?.role) || "tenant";
+  } catch {
+    return "tenant";
+  }
 }
 
 function getPresentation(role: AIRole, value: unknown): AIPresentation {
@@ -152,6 +156,7 @@ export default function AIChatWidget() {
 
       const responseRole = normalizeRole(data.role);
       const displayRole = responseRole || role || "landlord";
+      if (responseRole && responseRole !== role) setRole(responseRole);
       const nextPresentation = getPresentation(displayRole, data.presentation);
       setPresentation(nextPresentation);
 
@@ -164,7 +169,11 @@ export default function AIChatWidget() {
         timestamp: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
       }]);
 
-      const action = isAIAction(data.action) ? data.action : null;
+      const action = isAIAction(data.action)
+        && typeof data.action === "object"
+        && (data.action as { requiresConfirmation?: unknown }).requiresConfirmation === false
+        ? data.action
+        : null;
       if (role === "landlord"
         && responseRole === "landlord"
         && data.denied !== true
