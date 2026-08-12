@@ -16,7 +16,8 @@ import {
   Volume2,
   Square,
 } from "lucide-react";
-import { dispatchAIAction } from "@/lib/ai-actions";
+import { dispatchAIAction, isAIAction } from "@/lib/ai-actions";
+import { safeJsonParse, type WebAdminUser } from "@/lib/client-storage";
 
 interface Message {
   id: string;
@@ -25,13 +26,76 @@ interface Message {
   timestamp: string;
 }
 
-const QUICK_PROMPTS = [
-  "Thống kê doanh thu tháng này",
-  "Soạn tin nhắn nhắc nợ",
-  "Hướng dẫn tạo hợp đồng mới",
-];
+type AIRole = "landlord" | "tenant";
+
+type AIPresentation = {
+  title: string;
+  greeting: string;
+};
+
+type AIChatResponse = {
+  reply?: unknown;
+  action?: unknown;
+  role?: unknown;
+  presentation?: unknown;
+  denied?: unknown;
+};
+
+const ROLE_PRESENTATIONS: Record<AIRole, AIPresentation> = {
+  landlord: {
+    title: "TroHub AI — Trợ lý Chủ trọ",
+    greeting: "Xin chào Chủ trọ! Tôi có thể giúp gì cho việc quản lý nhà trọ hôm nay?",
+  },
+  tenant: {
+    title: "TroHub AI — Trợ lý Cư dân",
+    greeting: "Xin chào Cư dân! Bạn cần tra cứu hóa đơn hay báo sửa chữa gì không?",
+  },
+};
+
+const QUICK_PROMPTS: Record<AIRole, string[]> = {
+  landlord: [
+    "Thống kê doanh thu tháng này",
+    "Soạn tin nhắn nhắc nợ",
+    "Hướng dẫn tạo hợp đồng mới",
+  ],
+  tenant: [
+    "Hóa đơn của tôi tháng này",
+    "Báo hỏng thiết bị",
+    "Xem lịch thanh toán",
+  ],
+};
+
+function normalizeRole(value: unknown): AIRole | null {
+  if (value === "landlord" || value === 1) return "landlord";
+  if (value === "tenant" || value === 2) return "tenant";
+  return null;
+}
+
+function readStoredRole(): AIRole | null {
+  try {
+    const user = safeJsonParse<WebAdminUser | null>(localStorage.getItem("trohub_user"), null);
+    return normalizeRole(user?.role) || "tenant";
+  } catch {
+    return "tenant";
+  }
+}
+
+function getPresentation(role: AIRole, value: unknown): AIPresentation {
+  if (!value || typeof value !== "object") return ROLE_PRESENTATIONS[role];
+  const presentation = value as Record<string, unknown>;
+  return {
+    title: typeof presentation.title === "string" && presentation.title.trim()
+      ? presentation.title
+      : ROLE_PRESENTATIONS[role].title,
+    greeting: typeof presentation.greeting === "string" && presentation.greeting.trim()
+      ? presentation.greeting
+      : ROLE_PRESENTATIONS[role].greeting,
+  };
+}
 
 export default function AIChatWidget() {
+  const [role, setRole] = useState<AIRole | null>(null);
+  const [presentation, setPresentation] = useState<AIPresentation>(ROLE_PRESENTATIONS.landlord);
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [inputMessage, setInputMessage] = useState("");
@@ -44,12 +108,22 @@ export default function AIChatWidget() {
     {
       id: "welcome",
       sender: "ai",
-      text: "Xin chào! Tôi là **Trợ lý TroHub AI** (powered by Gemini 2.5 Flash). Tôi có thể giúp gì cho bạn hôm nay?",
+      text: `${ROLE_PRESENTATIONS.landlord.greeting} (powered by Gemini 2.5 Flash).`,
       timestamp: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const storedRole = readStoredRole();
+    setRole(storedRole);
+    const nextPresentation = ROLE_PRESENTATIONS[storedRole || "landlord"];
+    setPresentation(nextPresentation);
+    setMessages((prev) => prev[0]?.id === "welcome" && prev.length === 1
+      ? [{ ...prev[0], text: `${nextPresentation.greeting} (powered by Gemini 2.5 Flash).` }]
+      : prev);
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -78,16 +152,34 @@ export default function AIChatWidget() {
       const data = await fetchAPI("/ai/chat", {
         method: "POST",
         body: JSON.stringify({ message: query }),
-      });
+      }) as AIChatResponse;
+
+      const responseRole = normalizeRole(data.role);
+      const displayRole = responseRole || role || "landlord";
+      if (responseRole && responseRole !== role) setRole(responseRole);
+      const nextPresentation = getPresentation(displayRole, data.presentation);
+      setPresentation(nextPresentation);
 
       setMessages((prev) => [...prev, {
         id: `ai-${prev.length}`,
         sender: "ai",
-        text: data.reply || "Xin lỗi, tôi không thể phản hồi câu hỏi này lúc này.",
+        text: typeof data.reply === "string" && data.reply
+          ? data.reply
+          : "Xin lỗi, tôi không thể phản hồi câu hỏi này lúc này.",
         timestamp: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
       }]);
-      if (dispatchAIAction(data.action)) {
-        window.location.assign(data.action.type === "FILL_CONTRACT_FORM" ? "/dashboard/contracts/new" : "/dashboard/utilities");
+
+      const action = isAIAction(data.action)
+        && typeof data.action === "object"
+        && (data.action as { requiresConfirmation?: unknown }).requiresConfirmation === false
+        ? data.action
+        : null;
+      if (role === "landlord"
+        && responseRole === "landlord"
+        && data.denied !== true
+        && action
+        && dispatchAIAction(action)) {
+        window.location.assign(action.type === "FILL_CONTRACT_FORM" ? "/dashboard/contracts/new" : "/dashboard/utilities");
       }
     } catch (err: any) {
       setMessages((prev) => [...prev, {
@@ -112,7 +204,7 @@ export default function AIChatWidget() {
       {
         id: "welcome",
         sender: "ai",
-        text: "Xin chào! Tôi là **Trợ lý TroHub AI**. Lịch sử trò chuyện đã được làm sạch. Bạn cần hỗ trợ thêm gì?",
+        text: `${presentation.greeting} Lịch sử trò chuyện đã được làm sạch. Bạn cần hỗ trợ thêm gì?`,
         timestamp: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
       },
     ]);
@@ -183,6 +275,7 @@ export default function AIChatWidget() {
             setIsOpen(true);
             setIsMinimized(false);
           }}
+          aria-label="Mở Trợ lý TroHub AI"
           className="fixed bottom-6 right-6 z-50 group flex items-center gap-3 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white px-4 py-3.5 rounded-full shadow-2xl shadow-emerald-900/50 border border-emerald-400/30 transition-all duration-300 hover:scale-105 active:scale-95"
           title="Mở Trợ lý TroHub AI"
         >
@@ -212,7 +305,7 @@ export default function AIChatWidget() {
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-sm text-emerald-100">TroHub AI Assistant</h3>
+                  <h3 className="font-semibold text-sm text-emerald-100">{presentation.title}</h3>
                   <span className="px-1.5 py-0.5 text-[10px] font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                     Gemini 2.5
@@ -251,7 +344,7 @@ export default function AIChatWidget() {
           {!isMinimized && (
             <>
               {/* Message List */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs sm:text-sm bg-gradient-to-b from-slate-950 via-emerald-950/30 to-slate-950 scrollbar-thin scrollbar-thumb-emerald-800">
+              <div aria-live="polite" className="flex-1 overflow-y-auto p-4 space-y-4 text-xs sm:text-sm bg-gradient-to-b from-slate-950 via-emerald-950/30 to-slate-950 scrollbar-thin scrollbar-thumb-emerald-800">
                 {messages.map((msg) => (
                   <div
                     key={msg.id}
@@ -325,7 +418,7 @@ export default function AIChatWidget() {
                 <span className="text-[11px] text-emerald-400/70 font-medium whitespace-nowrap flex items-center gap-1">
                   <Sparkles className="w-3 h-3 text-emerald-400" /> Gợi ý:
                 </span>
-                {QUICK_PROMPTS.map((prompt, idx) => (
+                {QUICK_PROMPTS[role || "landlord"].map((prompt, idx) => (
                   <button
                     key={idx}
                     onClick={() => handleSend(prompt)}
@@ -353,11 +446,12 @@ export default function AIChatWidget() {
                   disabled={loading}
                   className="flex-1 bg-slate-900/90 text-emerald-50 placeholder-emerald-500/50 text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-emerald-500/20 focus:outline-none focus:border-emerald-400/60 focus:ring-1 focus:ring-emerald-400/50 transition disabled:opacity-50"
                 />
-                <button type="button" onClick={handleVoiceInput} disabled={loading || listening} aria-pressed={listening} className="p-2.5 text-emerald-200 hover:bg-emerald-900/40 rounded-xl disabled:opacity-40" title="Nhập bằng giọng nói">
+                <button type="button" onClick={handleVoiceInput} disabled={loading || listening} aria-label="Nhập bằng giọng nói" aria-pressed={listening} className="p-2.5 text-emerald-200 hover:bg-emerald-900/40 rounded-xl disabled:opacity-40" title="Nhập bằng giọng nói">
                   <Mic className="w-4 h-4" />
                 </button>
                 <button
                   type="submit"
+                  aria-label="Gửi câu hỏi"
                   disabled={!inputMessage.trim() || loading}
                   className="p-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl shadow-md shadow-emerald-950/50 disabled:opacity-40 disabled:cursor-not-allowed transition transform hover:scale-105 active:scale-95 flex items-center justify-center"
                   title="Gửi câu hỏi"

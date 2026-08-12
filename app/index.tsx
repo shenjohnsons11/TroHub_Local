@@ -40,6 +40,7 @@ import { resolveNotificationTarget } from "../utils/notificationNavigation";
 import { API_BASE_URL } from "../constants/api";
 import * as Linking from "expo-linking";
 import { resolveAppDeepLink } from "../utils/deepLinks";
+import type { AIChatAction } from "../services/aiService";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({ shouldShowAlert: true, shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: true }),
@@ -154,8 +155,8 @@ export default function App() {
     void Linking.getInitialURL().then(openDeepLink);
     return () => subscription.remove();
   }, [isLoggedIn]);
-  const handleAIAction = (action: any) => {
-    if (profile?.role !== 1 || !action?.type) return;
+  const handleAIAction = (action: AIChatAction) => {
+    if (profile?.role !== 1 || !action || (action.type !== "FILL_CONTRACT_FORM" && action.type !== "FILL_UTILITY_READING")) return;
     handleChangeTab(action.type === "FILL_CONTRACT_FORM" ? "contract" : "invoice_bulk", action.type === "FILL_CONTRACT_FORM" ? { action: "create", aiAction: action } : { aiAction: action });
   };
 
@@ -251,7 +252,7 @@ export default function App() {
 
               {activeTab === "notifications" && <AdminNotificationsScreen onBack={() => handleChangeTab("home")} onNavigate={handleChangeTab} refreshKey={notificationRefreshKey} onUnreadChanged={() => setNotificationRefreshKey((value) => value + 1)} />}
 
-              {activeTab === "ai_chat" && <AIChatScreen onBack={() => setActiveTab("home")} onAction={handleAIAction} />}
+              {activeTab === "ai_chat" && <AIChatScreen profile={profile} onBack={() => setActiveTab("home")} onAction={handleAIAction} />}
             </>
           ) : (
             <>
@@ -302,7 +303,7 @@ export default function App() {
 
               {activeTab === "cccd_scan" && <CCCDScannerScreen onBack={() => setActiveTab("home")} />}
 
-              {activeTab === "ai_chat" && <AIChatScreen onBack={() => setActiveTab("home")} />}
+              {activeTab === "ai_chat" && <AIChatScreen profile={profile} onBack={() => setActiveTab("home")} />}
             </>
           )}
         </View>
