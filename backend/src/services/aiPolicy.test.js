@@ -47,5 +47,11 @@ test('role presentations are explicit', () => {
 
 test('negated keywords stay general', () => {
   assert.equal(classifyAIIntent('Tôi không cần xem doanh thu'), 'general');
-  assert.equal(classifyAIIntent('Đèn phòng tôi không hỏng'), 'general');
+  assert.equal(classifyAIIntent('Tôi không báo hỏng đèn'), 'general');
+});
+
+test('malfunction negation remains a repair request', () => {
+  assert.equal(classifyAIIntent('Vòi nước không chảy'), 'tenant_repair');
+  assert.equal(classifyAIIntent('Đèn không sáng'), 'tenant_repair');
+  assert.equal(classifyAIIntent('Quạt không hoạt động'), 'tenant_repair');
 });
