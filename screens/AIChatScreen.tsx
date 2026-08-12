@@ -24,7 +24,7 @@ interface Message {
 interface AIChatScreenProps {
   profile?: UserProfile | null;
   onBack?: () => void;
-  onAction?: (action: any) => void;
+  onAction?: (action: AIChatAction) => void;
 }
 
 const ROLE_PRESENTATIONS: Record<AIRole, AIPresentation> = {
