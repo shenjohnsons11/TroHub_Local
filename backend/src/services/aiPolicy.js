@@ -17,13 +17,14 @@ function normalizeRole(role) {
 
 function classifyAIIntent(message) {
   const value = String(message || '').toLowerCase();
-  if (/(?:\b(?:không|đừng|chưa)\b[^.!?]{0,24}\b(?:doanh thu|tổng công nợ|tỷ lệ lấp đầy|doanh số|báo hỏng|sửa chữa|hỏng|rò nước|vòi nước|đèn)\b)|(?:\b(?:doanh thu|tổng công nợ|tỷ lệ lấp đầy|doanh số|báo hỏng|sửa chữa|hỏng|rò nước|vòi nước|đèn)\b[^.!?]{0,24}\bkhông\b)/.test(value)) return 'general';
+  if (/(?:không cần|không muốn|không báo|đừng báo|chưa cần)[^.!?]{0,24}(?:doanh thu|báo hỏng|sửa chữa|hỏi|đèn|vòi nước)/.test(value)
+    || /(?:không hỏi|không xem)[^.!?]{0,24}(?:doanh thu|công nợ|hóa đơn)/.test(value)) return 'general';
   if (/doanh thu|tổng công nợ|tỷ lệ lấp đầy|doanh số/.test(value)) return 'landlord_financials';
   if (/tạo|sửa|duyệt|kích hoạt|trả phòng/.test(value)
     && /hợp đồng|phòng|hóa đơn|điện|nước/.test(value)) return 'landlord_contract_action';
   if (/hóa đơn|tiền phòng|thanh toán|công nợ/.test(value)
     && /(của tôi|của mình|phòng tôi|phòng mình|tháng này)/.test(value)) return 'tenant_personal_financials';
-  if (/báo hỏng|sửa chữa|hỏng|rò nước|vòi nước|đèn/.test(value)) return 'tenant_repair';
+  if (/báo hỏng|sửa chữa|hỏng|rò nước|vòi nước|đèn|quạt/.test(value)) return 'tenant_repair';
   return 'general';
 }
 
