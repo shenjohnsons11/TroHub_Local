@@ -3,8 +3,9 @@ import { View, StyleSheet, TouchableOpacity, FlatList, KeyboardAvoidingView, Pla
 import { AppText, AppTextInput } from "@/components/ui/typography";
 import { Ionicons } from "@expo/vector-icons";
 import * as Speech from "expo-speech";
-import { aiService } from "../services/aiService";
+import { aiService, type AIPresentation, type AIRole, type AIChatResponse } from "../services/aiService";
 import { useAppTheme } from "../contexts/ThemeContext";
+import { UserProfile } from "../types/UserProfile";
 
 let ExpoSpeechRecognitionModule: any = null;
 try {
@@ -21,18 +22,59 @@ interface Message {
 }
 
 interface AIChatScreenProps {
+  profile: UserProfile;
   onBack?: () => void;
   onAction?: (action: any) => void;
 }
 
-const QUICK_PROMPTS = [
-  "Thống kê doanh thu tháng này",
-  "Soạn tin nhắn nhắc nợ",
-  "Hướng dẫn tạo hợp đồng mới",
-];
+const ROLE_PRESENTATIONS: Record<AIRole, AIPresentation> = {
+  landlord: {
+    title: "TroHub AI — Trợ lý Chủ trọ",
+    greeting: "Xin chào Chủ trọ! Tôi có thể giúp gì cho việc quản lý nhà trọ hôm nay?",
+  },
+  tenant: {
+    title: "TroHub AI — Trợ lý Cư dân",
+    greeting: "Xin chào Cư dân! Bạn cần tra cứu hóa đơn hay báo sửa chữa gì không?",
+  },
+};
 
-export default function AIChatScreen({ onBack, onAction }: AIChatScreenProps) {
+const QUICK_PROMPTS: Record<AIRole, string[]> = {
+  landlord: [
+    "Thống kê doanh thu tháng này",
+    "Soạn tin nhắn nhắc nợ",
+    "Hướng dẫn tạo hợp đồng mới",
+  ],
+  tenant: [
+    "Hóa đơn của tôi tháng này",
+    "Báo hỏng thiết bị",
+    "Xem lịch thanh toán",
+  ],
+};
+
+function normalizeRole(value: unknown): AIRole | null {
+  if (value === "landlord" || value === 1) return "landlord";
+  if (value === "tenant" || value === 2) return "tenant";
+  return null;
+}
+
+function getPresentation(role: AIRole, value: AIChatResponse["presentation"]): AIPresentation {
+  if (!value || typeof value !== "object") return ROLE_PRESENTATIONS[role];
+  const presentation = value as Record<string, unknown>;
+  return {
+    title: typeof presentation.title === "string" && presentation.title.trim()
+      ? presentation.title
+      : ROLE_PRESENTATIONS[role].title,
+    greeting: typeof presentation.greeting === "string" && presentation.greeting.trim()
+      ? presentation.greeting
+      : ROLE_PRESENTATIONS[role].greeting,
+  };
+}
+
+export default function AIChatScreen({ profile, onBack, onAction }: AIChatScreenProps) {
   const { theme } = useAppTheme();
+  const initialRole = normalizeRole(profile.role) || "tenant";
+  const [role, setRole] = useState<AIRole>(initialRole);
+  const [presentation, setPresentation] = useState<AIPresentation>(ROLE_PRESENTATIONS[initialRole]);
   const [inputMessage, setInputMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
@@ -40,7 +82,7 @@ export default function AIChatScreen({ onBack, onAction }: AIChatScreenProps) {
     {
       id: "welcome",
       sender: "ai",
-      text: "Xin chào! Tôi là **Trợ lý TroHub AI** (powered by Gemini 2.5 Flash). Tôi có thể hỗ trợ bạn thống kê phòng, soạn tin nhắc nợ hay hướng dẫn sử dụng app!",
+      text: `${ROLE_PRESENTATIONS[initialRole].greeting} (powered by Gemini 2.5 Flash).`,
       timestamp: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
@@ -83,16 +125,28 @@ export default function AIChatScreen({ onBack, onAction }: AIChatScreenProps) {
 
     try {
       const response = await aiService.chat(query);
+      const responseRole = normalizeRole(response.role);
+      const displayRole = responseRole || role;
+      if (responseRole && responseRole !== role) setRole(responseRole);
+      const nextPresentation = getPresentation(displayRole, response.presentation);
+      setPresentation(nextPresentation);
 
       const aiMsg: Message = {
         id: (Date.now() + 1).toString(),
         sender: "ai",
-        text: response.reply || "Xin lỗi, tôi chưa thể trả lời câu hỏi này lúc này.",
+        text: typeof response.reply === "string" && response.reply
+          ? response.reply
+          : "Xin lỗi, tôi chưa thể trả lời câu hỏi này lúc này.",
         timestamp: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
       };
 
       setMessages((prev) => [...prev, aiMsg]);
-      if (response.action) onAction?.(response.action);
+      const action = response.action
+        && typeof response.action === "object"
+        && (response.action as { requiresConfirmation?: unknown }).requiresConfirmation === false
+        ? response.action
+        : null;
+      if (role === "landlord" && displayRole === "landlord" && response.denied !== true && action) onAction?.(action);
     } catch (error: any) {
       const errorMsg: Message = {
         id: (Date.now() + 1).toString(),
@@ -141,7 +195,7 @@ export default function AIChatScreen({ onBack, onAction }: AIChatScreenProps) {
             {
               id: "welcome",
               sender: "ai",
-              text: "Đã làm sạch cuộc trò chuyện. Tôi có thể giúp gì thêm cho bạn?",
+              text: `${presentation.greeting} Lịch sử trò chuyện đã được làm sạch. Bạn cần hỗ trợ thêm gì?`,
               timestamp: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
             },
           ]);
@@ -184,7 +238,7 @@ export default function AIChatScreen({ onBack, onAction }: AIChatScreenProps) {
         <View style={[styles.bubble, isUser ? styles.userBubble : styles.aiBubble]}>
           {!isUser && (
             <View style={styles.aiHeader}>
-              <AppText style={styles.aiTitle}>TroHub AI 🤖</AppText>
+              <AppText style={styles.aiTitle}>{presentation.title}</AppText>
               <TouchableOpacity onPress={() => handleCopyText(item.text)} style={styles.copyBtn}>
                 <Ionicons name="copy-outline" size={14} color="#A7F3D0" />
               </TouchableOpacity>
@@ -223,7 +277,7 @@ export default function AIChatScreen({ onBack, onAction }: AIChatScreenProps) {
           </View>
           <View>
             <View style={styles.titleRow}>
-              <AppText style={styles.headerTitle}>Trợ lý TroHub AI</AppText>
+              <AppText style={styles.headerTitle}>{presentation.title}</AppText>
               <View style={styles.badge}>
                 <View style={styles.dot} />
                 <AppText style={styles.badgeText}>Gemini 2.5</AppText>
@@ -242,7 +296,7 @@ export default function AIChatScreen({ onBack, onAction }: AIChatScreenProps) {
       <View style={styles.promptContainer}>
         <FlatList
           horizontal
-          data={QUICK_PROMPTS}
+          data={QUICK_PROMPTS[role]}
           keyExtractor={(item, idx) => idx.toString()}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 12 }}

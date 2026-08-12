@@ -251,7 +251,7 @@ export default function App() {
 
               {activeTab === "notifications" && <AdminNotificationsScreen onBack={() => handleChangeTab("home")} onNavigate={handleChangeTab} refreshKey={notificationRefreshKey} onUnreadChanged={() => setNotificationRefreshKey((value) => value + 1)} />}
 
-              {activeTab === "ai_chat" && <AIChatScreen onBack={() => setActiveTab("home")} onAction={handleAIAction} />}
+              {activeTab === "ai_chat" && <AIChatScreen profile={profile} onBack={() => setActiveTab("home")} onAction={handleAIAction} />}
             </>
           ) : (
             <>
@@ -302,7 +302,7 @@ export default function App() {
 
               {activeTab === "cccd_scan" && <CCCDScannerScreen onBack={() => setActiveTab("home")} />}
 
-              {activeTab === "ai_chat" && <AIChatScreen onBack={() => setActiveTab("home")} />}
+              {activeTab === "ai_chat" && <AIChatScreen profile={profile} onBack={() => setActiveTab("home")} />}
             </>
           )}
         </View>
