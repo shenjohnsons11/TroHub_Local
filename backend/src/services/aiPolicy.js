@@ -12,11 +12,12 @@ const ROLE_PRESENTATION = {
 };
 
 function normalizeRole(role) {
-  return Number(role) === 1 ? ROLE.landlord : ROLE.tenant;
+  return role === ROLE.landlord || Number(role) === 1 ? ROLE.landlord : ROLE.tenant;
 }
 
 function classifyAIIntent(message) {
   const value = String(message || '').toLowerCase();
+  if (/(?:\b(?:không|đừng|chưa)\b[^.!?]{0,24}\b(?:doanh thu|tổng công nợ|tỷ lệ lấp đầy|doanh số|báo hỏng|sửa chữa|hỏng|rò nước|vòi nước|đèn)\b)|(?:\b(?:doanh thu|tổng công nợ|tỷ lệ lấp đầy|doanh số|báo hỏng|sửa chữa|hỏng|rò nước|vòi nước|đèn)\b[^.!?]{0,24}\bkhông\b)/.test(value)) return 'general';
   if (/doanh thu|tổng công nợ|tỷ lệ lấp đầy|doanh số/.test(value)) return 'landlord_financials';
   if (/tạo|sửa|duyệt|kích hoạt|trả phòng/.test(value)
     && /hợp đồng|phòng|hóa đơn|điện|nước/.test(value)) return 'landlord_contract_action';
@@ -28,7 +29,7 @@ function classifyAIIntent(message) {
 
 function authorizeAIAction(role, action) {
   if (!action || typeof action !== 'object') return null;
-  if (role !== ROLE.landlord) return null;
+  if (normalizeRole(role) !== ROLE.landlord) return null;
   if (action.type === 'FILL_CONTRACT_FORM' || action.type === 'FILL_UTILITY_READING') {
     return { ...action, requiresConfirmation: false };
   }
@@ -36,7 +37,7 @@ function authorizeAIAction(role, action) {
 }
 
 function getRolePresentation(role) {
-  return ROLE_PRESENTATION[role] || ROLE_PRESENTATION.tenant;
+  return ROLE_PRESENTATION[normalizeRole(role)];
 }
 
 module.exports = {

@@ -25,6 +25,14 @@ test('tenant cannot receive landlord actions', () => {
   assert.equal(authorizeAIAction('tenant', { type: 'FILL_UTILITY_READING' }), null);
 });
 
+test('numeric landlord roles authorize actions and presentation', () => {
+  assert.deepEqual(
+    authorizeAIAction(1, { type: 'FILL_UTILITY_READING', roomCode: 'A101' }),
+    { type: 'FILL_UTILITY_READING', roomCode: 'A101', requiresConfirmation: false },
+  );
+  assert.equal(getRolePresentation(1).title, 'TroHub AI — Trợ lý Chủ trọ');
+});
+
 test('landlord can prepare existing form-fill actions', () => {
   assert.deepEqual(
     authorizeAIAction('landlord', { type: 'FILL_UTILITY_READING', roomCode: 'A101', newElec: 12, newWater: 3 }),
@@ -35,4 +43,9 @@ test('landlord can prepare existing form-fill actions', () => {
 test('role presentations are explicit', () => {
   assert.equal(getRolePresentation('landlord').title, 'TroHub AI — Trợ lý Chủ trọ');
   assert.equal(getRolePresentation('tenant').title, 'TroHub AI — Trợ lý Cư dân');
+});
+
+test('negated keywords stay general', () => {
+  assert.equal(classifyAIIntent('Tôi không cần xem doanh thu'), 'general');
+  assert.equal(classifyAIIntent('Đèn phòng tôi không hỏng'), 'general');
 });
