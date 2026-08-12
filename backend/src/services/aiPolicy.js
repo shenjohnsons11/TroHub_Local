@@ -17,7 +17,9 @@ function normalizeRole(role) {
 
 function classifyAIIntent(message) {
   const value = String(message || '').toLowerCase();
-  if (/(?:không cần|không muốn|không báo|đừng báo|chưa cần)[^.!?]{0,24}(?:doanh thu|báo hỏng|sửa chữa|hỏi|đèn|vòi nước)/.test(value)
+  if (/(?:đèn|vòi nước|quạt|thiết bị)[^.!?]{0,24}(?:không|chưa)[^.!?]{0,12}(?:hỏng|rò|cần sửa|cần báo)/.test(value)
+    || /(?:doanh thu|công nợ|hóa đơn)[^.!?]{0,24}(?:không cần|không muốn|không xem)/.test(value)
+    || /(?:không cần|không muốn|không báo|đừng báo|chưa cần)[^.!?]{0,24}(?:doanh thu|báo hỏng|sửa chữa|hỏi|đèn|vòi nước)/.test(value)
     || /(?:không hỏi|không xem)[^.!?]{0,24}(?:doanh thu|công nợ|hóa đơn)/.test(value)) return 'general';
   if (/doanh thu|tổng công nợ|tỷ lệ lấp đầy|doanh số/.test(value)) return 'landlord_financials';
   if (/tạo|sửa|duyệt|kích hoạt|trả phòng/.test(value)
