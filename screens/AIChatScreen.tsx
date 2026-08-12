@@ -3,7 +3,7 @@ import { View, StyleSheet, TouchableOpacity, FlatList, KeyboardAvoidingView, Pla
 import { AppText, AppTextInput } from "@/components/ui/typography";
 import { Ionicons } from "@expo/vector-icons";
 import * as Speech from "expo-speech";
-import { aiService, type AIPresentation, type AIRole, type AIChatResponse } from "../services/aiService";
+import { aiService, type AIPresentation, type AIRole, type AIChatAction, type AIChatResponse } from "../services/aiService";
 import { useAppTheme } from "../contexts/ThemeContext";
 import { UserProfile } from "../types/UserProfile";
 
@@ -22,7 +22,7 @@ interface Message {
 }
 
 interface AIChatScreenProps {
-  profile: UserProfile;
+  profile?: UserProfile | null;
   onBack?: () => void;
   onAction?: (action: any) => void;
 }
@@ -57,6 +57,31 @@ function normalizeRole(value: unknown): AIRole | null {
   return null;
 }
 
+function isNonNegativeNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
+function isValidISODate(value: unknown): value is string {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function isAIAction(value: unknown): value is AIChatAction {
+  if (!value || typeof value !== "object") return false;
+  const action = value as Record<string, unknown>;
+  if (action.type === "FILL_CONTRACT_FORM") {
+    return typeof action.roomCode === "string" && !!action.roomCode.trim()
+      && typeof action.tenantName === "string" && !!action.tenantName.trim()
+      && isNonNegativeNumber(action.rentPrice)
+      && isValidISODate(action.startDate);
+  }
+  return action.type === "FILL_UTILITY_READING"
+    && typeof action.roomCode === "string" && !!action.roomCode.trim()
+    && isNonNegativeNumber(action.newElec)
+    && isNonNegativeNumber(action.newWater);
+}
+
 function getPresentation(role: AIRole, value: AIChatResponse["presentation"]): AIPresentation {
   if (!value || typeof value !== "object") return ROLE_PRESENTATIONS[role];
   const presentation = value as Record<string, unknown>;
@@ -72,7 +97,8 @@ function getPresentation(role: AIRole, value: AIChatResponse["presentation"]): A
 
 export default function AIChatScreen({ profile, onBack, onAction }: AIChatScreenProps) {
   const { theme } = useAppTheme();
-  const initialRole = normalizeRole(profile.role) || "tenant";
+  const authRole: AIRole = profile?.role === 1 ? "landlord" : "tenant";
+  const initialRole = authRole;
   const [role, setRole] = useState<AIRole>(initialRole);
   const [presentation, setPresentation] = useState<AIPresentation>(ROLE_PRESENTATIONS[initialRole]);
   const [inputMessage, setInputMessage] = useState("");
@@ -141,12 +167,10 @@ export default function AIChatScreen({ profile, onBack, onAction }: AIChatScreen
       };
 
       setMessages((prev) => [...prev, aiMsg]);
-      const action = response.action
-        && typeof response.action === "object"
-        && (response.action as { requiresConfirmation?: unknown }).requiresConfirmation === false
+      const action = isAIAction(response.action) && response.action.requiresConfirmation === false
         ? response.action
         : null;
-      if (role === "landlord" && displayRole === "landlord" && response.denied !== true && action) onAction?.(action);
+      if (authRole === "landlord" && response.role === "landlord" && response.denied !== true && action) onAction?.(action);
     } catch (error: any) {
       const errorMsg: Message = {
         id: (Date.now() + 1).toString(),
