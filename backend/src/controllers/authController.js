@@ -7,7 +7,7 @@ const { buildLoginLookup, normalizeEmail, normalizePhone } = require('../service
 const { normalizeCoordinates, reverseGeocode } = require('../services/propertyLocation');
 
 // Chuỗi bí mật mã hóa phiên đăng nhập
-const JWT_SECRET = process.env.JWT_SECRET || '***REMOVED***';
+const JWT_SECRET = process.env.JWT_SECRET;
 const OTP_TTL_MS = 10 * 60 * 1000;
 const OTP_RESEND_MS = 60 * 1000;
 const OTP_MAX_ATTEMPTS = 5;

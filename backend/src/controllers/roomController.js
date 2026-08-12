@@ -18,7 +18,7 @@ exports.getAllRooms = async (req, res) => {
         if (!landlordId && authHeader && authHeader.startsWith('Bearer ')) {
             const token = authHeader.split(' ')[1];
             try {
-                const decoded = require('jsonwebtoken').verify(token, process.env.JWT_SECRET || '***REMOVED***');
+                const decoded = require('jsonwebtoken').verify(token, process.env.JWT_SECRET);
                 if (decoded.role === 1) landlordId = decoded.id;
             } catch(e) {}
         }
