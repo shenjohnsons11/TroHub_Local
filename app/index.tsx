@@ -155,7 +155,7 @@ export default function App() {
     return () => subscription.remove();
   }, [isLoggedIn]);
   const handleAIAction = (action: any) => {
-    if (profile?.role !== 1 || !action?.type) return;
+    if (profile?.role !== 1 || !action || (action.type !== "FILL_CONTRACT_FORM" && action.type !== "FILL_UTILITY_READING")) return;
     handleChangeTab(action.type === "FILL_CONTRACT_FORM" ? "contract" : "invoice_bulk", action.type === "FILL_CONTRACT_FORM" ? { action: "create", aiAction: action } : { aiAction: action });
   };
 

@@ -8,13 +8,19 @@ export type AIPresentation = {
   greeting: string;
 };
 
+export type AIChatAction = {
+  type: "FILL_CONTRACT_FORM" | "FILL_UTILITY_READING";
+  requiresConfirmation?: boolean;
+  [key: string]: unknown;
+};
+
 export type AIChatResponse = {
   success?: boolean;
-  reply?: unknown;
-  action?: unknown;
-  role?: unknown;
-  presentation?: unknown;
-  denied?: unknown;
+  reply: string;
+  action: AIChatAction | null;
+  role: AIRole;
+  presentation: AIPresentation;
+  denied?: boolean;
   timestamp?: string;
 };
 
