@@ -41,9 +41,9 @@ services:
     ports:
       - "3000:3000" # Mở port 3000 cho Backend
     environment:
-      - MONGODB_URI=mongodb://db:27017/trohub
+      - MONGODB_URI=${MONGODB_URI:?MONGODB_URI must be set}
       - MONGODB_DB=trohub
-      - JWT_SECRET=***REMOVED***
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set}
       - PORT=3000
     networks:
       - trohub_network
