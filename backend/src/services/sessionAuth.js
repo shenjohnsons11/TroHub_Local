@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const Account = require('../models/Account');
 
-const JWT_SECRET = process.env.JWT_SECRET || '***REMOVED***';
+const JWT_SECRET = process.env.JWT_SECRET;
 
 function authError(code, message) {
     const error = new Error(message);

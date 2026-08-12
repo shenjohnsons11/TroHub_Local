@@ -11,7 +11,7 @@ const {
 const { notifyLandlord } = require('../services/landlordNotificationService');
 const { getOutstandingDebt } = require('../services/contractCheckoutService');
 
-const JWT_SECRET = process.env.JWT_SECRET || '***REMOVED***';
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // Hàm lấy tenantId từ JWT token trong header Authorization
 const getTenantIdFromToken = (req) => {
