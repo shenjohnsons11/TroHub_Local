@@ -418,7 +418,11 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
                 <AppText style={styles.sectionTitle}>{t("mobile.invoices.title")}</AppText>
                 <AppText style={styles.sectionSub}>{t("mobile.invoices.subtitle")}</AppText>
               </View>
-              <View style={{ flexDirection: 'row', gap: 8 }}>
+              <View style={{ flexDirection: 'row', gap: 6 }}>
+                <Pressable accessibilityRole="button" style={[styles.sectionBtn, { backgroundColor: theme.primarySoft }]} onPress={() => onNavigate && onNavigate('scan_meter')}>
+                  <Ionicons name="camera-outline" size={16} color={theme.primary} />
+                  <AppText style={[styles.sectionBtnText, { color: theme.primary }]}>Quét AI</AppText>
+                </Pressable>
                 <Pressable accessibilityRole="button" style={[styles.sectionBtn, { backgroundColor: theme.primarySoft }]} onPress={() => onNavigate && onNavigate('invoice_bulk')}>
                   <Ionicons name="documents-outline" size={16} color={theme.primary} />
                   <AppText style={[styles.sectionBtnText, { color: theme.primary }]}>{t("mobile.invoices.bulk")}</AppText>

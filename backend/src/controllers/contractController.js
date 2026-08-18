@@ -186,7 +186,13 @@ exports.createContract = async (req, res) => {
             });
         }
 
-        // Xóa các số điện/nước nháp cũ của phòng để ô số điện mới trên màn hình chốt điện nước để trống
+        // Đồng bộ chỉ số điện/nước ban đầu từ hợp đồng vào phòng
+        if (Number.isFinite(Number(meterTerms.initialElectricity))) {
+            room.lastElectricityReading = Number(meterTerms.initialElectricity);
+        }
+        if (Number.isFinite(Number(meterTerms.initialWater))) {
+            room.lastWaterReading = Number(meterTerms.initialWater);
+        }
         room.draftElectricity = undefined;
         room.draftWater = undefined;
         await room.save();
@@ -319,8 +325,18 @@ exports.confirmContract = async (req, res) => {
         contract.status = 1;
         await contract.save();
 
-        // 2. Chuyển trạng thái Phòng thành Đang thuê (1)
-        const room = await Room.findByIdAndUpdate(contract.roomId, { status: 1 });
+        // 2. Chuyển trạng thái Phòng thành Đang thuê (1) và đồng bộ chỉ số điện/nước ban đầu từ Hợp đồng
+        const room = await Room.findById(contract.roomId);
+        if (room) {
+            room.status = 1;
+            if (Number.isFinite(Number(contract.initialElectricity))) {
+                room.lastElectricityReading = Number(contract.initialElectricity);
+            }
+            if (Number.isFinite(Number(contract.initialWater))) {
+                room.lastWaterReading = Number(contract.initialWater);
+            }
+            await room.save();
+        }
 
         await sendNotification({
             userId: contract.tenantId,

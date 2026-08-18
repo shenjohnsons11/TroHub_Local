@@ -21,7 +21,8 @@
     "unitVnd": "đ",
     "unitKwh": "kWh",
     "unitM3": "m³",
-    "language": "Ngôn ngữ"
+    "language": "Ngôn ngữ",
+    "room": "Phòng"
   },
   "auth": {
     "login": "Đăng nhập",
@@ -54,16 +55,20 @@
   },
   "nav": {
     "overview": "Tổng quan",
-    "rooms": "Quản lý Phòng",
+    "rooms": "Phòng",
+    "roomsManage": "Quản lý Phòng",
     "tenants": "Người thuê",
     "contracts": "Hợp đồng",
     "invoices": "Hóa đơn",
     "utilities": "Điện & Nước",
-    "repairs": "Sửa chữa & Sự cố",
+    "repairs": "Sửa chữa",
+    "incident": "Sự cố",
     "settings": "Cài đặt",
     "payments": "Cổng thanh toán",
     "debts": "Công nợ",
-    "notifications": "Thông báo"
+    "notifications": "Thông báo",
+    "home": "Trang chủ",
+    "account": "Tài khoản"
   },
   "dashboard": {
     "eyebrow": "TỔNG QUAN VẬN HÀNH",
@@ -89,6 +94,7 @@
     "tenantList": "Người thuê",
     "createContract": "Tạo hợp đồng",
     "handleRepair": "Xử lý sự cố",
+    "scanMeter": "Quét điện nước AI 📸",
     "aiAssistant": "Trợ lý AI",
     "occupancy": "Tỷ lệ lấp đầy",
     "noData": "Chưa có dữ liệu"
@@ -142,6 +148,12 @@
     "endDate": "Ngày hết hạn",
     "depositAmount": "Tiền cọc đã thu",
     "rentalPrice": "Giá thuê chốt",
+    "roomInfo": "Thông tin phòng",
+    "terms": "Điều khoản hợp đồng",
+    "signContract": "Ký xác nhận hợp đồng",
+    "rentFee": "Tiền thuê hàng tháng",
+    "deposit": "Tiền cọc",
+    "parking": "Phí gửi xe",
     "status": {
       "active": "Đang hiệu lực",
       "expired": "Đã hết hạn",

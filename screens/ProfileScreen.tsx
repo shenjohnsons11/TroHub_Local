@@ -2,12 +2,13 @@ import React, { useState } from "react";
 import { ScrollView, StyleSheet, View, Pressable } from "react-native";
 import { AppText, AppTextInput } from "@/components/ui/typography";
 import Card from "../components/Card";
-import { UserProfile } from "../types/UserProfile";
 import { useAppTheme } from "../contexts/ThemeContext";
 import { useNotification } from "../hooks/useNotification";
-import AppButton from "../components/ui/AppButton";
+import { UserProfile } from "../types/UserProfile";
 import { Ionicons } from "@expo/vector-icons";
+import AppButton from "../components/ui/AppButton";
 import { formatCCCD, formatPhone, unformatDigits } from "../utils/formatters";
+import { useTranslation } from "../contexts/LanguageContext";
 
 type Props = {
   profile: UserProfile;
@@ -18,45 +19,38 @@ type Props = {
 
 export default function ProfileScreen({ profile, onSave, onBack, onLogout }: Props) {
   const { theme } = useAppTheme();
+  const { t } = useTranslation();
   const notification = useNotification();
   const styles = createStyles(theme);
-
   const [fullName, setFullName] = useState(profile.fullName);
   const [phone, setPhone] = useState(formatPhone(profile.phone));
   const [email, setEmail] = useState(profile.email);
   const [cccd, setCccd] = useState(formatCCCD(profile.cccd));
   const [room] = useState(profile.room);
   const [startDate] = useState(profile.startDate);
-
   const [fullNameError, setFullNameError] = useState("");
   const [phoneError, setPhoneError] = useState("");
 
   const handlePhoneChange = (value: string) => {
     setPhone(formatPhone(value));
-
-    if (phoneError) {
-      setPhoneError("");
-    }
+    if (phoneError) setPhoneError("");
   };
 
   const handleSave = () => {
     let isValid = true;
 
     if (!fullName.trim()) {
-      setFullNameError("Vui lòng nhập họ và tên");
+      setFullNameError(t("common.error"));
       isValid = false;
-    } else {
-      setFullNameError("");
     }
 
-    if (!phone.trim()) {
-      setPhoneError("Vui lòng nhập số điện thoại");
+    const rawPhone = unformatDigits(phone);
+    if (!rawPhone) {
+      setPhoneError(t("common.error"));
       isValid = false;
-    } else if (unformatDigits(phone).length !== 10) {
-      setPhoneError("Số điện thoại không hợp lệ (cần 10 số)");
+    } else if (rawPhone.length < 9) {
+      setPhoneError(t("common.error"));
       isValid = false;
-    } else {
-      setPhoneError("");
     }
 
     if (!isValid) return;
@@ -64,12 +58,12 @@ export default function ProfileScreen({ profile, onSave, onBack, onLogout }: Pro
     onSave({
       ...profile,
       fullName: fullName.trim(),
-      phone: unformatDigits(phone),
+      phone: rawPhone,
       email: email.trim(),
       cccd: unformatDigits(cccd),
     });
 
-    notification.success("Thông tin cá nhân đã được cập nhật", { title: "Thành công" });
+    notification.success(t("common.success"));
   };
 
   return (
@@ -81,13 +75,11 @@ export default function ProfileScreen({ profile, onSave, onBack, onLogout }: Pro
     >
       <Pressable style={styles.backButton} onPress={onBack}>
         <Ionicons name="chevron-back" size={18} color={theme.primary} />
-        <AppText style={styles.backText}>Quay lại</AppText>
+        <AppText style={styles.backText}>{t("common.back")}</AppText>
       </Pressable>
 
-      <AppText style={styles.title}>Thông tin cá nhân</AppText>
-      <AppText style={styles.subtitle}>
-        Xem và cập nhật thông tin người thuê phòng.
-      </AppText>
+      <AppText style={styles.title}>{t("auth.account")}</AppText>
+      <AppText style={styles.subtitle}>{t("dashboard.property")}</AppText>
 
       <Card style={[styles.card, styles.avatarCard]}>
         <View style={styles.avatar}>
@@ -96,14 +88,14 @@ export default function ProfileScreen({ profile, onSave, onBack, onLogout }: Pro
           </AppText>
         </View>
 
-        <AppText style={styles.name}>{fullName || "Người thuê"}</AppText>
-        <AppText style={styles.roomText}>Phòng {room}</AppText>
+        <AppText style={styles.name}>{fullName || t("common.tenant")}</AppText>
+        <AppText style={styles.roomText}>{t("common.room")} {room}</AppText>
       </Card>
 
       <Card style={[styles.card, styles.formCard]}>
-        <AppText style={styles.sectionTitle}>Thông tin người thuê</AppText>
+        <AppText style={styles.sectionTitle}>{t("auth.account")}</AppText>
 
-        <AppText style={styles.label}>Họ và tên</AppText>
+        <AppText style={styles.label}>{t("auth.fullName")}</AppText>
         <AppTextInput
           style={[styles.input, fullNameError ? styles.inputError : null]}
           value={fullName}
@@ -111,66 +103,66 @@ export default function ProfileScreen({ profile, onSave, onBack, onLogout }: Pro
             setFullName(value);
             if (fullNameError) setFullNameError("");
           }}
-          placeholder="Nhập họ và tên"
+          placeholder={t("auth.fullName")}
           placeholderTextColor={theme.muted}
         />
         {fullNameError ? (
           <AppText style={styles.errorText}>{fullNameError}</AppText>
         ) : null}
 
-        <AppText style={styles.groupTitle}>Liên hệ</AppText>
-        <AppText style={styles.label}>Số điện thoại</AppText>
+        <AppText style={styles.groupTitle}>{t("auth.phone")}</AppText>
+        <AppText style={styles.label}>{t("auth.phone")}</AppText>
         <AppTextInput
           style={[styles.input, phoneError ? styles.inputError : null]}
           value={phone}
           onChangeText={handlePhoneChange}
           keyboardType="phone-pad"
           maxLength={15}
-          placeholder="Nhập số điện thoại"
+          placeholder={t("auth.phone")}
           placeholderTextColor={theme.muted}
         />
         {phoneError ? <AppText style={styles.errorText}>{phoneError}</AppText> : null}
 
-        <AppText style={styles.label}>Email</AppText>
+        <AppText style={styles.label}>{t("auth.email")}</AppText>
         <AppTextInput
           style={styles.input}
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
           autoCapitalize="none"
-          placeholder="Nhập email"
+          placeholder={t("auth.email")}
           placeholderTextColor={theme.muted}
         />
 
-        <AppText style={styles.label}>CMND/CCCD</AppText>
+        <AppText style={styles.label}>CCCD / ID</AppText>
         <AppTextInput
           style={styles.input}
           value={cccd}
           onChangeText={(value) => setCccd(formatCCCD(value))}
           keyboardType="number-pad"
           maxLength={14}
-          placeholder="Nhập CMND/CCCD"
+          placeholder="001234567890"
           placeholderTextColor={theme.muted}
         />
 
-        <AppText style={styles.groupTitle}>Thông tin thuê phòng</AppText>
-        <AppText style={styles.label}>Phòng</AppText>
+        <AppText style={styles.groupTitle}>{t("contracts.title")}</AppText>
+        <AppText style={styles.label}>{t("common.room")}</AppText>
         <AppTextInput style={styles.inputDisabled} value={room} editable={false} />
 
-        <AppText style={styles.label}>Ngày bắt đầu thuê</AppText>
+        <AppText style={styles.label}>{t("contracts.startDate")}</AppText>
         <AppTextInput
           style={styles.inputDisabled}
           value={startDate}
           editable={false}
         />
 
-        <AppButton icon="save-outline" onPress={handleSave}>Lưu thay đổi</AppButton>
+        <AppButton icon="save-outline" onPress={handleSave}>{t("common.save")}</AppButton>
         <AppButton 
           icon="log-out-outline" 
           onPress={onLogout}
           style={{ marginTop: 12, backgroundColor: theme.danger }}
         >
-          Đăng xuất
+          {t("auth.logout")}
         </AppButton>
       </Card>
     </ScrollView>
@@ -180,141 +172,117 @@ export default function ProfileScreen({ profile, onSave, onBack, onLogout }: Pro
 const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.background,
   },
   content: {
     paddingHorizontal: 22,
-    paddingTop: 28,
-    paddingBottom: 30,
+    paddingTop: 34,
+    paddingBottom: 40,
   },
   backButton: {
-    alignSelf: "flex-start",
-    marginBottom: 14,
-    minHeight: 44,
     flexDirection: "row",
     alignItems: "center",
+    gap: 4,
+    marginBottom: 12,
   },
   backText: {
     color: theme.primary,
     fontSize: 14,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   title: {
     fontSize: 24,
     lineHeight: 31,
     fontWeight: "900",
     color: theme.text,
+    marginBottom: 4,
   },
   subtitle: {
-    color: theme.muted,
     fontSize: 13,
-    lineHeight: 20,
-    marginTop: 6,
-    marginBottom: 20,
+    color: theme.muted,
+    marginBottom: 18,
   },
   card: {
-    backgroundColor: theme.surface,
-    borderColor: theme.border,
-    shadowColor: theme.text,
+    marginBottom: 16,
   },
   avatarCard: {
     alignItems: "center",
-    marginBottom: 16,
+    paddingVertical: 24,
   },
   avatar: {
-    width: 86,
-    height: 86,
-    borderRadius: 43,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: theme.primary,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 14,
+    marginBottom: 12,
   },
   avatarText: {
     color: theme.background,
-    fontSize: 34,
+    fontSize: 28,
     fontWeight: "900",
   },
   name: {
-    fontSize: 20,
-    fontWeight: "900",
+    fontSize: 18,
+    fontWeight: "800",
     color: theme.text,
-    textAlign: "center",
+    marginBottom: 4,
   },
   roomText: {
-    color: theme.primary,
     fontSize: 13,
-    fontWeight: "900",
-    marginTop: 6,
+    color: theme.primary,
+    fontWeight: "700",
   },
   formCard: {
-    marginBottom: 18,
+    padding: 18,
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: "900",
+    fontWeight: "800",
     color: theme.text,
-    marginBottom: 12,
+    marginBottom: 14,
   },
   groupTitle: {
-    color: theme.text,
     fontSize: 14,
-    fontWeight: "900",
-    marginTop: 20,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: theme.border,
+    fontWeight: "800",
+    color: theme.text,
+    marginTop: 18,
+    marginBottom: 10,
   },
   label: {
-    fontSize: 13,
-    color: theme.muted,
-    marginBottom: 8,
-    marginTop: 10,
+    fontSize: 12,
     fontWeight: "700",
+    color: theme.muted,
+    marginBottom: 6,
+    marginTop: 8,
   },
   input: {
-    width: "100%",
-    height: 48,
-    backgroundColor: theme.surfaceElevated,
-    borderRadius: 10,
-    paddingHorizontal: 14,
+    backgroundColor: theme.surface,
     borderWidth: 1,
     borderColor: theme.border,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     fontSize: 14,
     color: theme.text,
   },
   inputDisabled: {
-    width: "100%",
-    height: 48,
-    backgroundColor: theme.primarySoft,
-    borderRadius: 10,
-    paddingHorizontal: 14,
+    backgroundColor: theme.surface,
     borderWidth: 1,
     borderColor: theme.border,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     fontSize: 14,
     color: theme.muted,
   },
   inputError: {
     borderColor: theme.danger,
-    backgroundColor: theme.warningSoft,
   },
   errorText: {
     color: theme.danger,
     fontSize: 12,
+    marginTop: 4,
     fontWeight: "600",
-    marginTop: 6,
-  },
-  saveButton: {
-    height: 52,
-    backgroundColor: theme.primary,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 22,
-  },
-  saveText: {
-    color: theme.background,
-    fontSize: 15,
-    fontWeight: "900",
   },
 });
