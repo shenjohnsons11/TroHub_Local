@@ -13,6 +13,7 @@ import { contractService } from "../services/contractService";
 import { formatPhone } from "../utils/formatters";
 import { getExpoPushToken, isPushEnabled, notificationPlatform, openNotificationSettings, requestNotificationPermission, setPushEnabled } from "../services/pushNotificationService";
 import { notificationService } from "../services/notificationService";
+import { useTranslation } from "../contexts/LanguageContext";
 
 type Props = {
   profile: UserProfile;
@@ -21,33 +22,6 @@ type Props = {
   onPushTokenChange?: (token: string | null) => void;
 };
 
-const menuItems = [
-  {
-    key: "profile",
-    icon: "person-outline",
-    title: "Thông tin cá nhân",
-    desc: "Xem và cập nhật thông tin người thuê",
-  },
-  {
-    key: "contract",
-    icon: "document-text-outline",
-    title: "Hợp đồng",
-    desc: "Xem hợp đồng thuê phòng hiện tại",
-  },
-  {
-    key: "payment",
-    icon: "receipt-outline",
-    title: "Lịch sử thanh toán",
-    desc: "Xem các hóa đơn đã thanh toán",
-  },
-  {
-    key: "password",
-    icon: "lock-closed-outline",
-    title: "Đổi mật khẩu",
-    desc: "Cập nhật mật khẩu đăng nhập",
-  },
-];
-
 export default function AccountScreen({
   profile,
   onLogout,
@@ -55,6 +29,7 @@ export default function AccountScreen({
   onPushTokenChange,
 }: Props) {
   const { theme } = useAppTheme();
+  const { t } = useTranslation();
   const styles = createStyles(theme);
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
@@ -62,6 +37,33 @@ export default function AccountScreen({
   const [pushLoading, setPushLoading] = useState(false);
   const [pushError, setPushError] = useState("");
   const [stats, setStats] = useState({ invoices: 0, repairs: 0, months: 0, hasContract: false });
+
+  const menuItems = [
+    {
+      key: "profile",
+      icon: "person-outline",
+      title: t("auth.account"),
+      desc: t("auth.account"),
+    },
+    {
+      key: "contract",
+      icon: "document-text-outline",
+      title: t("nav.contracts"),
+      desc: t("nav.contracts"),
+    },
+    {
+      key: "payment",
+      icon: "receipt-outline",
+      title: t("payments.title"),
+      desc: t("payments.title"),
+    },
+    {
+      key: "password",
+      icon: "lock-closed-outline",
+      title: t("auth.resetPassword"),
+      desc: t("auth.resetPassword"),
+    },
+  ];
 
   useEffect(() => {
     async function loadStats() {
@@ -99,11 +101,11 @@ export default function AccountScreen({
       if (next) {
         const status = await requestNotificationPermission();
         if (status !== "granted") {
-          setPushError("Bạn chưa cho phép thông báo trên iPhone.");
+          setPushError(t("common.error"));
           return;
         }
         const token = await getExpoPushToken();
-        if (!token) throw new Error("Chưa thể đăng ký thiết bị này nhận thông báo.");
+        if (!token) throw new Error(t("common.error"));
         await notificationService.registerDevice(token, notificationPlatform());
         await setPushEnabled(profile.id, true);
         setPushPreference(true);
@@ -117,7 +119,7 @@ export default function AccountScreen({
       }
     } catch (error) {
       setPushPreference(previous);
-      setPushError(error instanceof Error ? error.message : "Không thể cập nhật thông báo.");
+      setPushError(error instanceof Error ? error.message : t("common.error"));
     } finally {
       setPushLoading(false);
     }
@@ -152,8 +154,8 @@ export default function AccountScreen({
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.titleRow}>
-          <AppText style={[styles.title, { color: theme.text }]}>Tài khoản</AppText>
-          <Pressable accessibilityRole="button" accessibilityLabel="Mở cài đặt" onPress={() => void openSettings()} style={[styles.settingsButton, { backgroundColor: theme.primarySoft }]}>
+          <AppText style={[styles.title, { color: theme.text }]}>{t("auth.account")}</AppText>
+          <Pressable accessibilityRole="button" accessibilityLabel={t("nav.settings")} onPress={() => void openSettings()} style={[styles.settingsButton, { backgroundColor: theme.primarySoft }]}>
             <Ionicons name="settings-outline" size={22} color={theme.primary} />
           </Pressable>
         </View>
@@ -170,7 +172,7 @@ export default function AccountScreen({
 
           <View style={styles.roomBadge}>
             <AppText style={styles.roomText}>
-              {stats.hasContract ? `Phòng ${profile.room}` : "Chưa có phòng"}
+              {stats.hasContract ? `${t("common.room")} ${profile.room}` : t("common.noData")}
             </AppText>
           </View>
         </View>
@@ -179,22 +181,22 @@ export default function AccountScreen({
           <View style={styles.statRow}>
             <Card style={[styles.card, styles.statCard]}>
               <AppText style={styles.statNumber}>{stats.invoices}</AppText>
-              <AppText style={styles.statLabel}>Hóa đơn</AppText>
+              <AppText style={styles.statLabel}>{t("nav.invoices")}</AppText>
             </Card>
 
             <Card style={[styles.card, styles.statCard]}>
               <AppText style={styles.statNumber}>{stats.repairs}</AppText>
-              <AppText style={styles.statLabel}>Sửa chữa</AppText>
+              <AppText style={styles.statLabel}>{t("nav.repairs")}</AppText>
             </Card>
 
             <Card style={[styles.card, styles.statCard]}>
               <AppText style={styles.statNumber}>{stats.months}</AppText>
-              <AppText style={styles.statLabel}>Tháng thuê</AppText>
+              <AppText style={styles.statLabel}>{t("common.month")}</AppText>
             </Card>
           </View>
         )}
 
-        <AppText style={[styles.sectionTitle, { color: theme.text }]}>Cài đặt tài khoản</AppText>
+        <AppText style={[styles.sectionTitle, { color: theme.text }]}>{t("nav.settings")}</AppText>
         <ThemeToggle />
 
         {menuItems.map((item) => (
@@ -220,20 +222,20 @@ export default function AccountScreen({
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setSettingsVisible(false)} />
           <View style={styles.drawer}>
             <View style={styles.drawerHandle} />
-            <AppText style={styles.drawerTitle}>Cài đặt</AppText>
+            <AppText style={styles.drawerTitle}>{t("nav.settings")}</AppText>
             <Pressable style={styles.drawerRow} onPress={() => { setSettingsVisible(false); onNavigate?.("profile"); }}>
-              <Ionicons name="person-outline" size={21} color="#CFEDE1" /><AppText style={styles.drawerText}>Thông tin cá nhân</AppText><Ionicons name="chevron-forward" size={19} color="#9BC9B7" />
+              <Ionicons name="person-outline" size={21} color="#CFEDE1" /><AppText style={styles.drawerText}>{t("auth.account")}</AppText><Ionicons name="chevron-forward" size={19} color="#9BC9B7" />
             </Pressable>
             <Pressable style={styles.drawerRow} onPress={() => { setSettingsVisible(false); setPasswordVisible(true); }}>
-              <Ionicons name="lock-closed-outline" size={21} color="#CFEDE1" /><AppText style={styles.drawerText}>Đổi mật khẩu</AppText><Ionicons name="chevron-forward" size={19} color="#9BC9B7" />
+              <Ionicons name="lock-closed-outline" size={21} color="#CFEDE1" /><AppText style={styles.drawerText}>{t("auth.resetPassword")}</AppText><Ionicons name="chevron-forward" size={19} color="#9BC9B7" />
             </Pressable>
             <View style={styles.drawerRow}>
-              <Ionicons name="notifications-outline" size={21} color="#CFEDE1" /><AppText style={styles.drawerText}>Bật thông báo</AppText>
+              <Ionicons name="notifications-outline" size={21} color="#CFEDE1" /><AppText style={styles.drawerText}>{t("notifications.title")}</AppText>
               {pushLoading ? <ActivityIndicator color="#CFEDE1" /> : <Switch value={pushEnabled} onValueChange={(next) => void handlePushChange(next)} trackColor={{ false: "#3A685A", true: "#22C55E" }} thumbColor="#F8FFFB" />}
             </View>
-            {!!pushError && <View style={styles.pushError}><AppText style={styles.pushErrorText}>{pushError}</AppText><Pressable onPress={() => void openNotificationSettings()}><AppText style={styles.openSettingsText}>Mở Cài đặt iPhone</AppText></Pressable></View>}
+            {!!pushError && <View style={styles.pushError}><AppText style={styles.pushErrorText}>{pushError}</AppText><Pressable onPress={() => void openNotificationSettings()}><AppText style={styles.openSettingsText}>{t("nav.settings")}</AppText></Pressable></View>}
             <Pressable style={styles.logoutAction} onPress={() => { setSettingsVisible(false); onLogout(); }}>
-              <Ionicons name="log-out-outline" size={20} color="#FFE2E5" /><AppText style={styles.logoutActionText}>Đăng xuất</AppText>
+              <Ionicons name="log-out-outline" size={20} color="#FFE2E5" /><AppText style={styles.logoutActionText}>{t("auth.logout")}</AppText>
             </Pressable>
           </View>
         </View>
@@ -250,123 +252,104 @@ export default function AccountScreen({
 const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.background,
   },
   content: {
-    paddingHorizontal: 22,
-    paddingTop: 34,
-    paddingBottom: 30,
-  },
-  title: {
-    fontSize: 24,
-    lineHeight: 31,
-    fontWeight: "900",
-    color: theme.text,
+    paddingHorizontal: 20,
+    paddingTop: 40,
+    paddingBottom: 40,
   },
   titleRow: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 18,
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "900",
   },
   settingsButton: {
     width: 44,
     height: 44,
-    borderRadius: 14,
+    borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
-  },
-  card: {
-    backgroundColor: theme.surface,
-    borderColor: theme.border,
-    shadowColor: theme.text,
   },
   profileCard: {
     alignItems: "center",
-    marginBottom: 16,
-    padding: 24,
-    borderRadius: 24,
-    backgroundColor: theme.surfaceElevated,
-    shadowColor: theme.text,
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 10 },
-    shadowRadius: 22,
-    elevation: 4,
+    paddingVertical: 24,
+    marginBottom: 20,
   },
   avatar: {
-    width: 86,
-    height: 86,
-    borderRadius: 43,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: theme.primary,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 14,
+    marginBottom: 12,
   },
   avatarText: {
-    color: theme.background,
-    fontSize: 34,
+    color: "#fff",
+    fontSize: 32,
     fontWeight: "900",
   },
   name: {
-    fontSize: 22,
-    fontWeight: "900",
+    fontSize: 20,
+    fontWeight: "800",
     color: theme.text,
-    textAlign: "center",
+    marginBottom: 4,
   },
   phone: {
+    fontSize: 14,
     color: theme.muted,
-    fontSize: 13,
-    marginTop: 6,
+    marginBottom: 10,
   },
   roomBadge: {
     backgroundColor: theme.primarySoft,
     paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 999,
-    marginTop: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   roomText: {
     color: theme.primary,
-    fontSize: 12,
-    fontWeight: "900",
+    fontSize: 13,
+    fontWeight: "700",
   },
   statRow: {
     flexDirection: "row",
-    gap: 10,
-    marginBottom: 22,
+    gap: 12,
+    marginBottom: 24,
+  },
+  card: {
+    borderRadius: 16,
   },
   statCard: {
     flex: 1,
     alignItems: "center",
     paddingVertical: 14,
-    paddingHorizontal: 6,
   },
   statNumber: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "900",
     color: theme.primary,
   },
   statLabel: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.muted,
-    fontWeight: "700",
-    marginTop: 5,
-    textAlign: "center",
+    marginTop: 2,
+    fontWeight: "600",
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: "900",
-    color: theme.text,
+    fontSize: 18,
+    fontWeight: "800",
     marginBottom: 12,
   },
   menuCard: {
-    marginBottom: 12,
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-  },
-  menuInfo: {
-    flex: 1,
+    padding: 16,
+    marginBottom: 10,
   },
   menuIcon: {
     width: 40,
@@ -375,33 +358,87 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSh
     backgroundColor: theme.primarySoft,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
+    marginRight: 14,
+  },
+  menuInfo: {
+    flex: 1,
   },
   menuTitle: {
-    fontSize: 14,
-    fontWeight: "900",
+    fontSize: 15,
+    fontWeight: "700",
     color: theme.text,
+    marginBottom: 2,
   },
   menuDesc: {
-    color: theme.muted,
     fontSize: 12,
-    marginTop: 5,
-    lineHeight: 18,
-  },
-  arrow: {
-    fontSize: 28,
     color: theme.muted,
-    marginLeft: 10,
   },
-  drawerBackdrop: { flex: 1, backgroundColor: "rgba(0, 0, 0, 0.45)", justifyContent: "flex-end" },
-  drawer: { backgroundColor: "#063D32", borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 22, paddingBottom: 34 },
-  drawerHandle: { width: 42, height: 4, borderRadius: 2, backgroundColor: "#74AB98", alignSelf: "center", marginBottom: 18 },
-  drawerTitle: { color: "#FFFFFF", fontSize: 21, fontWeight: "900", marginBottom: 12 },
-  drawerRow: { minHeight: 58, flexDirection: "row", alignItems: "center", gap: 13, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "#2D6858" },
-  drawerText: { color: "#F5FFFA", fontSize: 15, fontWeight: "700", flex: 1 },
-  pushError: { marginTop: 12, padding: 12, borderRadius: 12, backgroundColor: "rgba(239, 68, 68, 0.16)" },
-  pushErrorText: { color: "#FFE2E5", fontSize: 13, lineHeight: 18 },
-  openSettingsText: { color: "#8DE0BD", fontSize: 13, fontWeight: "800", marginTop: 8 },
-  logoutAction: { minHeight: 52, marginTop: 22, borderRadius: 14, backgroundColor: "#B73D4B", alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 9 },
-  logoutActionText: { color: "#FFE2E5", fontSize: 15, fontWeight: "900" },
+  drawerBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  drawer: {
+    backgroundColor: "#1A3026",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 40,
+  },
+  drawerHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: "#3A685A",
+    borderRadius: 2,
+    alignSelf: "center",
+    marginBottom: 16,
+  },
+  drawerTitle: {
+    fontSize: 20,
+    fontWeight: "900",
+    color: "#fff",
+    marginBottom: 20,
+  },
+  drawerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#3A685A",
+  },
+  drawerText: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#CFEDE1",
+    marginLeft: 14,
+  },
+  pushError: {
+    backgroundColor: "rgba(239, 68, 68, 0.2)",
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 10,
+  },
+  pushErrorText: {
+    color: "#FCA5A5",
+    fontSize: 13,
+    marginBottom: 4,
+  },
+  openSettingsText: {
+    color: "#93C5FD",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  logoutAction: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 16,
+    marginTop: 10,
+  },
+  logoutActionText: {
+    color: "#FFE2E5",
+    fontSize: 16,
+    fontWeight: "800",
+    marginLeft: 14,
+  },
 });

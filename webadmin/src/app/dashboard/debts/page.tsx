@@ -13,6 +13,7 @@ import { PageHeader } from "@/components/calm-ops/page-header";
 import { useNotification } from "@/hooks/use-notification";
 import { fetchAPI } from "@/lib/api";
 import { formatCurrency } from "@/lib/formatters";
+import { useLanguage } from "@/components/language-provider";
 
 interface Debt {
   contractId: string;
@@ -24,6 +25,7 @@ interface Debt {
 }
 
 export default function DebtsPage() {
+  const { t } = useLanguage();
   const [debts, setDebts] = useState<Debt[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -36,15 +38,15 @@ export default function DebtsPage() {
       if (data.success) {
         setDebts(data.data.map((item: Debt & { tenant?: string }) => ({
           ...item,
-          nguoiThue: item.nguoiThue || item.tenant || "Không xác định",
+          nguoiThue: item.nguoiThue || item.tenant || t("common.unspecified"),
         })));
       }
     } catch (error: unknown) {
-      notification.error(error instanceof Error ? error.message : "Không thể tải danh sách công nợ.");
+      notification.error(error instanceof Error ? error.message : t("common.error"));
     } finally {
       setLoading(false);
     }
-  }, [notification]);
+  }, [notification, t]);
 
   useEffect(() => {
     void loadDebts();
@@ -53,10 +55,10 @@ export default function DebtsPage() {
   const handleRemind = async (contractId: string) => {
     try {
       const data = await fetchAPI(`/invoices/debts/${contractId}/remind`, { method: "POST" });
-      if (data.success) notification.success("Đã gửi thông báo nhắc nợ thành công.");
-      else notification.error(data.message || "Không thể gửi thông báo nhắc nợ.");
+      if (data.success) notification.success(t("debts.remindedSuccess"));
+      else notification.error(data.message || t("common.error"));
     } catch (error: unknown) {
-      notification.error(error instanceof Error ? error.message : "Lỗi kết nối khi gửi nhắc nợ.");
+      notification.error(error instanceof Error ? error.message : t("common.error"));
     }
   };
 
@@ -69,50 +71,49 @@ export default function DebtsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Dòng tiền"
-        title="Quản lý công nợ"
-        description="Theo dõi công nợ của Người thuê và gửi nhắc thanh toán."
-        action={<Button onClick={loadDebts} variant="outline" aria-label="Làm mới danh sách công nợ"><RefreshCw aria-hidden="true" /> Làm mới</Button>}
+        eyebrow={t("nav.overview")}
+        title={t("debts.title")}
+        description={t("debts.subtitle")}
+        action={<Button onClick={loadDebts} variant="outline" aria-label={t("common.loading")}><RefreshCw aria-hidden="true" /> {t("common.loading")}</Button>}
       />
       <div className="grid gap-4 sm:grid-cols-2">
         <Card className="bg-primary text-primary-foreground dark:ring-primary/20">
-          <CardHeader><CardTitle className="flex items-center gap-2 text-sm opacity-80"><AlertCircle aria-hidden="true" className="size-4" /> Tổng công nợ hiện tại</CardTitle></CardHeader>
-          <CardContent><p className="text-3xl font-black tracking-[-.04em]">{formatCurrency(totalSystemDebt)}</p><p className="mt-2 text-xs font-semibold opacity-70">Từ {debts.length} phòng đang nợ</p></CardContent>
+          <CardHeader><CardTitle className="flex items-center gap-2 text-sm opacity-80"><AlertCircle aria-hidden="true" className="size-4" /> {t("debts.totalDebt")}</CardTitle></CardHeader>
+          <CardContent><p className="text-3xl font-black tracking-[-.04em]">{formatCurrency(totalSystemDebt)}</p><p className="mt-2 text-xs font-semibold opacity-70">{debts.length} {t("nav.rooms")}</p></CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2 text-sm text-muted-foreground"><WalletCards aria-hidden="true" className="size-4 text-primary" /> Hóa đơn chưa thanh toán</CardTitle></CardHeader>
-          <CardContent><p className="text-3xl font-black tracking-[-.04em]">{debts.reduce((sum, debt) => sum + debt.unpaidInvoiceCount, 0)}</p><p className="mt-2 text-xs font-semibold text-muted-foreground">Trên toàn hệ thống</p></CardContent>
+          <CardHeader><CardTitle className="flex items-center gap-2 text-sm text-muted-foreground"><WalletCards aria-hidden="true" className="size-4 text-primary" /> {t("debts.unpaidInvoices")}</CardTitle></CardHeader>
+          <CardContent><p className="text-3xl font-black tracking-[-.04em]">{debts.reduce((sum, debt) => sum + debt.unpaidInvoiceCount, 0)}</p><p className="mt-2 text-xs font-semibold text-muted-foreground">{t("dashboard.property")}</p></CardContent>
         </Card>
       </div>
       <section className="calm-surface overflow-hidden">
         <div className="flex flex-col gap-3 bg-muted/35 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-lg font-black">Danh sách nợ theo phòng</h2>
+          <h2 className="text-lg font-black">{t("debts.title")}</h2>
           <div className="relative w-full sm:w-72">
             <Search aria-hidden="true" className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input aria-label="Tìm công nợ" placeholder="Tìm theo phòng hoặc Người thuê" value={search} onChange={(event) => setSearch(event.target.value)} className="h-11 pl-9" />
+            <Input aria-label={t("common.search")} placeholder={t("common.search")} value={search} onChange={(event) => setSearch(event.target.value)} className="h-11 pl-9" />
           </div>
         </div>
         <Table>
-          <TableHeader><TableRow><TableHead>Phòng</TableHead><TableHead>Người thuê</TableHead><TableHead className="text-center">Số hóa đơn nợ</TableHead><TableHead className="text-right">Tổng nợ</TableHead><TableHead className="text-right">Thao tác</TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead>{t("common.room")}</TableHead><TableHead>{t("common.tenant")}</TableHead><TableHead className="text-center">{t("debts.unpaidInvoices")}</TableHead><TableHead className="text-right">{t("debts.totalDebt")}</TableHead><TableHead className="text-right">{t("common.action")}</TableHead></TableRow></TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={5} className="py-8"><AppLoading message="Đang tải danh sách công nợ" /></TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="py-8"><AppLoading message={t("common.loading")} /></TableCell></TableRow>
             ) : filteredDebts.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="h-64 text-center">
                   <Image src="/trohub-empty-states.png" alt="" width={170} height={100} className="mx-auto h-24 w-40 rounded-[20px] object-cover object-[center_68%]" />
-                  <p className="mt-3 font-extrabold">Không có công nợ cần thu</p>
-                  <p className="mt-1 text-sm text-muted-foreground">Các khoản nợ mới sẽ xuất hiện tại đây.</p>
+                  <p className="mt-3 font-extrabold">{t("common.noData")}</p>
                 </TableCell>
               </TableRow>
             ) : filteredDebts.map((debt) => (
               <TableRow key={debt.contractId}>
                 <TableCell className="font-extrabold">{debt.room}</TableCell>
                 <TableCell>{debt.nguoiThue}</TableCell>
-                <TableCell className="text-center"><Badge variant="destructive">{debt.unpaidInvoiceCount} hóa đơn</Badge></TableCell>
+                <TableCell className="text-center"><Badge variant="destructive">{debt.unpaidInvoiceCount}</Badge></TableCell>
                 <TableCell className="text-right text-base font-black text-destructive">{formatCurrency(debt.totalDebt)}</TableCell>
                 <TableCell className="text-right">
-                  <Button onClick={() => handleRemind(debt.contractId)} variant="ghost" size="icon" aria-label={`Gửi nhắc nợ phòng ${debt.room}`}>
+                  <Button onClick={() => handleRemind(debt.contractId)} variant="ghost" size="icon" aria-label={t("invoices.sendReminder")}>
                     <Bell aria-hidden="true" />
                   </Button>
                 </TableCell>

@@ -16,9 +16,11 @@ import { getNotificationMessage } from "@/lib/notification-messages";
 import { formatCCCD, formatPhone, unformatDigits } from "@/lib/formatters";
 import { issueTemporaryPassword } from "@/lib/password-reset";
 import { TemporaryPasswordDialog } from "@/components/temporary-password-dialog";
+import { useLanguage } from "@/components/language-provider";
 
 export default function TenantsPage() {
   const notification = useNotification();
+  const { t } = useLanguage();
   const [tenants, setTenants] = useState<any[]>([]);
   const [rooms, setRooms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,7 +48,7 @@ export default function TenantsPage() {
       if (tenantsData.success) setTenants(tenantsData.data);
       if (roomsData.success) setRooms(roomsData.data.filter((room: any) => room.status === 0));
     } catch (error) {
-      notification.error(getNotificationMessage(error, "Không thể tải danh sách người thuê."));
+      notification.error(getNotificationMessage(error, t("common.error")));
     } finally {
       setLoading(false);
     }
@@ -87,10 +89,10 @@ export default function TenantsPage() {
         await fetchAPI("/tenants", { method: "POST", body: JSON.stringify(payload) });
         setIsAddOpen(false);
       }
-      notification.success(editingTenantId ? "Đã cập nhật người thuê." : existingTenantId ? "Đã liên kết Người thuê vào danh bạ." : "Đã thêm mới Người thuê vào danh bạ.");
+      notification.success(editingTenantId ? t("tenants.updatedSuccess") : t("tenants.createdSuccess"));
       await loadData();
     } catch (error) {
-      notification.error(getNotificationMessage(error, "Không thể lưu người thuê."));
+      notification.error(getNotificationMessage(error, t("common.error")));
     } finally {
       setSavingTenant(false);
     }
@@ -124,27 +126,27 @@ export default function TenantsPage() {
 
   const handleDelete = async (id: string) => {
     const confirmed = await notification.confirm({
-      title: "Xóa người thuê",
-      message: "Bạn có chắc chắn muốn xóa người thuê này?",
-      confirmText: "Xóa",
+      title: t("common.delete"),
+      message: t("tenants.deleteConfirm"),
+      confirmText: t("common.delete"),
       destructive: true,
     });
     if (!confirmed) return;
     try {
       await fetchAPI(`/tenants/${id}`, { method: "DELETE" });
-      notification.success("Đã xóa người thuê.");
+      notification.success(t("tenants.deletedSuccess"));
       await loadData();
     } catch (error) {
-      notification.error(getNotificationMessage(error, "Không thể xóa người thuê."));
+      notification.error(getNotificationMessage(error, t("common.error")));
     }
   };
 
   const handleTemporaryPassword = async (tenant: any) => {
     try {
       const response = await issueTemporaryPassword(tenant._id || tenant.id);
-      setTemporaryPassword({ value: response.temporaryPassword, name: tenant.fullName || tenant.name || "Người thuê" });
+      setTemporaryPassword({ value: response.temporaryPassword, name: tenant.fullName || tenant.name || t("common.tenant") });
     } catch (error) {
-      notification.error(getNotificationMessage(error, "Không thể tạo mật khẩu tạm."));
+      notification.error(getNotificationMessage(error, t("common.error")));
     }
   };
 
@@ -160,10 +162,10 @@ export default function TenantsPage() {
     if (type === "zalo") {
       window.open(`https://zalo.me/${cleanPhone}`, "_blank");
     } else {
-      const message = encodeURIComponent(`Chào ${inviteTenantName}, mời bạn tham gia ứng dụng TroHub để theo dõi hóa đơn và hợp đồng.`);
+      const message = encodeURIComponent(`Hello ${inviteTenantName}, please join TroHub to manage your rental lease: https://trohub.app/download`);
       window.location.href = `sms:${cleanPhone}?body=${message}`;
     }
-    notification.success(`Đã mở ứng dụng ${type === "zalo" ? "Zalo" : "SMS"} để gửi lời mời.`);
+    notification.success(t("common.success"));
     setInviteModalOpen(false);
   };
 
@@ -173,54 +175,54 @@ export default function TenantsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Vận hành" title="Người thuê" description="Quản lý hồ sơ, phòng đang thuê và trạng thái liên kết ứng dụng." />
+      <PageHeader eyebrow={t("nav.overview")} title={t("tenants.title")} description={t("tenants.subtitle")} />
       <section className="calm-surface flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input aria-label="Tìm người thuê" placeholder="Tìm theo tên, SĐT..." className="pl-9" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} />
+          <Input aria-label={t("common.search")} placeholder={t("tenants.phone") + ", " + t("tenants.fullName") + "..."} className="pl-9" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} />
         </div>
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
           <DialogTrigger onClick={openAddModal} className="inline-flex h-10 items-center justify-center gap-2 rounded-[16px] bg-primary px-4 text-sm font-bold text-primary-foreground shadow-[var(--calm-shadow)] transition hover:opacity-90">
-            <Plus className="size-4" />Thêm người thuê
+            <Plus className="size-4" />{t("tenants.addTenant")}
           </DialogTrigger>
           <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-[600px]">
-            <DialogHeader><DialogTitle>Thêm người thuê</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{t("tenants.addTenant")}</DialogTitle></DialogHeader>
             <form onSubmit={handleSaveTenant} className="mt-2 space-y-5">
-              <p className="text-sm leading-6 text-muted-foreground">Nhập SĐT, CCCD hoặc Email để tra cứu hoặc tạo mới hồ sơ Người thuê vào danh bạ của bạn.</p>
+              <p className="text-sm leading-6 text-muted-foreground">{t("tenants.lookupHint")}</p>
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2"><Label htmlFor="phone">Số điện thoại</Label><Input id="phone" autoFocus value={phone} onChange={(event) => { const value = formatPhone(event.target.value); setPhone(value); setLookupIdentifier(value); }} placeholder="0901.234.567" required readOnly={Boolean(existingTenantId)} /></div>
-                <div className="space-y-2"><Label htmlFor="idCard">CCCD</Label><Input id="idCard" value={idCard} onChange={(event) => { const value = formatCCCD(event.target.value); setIdCard(value); setLookupIdentifier(value); }} placeholder="0790.1234.5678" required readOnly={Boolean(existingTenantId)} /></div>
-                <div className="space-y-2"><Label htmlFor="email">Email đăng nhập</Label><Input id="email" type="email" value={email} onChange={(event) => { setEmail(event.target.value); setLookupIdentifier(event.target.value); }} placeholder="nguyenvana@gmail.com" required readOnly={Boolean(existingTenantId)} /></div>
-                <div className="space-y-2"><Label htmlFor="fullName">Họ và tên</Label><Input id="fullName" value={fullName} onChange={(event) => setFullName(event.target.value)} required placeholder="Nguyễn Văn A" readOnly={Boolean(existingTenantId)} /></div>
+                <div className="space-y-2"><Label htmlFor="phone">{t("tenants.phone")}</Label><Input id="phone" autoFocus value={phone} onChange={(event) => { const value = formatPhone(event.target.value); setPhone(value); setLookupIdentifier(value); }} placeholder="0901.234.567" required readOnly={Boolean(existingTenantId)} /></div>
+                <div className="space-y-2"><Label htmlFor="idCard">{t("tenants.idCard")}</Label><Input id="idCard" value={idCard} onChange={(event) => { const value = formatCCCD(event.target.value); setIdCard(value); setLookupIdentifier(value); }} placeholder="0790.1234.5678" required readOnly={Boolean(existingTenantId)} /></div>
+                <div className="space-y-2"><Label htmlFor="email">{t("tenants.email")}</Label><Input id="email" type="email" value={email} onChange={(event) => { setEmail(event.target.value); setLookupIdentifier(event.target.value); }} placeholder="tenant@gmail.com" required readOnly={Boolean(existingTenantId)} /></div>
+                <div className="space-y-2"><Label htmlFor="fullName">{t("tenants.fullName")}</Label><Input id="fullName" value={fullName} onChange={(event) => setFullName(event.target.value)} required placeholder="Nguyen Van A" readOnly={Boolean(existingTenantId)} /></div>
               </div>
-              <div className="space-y-2"><Label htmlFor="roomCode">Phòng xếp</Label><select id="roomCode" value={roomCode} onChange={(event) => setRoomCode(event.target.value)} className="flex h-10 w-full rounded-[16px] border border-input bg-card px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"><option value="">Chưa xếp phòng</option>{rooms.map((room) => <option key={room._id || room.id} value={room.roomCode}>{room.roomCode}</option>)}</select></div>
-              {lookupStatus !== "idle" && <div aria-live="polite" className="flex items-center gap-3 rounded-[16px] bg-primary/10 p-3 text-sm"><Search className={`size-4 shrink-0 text-primary ${lookupStatus === "loading" ? "animate-pulse" : ""}`} /><p className="flex-1">{lookupStatus === "loading" ? "Đang tra cứu…" : lookupStatus === "found" ? "Đã tìm thấy tài khoản. Hồ sơ được khóa để liên kết an toàn." : lookupStatus === "error" ? "Không thể tra cứu lúc này. Vui lòng thử lại." : "Chưa có tài khoản. Hệ thống sẽ tạo mới với mật khẩu 123456."}</p>{existingTenantId && <Button type="button" variant="link" className="h-auto p-0" onClick={openAddModal}>Đổi người</Button>}</div>}
-              <Button type="submit" className="w-full" disabled={savingTenant || lookupStatus === "loading"}><UserRound className="size-4" />{existingTenantId ? "Liên kết Người thuê vào phòng" : "Tạo mới & Liên kết"}</Button>
+              <div className="space-y-2"><Label htmlFor="roomCode">{t("tenants.currentRoom")}</Label><select id="roomCode" value={roomCode} onChange={(event) => setRoomCode(event.target.value)} className="flex h-10 w-full rounded-[16px] border border-input bg-card px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"><option value="">{t("tenants.unassigned")}</option>{rooms.map((room) => <option key={room._id || room.id} value={room.roomCode}>{room.roomCode}</option>)}</select></div>
+              {lookupStatus !== "idle" && <div aria-live="polite" className="flex items-center gap-3 rounded-[16px] bg-primary/10 p-3 text-sm"><Search className={`size-4 shrink-0 text-primary ${lookupStatus === "loading" ? "animate-pulse" : ""}`} /><p className="flex-1">{lookupStatus === "loading" ? t("common.loading") : lookupStatus === "found" ? t("tenants.lookupFound") : lookupStatus === "error" ? t("common.error") : t("common.new")}</p>{existingTenantId && <Button type="button" variant="link" className="h-auto p-0" onClick={openAddModal}>{t("common.edit")}</Button>}</div>}
+              <Button type="submit" className="w-full" disabled={savingTenant || lookupStatus === "loading"}><UserRound className="size-4" />{existingTenantId ? t("common.save") : t("tenants.addTenant")}</Button>
             </form>
           </DialogContent>
         </Dialog>
         <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
           <DialogContent className="sm:max-w-[460px]">
-            <DialogHeader><DialogTitle>Sửa thông tin người thuê</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{t("tenants.editTenant")}</DialogTitle></DialogHeader>
             <form onSubmit={handleSaveTenant} className="mt-4 space-y-4">
-              <div className="space-y-2"><Label htmlFor="editFullName">Họ và tên</Label><Input id="editFullName" value={fullName} onChange={(event) => setFullName(event.target.value)} required /></div>
-              <div className="space-y-2"><Label htmlFor="editPhone">Số điện thoại</Label><Input id="editPhone" value={phone} onChange={(event) => setPhone(formatPhone(event.target.value))} required /></div>
-              <div className="space-y-2"><Label htmlFor="editIdCard">CCCD</Label><Input id="editIdCard" value={idCard} onChange={(event) => setIdCard(formatCCCD(event.target.value))} required /></div>
-              <Button type="submit" className="w-full"><UserRound className="size-4" />Cập nhật</Button>
+              <div className="space-y-2"><Label htmlFor="editFullName">{t("tenants.fullName")}</Label><Input id="editFullName" value={fullName} onChange={(event) => setFullName(event.target.value)} required /></div>
+              <div className="space-y-2"><Label htmlFor="editPhone">{t("tenants.phone")}</Label><Input id="editPhone" value={phone} onChange={(event) => setPhone(formatPhone(event.target.value))} required /></div>
+              <div className="space-y-2"><Label htmlFor="editIdCard">{t("tenants.idCard")}</Label><Input id="editIdCard" value={idCard} onChange={(event) => setIdCard(formatCCCD(event.target.value))} required /></div>
+              <Button type="submit" className="w-full"><UserRound className="size-4" />{t("common.update")}</Button>
             </form>
           </DialogContent>
         </Dialog>
         <Dialog open={inviteModalOpen} onOpenChange={setInviteModalOpen}>
           <DialogContent className="sm:max-w-[400px]">
-            <DialogHeader><DialogTitle>Gửi lời mời tham gia App</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{t("common.send")}</DialogTitle></DialogHeader>
             <div className="space-y-4 pt-4">
               <div className="space-y-2">
-                <Label htmlFor="invitePhone">Số điện thoại nhận</Label>
+                <Label htmlFor="invitePhone">{t("tenants.phone")}</Label>
                 <Input id="invitePhone" value={invitePhone} onChange={(e) => setInvitePhone(formatPhone(e.target.value))} />
               </div>
               <div className="flex gap-3 pt-2">
-                <Button className="w-full bg-[#0068FF] hover:bg-[#0054cc] text-white" onClick={() => handleSendInvite("zalo")}>Gửi Zalo</Button>
-                <Button className="w-full" variant="outline" onClick={() => handleSendInvite("sms")}>Gửi SMS</Button>
+                <Button className="w-full bg-[#0068FF] hover:bg-[#0054cc] text-white" onClick={() => handleSendInvite("zalo")}>Zalo</Button>
+                <Button className="w-full" variant="outline" onClick={() => handleSendInvite("sms")}>SMS</Button>
               </div>
             </div>
           </DialogContent>
@@ -229,16 +231,16 @@ export default function TenantsPage() {
 
       <div className="calm-workbench">
         <Table>
-          <TableHeader><TableRow><TableHead>Họ và tên</TableHead><TableHead>Số điện thoại</TableHead><TableHead>Phòng đang thuê</TableHead><TableHead>Trạng thái App</TableHead><TableHead className="text-right">Thao tác</TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead>{t("tenants.fullName")}</TableHead><TableHead>{t("tenants.phone")}</TableHead><TableHead>{t("tenants.currentRoom")}</TableHead><TableHead>{t("common.status")}</TableHead><TableHead className="text-right">{t("common.action")}</TableHead></TableRow></TableHeader>
           <TableBody>
-            {loading ? <TableRow><TableCell colSpan={5} className="h-40 text-center text-muted-foreground"><UserRound className="mx-auto mb-2 size-8 animate-pulse text-primary" />Đang tải hồ sơ…</TableCell></TableRow>
-              : filteredTenants.length === 0 ? <TableRow><TableCell colSpan={5} className="h-64 text-center"><Image src="/trohub-empty-states.png" alt="" width={170} height={100} className="mx-auto h-24 w-40 rounded-[20px] object-cover object-center" /><p className="mt-3 font-black">Không tìm thấy người thuê nào</p></TableCell></TableRow>
+            {loading ? <TableRow><TableCell colSpan={5} className="h-40 text-center text-muted-foreground"><UserRound className="mx-auto mb-2 size-8 animate-pulse text-primary" />{t("common.loading")}</TableCell></TableRow>
+              : filteredTenants.length === 0 ? <TableRow><TableCell colSpan={5} className="h-64 text-center"><Image src="/trohub-empty-states.png" alt="" width={170} height={100} className="mx-auto h-24 w-40 rounded-[20px] object-cover object-center" /><p className="mt-3 font-black">{t("tenants.emptyTenants")}</p></TableCell></TableRow>
                 : filteredTenants.map((tenant) => <TableRow key={tenant._id || tenant.id}>
-                  <TableCell className="font-bold">{tenant.fullName || tenant.name}{tenant.idCard && <span className="mt-1 block text-xs font-normal text-muted-foreground">CCCD {formatCCCD(tenant.idCard)}</span>}</TableCell>
+                  <TableCell className="font-bold">{tenant.fullName || tenant.name}{tenant.idCard && <span className="mt-1 block text-xs font-normal text-muted-foreground">{t("tenants.idCard")} {formatCCCD(tenant.idCard)}</span>}</TableCell>
                   <TableCell>{formatPhone(tenant.phone)}</TableCell>
-                  <TableCell>{tenant.roomCode || "Chưa xếp phòng"}</TableCell>
-                  <TableCell>{tenant.linkedAccountId ? <Badge className="border-0 bg-primary/10 text-primary">Đã liên kết</Badge> : <div className="flex flex-col items-start gap-1"><Badge variant="secondary">Chưa liên kết App</Badge><Button variant="link" size="sm" className="h-auto p-0 text-xs text-primary" onClick={() => openInviteModal(tenant)}><Send className="mr-1 size-3" /> Gửi lời mời</Button></div>}</TableCell>
-                  <TableCell><div className="flex justify-end gap-2"><Button aria-label={`Tạo mật khẩu tạm cho ${tenant.fullName || tenant.name}`} onClick={() => void handleTemporaryPassword(tenant)} variant="ghost" size="icon"><KeyRound className="size-4" /></Button><Button aria-label={`Sửa ${tenant.fullName || tenant.name}`} onClick={() => openEditModal(tenant)} variant="ghost" size="icon"><Edit className="size-4" /></Button><Button aria-label={`Xóa ${tenant.fullName || tenant.name}`} onClick={() => void handleDelete(tenant._id || tenant.id)} variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive"><Trash2 className="size-4" /></Button></div></TableCell>
+                  <TableCell>{tenant.roomCode || t("tenants.unassigned")}</TableCell>
+                  <TableCell>{tenant.linkedAccountId ? <Badge className="border-0 bg-primary/10 text-primary">{t("tenants.assigned")}</Badge> : <div className="flex flex-col items-start gap-1"><Badge variant="secondary">{t("tenants.unassigned")}</Badge><Button variant="link" size="sm" className="h-auto p-0 text-xs text-primary" onClick={() => openInviteModal(tenant)}><Send className="mr-1 size-3" /> {t("common.send")}</Button></div>}</TableCell>
+                  <TableCell><div className="flex justify-end gap-2"><Button aria-label={t("common.edit")} onClick={() => void handleTemporaryPassword(tenant)} variant="ghost" size="icon"><KeyRound className="size-4" /></Button><Button aria-label={t("common.edit")} onClick={() => openEditModal(tenant)} variant="ghost" size="icon"><Edit className="size-4" /></Button><Button aria-label={t("common.delete")} onClick={() => void handleDelete(tenant._id || tenant.id)} variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive"><Trash2 className="size-4" /></Button></div></TableCell>
                 </TableRow>)}
           </TableBody>
         </Table>

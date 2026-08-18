@@ -16,6 +16,7 @@ import { ContentSkeleton } from "../components/ui/content-skeleton";
 import { calculateUnpaidTotal } from "../utils/invoicePresentation";
 import { formatCurrency, unformatNumber } from "../utils/formatters";
 import { useLanguage } from "../contexts/LanguageContext";
+import { getStatusText } from "../utils/statusHelpers";
 
 type FilterType = "all" | "unpaid" | "paid";
 
@@ -66,9 +67,7 @@ export default function InvoiceScreen({ params }: Props) {
       await loadInvoices();
       setSelectedInvoice(null);
       setPaymentInvoice(null);
-      notification.success("Cảm ơn Người thuê đã thanh toán hóa đơn.", {
-        title: "Thanh toán thành công",
-      });
+      notification.success(t("common.success"));
     } catch (error) {
       console.log("Lỗi refresh hóa đơn sau thanh toán:", error);
     }
@@ -101,15 +100,15 @@ export default function InvoiceScreen({ params }: Props) {
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <>
-            <AppText style={styles.title}>{t("invoices")}</AppText>
+            <AppText style={styles.title}>{t("invoices.title")}</AppText>
             {unpaidInvoices.length > 0 ? (
               <AnimatedEntry>
                 <GradientHero
                   actionIcon="card-outline"
-                  actionLabel={t("payInvoice")}
-                  detail={`${unpaidInvoices.length} hóa đơn chưa thanh toán`}
+                  actionLabel={t("invoices.payNow")}
+                  detail={`${unpaidInvoices.length} ${t("invoices.status.unpaid")}`}
                   icon="receipt-outline"
-                  label={t("paymentDue")}
+                  label={t("invoices.totalAmount")}
                   onAction={() => openPaymentModal(unpaidInvoices[0])}
                   value={formatCurrency(unpaidTotal)}
                 />
@@ -125,7 +124,7 @@ export default function InvoiceScreen({ params }: Props) {
                   style={[styles.filterButton, filter === value && styles.filterActive]}
                 >
                   <AppText style={[styles.filterText, filter === value && styles.filterTextActive]}>
-                    {value === "all" ? t("all") : value === "unpaid" ? t("unpaid") : t("paid")}
+                    {value === "all" ? t("common.all") : value === "unpaid" ? t("invoices.status.unpaid") : t("invoices.status.paid")}
                   </AppText>
                 </Pressable>
               ))}
@@ -135,14 +134,14 @@ export default function InvoiceScreen({ params }: Props) {
         ListEmptyComponent={
           invoiceList.length === 0 ? (
             <IllustratedEmptyState
-              description={t("invoiceNewHere")}
+              description={t("invoices.emptyDescription")}
               kind="invoice"
-              title={t("noInvoices")}
+              title={t("invoices.empty")}
             />
           ) : (
             <View style={styles.filterEmpty}>
               <Ionicons name="filter-outline" size={22} color={theme.muted} />
-              <AppText style={styles.filterEmptyText}>{t("noMatchingInvoices")}</AppText>
+              <AppText style={styles.filterEmptyText}>{t("invoices.noMatch")}</AppText>
             </View>
           )
         }
@@ -154,27 +153,27 @@ export default function InvoiceScreen({ params }: Props) {
                 <AppText style={styles.amount}>{formatCurrency(invoice.numericAmount ?? unformatNumber(invoice.amount))}</AppText>
                 <View style={styles.cardHeader}>
                   <View style={styles.cardLeft}>
-                    <AppText style={{ fontSize: 11, fontWeight: '800', color: theme.primary, marginBottom: 2 }}>Mã HD: HD-{(invoice.month || "").replace("/", "")}-{(invoice.id || "000").substring(0, 3).toUpperCase()}</AppText>
-                    <AppText style={styles.cardTitle}>Hóa đơn tháng {invoice.month}</AppText>
-                    <AppText style={styles.room}>Phòng {invoice.room}</AppText>
+                    <AppText style={{ fontSize: 11, fontWeight: '800', color: theme.primary, marginBottom: 2 }}>{t("invoices.code", { code: invoice.id || "" })}</AppText>
+                    <AppText style={styles.cardTitle}>{t("invoices.period")}: {invoice.month}</AppText>
+                    <AppText style={styles.room}>{t("common.room")} {invoice.room}</AppText>
                   </View>
                   <View style={[styles.statusBadge, isClosed ? styles.paidBadge : styles.unpaidBadge]}>
                     <AppText style={[styles.statusText, isClosed ? styles.paidText : styles.unpaidText]}>
-                      {invoice.statusText}
+                      {getStatusText("invoice", invoice.status, t)}
                     </AppText>
                   </View>
                 </View>
-                <AppText style={styles.dueDate}>Hạn thanh toán: {invoice.dueDate}</AppText>
+                <AppText style={styles.dueDate}>{t("invoices.dueDate")}: {invoice.dueDate}</AppText>
                 <View style={styles.actionRow}>
                   {!isClosed ? (
                     <Pressable style={styles.payButton} onPress={() => openPaymentModal(invoice)}>
                       <Ionicons name="card-outline" size={18} color={theme.background} />
-                      <AppText style={styles.payText}>{t("pay")}</AppText>
+                      <AppText style={styles.payText}>{t("invoices.payNow")}</AppText>
                     </Pressable>
                   ) : null}
                   <Pressable style={styles.detailButton} onPress={() => setSelectedInvoice(invoice)}>
                     <Ionicons name="eye-outline" size={18} color={theme.primary} />
-                    <AppText style={styles.detailText}>{t("details")}</AppText>
+                    <AppText style={styles.detailText}>{t("common.details")}</AppText>
                   </Pressable>
                 </View>
               </Card>
@@ -248,101 +247,101 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSh
   },
   filterEmpty: {
     alignItems: "center",
-    backgroundColor: theme.surface,
-    borderRadius: 20,
-    flexDirection: "row",
-    gap: 10,
-    padding: 18,
+    justifyContent: "center",
+    paddingVertical: 40,
+    gap: 8,
   },
-  filterEmptyText: { color: theme.muted, flex: 1, fontSize: 13, fontWeight: "700" },
+  filterEmptyText: {
+    color: theme.muted,
+    fontSize: 14,
+    fontWeight: "600",
+  },
   invoiceCard: {
     marginBottom: 14,
-    backgroundColor: theme.surface,
-    borderColor: "transparent",
-    borderRadius: 20,
+    padding: 16,
+  },
+  amount: {
+    fontSize: 20,
+    fontWeight: "900",
+    color: theme.primary,
+    marginBottom: 8,
   },
   cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    gap: 12,
-    marginTop: 10,
+    alignItems: "flex-start",
   },
   cardLeft: {
     flex: 1,
   },
   cardTitle: {
-    fontSize: 15,
-    fontWeight: "900",
+    fontSize: 16,
+    fontWeight: "800",
     color: theme.text,
   },
   room: {
-    color: theme.muted,
     fontSize: 13,
-    marginTop: 5,
+    color: theme.muted,
+    marginTop: 2,
   },
   statusBadge: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 9,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 999,
-  },
-  unpaidBadge: {
-    backgroundColor: theme.warningSoft,
   },
   paidBadge: {
     backgroundColor: theme.positiveSoft,
   },
-  statusText: {
-    fontSize: 11,
-    fontWeight: "900",
+  unpaidBadge: {
+    backgroundColor: theme.warningSoft,
   },
-  unpaidText: {
-    color: theme.warningForeground,
+  statusText: {
+    fontSize: 12,
+    fontWeight: "800",
   },
   paidText: {
     color: theme.positive,
   },
-  amount: {
-    fontSize: 24,
-    fontWeight: "900",
-    color: theme.text,
-    marginTop: 18,
+  unpaidText: {
+    color: theme.warningForeground,
   },
   dueDate: {
+    fontSize: 12,
     color: theme.muted,
-    fontSize: 13,
-    marginTop: 8,
+    marginTop: 10,
   },
   actionRow: {
     flexDirection: "row",
     gap: 10,
-    marginTop: 18,
-    flexWrap: "wrap",
+    marginTop: 14,
+    justifyContent: "flex-end",
   },
   payButton: {
-    alignItems: "center",
-    backgroundColor: theme.primary,
     flexDirection: "row",
-    gap: 7,
-    paddingHorizontal: 18,
-    paddingVertical: 11,
-    borderRadius: 16,
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: theme.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 12,
   },
   payText: {
     color: theme.background,
     fontWeight: "800",
+    fontSize: 13,
   },
   detailButton: {
-    alignItems: "center",
-    backgroundColor: theme.primarySoft,
     flexDirection: "row",
-    gap: 7,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 16,
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: theme.surface,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 12,
   },
   detailText: {
     color: theme.primary,
     fontWeight: "800",
+    fontSize: 13,
   },
 });

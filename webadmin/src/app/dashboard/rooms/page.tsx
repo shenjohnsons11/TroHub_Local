@@ -15,6 +15,7 @@ import { fetchAPI } from "@/lib/api";
 import { getNotificationMessage } from "@/lib/notification-messages";
 import { formatCurrency, formatNumberInput, unformatNumber } from "@/lib/formatters";
 import { useLanguage } from "@/components/language-provider";
+import { getStatusText } from "@/lib/status-helpers";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function RoomsPage() {
@@ -38,7 +39,7 @@ export default function RoomsPage() {
       const data = await fetchAPI("/rooms");
       if (data.success) setRooms(data.data);
     } catch (error) {
-      notification.error(getNotificationMessage(error, "Không thể tải danh sách phòng."));
+      notification.error(getNotificationMessage(error, t("common.error")));
     } finally {
       setLoading(false);
     }
@@ -83,27 +84,29 @@ export default function RoomsPage() {
         await fetchAPI("/rooms", { method: "POST", body: JSON.stringify(payload) });
         setIsAddOpen(false);
       }
-      notification.success(editingRoomId ? "Đã cập nhật phòng." : "Đã thêm phòng mới.");
+      notification.success(editingRoomId ? t("rooms.updatedSuccess") : t("rooms.createdSuccess"));
       await loadRooms();
     } catch (error) {
-      notification.error(getNotificationMessage(error, "Không thể lưu phòng."));
+      notification.error(getNotificationMessage(error, t("common.error")));
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (room: any) => {
+    const id = room._id || room.id;
     const confirmed = await notification.confirm({
-      title: "Xóa phòng",
-      message: "Bạn có chắc chắn muốn xóa phòng này?",
-      confirmText: "Xóa",
+      title: t("rooms.deleteConfirmTitle"),
+      message: t("rooms.deleteConfirmMessage", { code: room.roomCode || "" }),
+      confirmText: t("common.delete"),
       destructive: true,
     });
     if (!confirmed) return;
+
     try {
       await fetchAPI(`/rooms/${id}`, { method: "DELETE" });
-      notification.success("Đã xóa phòng.");
+      notification.success(t("rooms.deletedSuccess"));
       await loadRooms();
     } catch (error) {
-      notification.error(getNotificationMessage(error, "Không thể xóa phòng."));
+      notification.error(getNotificationMessage(error, t("common.error")));
     }
   };
 
@@ -121,30 +124,31 @@ export default function RoomsPage() {
   const handleStatusChange = async (id: string, status: number) => {
     try {
       await fetchAPI(`/rooms/${id}`, { method: "PUT", body: JSON.stringify({ status }) });
-      notification.success("Đã cập nhật trạng thái phòng.");
+      notification.success(t("common.success"));
       setStatusDropdown(null);
       await loadRooms();
     } catch (error) {
-      notification.error(getNotificationMessage(error, "Không thể cập nhật trạng thái."));
+      notification.error(getNotificationMessage(error, t("common.error")));
     }
   };
 
   const statusBadge = (room: any) => {
     const status = room.status;
+    const statusLabel = getStatusText("room", status, t);
     return (
       <div className="flex items-center gap-2">
         {status === 0
-          ? <Badge className="border-0 bg-primary/10 text-primary">Còn trống</Badge>
+          ? <Badge className="border-0 bg-primary/10 text-primary">{statusLabel}</Badge>
           : status === 1
-            ? <Badge className="border-0 bg-accent text-accent-foreground">Đang thuê</Badge>
-            : <Badge className="border-0 bg-[var(--warning-soft)] text-warning-foreground">Bảo trì</Badge>}
+            ? <Badge className="border-0 bg-accent text-accent-foreground">{statusLabel}</Badge>
+            : <Badge className="border-0 bg-[var(--warning-soft)] text-warning-foreground">{statusLabel}</Badge>}
         <div className="relative">
           <Button variant="ghost" size="icon" onClick={() => setStatusDropdown(statusDropdown === (room._id || room.id) ? null : (room._id || room.id))} className="size-6 rounded-full"><Settings className="size-3" /></Button>
           {statusDropdown === (room._id || room.id) && (
-            <div className="absolute right-0 top-8 z-10 w-36 rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
-              <button onClick={() => void handleStatusChange(room._id || room.id, 0)} className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent">✅ Còn trống</button>
-              <button onClick={() => void handleStatusChange(room._id || room.id, 1)} className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent">🏠 Đang thuê</button>
-              <button onClick={() => void handleStatusChange(room._id || room.id, 2)} className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent">🔧 Bảo trì</button>
+            <div className="absolute right-0 top-8 z-10 w-40 rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+              <button onClick={() => void handleStatusChange(room._id || room.id, 0)} className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent">✅ {t("statusMap.room.available")}</button>
+              <button onClick={() => void handleStatusChange(room._id || room.id, 1)} className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent">🏠 {t("statusMap.room.rented")}</button>
+              <button onClick={() => void handleStatusChange(room._id || room.id, 2)} className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent">🔧 {t("statusMap.room.maintenance")}</button>
             </div>
           )}
         </div>
@@ -155,77 +159,77 @@ export default function RoomsPage() {
   const roomForm = (edit = false) => (
     <form onSubmit={handleSaveRoom} className="mt-4 space-y-4">
       <div className="space-y-2">
-        <Label htmlFor={edit ? "editRoomCode" : "roomCode"}>Mã phòng / Tên phòng</Label>
-        <Input id={edit ? "editRoomCode" : "roomCode"} value={roomCode} onChange={(event) => setRoomCode(event.target.value)} required placeholder="VD: P.101" />
+        <Label htmlFor={edit ? "editRoomCode" : "roomCode"}>{t("rooms.roomCode")}</Label>
+        <Input id={edit ? "editRoomCode" : "roomCode"} value={roomCode} onChange={(event) => setRoomCode(event.target.value)} required placeholder={t("rooms.roomCodePlaceholder")} />
       </div>
       <div className="space-y-2">
-        <Label htmlFor={edit ? "editPrice" : "price"}>Giá thuê (VNĐ)</Label>
-        <Input id={edit ? "editPrice" : "price"} inputMode="numeric" value={price} onChange={(event) => setPrice(formatNumberInput(event.target.value))} required placeholder="VD: 3.000.000" />
+        <Label htmlFor={edit ? "editPrice" : "price"}>{t("rooms.price")}</Label>
+        <Input id={edit ? "editPrice" : "price"} inputMode="numeric" value={price} onChange={(event) => setPrice(formatNumberInput(event.target.value))} required placeholder={t("rooms.pricePlaceholder")} />
       </div>
       <div className="space-y-2">
-        <Label htmlFor={edit ? "editArea" : "area"}>Diện tích (m²)</Label>
-        <Input id={edit ? "editArea" : "area"} type="number" value={area} onChange={(event) => setArea(event.target.value)} required placeholder="VD: 25" />
+        <Label htmlFor={edit ? "editArea" : "area"}>{t("rooms.area")}</Label>
+        <Input id={edit ? "editArea" : "area"} type="number" value={area} onChange={(event) => setArea(event.target.value)} required placeholder={t("rooms.areaPlaceholder")} />
       </div>
       <div className="space-y-2">
-        <Label htmlFor={edit ? "editFloor" : "floor"}>{t("floor")}</Label>
+        <Label htmlFor={edit ? "editFloor" : "floor"}>{t("rooms.floor")}</Label>
         <Input id={edit ? "editFloor" : "floor"} type="number" min="1" step="1" value={floor} onChange={(event) => setFloor(event.target.value)} required />
       </div>
-      <Button type="submit" className="w-full"><DoorOpen className="size-4" />{edit ? "Cập nhật phòng" : "Lưu phòng mới"}</Button>
+      <Button type="submit" className="w-full"><DoorOpen className="size-4" />{edit ? t("rooms.editRoom") : t("rooms.addRoom")}</Button>
     </form>
   );
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Vận hành" title="Quản lý Phòng" description="Theo dõi trạng thái, giá thuê và Người thuê hiện tại của từng phòng." />
+      <PageHeader eyebrow={t("nav.overview")} title={t("rooms.title")} description={t("rooms.subtitle")} />
       <section className="calm-surface flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input aria-label="Tìm kiếm phòng" placeholder="Tìm kiếm phòng..." className="pl-9" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} />
+          <Input aria-label={t("rooms.searchPlaceholder")} placeholder={t("rooms.searchPlaceholder")} className="pl-9" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} />
         </div>
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
           <DialogTrigger onClick={openAddModal} className="inline-flex h-10 items-center justify-center gap-2 rounded-[16px] bg-primary px-4 text-sm font-bold text-primary-foreground shadow-[var(--calm-shadow)] transition hover:opacity-90">
-            <Plus className="size-4" />Thêm phòng mới
+            <Plus className="size-4" />{t("rooms.addRoom")}
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[440px]"><DialogHeader><DialogTitle>Thêm phòng mới</DialogTitle></DialogHeader>{roomForm()}</DialogContent>
+          <DialogContent className="sm:max-w-[440px]"><DialogHeader><DialogTitle>{t("rooms.addRoom")}</DialogTitle></DialogHeader>{roomForm()}</DialogContent>
         </Dialog>
         <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-          <DialogContent className="sm:max-w-[440px]"><DialogHeader><DialogTitle>Sửa thông tin phòng</DialogTitle></DialogHeader>{roomForm(true)}</DialogContent>
+          <DialogContent className="sm:max-w-[440px]"><DialogHeader><DialogTitle>{t("rooms.editRoom")}</DialogTitle></DialogHeader>{roomForm(true)}</DialogContent>
         </Dialog>
       </section>
 
-      <div className="flex flex-wrap gap-2" aria-label={t("floor")}>
-        <Button type="button" variant={selectedFloor === "all" ? "default" : "outline"} onClick={() => setSelectedFloor("all")}>{t("all")}</Button>
-        {floorOptions.map((option) => <Button type="button" key={option} variant={selectedFloor === option ? "default" : "outline"} onClick={() => setSelectedFloor(option)}>{t("floor")} {option}</Button>)}
+      <div className="flex flex-wrap gap-2" aria-label={t("rooms.floor")}>
+        <Button type="button" variant={selectedFloor === "all" ? "default" : "outline"} onClick={() => setSelectedFloor("all")}>{t("common.all")}</Button>
+        {floorOptions.map((option) => <Button type="button" key={option} variant={selectedFloor === option ? "default" : "outline"} onClick={() => setSelectedFloor(option)}>{t("common.floor", { number: option })}</Button>)}
       </div>
 
       {loading ? (
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3" aria-label="Đang tải danh mục phòng">{Array.from({ length: 6 }, (_, index) => <Skeleton key={index} className="h-48 w-full" />)}</div>
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3" aria-label={t("common.loading")}>{Array.from({ length: 6 }, (_, index) => <Skeleton key={index} className="h-48 w-full" />)}</div>
       ) : filteredRooms.length === 0 ? (
         <div className="calm-surface grid min-h-72 place-items-center overflow-hidden p-8 text-center">
-          <div><Image src="/trohub-empty-states.png" alt="" width={190} height={120} className="mx-auto h-28 w-44 rounded-[20px] object-cover object-left" /><h2 className="mt-4 text-xl font-black">Không tìm thấy phòng nào</h2><p className="mt-1 text-sm text-muted-foreground">Thử từ khóa khác hoặc thêm phòng đầu tiên.</p></div>
+          <div><Image src="/trohub-empty-states.png" alt="" width={190} height={120} className="mx-auto h-28 w-44 rounded-[20px] object-cover object-left" /><h2 className="mt-4 text-xl font-black">{t("rooms.emptyRooms")}</h2><p className="mt-1 text-sm text-muted-foreground">{t("rooms.searchPlaceholder")}</p></div>
         </div>
       ) : (
         <div className="space-y-8">
           {Object.entries(roomsByFloor).map(([floorNumber, floorRooms]) => <section key={floorNumber} className="space-y-4">
-            <div className="flex items-center justify-between"><h2 className="text-lg font-black">{t("floor").toUpperCase()} {floorNumber}</h2><span className="text-sm font-bold text-muted-foreground">{floorRooms.length} {t("rooms")}</span></div>
+            <div className="flex items-center justify-between"><h2 className="text-lg font-black">{t("common.floor", { number: floorNumber }).toUpperCase()}</h2><span className="text-sm font-bold text-muted-foreground">{floorRooms.length} {t("nav.rooms")}</span></div>
             <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {floorRooms.map((room) => (
             <article key={room._id || room.id} className="calm-surface group overflow-hidden p-5 transition duration-200 hover:-translate-y-0.5 hover:shadow-lg">
               <div className="flex items-start justify-between gap-4">
-                <div><p className="text-xs font-bold uppercase tracking-[.16em] text-muted-foreground">Căn hộ</p><h2 className="mt-1 text-2xl font-black">{room.roomCode}</h2></div>
+                <div><p className="text-xs font-bold uppercase tracking-[.16em] text-muted-foreground">{t("common.room")}</p><h2 className="mt-1 text-2xl font-black">{room.roomCode}</h2></div>
                 {statusBadge(room)}
               </div>
               <div className="mt-6 rounded-[20px] bg-primary/8 p-4">
-                <p className="text-sm text-muted-foreground">Giá thuê mỗi tháng</p>
+                <p className="text-sm text-muted-foreground">{t("rooms.price")}</p>
                 <p className="mt-1 text-2xl font-black tracking-[-.04em] text-primary">{formatCurrency(room.defaultRentPrice)}</p>
               </div>
               <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
-                <div><dt className="text-muted-foreground">{t("floor")}</dt><dd className="mt-1 font-bold">{t("floor")} {room.floor || 1}</dd></div>
-                <div><dt className="text-muted-foreground">Diện tích · Người thuê</dt><dd className="mt-1 truncate font-bold">{room.area} m² · {room.tenant || "Chưa có"}</dd></div>
+                <div><dt className="text-muted-foreground">{t("rooms.floor")}</dt><dd className="mt-1 font-bold">{t("common.floor", { number: room.floor || 1 })}</dd></div>
+                <div><dt className="text-muted-foreground">{t("rooms.area")} · {t("common.tenant")}</dt><dd className="mt-1 truncate font-bold">{room.area} m² · {room.tenant || t("common.unspecified")}</dd></div>
               </dl>
               <div className="mt-5 flex flex-wrap justify-end gap-2">
-                <Button onClick={() => openEditModal(room)} variant="secondary" size="sm"><Edit className="size-4" />Sửa</Button>
-                <Button onClick={() => void handleDelete(room._id || room.id)} variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10 hover:text-destructive"><Trash2 className="size-4" />Xóa</Button>
+                <Button onClick={() => openEditModal(room)} variant="secondary" size="sm"><Edit className="size-4" />{t("common.edit")}</Button>
+                <Button onClick={() => void handleDelete(room)} variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10 hover:text-destructive"><Trash2 className="size-4" />{t("common.delete")}</Button>
               </div>
             </article>
           ))}
