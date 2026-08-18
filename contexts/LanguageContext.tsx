@@ -76,7 +76,8 @@ export function LanguageProvider({ children }: PropsWithChildren) {
   }, []);
 
   const toggleLanguage = useCallback(async () => {
-    const nextLang = languageRef.current === "vi" ? "en" : "vi";
+    const currentLang = (languageRef.current || "vi").toLowerCase() as Language;
+    const nextLang = currentLang === "vi" ? "en" : "vi";
     await setLanguage(nextLang);
   }, [setLanguage]);
 

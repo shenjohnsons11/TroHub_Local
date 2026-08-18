@@ -28,7 +28,7 @@ import MeterScannerScreen from "../screens/MeterScannerScreen";
 import CCCDScannerScreen from "../screens/CCCDScannerScreen";
 import AIChatScreen from "../screens/AIChatScreen";
 
-import AppLoadingScreen from "../components/AppLoadingScreen";
+import AppSplashScreen from "../components/AppSplashScreen";
 import { useAppTheme } from "../contexts/ThemeContext";
 
 import { UserProfile } from "../types/UserProfile";
@@ -200,18 +200,26 @@ export default function App() {
     };
   }, [isLoggedIn, profile?.id]);
 
+  const splash = <AppSplashScreen visible={isChecking} key="app-splash" />;
+
   if (isChecking) {
-    return <AppLoadingScreen />;
+    return <View style={styles.root}>{splash}</View>;
   }
 
   if (!isLoggedIn || !profile) {
-    return <LoginScreen onLogin={handleLogin} />;
+    return (
+      <View style={styles.root}>
+        <LoginScreen onLogin={handleLogin} />
+        {splash}
+      </View>
+    );
   }
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
-      <View style={[styles.phone, { backgroundColor: theme.background }]}>
-        <View style={styles.content}>
+    <View style={styles.root}>
+      <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}> 
+        <View style={[styles.phone, { backgroundColor: theme.background }]}> 
+          <View style={styles.content}>
           {activeTab === "change_password" ? (
             <ChangePasswordScreen 
               onSuccess={() => setActiveTab("home")} 
@@ -306,18 +314,24 @@ export default function App() {
               {activeTab === "ai_chat" && <AIChatScreen profile={profile} onBack={() => setActiveTab("home")} />}
             </>
           )}
-        </View>
+          </View>
 
-        {activeTab !== "change_password" && (
-          <BottomNav activeTab={activeTab} onChangeTab={handleChangeTab} role={profile.role} />
-        )}
-        <Toast />
-      </View>
-    </SafeAreaView>
+          {activeTab !== "change_password" && (
+            <BottomNav activeTab={activeTab} onChangeTab={handleChangeTab} role={profile.role} />
+          )}
+          <Toast />
+        </View>
+      </SafeAreaView>
+      {splash}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: "#04100e",
+  },
   safe: {
     flex: 1,
     backgroundColor: "#FAF8F4",

@@ -30,6 +30,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "unpaid" | "paid">("all");
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [remindingId, setRemindingId] = useState<string | null>(null);
 
   // Modal states for creating invoice
   const [modalVisible, setModalVisible] = useState(params?.action === "create");
@@ -250,11 +251,14 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
 
   const handleRemind = async (invoiceId: string) => {
     try {
+      setRemindingId(invoiceId);
       await adminService.remindInvoice(invoiceId);
-      notification.success(t("mobile.invoices.reminded"));
+      notification.success("✅ Đã gửi thông báo nhắc nợ tới Khách thuê thành công!");
       loadData();
-    } catch {
-      notification.error(t("mobile.invoices.remindFailed"));
+    } catch (err: any) {
+      notification.error(err?.message || t("mobile.invoices.remindFailed"));
+    } finally {
+      setRemindingId(null);
     }
   };
 
@@ -473,6 +477,8 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
                 <AppButton
                   accessibilityLabel={t("mobile.invoices.remindLabel", { roomCode: item.room || item.contractId?.roomId?.roomCode || "N/A" })}
                   icon="notifications-outline"
+                  loading={remindingId === item._id}
+                  disabled={remindingId === item._id}
                   style={styles.remindButton}
                   onPress={(e) => { e.stopPropagation(); handleRemind(item._id); }}
                 >

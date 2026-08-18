@@ -209,17 +209,17 @@ export default function LoginPage() {
               {mode === "login" ? <KeyRound className="size-5" aria-hidden="true" /> : <UserPlus className="size-5" aria-hidden="true" />}
             </span>
             <h2 className="text-3xl font-black tracking-[-0.025em] text-foreground text-balance">
-              {mode === "login" ? t("welcomeBack") : t("registerLandlord")}
+              {mode === "login" ? t("auth.loginTitle") : t("auth.registerLandlord")}
             </h2>
             <p className="mb-8 mt-2 max-w-[46ch] leading-relaxed text-muted-foreground text-pretty">
-              {mode === "login" ? t("loginDescription") : t("registerDescription")}
+              {mode === "login" ? t("auth.loginDescription") : t("auth.registerDescription")}
             </p>
 
             {mode === "login" ? (
               <form onSubmit={handleLogin} className="space-y-5">
                 <div className="space-y-2">
                   <Label htmlFor="identifier" className="font-bold text-foreground">
-                    {t("phoneOrEmail")}
+                    {t("auth.phoneOrEmail")}
                   </Label>
                   <Input
                     id="identifier"
@@ -229,18 +229,18 @@ export default function LoginPage() {
                     autoCorrect="off"
                     value={identifier}
                     onChange={(event) => setIdentifier(event.target.value)}
-                    placeholder="Ví dụ: 0901234567 hoặc email@example.com"
+                    placeholder={t("auth.identifierPlaceholder")}
                     required
                     className="h-12 rounded-[16px] bg-background px-4 text-base placeholder:text-muted-foreground focus-visible:ring-primary"
                   />
                   <p className="text-sm leading-relaxed text-muted-foreground">
-                    Nhập SĐT hoặc Email đã đăng ký.
+                    {t("auth.identifierHint")}
                   </p>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="password" className="font-bold text-foreground">
-                    {t("password")}
+                    {t("auth.password")}
                   </Label>
                   <Input
                     id="password"
@@ -249,7 +249,7 @@ export default function LoginPage() {
                     autoComplete="current-password"
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
-                    placeholder="Nhập mật khẩu"
+                    placeholder={t("auth.passwordPlaceholder")}
                     required
                     minLength={6}
                     className="h-12 rounded-[16px] bg-background px-4 text-base placeholder:text-muted-foreground focus-visible:ring-primary"
@@ -267,7 +267,7 @@ export default function LoginPage() {
                     htmlFor="remember"
                     className="cursor-pointer text-sm font-medium text-muted-foreground"
                   >
-                    Ghi nhớ đăng nhập
+                    {t("auth.rememberMe")}
                   </label>
                 </div>
 
@@ -286,9 +286,9 @@ export default function LoginPage() {
                   className="h-12 w-full rounded-[16px] bg-primary text-base font-extrabold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_25%,transparent)] transition-transform hover:bg-primary/90 active:scale-[0.98]"
                 >
                   {loading ? (
-                    <><LoaderCircle className="animate-spin" aria-hidden="true" />{t("loggingIn")}</>
+                    <><LoaderCircle className="animate-spin" aria-hidden="true" />{t("auth.loggingIn")}</>
                   ) : (
-                    <><LogIn aria-hidden="true" />{t("login")}</>
+                    <><LogIn aria-hidden="true" />{t("auth.login")}</>
                   )}
                 </Button>
               </form>
@@ -296,14 +296,14 @@ export default function LoginPage() {
               <form onSubmit={handleRegister} className="space-y-5">
                 <div className="space-y-2">
                   <Label htmlFor="fullName" className="font-bold text-foreground">
-                    {t("fullName")} *
+                    {t("auth.fullName")} *
                   </Label>
                   <Input
                     id="fullName"
                     name="fullName"
                     value={fullName}
                     onChange={(event) => setFullName(event.target.value)}
-                    placeholder="Ví dụ: Nguyễn Văn A"
+                    placeholder={t("auth.fullNamePlaceholder")}
                     required
                     className="h-12 rounded-[16px] bg-background px-4 text-base placeholder:text-muted-foreground focus-visible:ring-primary"
                   />
@@ -311,14 +311,14 @@ export default function LoginPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="phone" className="font-bold text-foreground">
-                    {t("phoneOrEmail")} *
+                    {t("auth.phone")} *
                   </Label>
                   <Input
                     id="phone"
                     name="phone"
                     value={identifier}
                     onChange={(event) => setIdentifier(formatPhone(event.target.value))}
-                    placeholder="Ví dụ: 0901.234.567"
+                    placeholder={t("auth.phonePlaceholder")}
                     required
                     className="h-12 rounded-[16px] bg-background px-4 text-base placeholder:text-muted-foreground focus-visible:ring-primary"
                   />
@@ -326,7 +326,7 @@ export default function LoginPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="email" className="font-bold text-foreground">
-                    {t("email")} *
+                    {t("auth.email")} *
                   </Label>
                   <Input
                     id="email"
@@ -334,21 +334,21 @@ export default function LoginPage() {
                     type="email"
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
-                    placeholder="Ví dụ: landlord@gmail.com"
+                    placeholder={t("auth.emailPlaceholder")}
                     required
                     className="h-12 rounded-[16px] bg-background px-4 text-base placeholder:text-muted-foreground focus-visible:ring-primary"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="idCard" className="font-bold text-foreground">Số CMND / CCCD *</Label>
+                  <Label htmlFor="idCard" className="font-bold text-foreground">{t("auth.idCard")} *</Label>
                   <Input
                     id="idCard"
                     name="idCard"
                     inputMode="numeric"
                     value={idCard}
                     onChange={(event) => setIdCard(formatCCCD(event.target.value))}
-                    placeholder="Nhập CCCD 12 số"
+                    placeholder={t("auth.idCardPlaceholder")}
                     required
                     maxLength={14}
                     className="h-12 rounded-[16px] bg-background px-4 text-base placeholder:text-muted-foreground focus-visible:ring-primary"
@@ -357,7 +357,7 @@ export default function LoginPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="password" className="font-bold text-foreground">
-                    {t("password")} *
+                    {t("auth.password")} *
                   </Label>
                   <Input
                     id="password"
@@ -365,7 +365,7 @@ export default function LoginPage() {
                     type="password"
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
-                    placeholder="Nhập mật khẩu (từ 6 ký tự)"
+                    placeholder={t("auth.passwordPlaceholderMin")}
                     required
                     minLength={6}
                     className="h-12 rounded-[16px] bg-background px-4 text-base placeholder:text-muted-foreground focus-visible:ring-primary"
@@ -374,14 +374,14 @@ export default function LoginPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="inviteCode" className="font-bold text-foreground">
-                    {t("inviteCode")} *
+                    {t("auth.inviteCode")} *
                   </Label>
                   <Input
                     id="inviteCode"
                     name="inviteCode"
                     value={inviteCode}
                     onChange={(event) => setInviteCode(event.target.value)}
-                    placeholder="Nhập mã mời 6 chữ số"
+                    placeholder={t("auth.inviteCodePlaceholder")}
                     required
                     maxLength={6}
                     className="h-12 rounded-[16px] bg-background px-4 text-base placeholder:text-muted-foreground focus-visible:ring-primary"
@@ -389,13 +389,13 @@ export default function LoginPage() {
                   <div className="mt-2 text-right">
                     <Dialog>
                       <DialogTrigger className="text-xs text-primary font-bold hover:underline bg-transparent border-0 p-0 cursor-pointer">
-                        💬 Yêu cầu cấp mã mời qua Zalo
+                        💬 {t("auth.requestInvite")}
                       </DialogTrigger>
                       <DialogContent className="sm:max-w-[420px] rounded-[24px]">
                         <DialogHeader>
-                          <DialogTitle className="text-center text-xl font-bold">Yêu cầu cấp mã mời</DialogTitle>
+                          <DialogTitle className="text-center text-xl font-bold">{t("auth.requestInviteTitle")}</DialogTitle>
                           <DialogDescription className="text-center text-sm">
-                            Quét mã QR dưới bằng camera điện thoại để soạn tin nhắn yêu cầu nhanh chóng.
+                            {t("auth.requestInviteDescription")}
                           </DialogDescription>
                         </DialogHeader>
                         <div className="flex flex-col items-center justify-center p-4">
@@ -413,7 +413,7 @@ export default function LoginPage() {
                             <div className="h-[200px] w-[200px] animate-pulse bg-muted rounded-lg" />
                           )}
                           <p className="mt-4 text-center text-xs text-muted-foreground max-w-[280px]">
-                            Hệ thống sẽ soạn sẵn tin nhắn thông tin của bạn và tự mở ứng dụng Zalo chat tới số admin sau khi điền thông tin.
+                            {t("auth.requestInviteHint")}
                           </p>
                           <div className="mt-6 border-t pt-4 w-full text-center">
                             <a
@@ -422,7 +422,7 @@ export default function LoginPage() {
                               rel="noopener noreferrer"
                               className="text-sm text-primary font-bold hover:underline inline-flex items-center gap-1.5"
                             >
-                              Hoặc truy cập trực tiếp trên máy tính <ExternalLink className="size-3.5" />
+                              {t("auth.requestInviteDirect")} <ExternalLink className="size-3.5" />
                             </a>
                           </div>
                         </div>
@@ -432,21 +432,21 @@ export default function LoginPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="propertyAddress" className="font-bold text-foreground">{t("propertyAddress")} *</Label>
+                  <Label htmlFor="propertyAddress" className="font-bold text-foreground">{t("auth.propertyAddress")} *</Label>
                   <Input
                     id="propertyAddress"
                     name="propertyAddress"
                     value={propertyAddress}
                     onChange={(event) => setPropertyAddress(event.target.value)}
-                    placeholder={t("propertyAddressPlaceholder")}
+                    placeholder={t("auth.propertyAddressPlaceholder")}
                     required
                     className="h-12 rounded-[16px] bg-background px-4 text-base placeholder:text-muted-foreground focus-visible:ring-primary"
                   />
                   <Button type="button" variant="outline" disabled={isLocating} onClick={handleLocate} className="h-11 w-full rounded-[14px] font-bold">
-                    {isLocating ? <><LoaderCircle className="animate-spin" aria-hidden="true" />{t("locating")}</> : <><MapPin aria-hidden="true" />{t("getLocation")}</>}
+                    {isLocating ? <><LoaderCircle className="animate-spin" aria-hidden="true" />{t("auth.locating")}</> : <><MapPin aria-hidden="true" />{t("auth.getLocation")}</>}
                   </Button>
-                  <p className="text-xs leading-relaxed text-muted-foreground">{t("propertyAddressHint")}</p>
-                  <p className="text-xs leading-relaxed text-muted-foreground">{t("propertyLocationAttribution")}</p>
+                  <p className="text-xs leading-relaxed text-muted-foreground">{t("auth.propertyAddressHint")}</p>
+                  <p className="text-xs leading-relaxed text-muted-foreground">{t("auth.propertyLocationAttribution")}</p>
                 </div>
 
                 {error ? (
@@ -464,9 +464,9 @@ export default function LoginPage() {
                   className="h-12 w-full rounded-[16px] bg-primary text-base font-extrabold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_25%,transparent)] transition-transform hover:bg-primary/90 active:scale-[0.98]"
                 >
                   {loading ? (
-                    <><LoaderCircle className="animate-spin" aria-hidden="true" />{t("registering")}</>
+                    <><LoaderCircle className="animate-spin" aria-hidden="true" />{t("auth.registering")}</>
                   ) : (
-                    <><UserPlus aria-hidden="true" />{t("register")}</>
+                    <><UserPlus aria-hidden="true" />{t("auth.register")}</>
                   )}
                 </Button>
               </form>

@@ -182,20 +182,20 @@ export default function LoginScreen({ onLogin }: Props) {
                 { backgroundColor: theme.surface, borderColor: theme.border },
               ]}
             >
-              <View style={{ alignItems: "flex-end", marginBottom: 14 }}><LanguageToggle /></View>
+              <View style={styles.languageToggleRow}><LanguageToggle /></View>
               <AppText style={[styles.eyebrow, { color: theme.primary }]}>TRO HUB</AppText>
               <AppText style={[styles.title, { color: theme.text }]}>
-                {mode === "login" ? t("login") : t("register")}
+                {mode === "login" ? t("auth.loginTitle") : t("auth.registerLandlord")}
               </AppText>
               <AppText style={[styles.subtitle, { color: theme.muted }]}>
                 {mode === "login"
-                  ? t("loginDescription")
-                  : t("registerDescription")}
+                  ? t("auth.loginDescription")
+                  : t("auth.registerDescription")}
               </AppText>
 
               {mode === "register" && (
                 <View style={styles.field}>
-                  <AppText style={[styles.label, { color: theme.text }]}>{t("fullName")}</AppText>
+                  <AppText style={[styles.label, { color: theme.text }]}>{t("auth.fullName")}</AppText>
                   <AppTextInput
                     editable={!isSubmitting}
                     onChangeText={(value) => {
@@ -222,10 +222,10 @@ export default function LoginScreen({ onLogin }: Props) {
 
               <View style={styles.field}>
                 <AppText style={[styles.label, { color: theme.text }]}>
-                  {mode === "login" ? t("phoneOrEmail") : t("phone")}
+                  {mode === "login" ? t("auth.phoneOrEmail") : t("auth.phone")}
                 </AppText>
                 <AppTextInput
-                  accessibilityLabel={mode === "login" ? t("phoneOrEmail") : t("phone")}
+                  accessibilityLabel={mode === "login" ? t("auth.phoneOrEmail") : t("auth.phone")}
                   keyboardType={mode === "login" ? "email-address" : "phone-pad"}
                   autoCapitalize={mode === "login" ? "none" : undefined}
                   editable={!isSubmitting}
@@ -257,7 +257,7 @@ export default function LoginScreen({ onLogin }: Props) {
               {mode === "register" && (
                 <>
                   <View style={styles.field}>
-                    <AppText style={[styles.label, { color: theme.text }]}>{t("email")}</AppText>
+                    <AppText style={[styles.label, { color: theme.text }]}>{t("auth.email")}</AppText>
                     <AppTextInput
                       keyboardType="email-address"
                       autoCapitalize="none"
@@ -284,7 +284,7 @@ export default function LoginScreen({ onLogin }: Props) {
                   </View>
 
                   <View style={styles.field}>
-                    <AppText style={[styles.label, { color: theme.text }]}>{t("idCard")}</AppText>
+                    <AppText style={[styles.label, { color: theme.text }]}>{t("auth.idCard")}</AppText>
                     <View style={styles.identityRow}>
                       <AppTextInput
                         keyboardType="numeric"
@@ -310,9 +310,9 @@ export default function LoginScreen({ onLogin }: Props) {
               )}
 
               <View style={styles.field}>
-                <AppText style={[styles.label, { color: theme.text }]}>{t("password")}</AppText>
+                <AppText style={[styles.label, { color: theme.text }]}>{t("auth.password")}</AppText>
                 <AppTextInput
-                  accessibilityLabel={t("password")}
+                  accessibilityLabel={t("auth.password")}
                   editable={!isSubmitting}
                   onChangeText={(value) => {
                     setPassword(value);
@@ -344,7 +344,7 @@ export default function LoginScreen({ onLogin }: Props) {
                 onPress={handleSubmit}
                 style={styles.primaryButton}
               >
-                {mode === "login" ? t("login") : t("signUpNow")}
+                {mode === "login" ? t("auth.login") : t("auth.register")}
               </AppButton>
 
               {mode === "login" && (
@@ -355,18 +355,18 @@ export default function LoginScreen({ onLogin }: Props) {
                   style={styles.forgotButton}
                   variant="ghost"
                 >
-                  {t("forgotPassword")}
+                  {t("auth.forgotPassword")}
                 </AppButton>
               )}
 
               <View style={styles.toggleContainer}>
                 {mode === "login" ? (
                   <Pressable onPress={() => { setMode("register"); setIdentifierError(""); setPasswordError(""); }}>
-                    <AppText style={[styles.toggleText, { color: theme.primary }]}>{t("tenantRegister")}</AppText>
+                    <AppText style={[styles.toggleText, { color: theme.primary }]}>{t("auth.tenantRegister")}</AppText>
                   </Pressable>
                 ) : (
                   <Pressable onPress={() => { setMode("login"); setIdentifierError(""); setPasswordError(""); }}>
-                    <AppText style={[styles.toggleText, { color: theme.primary }]}>{t("backToLogin")}</AppText>
+                    <AppText style={[styles.toggleText, { color: theme.primary }]}>{t("auth.backToLogin")}</AppText>
                   </Pressable>
                 )}
               </View>
@@ -403,6 +403,7 @@ export default function LoginScreen({ onLogin }: Props) {
 
 const styles = StyleSheet.create({
   identityRow: { flexDirection: "row", gap: 8 },
+  languageToggleRow: { alignItems: "flex-end", marginBottom: 14, position: "relative", zIndex: 50, elevation: 50 },
   identityInput: { flex: 1 },
   scanButton: { minHeight: 44, alignItems: "center", justifyContent: "center", borderRadius: 12, paddingHorizontal: 10 },
   scanButtonText: { fontSize: 11, fontWeight: "800" },

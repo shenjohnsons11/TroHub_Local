@@ -20,7 +20,8 @@
     "floor": "Floor {number}",
     "unitVnd": "VND",
     "unitKwh": "kWh",
-    "unitM3": "m³"
+    "unitM3": "m³",
+    "language": "Language"
   },
   "auth": {
     "login": "Sign In",
@@ -48,7 +49,31 @@
     "inviteCode": "Registration Invite Code (6 digits)",
     "tenantRegister": "Create Tenant Account",
     "tenantMobileOnly": "Tenant accounts must sign in using the TroHub Mobile App.",
-    "logout": "Sign Out"
+    "logout": "Sign Out",
+    "identifierPlaceholder": "Example: 0901234567 or email@example.com",
+    "identifierHint": "Enter your registered phone number or email.",
+    "passwordPlaceholder": "Enter password",
+    "passwordPlaceholderMin": "Enter password (6 characters minimum)",
+    "rememberMe": "Remember me",
+    "loggingIn": "Signing in...",
+    "registering": "Registering...",
+    "fullNamePlaceholder": "Example: Nguyen Van A",
+    "phonePlaceholder": "Example: 0901.234.567",
+    "emailPlaceholder": "Example: landlord@gmail.com",
+    "idCardPlaceholder": "Enter 12-digit national ID",
+    "inviteCodePlaceholder": "Enter 6-digit invite code",
+    "requestInvite": "Request an invite code via Zalo",
+    "requestInviteTitle": "Request an invite code",
+    "requestInviteDescription": "Scan the QR code with your phone to quickly compose a request message.",
+    "requestInviteHint": "The system prepares your information and opens a Zalo chat with the administrator after you submit it.",
+    "requestInviteDirect": "Or open directly on this computer",
+    "propertyAddress": "Property address",
+    "propertyAddressPlaceholder": "Example: 123 Nguyen Hue, District 1, Ho Chi Minh City",
+    "locating": "Getting location...",
+    "getLocation": "Use current GPS location",
+    "propertyAddressHint": "This address identifies your rental property.",
+    "propertyLocationAttribution": "You can edit the address after GPS lookup completes.",
+    "backToLogin": "Back to sign in"
   },
   "nav": {
     "overview": "Overview",
