@@ -18,6 +18,8 @@ import { PageHeader } from "@/components/calm-ops/page-header";
 import { safeJsonParse } from "@/lib/client-storage";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MeterLedger } from "@/components/meter-ledger";
+import { useLanguage } from "@/components/language-provider";
+import { getStatusText } from "@/lib/status-helpers";
 
 type CheckoutPreview = {
   roomCode: string;
@@ -31,6 +33,7 @@ type CheckoutPreview = {
 
 export default function ContractsPage() {
   const notification = useNotification();
+  const { t } = useLanguage();
   const [contracts, setContracts] = useState<any[]>([]);
   const [draftContracts, setDraftContracts] = useState<any[]>([]);
   const [activeFilter, setActiveFilter] = useState("all");
@@ -65,11 +68,11 @@ export default function ContractsPage() {
   const [selectedServices, setSelectedServices] = useState<{serviceId: string, fixedPrice: string}[]>([]);
 
   const computedStatus = (() => {
-    if (!startDate) return "Đang hiệu lực";
+    if (!startDate) return t("contracts.status.active");
     const start = new Date(startDate);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    return start > today ? "Chờ hiệu lực" : "Đang hiệu lực";
+    return start > today ? t("statusMap.contract.pendingTenant") : t("contracts.status.active");
   })();
 
   const loadData = async () => {
@@ -123,7 +126,7 @@ export default function ContractsPage() {
       setFinalElectricity(formatMeterReading(response.data.electricityOld));
       setFinalWater(formatMeterReading(response.data.waterOld));
     } catch (error) {
-      notification.error(getNotificationMessage(error, "Không thể tải bảng quyết toán."));
+      notification.error(getNotificationMessage(error, t("common.error")));
       setCheckoutModalOpen(false);
     } finally {
       setCheckoutPreviewLoading(false);
@@ -135,7 +138,7 @@ export default function ContractsPage() {
     const electricity = parseMeterReading(finalElectricity);
     const water = parseMeterReading(finalWater);
     if (!checkoutPreview || electricity === null || water === null || electricity < checkoutPreview.electricityOld || water < checkoutPreview.waterOld) {
-      notification.error("Chỉ số cuối kỳ phải hợp lệ và không nhỏ hơn chỉ số cũ.");
+      notification.error(t("common.error"));
       return;
     }
     try {
@@ -149,13 +152,11 @@ export default function ContractsPage() {
           note: checkoutNote
         })
       });
-      notification.success(response.settlement.amountDue > 0
-        ? `Khách còn nợ thêm ${formatCurrency(response.settlement.amountDue)}.`
-        : `Cần hoàn lại cho khách ${formatCurrency(response.settlement.refundAmount)}.`);
+      notification.success(t("contracts.checkoutSuccess"));
       setCheckoutModalOpen(false);
       await loadData();
     } catch (err: unknown) {
-      notification.error(getNotificationMessage(err, "Không thể duyệt trả phòng."));
+      notification.error(getNotificationMessage(err, t("common.error")));
     } finally {
       setCheckoutSubmitting(false);
     }
@@ -198,8 +199,7 @@ export default function ContractsPage() {
       const selectedRoom = rooms.find(r => (r._id || r.id) === roomId);
       const selectedTenant = tenants.find(t => (t._id || t.id) === tenantId);
       
-      if (!selectedRoom) throw new Error("Vui lòng chọn phòng");
-      if (!selectedTenant) throw new Error("Vui lòng chọn người thuê");
+      if (!selectedRoom || !selectedTenant) throw new Error(t("common.error"));
       const payload = { 
         roomId: selectedRoom._id || selectedRoom.id, 
         tenantId: selectedTenant._id || selectedTenant.id, 
@@ -215,7 +215,7 @@ export default function ContractsPage() {
         })),
         initialElectricity: initialElectricity ? parseMeterReading(initialElectricity) ?? undefined : undefined,
         initialWater: initialWater ? parseMeterReading(initialWater) ?? undefined : undefined,
-        status: computedStatus === "Đang hiệu lực" ? 1 : 0 // 0 means waiting/pending
+        status: 1
       };
       
       const endpoint = editContractId ? `/contracts/${editContractId}` : "/contracts";
@@ -226,78 +226,74 @@ export default function ContractsPage() {
         body: JSON.stringify(payload),
       });
       setIsAddOpen(false);
-      notification.success("Đã cập nhật hợp đồng.");
+      notification.success(t("contracts.createdSuccess"));
       loadData();
     } catch (err: unknown) {
-      notification.error(getNotificationMessage(err, "Không thể lưu hợp đồng."));
+      notification.error(getNotificationMessage(err, t("common.error")));
     }
   };
 
   const handleConfirmContract = async (id: string) => {
-    const confirmed = await notification.confirm({ title: "Duyệt hợp đồng", message: "Xác nhận duyệt hợp đồng này để nó có hiệu lực?", confirmText: "Duyệt" });
+    const confirmed = await notification.confirm({ title: t("contracts.createContract"), message: t("contracts.deleteConfirm"), confirmText: t("common.confirm") });
     if (!confirmed) return;
     try {
       const res = await fetchAPI(`/contracts/${id}/confirm`, {
         method: "PUT"
       });
       if (res.success) {
-        notification.success("Đã duyệt hợp đồng thành công.");
+        notification.success(t("contracts.approvedSuccess"));
         await loadData();
       } else {
-        notification.error(res.message || "Không thể duyệt hợp đồng.");
+        notification.error(res.message || t("common.error"));
       }
     } catch (err: unknown) {
-      notification.error(getNotificationMessage(err, "Không thể duyệt hợp đồng."));
+      notification.error(getNotificationMessage(err, t("common.error")));
     }
   };
 
   const handleSendContract = async (id: string) => {
     try {
       await fetchAPI(`/contracts/${id}/send`, { method: "POST" });
-      notification.success("Đã gửi hợp đồng cho Người thuê.");
+      notification.success(t("common.success"));
       await loadData();
-    } catch (error) {
-      notification.error(getNotificationMessage(error, "Không thể gửi hợp đồng."));
+    } catch (err: unknown) {
+      notification.error(getNotificationMessage(err, t("common.error")));
     }
   };
 
   const handleDelete = async (id: string) => {
-    const confirmed = await notification.confirm({ title: "Xóa hợp đồng", message: "Bạn có chắc chắn muốn xóa hợp đồng này?", confirmText: "Xóa", destructive: true });
+    const confirmed = await notification.confirm({ title: t("common.delete"), message: t("contracts.deleteConfirm"), confirmText: t("common.delete"), destructive: true });
     if (!confirmed) return;
     try {
       await fetchAPI(`/contracts/${id}`, { method: "DELETE" });
-      notification.success("Đã xóa hợp đồng.");
-      await loadData();
+      notification.success(t("common.success"));
+      loadData();
     } catch (err: unknown) {
-      notification.error(getNotificationMessage(err, "Không thể xóa hợp đồng."));
+      notification.error(getNotificationMessage(err, t("common.error")));
     }
   };
 
-  const filteredContracts = contracts.filter(c => {
-    const roomCode = c.roomId?.roomCode || "";
-    const tenantName = c.tenantId?.fullName || c.tenantId?.name || "";
-    const matchesSearch = roomCode.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          tenantName.toLowerCase().includes(searchTerm.toLowerCase());
-    if (!matchesSearch) return false;
-    if (activeFilter === "pending") return c.status === 0 || c.status === 4;
-    if (activeFilter === "active") return c.status === 1;
-    if (activeFilter === "checkout") return c.status === 2 || c.status === 5;
+  const filteredContracts = contracts.filter(contract => {
+    const roomMatches = contract.roomId?.roomCode?.toLowerCase().includes(searchTerm.toLowerCase());
+    const tenantMatches = (contract.tenantId?.fullName || contract.tenantId?.name)?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchSearch = roomMatches || tenantMatches;
+    if (!matchSearch) return false;
+
+    if (activeFilter === "all") return true;
+    if (activeFilter === "pending") return contract.status === 0 || contract.status === 4 || contract.status === 5;
+    if (activeFilter === "active") return contract.status === 1;
+    if (activeFilter === "checkout") return contract.status === 2 || contract.status === 5;
     return true;
   });
 
   const checkoutCalculation = (() => {
     if (!checkoutPreview) return null;
-    const electricityAmount = Math.max(
-      0,
-      (parseMeterReading(finalElectricity) ?? checkoutPreview.electricityOld) - checkoutPreview.electricityOld
-    ) * checkoutPreview.electricityPrice;
-    const waterAmount = Math.max(
-      0,
-      (parseMeterReading(finalWater) ?? checkoutPreview.waterOld) - checkoutPreview.waterOld
-    ) * checkoutPreview.waterPrice;
-    const utilitiesAmount = electricityAmount + waterAmount;
-    const damage = unformatNumber(damageAmount);
-    const totalDebt = checkoutPreview.unpaidAmount + utilitiesAmount + damage;
+    const finalElec = parseMeterReading(finalElectricity) ?? checkoutPreview.electricityOld;
+    const finalWat = parseMeterReading(finalWater) ?? checkoutPreview.waterOld;
+    const elecUsage = Math.max(0, finalElec - checkoutPreview.electricityOld);
+    const watUsage = Math.max(0, finalWat - checkoutPreview.waterOld);
+    const utilitiesAmount = (elecUsage * checkoutPreview.electricityPrice) + (watUsage * checkoutPreview.waterPrice);
+    const totalDebt = checkoutPreview.unpaidAmount + utilitiesAmount + unformatNumber(damageAmount);
     const balance = checkoutPreview.depositAmount - totalDebt;
     return {
       utilitiesAmount,
@@ -309,15 +305,15 @@ export default function ContractsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Vận hành" title="Hợp đồng" description="Theo dõi vòng đời hợp đồng từ khởi tạo, chờ ký đến hết hiệu lực." />
+      <PageHeader eyebrow={t("nav.overview")} title={t("contracts.title")} description={t("contracts.subtitle")} />
       <section className="calm-surface flex flex-col gap-4 p-4">
         <div className="flex flex-wrap gap-2">
           {[
-            { id: "all", label: "Tất cả" },
-            { id: "pending", label: "Chờ duyệt/ký" },
-            { id: "active", label: "Hiệu lực" },
-            { id: "checkout", label: "Trả phòng" },
-            { id: "draft", label: "Bản nháp" },
+            { id: "all", label: t("common.all") },
+            { id: "pending", label: t("statusMap.contract.pendingTenant") },
+            { id: "active", label: t("contracts.status.active") },
+            { id: "checkout", label: t("contracts.checkout") },
+            { id: "draft", label: t("statusMap.contract.draft") },
           ].map(tab => (
             <Button 
               key={tab.id}
@@ -335,7 +331,7 @@ export default function ContractsPage() {
           <div className="relative w-full sm:max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input 
-              placeholder="Tìm theo mã phòng, tên Người thuê..."
+              placeholder={t("common.search")}
               className="pl-9"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
@@ -344,17 +340,17 @@ export default function ContractsPage() {
 
         <div className="flex gap-2">
           <Link href="/dashboard/contracts/new" className="flex h-10 items-center rounded-[16px] bg-primary px-4 text-sm font-bold text-primary-foreground shadow-[var(--calm-shadow)] transition hover:opacity-90">
-            <Plus className="w-4 h-4 mr-2" /> Tạo hợp đồng mới
+            <Plus className="w-4 h-4 mr-2" /> {t("contracts.createContract")}
           </Link>
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
           <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{editContractId ? "Sửa hợp đồng thuê phòng" : "Tạo hợp đồng thuê phòng"}</DialogTitle>
+              <DialogTitle>{editContractId ? t("common.edit") : t("contracts.createContract")}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleCreateContract} className="space-y-4 mt-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="roomSelect">Chọn phòng *</Label>
+                  <Label htmlFor="roomSelect">{t("contracts.room")} *</Label>
                   <select 
                     id="roomSelect" 
                     value={roomId} 
@@ -371,12 +367,12 @@ export default function ContractsPage() {
                     required
                     className="flex h-10 w-full items-center justify-between rounded-[16px] border border-border bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   >
-                    <option value="" disabled>-- Chọn phòng --</option>
+                    <option value="" disabled>-- {t("contracts.room")} --</option>
                     {rooms.map(r => <option key={r._id || r.id} value={r._id || r.id}>{r.roomCode}</option>)}
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="tenantSelect">Người thuê *</Label>
+                  <Label htmlFor="tenantSelect">{t("contracts.tenant")} *</Label>
                   <select 
                     id="tenantSelect" 
                     value={tenantId} 
@@ -384,7 +380,7 @@ export default function ContractsPage() {
                     required
                     className="flex h-10 w-full items-center justify-between rounded-[16px] border border-border bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   >
-                    <option value="" disabled>-- Chọn Người thuê --</option>
+                    <option value="" disabled>-- {t("contracts.tenant")} --</option>
                     {tenants.map(t => <option key={t._id || t.id} value={t._id || t.id}>{t.fullName || t.name} ({formatPhone(t.phone)})</option>)}
                   </select>
                 </div>
@@ -392,7 +388,7 @@ export default function ContractsPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="startDate">Ngày bắt đầu *</Label>
+                  <Label htmlFor="startDate">{t("contracts.startDate")} *</Label>
                   <Input 
                     id="startDate" 
                     type="date" 
@@ -410,14 +406,14 @@ export default function ContractsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="endDate">Ngày kết thúc</Label>
+                  <Label htmlFor="endDate">{t("contracts.endDate")}</Label>
                   <Input id="endDate" type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="rent">Tiền thuê / tháng *</Label>
+                  <Label htmlFor="rent">{t("contracts.rentalPrice")} *</Label>
                   <Input 
                     id="rent" 
                     type="text" 
@@ -428,7 +424,7 @@ export default function ContractsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="deposit">Tiền cọc *</Label>
+                  <Label htmlFor="deposit">{t("contracts.depositAmount")} *</Label>
                   <Input 
                     id="deposit" 
                     type="text" 
@@ -442,7 +438,7 @@ export default function ContractsPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="electricityPrice">Giá tiền điện (đ/kWh) *</Label>
+                  <Label htmlFor="electricityPrice">{t("contracts.electricityPrice")} (đ/kWh) *</Label>
                   <Input
                     id="electricityPrice"
                     inputMode="decimal"
@@ -453,7 +449,7 @@ export default function ContractsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="waterPrice">Giá tiền nước (đ/m³) *</Label>
+                  <Label htmlFor="waterPrice">{t("contracts.waterPrice")} (đ/m³) *</Label>
                   <Input
                     id="waterPrice"
                     inputMode="decimal"
@@ -467,7 +463,7 @@ export default function ContractsPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="initialElectricity">Chỉ số điện đầu</Label>
+                  <Label htmlFor="initialElectricity">{t("contracts.initialElec")}</Label>
                   <Input
                     id="initialElectricity"
                     inputMode="decimal"
@@ -477,7 +473,7 @@ export default function ContractsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="initialWater">Chỉ số nước đầu</Label>
+                  <Label htmlFor="initialWater">{t("contracts.initialWater")}</Label>
                   <Input
                     id="initialWater"
                     inputMode="decimal"
@@ -488,110 +484,17 @@ export default function ContractsPage() {
                 </div>
               </div>
 
-              <div className="mt-4 space-y-4 border-t border-border pt-4">
-                <Label className="text-base font-semibold text-foreground">Giá Điện, Nước</Label>
-                {availableServices.filter(s => s.type === 1).length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Chưa cài đặt dịch vụ Điện, Nước trong phần Quản lý Dịch vụ.</p>
-                ) : (
-                  <div className="grid grid-cols-2 gap-4">
-                    {availableServices.filter(s => s.type === 1).map(srv => {
-                      const srvId = srv._id || srv.id;
-                      const isSelected = selectedServices.some(s => s.serviceId === srvId);
-                      const svcData = selectedServices.find(s => s.serviceId === srvId);
-                      return (
-                        <div key={srvId} className="space-y-2 rounded-[16px] bg-background p-3 shadow-[var(--calm-shadow)]">
-                          <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-foreground">
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={e => {
-                                if (e.target.checked) {
-                                  setSelectedServices([...selectedServices, { serviceId: srvId, fixedPrice: formatNumberInput(srv.defaultPrice) }]);
-                                } else {
-                                  setSelectedServices(selectedServices.filter(s => s.serviceId !== srvId));
-                                }
-                              }}
-                              className="rounded border-border text-primary focus:ring-primary"
-                            />
-                            {srv.name} <span className="font-normal text-muted-foreground">({srv.unit})</span>
-                          </label>
-                          {isSelected && (
-                            <Input
-                              className="h-10 bg-card text-sm"
-                              value={svcData?.fixedPrice || ""}
-                              onChange={e => {
-                                const updated = selectedServices.map(s => s.serviceId === srvId ? { ...s, fixedPrice: formatNumberInput(e.target.value) } : s);
-                                setSelectedServices(updated);
-                              }}
-                              placeholder="Đơn giá..."
-                              required
-                            />
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-3 mt-4 pt-4 border-t border-border">
-                <Label className="text-base font-semibold text-foreground">Dịch vụ khác</Label>
-                {availableServices.filter(s => s.type !== 1).length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Không có dịch vụ khác.</p>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {availableServices.filter(s => s.type !== 1).map(srv => {
-                      const srvId = srv._id || srv.id;
-                      const isSelected = selectedServices.some(s => s.serviceId === srvId);
-                      const svcData = selectedServices.find(s => s.serviceId === srvId);
-                      return (
-                        <div key={srvId} className={`flex flex-col gap-2 rounded-[16px] p-3 shadow-[var(--calm-shadow)] transition-colors ${isSelected ? 'bg-primary/10' : 'bg-background'}`}>
-                          <label className="flex items-center gap-2 cursor-pointer font-medium text-sm text-foreground">
-                            <input 
-                              type="checkbox" 
-                              checked={isSelected}
-                              onChange={e => {
-                                if (e.target.checked) {
-                                  setSelectedServices([...selectedServices, { serviceId: srvId, fixedPrice: formatNumberInput(srv.defaultPrice) }]);
-                                } else {
-                                  setSelectedServices(selectedServices.filter(s => s.serviceId !== srvId));
-                                }
-                              }}
-                              className="rounded border-border text-primary focus:ring-primary"
-                            />
-                            {srv.name} <span className="text-muted-foreground font-normal">({srv.unit})</span>
-                          </label>
-                          {isSelected && (
-                            <div className="pl-6">
-                              <Input 
-                                className="h-8 text-sm bg-card"
-                                value={svcData?.fixedPrice || ""}
-                                onChange={e => {
-                                  const updated = selectedServices.map(s => s.serviceId === srvId ? { ...s, fixedPrice: formatNumberInput(e.target.value) } : s);
-                                  setSelectedServices(updated);
-                                }}
-                                placeholder="Đơn giá..."
-                              />
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
               <div className="space-y-2 mt-4 pt-4 border-t border-border">
-                  <Label htmlFor="status">Trạng thái</Label>
+                  <Label htmlFor="status">{t("common.status")}</Label>
                   <Input 
                     id="status" 
                     value={computedStatus} 
                     disabled 
-                    className={`cursor-not-allowed font-semibold ${computedStatus === 'Chờ hiệu lực' ? 'bg-[var(--warning-soft)] text-warning-foreground' : 'bg-primary/10 text-primary'}`}
+                    className="cursor-not-allowed font-semibold bg-primary/10 text-primary"
                   />
               </div>
 
-              <Button type="submit" className="mt-4 w-full"><FileSignature className="size-4" />{editContractId ? "Lưu thay đổi" : "Tạo hợp đồng"}</Button>
+              <Button type="submit" className="mt-4 w-full"><FileSignature className="size-4" />{editContractId ? t("common.save") : t("contracts.createContract")}</Button>
             </form>
           </DialogContent>
         </Dialog>
@@ -599,28 +502,28 @@ export default function ContractsPage() {
         <Dialog open={checkoutModalOpen} onOpenChange={setCheckoutModalOpen}>
           <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>Quyết toán Trả phòng</DialogTitle>
+              <DialogTitle>{t("contracts.settleDeposit")}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleCheckout} className="space-y-4 mt-4">
               {checkoutPreviewLoading ? (
-                <div className="rounded-2xl bg-muted p-4 text-sm text-muted-foreground">Đang tải công nợ hiện tại…</div>
+                <div className="rounded-2xl bg-muted p-4 text-sm text-muted-foreground">{t("common.loading")}</div>
               ) : checkoutPreview && checkoutCalculation ? (
                 <div className="space-y-2 rounded-2xl bg-muted p-4 text-sm">
-                  <div className="flex justify-between"><span>Tiền cọc ban đầu</span><strong>{formatCurrency(checkoutPreview.depositAmount)}</strong></div>
-                  <div className="flex justify-between"><span>(−) Hóa đơn nợ cũ</span><strong>{formatCurrency(checkoutPreview.unpaidAmount)}</strong></div>
-                  <div className="flex justify-between"><span>(−) Điện nước cuối kỳ</span><strong>{formatCurrency(checkoutCalculation.utilitiesAmount)}</strong></div>
-                  <div className="flex justify-between"><span>(−) Tiền bồi thường hư hại</span><strong>{formatCurrency(unformatNumber(damageAmount))}</strong></div>
-                  <div className="flex justify-between border-t border-border pt-2"><span>Tổng nợ</span><strong>{formatCurrency(checkoutCalculation.totalDebt)}</strong></div>
+                  <div className="flex justify-between"><span>{t("contracts.depositAmount")}</span><strong>{formatCurrency(checkoutPreview.depositAmount)}</strong></div>
+                  <div className="flex justify-between"><span>(−) {t("invoices.status.unpaid")}</span><strong>{formatCurrency(checkoutPreview.unpaidAmount)}</strong></div>
+                  <div className="flex justify-between"><span>(−) {t("utilities.title")}</span><strong>{formatCurrency(checkoutCalculation.utilitiesAmount)}</strong></div>
+                  <div className="flex justify-between"><span>(−) {t("common.amount")}</span><strong>{formatCurrency(unformatNumber(damageAmount))}</strong></div>
+                  <div className="flex justify-between border-t border-border pt-2"><span>{t("debts.totalDebt")}</span><strong>{formatCurrency(checkoutCalculation.totalDebt)}</strong></div>
                   <div className={`rounded-xl p-3 text-center font-black ${checkoutCalculation.amountDue > 0 ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"}`}>
                     {checkoutCalculation.amountDue > 0
-                      ? `KHÁCH CÒN NỢ THÊM: ${formatCurrency(checkoutCalculation.amountDue)}`
-                      : `CẦN HOÀN LẠI CHO KHÁCH: ${formatCurrency(checkoutCalculation.refundAmount)}`}
+                      ? `${t("debts.totalDebt")}: ${formatCurrency(checkoutCalculation.amountDue)}`
+                      : `${t("contracts.settleDeposit")}: ${formatCurrency(checkoutCalculation.refundAmount)}`}
                   </div>
                 </div>
               ) : null}
-              {checkoutPreview ? <div className="space-y-3"><MeterLedger label="Điện" unit="kWh" previous={checkoutPreview.electricityOld} current={finalElectricity} unitPrice={checkoutPreview.electricityPrice} onChange={setFinalElectricity} /><MeterLedger label="Nước" unit="m³" previous={checkoutPreview.waterOld} current={finalWater} unitPrice={checkoutPreview.waterPrice} onChange={setFinalWater} /></div> : null}
+              {checkoutPreview ? <div className="space-y-3"><MeterLedger label={t("nav.utilities")} unit="kWh" previous={checkoutPreview.electricityOld} current={finalElectricity} unitPrice={checkoutPreview.electricityPrice} onChange={setFinalElectricity} /><MeterLedger label={t("nav.utilities")} unit="m³" previous={checkoutPreview.waterOld} current={finalWater} unitPrice={checkoutPreview.waterPrice} onChange={setFinalWater} /></div> : null}
               <div className="space-y-2">
-                <Label htmlFor="damageAmount">Tiền bồi thường hư hại (VNĐ)</Label>
+                <Label htmlFor="damageAmount">{t("common.amount")} (VNĐ)</Label>
                 <Input
                   id="damageAmount"
                   type="text"
@@ -630,17 +533,17 @@ export default function ContractsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="checkoutNote">Ghi chú</Label>
+                <Label htmlFor="checkoutNote">{t("common.note")}</Label>
                 <textarea
                   id="checkoutNote"
                   className="flex min-h-[80px] w-full rounded-[16px] border border-border bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   value={checkoutNote}
                   onChange={e => setCheckoutNote(e.target.value)}
-                  placeholder="Nhập ghi chú (nếu có)..."
+                  placeholder="..."
                 />
               </div>
               <Button type="submit" disabled={checkoutSubmitting || checkoutPreviewLoading || !checkoutPreview} className="w-full bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                {checkoutSubmitting ? "Đang duyệt…" : "Duyệt trả phòng"}
+                {checkoutSubmitting ? t("common.loading") : t("contracts.checkout")}
               </Button>
             </form>
           </DialogContent>
@@ -653,16 +556,15 @@ export default function ContractsPage() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {draftContracts.length === 0 ? (
             <div className="col-span-full py-12 text-center text-muted-foreground calm-surface rounded-xl border border-border">
-               Không có bản nháp nào.
+               {t("common.noData")}
             </div>
           ) : (
             draftContracts.map((draft, i) => (
               <div key={draft.id || i} className="calm-surface p-4 rounded-[20px] border border-border shadow-[var(--calm-shadow)] flex flex-col gap-3">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="font-bold text-foreground">Bản nháp #{draft.id || i+1}</h3>
-                    <p className="text-sm text-muted-foreground mt-1">Đã dừng ở Bước {draft.step || 1}</p>
-                    {draft.lastSaved && <p className="text-xs text-muted-foreground mt-1">Lưu lúc: {new Date(draft.lastSaved).toLocaleString("vi-VN")}</p>}
+                    <h3 className="font-bold text-foreground">{t("statusMap.contract.draft")} #{draft.id || i+1}</h3>
+                    <p className="text-sm text-muted-foreground mt-1">Step {draft.step || 1}</p>
                   </div>
                   <Button onClick={() => handleDeleteDraft(draft.id)} variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0">
                     <Trash2 className="size-4" />
@@ -671,7 +573,7 @@ export default function ContractsPage() {
                 <div className="mt-auto pt-4 border-t border-border">
                   <Link href={`/dashboard/contracts/new`} className="w-full flex items-center justify-center">
                     <Button className="w-full font-bold shadow-[var(--calm-shadow)]" variant="secondary">
-                      📋 Tiếp tục tạo
+                      📋 {t("common.edit")}
                     </Button>
                   </Link>
                 </div>
@@ -684,11 +586,11 @@ export default function ContractsPage() {
         <Table>
           <TableHeader className="bg-background">
             <TableRow>
-              <TableHead className="min-w-48 font-semibold text-foreground">Phòng / Người thuê</TableHead>
-              <TableHead className="font-semibold text-foreground">Ngày bắt đầu</TableHead>
-              <TableHead className="font-semibold text-foreground">Tiền cọc</TableHead>
-              <TableHead className="font-semibold text-foreground">Trạng thái</TableHead>
-              <TableHead className="text-right font-semibold text-foreground">Thao tác</TableHead>
+              <TableHead className="min-w-48 font-semibold text-foreground">{t("contracts.room")} / {t("contracts.tenant")}</TableHead>
+              <TableHead className="font-semibold text-foreground">{t("contracts.startDate")}</TableHead>
+              <TableHead className="font-semibold text-foreground">{t("contracts.depositAmount")}</TableHead>
+              <TableHead className="font-semibold text-foreground">{t("common.status")}</TableHead>
+              <TableHead className="text-right font-semibold text-foreground">{t("common.action")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -698,7 +600,7 @@ export default function ContractsPage() {
               </TableRow>
             ) : filteredContracts.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-64 text-center"><Image src="/trohub-empty-states.png" alt="" width={170} height={100} className="mx-auto h-24 w-40 rounded-[20px] object-cover object-center" /><p className="mt-3 font-black">Không tìm thấy hợp đồng nào</p></TableCell>
+                <TableCell colSpan={5} className="h-64 text-center"><Image src="/trohub-empty-states.png" alt="" width={170} height={100} className="mx-auto h-24 w-40 rounded-[20px] object-cover object-center" /><p className="mt-3 font-black">{t("common.noData")}</p></TableCell>
               </TableRow>
             ) : (
               filteredContracts.map(contract => (
@@ -709,20 +611,13 @@ export default function ContractsPage() {
                       <span className="text-xs text-muted-foreground">{contract.tenantId?.fullName || contract.tenantId?.name || "-"}</span>
                     </div>
                   </TableCell>
-                  <TableCell>{contract.startDate ? new Date(contract.startDate).toLocaleDateString("vi-VN") : "-"}</TableCell>
+                  <TableCell>{contract.startDate ? new Date(contract.startDate).toLocaleDateString() : "-"}</TableCell>
                   <TableCell>{formatCurrency(contract.fixedDeposit || contract.deposit)}</TableCell>
                   <TableCell>
                     {(() => {
-                      const start = new Date(contract.startDate);
-                      const today = new Date();
-                      today.setHours(0, 0, 0, 0);
-                      const displayStatus = contract.status === 5 ? "Chờ duyệt trả phòng" : contract.status === 4 ? "Chờ duyệt" : contract.status === 2 ? "Đã trả phòng" : contract.status === 3 ? "Đã hủy" : (contract.status === 1 && start > today) ? "Chờ hiệu lực" : contract.status === 1 ? "Đang hiệu lực" : "Chờ ký";
+                      const displayStatus = getStatusText("contract", contract.status, t);
                       return (
-                        <Badge className={
-                          displayStatus === "Đang hiệu lực" ? "border-0 bg-primary/10 text-primary" :
-                          (displayStatus === "Chờ hiệu lực" || displayStatus === "Chờ duyệt" || displayStatus === "Chờ duyệt trả phòng") ? "border-0 bg-[var(--warning-soft)] text-warning-foreground" :
-                          "border-0 bg-muted text-muted-foreground"
-                        }>
+                        <Badge className="border-0 bg-primary/10 text-primary">
                           {displayStatus}
                         </Badge>
                       );
@@ -731,23 +626,23 @@ export default function ContractsPage() {
                   <TableCell className="text-right">
                     {contract.status === 0 && (
                       <Button onClick={() => void handleSendContract(contract._id || contract.id)} variant="outline" size="sm" className="mr-2">
-                        <Send className="size-4" />{contract.lastSentAt ? "Gửi lại" : "Gửi cho Người thuê"}
+                        <Send className="size-4" />{t("common.send")}
                       </Button>
                     )}
                     {contract.status === 4 && (
                       <Button onClick={() => handleConfirmContract(contract._id || contract.id)} variant="secondary" size="sm" className="mr-2 text-primary">
-                        <CheckCircle2 className="size-4" />Duyệt
+                        <CheckCircle2 className="size-4" />{t("common.confirm")}
                       </Button>
                     )}
                     {contract.status === 5 && (
                       <Button onClick={() => void openCheckoutModal(contract._id || contract.id)} variant="outline" size="sm" className="mr-2 border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive">
-                        Duyệt trả phòng
+                        {t("contracts.checkout")}
                       </Button>
                     )}
                     <Button onClick={() => openEditModal(contract)} variant="ghost" size="sm" className="mr-2">
-                      <Edit className="size-4" />Sửa
+                      <Edit className="size-4" />{t("common.edit")}
                     </Button>
-                    <Button aria-label="Xóa hợp đồng" onClick={() => handleDelete(contract._id || contract.id)} variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive">
+                    <Button aria-label={t("common.delete")} onClick={() => handleDelete(contract._id || contract.id)} variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive">
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </TableCell>

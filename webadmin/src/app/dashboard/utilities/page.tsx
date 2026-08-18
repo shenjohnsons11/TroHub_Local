@@ -14,24 +14,19 @@ import { getNotificationMessage } from "@/lib/notification-messages";
 import { PageHeader } from "@/components/calm-ops/page-header";
 import { formatCurrency, formatMeterReading, parseMeterReading } from "@/lib/formatters";
 import { consumePendingAIAction } from "@/lib/ai-actions";
-
-const steps = [
-  { label: "Chọn kỳ", icon: CalendarRange },
-  { label: "Chốt điện/nước", icon: Gauge },
-  { label: "Preview", icon: Eye },
-  { label: "Phát hành", icon: Send },
-];
+import { useLanguage } from "@/components/language-provider";
 
 type MeterField = "electricity" | "water";
 
 const fileToDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
   const reader = new FileReader();
-  reader.onload = () => typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("Không thể đọc ảnh."));
-  reader.onerror = () => reject(new Error("Không thể đọc ảnh."));
+  reader.onload = () => typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("Cannot read file"));
+  reader.onerror = () => reject(new Error("Cannot read file"));
   reader.readAsDataURL(file);
 });
 
 export default function UtilitiesPage() {
+  const { t } = useLanguage();
   const notification = useNotification();
   const [previews, setPreviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,6 +41,13 @@ export default function UtilitiesPage() {
   const [meterChoice, setMeterChoice] = useState<{ contractId: string; room: string } | null>(null);
   const [manualMeter, setManualMeter] = useState<{ contractId: string; room: string; field: MeterField } | null>(null);
   const [manualMeterValue, setManualMeterValue] = useState("");
+
+  const steps = [
+    { label: t("invoices.period"), icon: CalendarRange },
+    { label: t("invoices.recordMeter"), icon: Gauge },
+    { label: "Preview", icon: Eye },
+    { label: t("common.send"), icon: Send },
+  ];
 
   const loadPreviews = async () => {
     try {
@@ -78,12 +80,12 @@ export default function UtilitiesPage() {
     const action = consumePendingAIAction("FILL_UTILITY_READING");
     if (!action) return;
     const preview = previews.find((item) => item.room?.trim().toLowerCase() === action.roomCode.trim().toLowerCase());
-    if (!preview) { notification.warning(`Không tìm thấy phòng ${action.roomCode}.`); return; }
+    if (!preview) { notification.warning(`${t("common.room")} ${action.roomCode} not found.`); return; }
     setUtilitiesState((current) => ({ ...current, [preview.contractId]: { electricity: formatMeterReading(action.newElec), water: formatMeterReading(action.newWater) } }));
     setHighlightedContractId(preview.contractId);
     const timer = window.setTimeout(() => setHighlightedContractId(""), 2000);
     return () => window.clearTimeout(timer);
-  }, [previews, notification]);
+  }, [previews, notification, t]);
 
   const handleUpdateInput = (contractId: string, field: "electricity" | "water", value: string) => {
     setUtilitiesState((prev) => ({
@@ -108,13 +110,13 @@ export default function UtilitiesPage() {
     try {
       const image = await fileToDataUrl(file);
       const result = await fetchAPI("/ocr/meter", { method: "POST", body: JSON.stringify({ image }) });
-      if (!result.data?.digits) throw new Error("Không đọc được chỉ số.");
+      if (!result.data?.digits) throw new Error("Cannot read digits");
       handleUpdateInput(target.contractId, target.field, result.data.digits);
-      notification.success(`Đã điền chỉ số ${target.field === "electricity" ? "điện" : "nước"} cho phòng ${target.room}.`);
+      notification.success(t("invoices.ocrSuccess"));
     } catch {
       setManualMeter(target);
       setManualMeterValue("");
-      notification.warning("Không thể đọc chỉ số từ ảnh. Vui lòng nhập tay.");
+      notification.warning(t("invoices.ocrError"));
     }
   };
 
@@ -143,7 +145,7 @@ export default function UtilitiesPage() {
         .filter((item) => item.draftElectricity !== undefined || item.draftWater !== undefined);
 
       if (utilitiesToUpdate.length === 0) {
-        notification.warning("Vui lòng nhập số liệu mới cho ít nhất 1 phòng.");
+        notification.warning(t("common.noData"));
         setLoading(false);
         return;
       }
@@ -154,13 +156,13 @@ export default function UtilitiesPage() {
       });
 
       if (res.success) {
-        notification.success("Đã lưu nháp sổ điện nước. Bạn có thể chuyển sang Hóa đơn để phát hành.");
+        notification.success(t("utilities.savedSuccess"));
         void loadPreviews();
       } else {
-        notification.error(getNotificationMessage(res.message, "Không thể lưu chỉ số điện nước."));
+        notification.error(getNotificationMessage(res.message, t("common.error")));
       }
     } catch (err: unknown) {
-      notification.error(getNotificationMessage(err, "Không thể lưu chỉ số điện nước."));
+      notification.error(getNotificationMessage(err, t("common.error")));
     } finally {
       setLoading(false);
     }
@@ -172,28 +174,28 @@ export default function UtilitiesPage() {
     <div className="space-y-6">
       <input ref={meterImageInputRef} className="sr-only" type="file" accept="image/*" capture="environment" onChange={handleMeterImage} tabIndex={-1} />
       <PageHeader
-        eyebrow="Vận hành · Quy trình hóa đơn"
-        title="Chốt điện nước"
-        description="Ghi chỉ số mới theo phòng, kiểm tra bản xem trước rồi chuyển sang phát hành hóa đơn."
+        eyebrow={t("nav.overview")}
+        title={t("utilities.title")}
+        description={t("utilities.subtitle")}
         action={
           <Button onClick={handleSaveBulk} disabled={loading}>
-            <Save aria-hidden="true" /> {loading ? "Đang xử lý..." : "Lưu sổ điện nước"}
+            <Save aria-hidden="true" /> {loading ? t("common.loading") : t("utilities.recordAll")}
           </Button>
         }
       />
 
       <div className="flex gap-4 p-4 calm-surface rounded-[20px]">
         <div className="space-y-1">
-          <label className="text-xs font-bold text-muted-foreground">Từ tháng</label>
+          <label className="text-xs font-bold text-muted-foreground">{t("common.from")} {t("common.month")}</label>
           <Input type="month" value={startMonth} onChange={(e) => setStartMonth(e.target.value)} />
         </div>
         <div className="space-y-1">
-          <label className="text-xs font-bold text-muted-foreground">Đến tháng</label>
+          <label className="text-xs font-bold text-muted-foreground">{t("common.to")} {t("common.month")}</label>
           <Input type="month" value={endMonth} onChange={(e) => setEndMonth(e.target.value)} />
         </div>
       </div>
 
-      <ol aria-label="Tiến trình tạo hóa đơn hàng loạt" className="grid gap-2 rounded-[20px] bg-card p-3 shadow-[var(--calm-shadow)] ring-1 ring-border/50 sm:grid-cols-4">
+      <ol aria-label={t("utilities.title")} className="grid gap-2 rounded-[20px] bg-card p-3 shadow-[var(--calm-shadow)] ring-1 ring-border/50 sm:grid-cols-4">
         {steps.map(({ label, icon: Icon }, index) => {
           const active = index === 1;
           const complete = index < 1;
@@ -207,7 +209,7 @@ export default function UtilitiesPage() {
                 <Icon aria-hidden="true" className="size-4" />
               </span>
               <span>
-                <span className="block text-[11px] font-bold uppercase tracking-[.12em] opacity-70">Bước {index + 1}</span>
+                <span className="block text-[11px] font-bold uppercase tracking-[.12em] opacity-70">Step {index + 1}</span>
                 <span className="text-sm font-extrabold">{label}</span>
               </span>
             </li>
@@ -220,29 +222,29 @@ export default function UtilitiesPage() {
           <div className="relative w-full sm:max-w-sm">
             <Search aria-hidden="true" className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              aria-label="Tìm theo mã phòng"
-              placeholder="Tìm theo mã phòng..."
+              aria-label={t("common.search")}
+              placeholder={t("rooms.searchPlaceholder")}
               className="h-11 pl-9"
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
             />
           </div>
-          <p className="text-sm font-bold text-muted-foreground">{previews.length} phòng đang hiệu lực</p>
+          <p className="text-sm font-bold text-muted-foreground">{previews.length} {t("nav.rooms")}</p>
         </div>
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead colSpan={6} className="bg-muted/50 py-2 text-center text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Kỳ ghi nhận: {startMonth} đến {endMonth}
+                {t("invoices.period")}: {startMonth} - {endMonth}
               </TableHead>
             </TableRow>
             <TableRow>
-              <TableHead>Mã phòng</TableHead>
-              <TableHead>Tiền phòng</TableHead>
-              <TableHead>Số điện cũ</TableHead>
-              <TableHead className="text-primary">Số điện mới</TableHead>
-              <TableHead>Số nước cũ</TableHead>
-              <TableHead className="text-primary">Số nước mới</TableHead>
+              <TableHead>{t("rooms.roomCode")}</TableHead>
+              <TableHead>{t("rooms.price")}</TableHead>
+              <TableHead>{t("utilities.oldElec")}</TableHead>
+              <TableHead className="text-primary">{t("utilities.newElec")}</TableHead>
+              <TableHead>{t("utilities.oldWater")}</TableHead>
+              <TableHead className="text-primary">{t("utilities.newWater")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -252,8 +254,7 @@ export default function UtilitiesPage() {
               <TableRow>
                 <TableCell colSpan={6} className="h-64 text-center">
                   <Image src="/trohub-empty-states.png" alt="" width={170} height={100} className="mx-auto h-24 w-40 rounded-[20px] object-cover object-left" />
-                  <p className="font-extrabold">Không có phòng phù hợp</p>
-                  <p className="mt-1 text-sm text-muted-foreground">Thử từ khóa khác hoặc kiểm tra hợp đồng đang hiệu lực.</p>
+                  <p className="font-extrabold">{t("common.noData")}</p>
                 </TableCell>
               </TableRow>
             ) : (
@@ -262,8 +263,8 @@ export default function UtilitiesPage() {
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <span className="font-extrabold">{p.room}</span>
-                      <Button type="button" variant="outline" size="sm" className="h-11 whitespace-nowrap px-2 text-xs" aria-label={`Chụp ảnh chỉ số phòng ${p.room}`} onClick={() => setMeterChoice({ contractId: p.contractId, room: p.room })}>
-                        📷 Chụp ảnh
+                      <Button type="button" variant="outline" size="sm" className="h-11 whitespace-nowrap px-2 text-xs" aria-label={t("utilities.scanCamera")} onClick={() => setMeterChoice({ contractId: p.contractId, room: p.room })}>
+                        📷
                       </Button>
                     </div>
                   </TableCell>
@@ -271,10 +272,10 @@ export default function UtilitiesPage() {
                   <TableCell className="text-muted-foreground">{formatMeterReading(p.electricityOld)} kWh</TableCell>
                   <TableCell>
                     <Input
-                      aria-label={`Số điện mới phòng ${p.room}`}
+                      aria-label={`${t("utilities.newElec")} ${p.room}`}
                       className="h-12 w-28 bg-accent/45"
                       style={highlightedContractId === p.contractId ? { outline: "2px solid #b8f5da", outlineOffset: 2, boxShadow: "0 0 8px #b8f5da" } : undefined}
-                      placeholder="Số mới"
+                      placeholder="0"
                       inputMode="decimal"
                       value={utilitiesState[p.contractId]?.electricity || ""}
                       onChange={(event) => handleUpdateInput(p.contractId, "electricity", event.target.value)}
@@ -283,10 +284,10 @@ export default function UtilitiesPage() {
                   <TableCell className="text-muted-foreground">{formatMeterReading(p.waterOld)} m³</TableCell>
                   <TableCell>
                     <Input
-                      aria-label={`Số nước mới phòng ${p.room}`}
+                      aria-label={`${t("utilities.newWater")} ${p.room}`}
                       className="h-12 w-28 bg-accent/45"
                       style={highlightedContractId === p.contractId ? { outline: "2px solid #b8f5da", outlineOffset: 2, boxShadow: "0 0 8px #b8f5da" } : undefined}
-                      placeholder="Số mới"
+                      placeholder="0"
                       inputMode="decimal"
                       value={utilitiesState[p.contractId]?.water || ""}
                       onChange={(event) => handleUpdateInput(p.contractId, "water", event.target.value)}
@@ -301,22 +302,21 @@ export default function UtilitiesPage() {
 
       <Dialog open={Boolean(meterChoice)} onOpenChange={(open) => { if (!open) setMeterChoice(null); }}>
         <DialogContent className="sm:max-w-sm">
-          <DialogHeader><DialogTitle>Chụp ảnh chỉ số · Phòng {meterChoice?.room}</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">Chọn loại đồng hồ trước khi chụp, sau đó nhập chỉ số để áp dụng đúng ô mới.</p>
+          <DialogHeader><DialogTitle>{t("utilities.scanCamera")} · {meterChoice?.room}</DialogTitle></DialogHeader>
           <div className="flex gap-3">
-            <Button type="button" className="flex-1" onClick={() => beginMeterCapture("electricity")}>⚡ Điện</Button>
-            <Button type="button" variant="outline" className="flex-1" onClick={() => beginMeterCapture("water")}>💧 Nước</Button>
+            <Button type="button" className="flex-1" onClick={() => beginMeterCapture("electricity")}>⚡ {t("nav.utilities")}</Button>
+            <Button type="button" variant="outline" className="flex-1" onClick={() => beginMeterCapture("water")}>💧 {t("nav.utilities")}</Button>
           </div>
         </DialogContent>
       </Dialog>
 
       <Dialog open={Boolean(manualMeter)} onOpenChange={(open) => { if (!open) setManualMeter(null); }}>
         <DialogContent className="sm:max-w-sm">
-          <DialogHeader><DialogTitle>Nhập chỉ số · Phòng {manualMeter?.room}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t("invoices.recordMeter")} · {manualMeter?.room}</DialogTitle></DialogHeader>
           <form onSubmit={applyManualMeter} className="space-y-4">
-            <p className="text-sm text-muted-foreground">Không thể đọc chỉ số từ ảnh. Nhập số {manualMeter?.field === "electricity" ? "điện" : "nước"} để điền vào chỉ số mới của phòng này.</p>
-            <Input autoFocus inputMode="decimal" aria-label={`Chỉ số ${manualMeter?.field === "electricity" ? "điện" : "nước"} mới phòng ${manualMeter?.room || ""}`} value={manualMeterValue} onChange={(event) => { const value = event.target.value; setManualMeterValue(parseMeterReading(value) === null ? value : formatMeterReading(value)); }} placeholder="Nhập chỉ số" required />
-            <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setManualMeter(null)}>Hủy</Button><Button type="submit">Áp dụng</Button></div>
+            <p className="text-sm text-muted-foreground">{t("invoices.ocrError")}</p>
+            <Input autoFocus inputMode="decimal" aria-label={manualMeter?.room || ""} value={manualMeterValue} onChange={(event) => { const value = event.target.value; setManualMeterValue(parseMeterReading(value) === null ? value : formatMeterReading(value)); }} placeholder="0" required />
+            <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setManualMeter(null)}>{t("common.cancel")}</Button><Button type="submit">{t("common.save")}</Button></div>
           </form>
         </DialogContent>
       </Dialog>

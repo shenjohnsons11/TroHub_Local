@@ -23,8 +23,10 @@ import {
   paidDateKey,
   type SuccessfulPayment,
 } from "@/lib/payment-history";
+import { useLanguage } from "@/components/language-provider";
 
 export default function PaymentsPage() {
+  const { t } = useLanguage();
   const notification = useNotification();
   const [rows, setRows] = useState<SuccessfulPayment[]>([]);
   const [selected, setSelected] = useState<SuccessfulPayment | null>(null);
@@ -41,12 +43,12 @@ export default function PaymentsPage() {
       setRows(response.data || []);
     } catch (error) {
       notification.error(
-        getNotificationMessage(error, "Không thể tải lịch sử thanh toán."),
+        getNotificationMessage(error, t("common.error")),
       );
     } finally {
       setLoading(false);
     }
-  }, [notification]);
+  }, [notification, t]);
 
   useEffect(() => {
     void load();
@@ -58,7 +60,7 @@ export default function PaymentsPage() {
   );
 
   const filtered = useMemo(() => {
-    const normalizedQuery = query.trim().toLocaleLowerCase("vi");
+    const normalizedQuery = query.trim().toLowerCase();
     return rows.filter((row) => {
       const matchesQuery = !normalizedQuery || [
         row.transactionCode,
@@ -67,7 +69,7 @@ export default function PaymentsPage() {
         row.room,
         row.nguoiThue,
       ].some((value) =>
-        value.toLocaleLowerCase("vi").includes(normalizedQuery),
+        value.toLowerCase().includes(normalizedQuery),
       );
       const date = paidDateKey(row.paidAt);
       return matchesQuery
@@ -83,27 +85,27 @@ export default function PaymentsPage() {
     <div className="space-y-6">
       <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <p className="text-sm font-bold text-primary">Đối soát</p>
+          <p className="text-sm font-bold text-primary">{t("nav.overview")}</p>
           <h1 className="mt-1 text-3xl font-black tracking-[-0.025em]">
-            Lịch sử thanh toán
+            {t("payments.title")}
           </h1>
           <p className="mt-2 text-muted-foreground">
-            Chỉ hiển thị các khoản tiền đã thanh toán thành công.
+            {t("payments.subtitle")}
           </p>
         </div>
         <Button variant="outline" onClick={load} disabled={loading}>
           <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-          Làm mới
+          {t("common.loading")}
         </Button>
       </header>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="border-t-2 border-primary bg-card px-5 py-4">
-          <p className="text-sm text-muted-foreground">Tổng tiền đã thu</p>
+          <p className="text-sm text-muted-foreground">{t("dashboard.revenue")}</p>
           <p className="mt-1 text-2xl font-black">{formatCurrency(collected)}</p>
         </div>
         <div className="border-t-2 border-emerald-600 bg-card px-5 py-4">
-          <p className="text-sm text-muted-foreground">Giao dịch thành công</p>
+          <p className="text-sm text-muted-foreground">{t("statusMap.payment.success")}</p>
           <p className="mt-1 text-2xl font-black">{filtered.length}</p>
         </div>
       </div>
@@ -115,34 +117,34 @@ export default function PaymentsPage() {
             className="h-11 pl-9"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Mã giao dịch, hóa đơn, Người thuê"
+            placeholder={t("common.search")}
           />
         </div>
         <select
-          aria-label="Phương thức thanh toán"
+          aria-label={t("payments.method")}
           className="h-11 rounded-[9px] border border-input bg-card px-3 text-sm"
           value={method}
           onChange={(event) => setMethod(event.target.value)}
         >
-          <option value="all">Tất cả phương thức</option>
+          <option value="all">{t("common.all")}</option>
           {methods.map((value) => <option key={value} value={value}>{value}</option>)}
         </select>
-        <Input aria-label="Từ ngày" type="date" className="h-11 w-auto" value={fromDate} onChange={(event) => setFromDate(event.target.value)} />
-        <Input aria-label="Đến ngày" type="date" className="h-11 w-auto" value={toDate} onChange={(event) => setToDate(event.target.value)} />
+        <Input aria-label={t("common.from")} type="date" className="h-11 w-auto" value={fromDate} onChange={(event) => setFromDate(event.target.value)} />
+        <Input aria-label={t("common.to")} type="date" className="h-11 w-auto" value={toDate} onChange={(event) => setToDate(event.target.value)} />
       </div>
 
       <div className="overflow-hidden border border-border bg-card">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Ngày thanh toán</TableHead>
-              <TableHead>Mã giao dịch</TableHead>
-              <TableHead>Người thuê</TableHead>
-              <TableHead>Phòng</TableHead>
-              <TableHead>Kỳ hóa đơn</TableHead>
-              <TableHead>Phương thức</TableHead>
-              <TableHead className="text-right">Số tiền</TableHead>
-              <TableHead className="w-16"><span className="sr-only">Thao tác</span></TableHead>
+              <TableHead>{t("payments.paidAt")}</TableHead>
+              <TableHead>{t("payments.gatewayRef")}</TableHead>
+              <TableHead>{t("common.tenant")}</TableHead>
+              <TableHead>{t("common.room")}</TableHead>
+              <TableHead>{t("invoices.period")}</TableHead>
+              <TableHead>{t("payments.method")}</TableHead>
+              <TableHead className="text-right">{t("common.amount")}</TableHead>
+              <TableHead className="w-16"><span className="sr-only">{t("common.action")}</span></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -155,7 +157,7 @@ export default function PaymentsPage() {
             )) : filtered.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="h-36 text-center text-muted-foreground">
-                  Chưa có giao dịch thành công trong phạm vi lọc.
+                  {t("common.noData")}
                 </TableCell>
               </TableRow>
             ) : filtered.map((row) => (
@@ -168,7 +170,7 @@ export default function PaymentsPage() {
                 <TableCell>{row.method}</TableCell>
                 <TableCell className="text-right font-black">{formatCurrency(row.amount)}</TableCell>
                 <TableCell>
-                  <Button aria-label={`Xem giao dịch ${row.transactionCode}`} variant="ghost" size="icon" onClick={() => setSelected(row)}>
+                  <Button aria-label={t("common.details")} variant="ghost" size="icon" onClick={() => setSelected(row)}>
                     <Eye className="h-4 w-4" />
                   </Button>
                 </TableCell>

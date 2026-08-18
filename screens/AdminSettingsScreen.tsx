@@ -12,11 +12,13 @@ import GradientHero from "../components/ui/GradientHero";
 import { formatPhone, unformatDigits } from "../utils/formatters";
 import { getExpoPushToken, isPushEnabled, notificationPlatform, openNotificationSettings, requestNotificationPermission, setPushEnabled } from "../services/pushNotificationService";
 import { notificationService } from "../services/notificationService";
+import { useTranslation } from "../contexts/LanguageContext";
 
 type Props = { profile: UserProfile; onSave: (profile: UserProfile) => void; onBack: () => void; onLogout: () => void; onPushTokenChange?: (token: string | null) => void };
 
 export default function AdminSettingsScreen({ profile, onSave, onBack, onLogout, onPushTokenChange }: Props) {
   const { theme } = useAppTheme();
+  const { t } = useTranslation();
   const notification = useNotification();
   const [fullName, setFullName] = useState(profile.fullName || "");
   const [phone, setPhone] = useState(formatPhone(profile.phone));
@@ -40,11 +42,11 @@ export default function AdminSettingsScreen({ profile, onSave, onBack, onLogout,
     try {
       if (next) {
         if (await requestNotificationPermission() !== "granted") {
-          setPushError("Bạn chưa cho phép thông báo trên thiết bị.");
+          setPushError(t("common.error"));
           return;
         }
         const token = await getExpoPushToken();
-        if (!token) throw new Error("Chưa thể đăng ký thiết bị này nhận thông báo.");
+        if (!token) throw new Error(t("common.error"));
         await notificationService.registerDevice(token, notificationPlatform());
         await setPushEnabled(profile.id, true);
         setPushPreference(true);
@@ -58,50 +60,50 @@ export default function AdminSettingsScreen({ profile, onSave, onBack, onLogout,
       }
     } catch (error) {
       setPushPreference(previous);
-      setPushError(error instanceof Error ? error.message : "Không thể cập nhật thông báo.");
+      setPushError(error instanceof Error ? error.message : t("common.error"));
     } finally {
       setPushLoading(false);
     }
   };
 
   const handleSave = () => {
-    if (!fullName.trim()) { notification.error("Vui lòng nhập họ và tên chủ trọ"); return; }
+    if (!fullName.trim()) { notification.error(t("common.error")); return; }
     if ((bankId || bankAccountNo || bankAccountName) && (!bankId || !bankAccountNo || !bankAccountName)) {
-      notification.error("Vui lòng nhập đầy đủ 3 trường Tên ngân hàng, Số tài khoản và Tên chủ tài khoản, hoặc để trống toàn bộ nếu chưa muốn cài đặt.");
+      notification.error(t("common.error"));
       return;
     }
     onSave({ ...profile, fullName, phone: unformatDigits(phone), email, bankId, bankAccountNo, bankAccountName });
-    notification.success("Đã cập nhật thông tin cài đặt");
+    notification.success(t("common.success"));
   };
 
   const inputStyle = [styles.input, { backgroundColor: theme.background, color: theme.text }];
   return <>
     <ScrollView style={[styles.container, { backgroundColor: theme.background }]} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Quay lại" style={styles.back} onPress={onBack}><Ionicons name="arrow-back" size={19} color={theme.primary} /><AppText style={[styles.backText, { color: theme.primary }]}>Quay lại</AppText></Pressable>
-      <GradientHero icon="settings-outline" label="CÀI ĐẶT CHỦ TRỌ" value={fullName || "Chủ trọ"} detail="Thông tin nhận tiền, giao diện và bảo mật tài khoản." />
-      <Section title="Thông tin cá nhân" icon="person-outline" theme={theme}>
-        <Field label="Họ và tên" value={fullName} setValue={setFullName} placeholder="Nguyễn Văn A" style={inputStyle} muted={theme.muted} />
-        <Field label="Số điện thoại" value={phone} setValue={(value: string) => setPhone(formatPhone(value))} placeholder="0901.234.567" keyboardType="number-pad" style={inputStyle} muted={theme.muted} />
-        <Field label="Email" value={email} setValue={setEmail} placeholder="chutro@email.com" keyboardType="email-address" style={inputStyle} muted={theme.muted} autoCapitalize="none" />
+      <Pressable accessibilityRole="button" accessibilityLabel={t("common.back")} style={styles.back} onPress={onBack}><Ionicons name="arrow-back" size={19} color={theme.primary} /><AppText style={[styles.backText, { color: theme.primary }]}>{t("common.back")}</AppText></Pressable>
+      <GradientHero icon="settings-outline" label={t("nav.settings")} value={fullName || t("dashboard.greetingFallback")} detail={t("dashboard.property")} />
+      <Section title={t("nav.settings")} icon="person-outline" theme={theme}>
+        <Field label={t("auth.fullName")} value={fullName} setValue={setFullName} placeholder="Nguyen Van A" style={inputStyle} muted={theme.muted} />
+        <Field label={t("auth.phone")} value={phone} setValue={(value: string) => setPhone(formatPhone(value))} placeholder="0901.234.567" keyboardType="number-pad" style={inputStyle} muted={theme.muted} />
+        <Field label={t("auth.email")} value={email} setValue={setEmail} placeholder="landlord@email.com" keyboardType="email-address" style={inputStyle} muted={theme.muted} autoCapitalize="none" />
       </Section>
-      <Section title="Tài khoản ngân hàng (Mã QR)" icon="card-outline" theme={theme}>
-        <View style={[styles.note, { backgroundColor: theme.primarySoft }]}><Ionicons name="information-circle-outline" size={20} color={theme.primary} /><AppText style={[styles.noteText, { color: theme.text }]}>Dùng để tạo mã QR thanh toán. Nhập đúng tên viết tắt (VD: VCB, MB) hoặc mã BIN.</AppText></View>
-        <Field label="Ngân hàng (Tên viết tắt hoặc BIN)" value={bankId} setValue={setBankId} placeholder="VD: MB hoặc 970422" style={inputStyle} muted={theme.muted} autoCapitalize="characters" />
-        <Field label="Số tài khoản" value={bankAccountNo} setValue={setBankAccountNo} placeholder="Nhập số tài khoản" keyboardType="number-pad" style={inputStyle} muted={theme.muted} />
-        <Field label="Tên chủ tài khoản" value={bankAccountName} setValue={setBankAccountName} placeholder="VD: NGUYEN VAN A" style={inputStyle} muted={theme.muted} autoCapitalize="characters" />
+      <Section title="VietQR" icon="card-outline" theme={theme}>
+        <View style={[styles.note, { backgroundColor: theme.primarySoft }]}><Ionicons name="information-circle-outline" size={20} color={theme.primary} /><AppText style={[styles.noteText, { color: theme.text }]}>VietQR payment config</AppText></View>
+        <Field label="Bank BIN / Code" value={bankId} setValue={setBankId} placeholder="MB / VCB" style={inputStyle} muted={theme.muted} autoCapitalize="characters" />
+        <Field label="Account No" value={bankAccountNo} setValue={setBankAccountNo} placeholder="0123456789" keyboardType="number-pad" style={inputStyle} muted={theme.muted} />
+        <Field label="Account Name" value={bankAccountName} setValue={setBankAccountName} placeholder="NGUYEN VAN A" style={inputStyle} muted={theme.muted} autoCapitalize="characters" />
       </Section>
       <ThemeToggle />
-      <Section title="Thông báo" icon="notifications-outline" theme={theme}>
+      <Section title={t("notifications.title")} icon="notifications-outline" theme={theme}>
         <View style={styles.pushRow}>
-          <View style={styles.pushCopy}><AppText style={[styles.pushTitle, { color: theme.text }]}>Bật thông báo</AppText><AppText style={[styles.pushDescription, { color: theme.muted }]}>Nhận cập nhật trả phòng, sửa chữa, hợp đồng và thanh toán.</AppText></View>
-          {pushLoading ? <ActivityIndicator color={theme.primary} /> : <Switch accessibilityLabel="Bật thông báo Chủ trọ" value={pushEnabled} onValueChange={(next) => void handlePushChange(next)} />}
+          <View style={styles.pushCopy}><AppText style={[styles.pushTitle, { color: theme.text }]}>{t("notifications.title")}</AppText><AppText style={[styles.pushDescription, { color: theme.muted }]}>Push Notifications</AppText></View>
+          {pushLoading ? <ActivityIndicator color={theme.primary} /> : <Switch accessibilityLabel={t("notifications.title")} value={pushEnabled} onValueChange={(next) => void handlePushChange(next)} />}
         </View>
-        {!!pushError && <View style={[styles.pushError, { backgroundColor: `${theme.danger}18` }]}><AppText style={[styles.pushErrorText, { color: theme.danger }]}>{pushError}</AppText><Pressable accessibilityRole="button" onPress={() => void openNotificationSettings()} style={styles.openSettings}><AppText style={[styles.openSettingsText, { color: theme.primary }]}>Mở cài đặt thiết bị</AppText></Pressable></View>}
+        {!!pushError && <View style={[styles.pushError, { backgroundColor: `${theme.danger}18` }]}><AppText style={[styles.pushErrorText, { color: theme.danger }]}>{pushError}</AppText><Pressable accessibilityRole="button" onPress={() => void openNotificationSettings()} style={styles.openSettings}><AppText style={[styles.openSettingsText, { color: theme.primary }]}>{t("nav.settings")}</AppText></Pressable></View>}
       </Section>
-      <AppButton icon="save-outline" onPress={handleSave}>Lưu cài đặt</AppButton>
-      <AppText style={[styles.sectionLabel, { color: theme.text }]}>Bảo mật</AppText>
-      <Pressable accessibilityRole="button" style={[styles.security, { backgroundColor: theme.surfaceElevated, shadowColor: theme.text }]} onPress={() => setPasswordVisible(true)}><View style={styles.securityLead}><Ionicons name="lock-closed-outline" size={22} color={theme.primary} /><AppText style={[styles.securityText, { color: theme.text }]}>Đổi mật khẩu</AppText></View><Ionicons name="chevron-forward" size={20} color={theme.muted} /></Pressable>
-      <AppButton icon="log-out-outline" variant="danger" onPress={onLogout} style={styles.logout}>Đăng xuất</AppButton>
+      <AppButton icon="save-outline" onPress={handleSave}>{t("common.save")}</AppButton>
+      <AppText style={[styles.sectionLabel, { color: theme.text }]}>{t("nav.settings")}</AppText>
+      <Pressable accessibilityRole="button" style={[styles.security, { backgroundColor: theme.surfaceElevated, shadowColor: theme.text }]} onPress={() => setPasswordVisible(true)}><View style={styles.securityLead}><Ionicons name="lock-closed-outline" size={22} color={theme.primary} /><AppText style={[styles.securityText, { color: theme.text }]}>{t("auth.resetPassword")}</AppText></View><Ionicons name="chevron-forward" size={20} color={theme.muted} /></Pressable>
+      <AppButton icon="log-out-outline" variant="danger" onPress={onLogout} style={styles.logout}>{t("auth.logout")}</AppButton>
     </ScrollView>
     <ChangePasswordModal visible={passwordVisible} onClose={() => setPasswordVisible(false)} />
   </>;

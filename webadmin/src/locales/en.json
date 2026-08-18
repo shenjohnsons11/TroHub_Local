@@ -6,11 +6,13 @@
     "status": "Status",
     "action": "Action",
     "save": "Save",
+    "saving": "Saving...",
     "cancel": "Cancel",
     "confirm": "Confirm",
     "delete": "Delete",
     "edit": "Edit",
     "add": "Add New",
+    "create": "Create",
     "loading": "Loading...",
     "success": "Success",
     "error": "System Error",
@@ -21,7 +23,64 @@
     "unitVnd": "VND",
     "unitKwh": "kWh",
     "unitM3": "m³",
-    "language": "Language"
+    "language": "Language",
+    "noData": "No data available",
+    "yes": "Yes",
+    "no": "No",
+    "send": "Send",
+    "update": "Update",
+    "view": "View",
+    "month": "Month",
+    "year": "Year",
+    "from": "From",
+    "to": "To",
+    "room": "Room",
+    "tenant": "Tenant",
+    "phone": "Phone Number",
+    "amount": "Amount",
+    "note": "Note",
+    "unspecified": "Unspecified"
+  },
+  "statusMap": {
+    "invoice": {
+      "draft": "Draft",
+      "unpaid": "Unpaid",
+      "paid": "Paid",
+      "overdue": "Overdue",
+      "settled": "Settled"
+    },
+    "contract": {
+      "draft": "Draft",
+      "pendingTenant": "Awaiting Tenant Signature",
+      "pendingOwner": "Awaiting Landlord Approval",
+      "active": "Active",
+      "expired": "Expired",
+      "terminated": "Terminated",
+      "pendingCheckout": "Awaiting Checkout Approval",
+      "checkedOut": "Checked Out",
+      "cancelled": "Cancelled"
+    },
+    "room": {
+      "available": "Available",
+      "rented": "Occupied",
+      "maintenance": "Under Maintenance"
+    },
+    "repair": {
+      "pending": "Pending",
+      "processing": "In Progress",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "priority": {
+      "low": "Low",
+      "medium": "Medium",
+      "urgent": "Urgent"
+    },
+    "payment": {
+      "success": "Success",
+      "pending": "Pending",
+      "failed": "Failed"
+    }
   },
   "auth": {
     "login": "Sign In",
@@ -57,7 +116,7 @@
     "rememberMe": "Remember me",
     "loggingIn": "Signing in...",
     "registering": "Registering...",
-    "fullNamePlaceholder": "Example: Nguyen Van A",
+    "fullNamePlaceholder": "Example: John Doe",
     "phonePlaceholder": "Example: 0901.234.567",
     "emailPlaceholder": "Example: landlord@gmail.com",
     "idCardPlaceholder": "Enter 12-digit national ID",
@@ -114,10 +173,10 @@
     "handleRepair": "Handle repair",
     "aiAssistant": "AI assistant",
     "occupancy": "Occupancy rate",
-    "noData": "No data yet"
-    ,"morning": "Good morning"
-    ,"afternoon": "Good afternoon"
-    ,"evening": "Good evening"
+    "noData": "No data yet",
+    "morning": "Good morning",
+    "afternoon": "Good afternoon",
+    "evening": "Good evening"
   },
   "rooms": {
     "title": "Room Management",
@@ -125,32 +184,55 @@
     "addRoom": "Add New Room",
     "editRoom": "Edit Room Info",
     "roomCode": "Room Code",
+    "roomCodePlaceholder": "Example: P.101",
     "price": "Monthly Rent",
+    "pricePlaceholder": "Example: 3,500,000",
     "deposit": "Security Deposit",
+    "depositPlaceholder": "Example: 3,500,000",
     "area": "Area (m²)",
+    "areaPlaceholder": "Example: 25",
+    "floor": "Floor",
     "maxTenants": "Max Capacity",
     "status": {
-      "rented": "Rented",
+      "rented": "Occupied",
       "available": "Available",
       "maintenance": "Under Maintenance"
     },
     "filterStatus": "Room Status",
     "filterFloor": "Filter by Floor",
     "searchPlaceholder": "Search by room code...",
-    "emptyRooms": "No rooms created yet."
+    "emptyRooms": "No rooms created yet.",
+    "createdSuccess": "Room created successfully!",
+    "updatedSuccess": "Room updated successfully!",
+    "deletedSuccess": "Room deleted!",
+    "deleteConfirmTitle": "Confirm Room Deletion",
+    "deleteConfirmMessage": "Are you sure you want to delete room {code}? This action cannot be undone.",
+    "electricityReading": "Current electricity reading",
+    "waterReading": "Current water reading",
+    "allFloors": "All floors",
+    "activeTenant": "Current Tenant"
   },
   "tenants": {
     "title": "Tenant Management",
     "subtitle": "List of current tenants and room assignments",
     "addTenant": "Add New Tenant",
+    "editTenant": "Edit Profile",
     "unassigned": "Unassigned",
     "assigned": "Assigned Room",
     "fullName": "Full Name",
     "phone": "Phone Number",
     "idCard": "National ID",
+    "email": "Email",
     "currentRoom": "Current Room",
     "startDate": "Move-in Date",
-    "emptyTenants": "No tenants found."
+    "emptyTenants": "No tenants found.",
+    "lookup": "Lookup Account",
+    "lookupHint": "Enter Phone or ID to autofill profile",
+    "lookupFound": "Found existing account in system",
+    "createdSuccess": "Tenant added successfully!",
+    "updatedSuccess": "Tenant updated successfully!",
+    "deletedSuccess": "Tenant deleted!",
+    "deleteConfirm": "Are you sure you want to delete this tenant?"
   },
   "contracts": {
     "title": "Contract Management",
@@ -165,28 +247,75 @@
     "endDate": "Expiration Date",
     "depositAmount": "Deposit Collected",
     "rentalPrice": "Agreed Rent",
+    "electricityPrice": "Electricity Price",
+    "waterPrice": "Water Price",
+    "initialElec": "Starting Electricity",
+    "initialWater": "Starting Water",
+    "services": "Included Services",
     "status": {
       "active": "Active",
       "expired": "Expired",
-      "terminated": "Terminated"
-    }
+      "terminated": "Terminated",
+      "pendingTenant": "Awaiting Tenant Signature",
+      "pendingOwner": "Awaiting Landlord Approval"
+    },
+    "createdSuccess": "Contract created successfully!",
+    "approvedSuccess": "Contract approved successfully!",
+    "checkoutSuccess": "Checkout and settlement completed successfully!",
+    "deleteConfirm": "Are you sure you want to delete this contract?"
   },
   "invoices": {
     "title": "Invoice Management",
     "subtitle": "Record meter readings, create invoices, and track payments",
     "createInvoice": "Create New Invoice",
+    "createSingle": "Create Single Invoice",
+    "createBulk": "Create Bulk Invoices",
     "recordMeter": "Record Meter Readings",
     "printInvoice": "Print Invoice PDF",
+    "invoiceCode": "Invoice Code",
+    "period": "Billing Period",
     "electricIndex": "Electricity Meter (old -> new)",
     "waterIndex": "Water Meter (old -> new)",
+    "roomFee": "Room Rent",
+    "electricFee": "Electricity Charge",
+    "waterFee": "Water Charge",
+    "serviceFee": "Service Fees",
+    "parkingFee": "Parking Fee",
+    "internetFee": "Internet Fee",
+    "garbageFee": "Garbage & Cleaning",
+    "discount": "Discount",
+    "penalty": "Late Fee Penalty",
     "totalAmount": "Total Amount Due",
     "dueDate": "Payment Due Date",
+    "issuedAt": "Issued Date",
     "status": {
       "unpaid": "Unpaid",
       "paid": "Paid",
-      "overdue": "Overdue"
+      "overdue": "Overdue",
+      "draft": "Draft",
+      "settled": "Settled"
     },
-    "payNow": "Pay Now"
+    "payNow": "Pay Now",
+    "markPaid": "Mark as Collected",
+    "sendReminder": "Send Payment Reminder 🔔",
+    "reminderSent": "✅ Payment reminder sent to tenant successfully!",
+    "ocrMeter": "Scan Readings via AI",
+    "ocrSuccess": "Meter readings recognized successfully!",
+    "ocrError": "Could not read digits from image. Please enter manually.",
+    "emptyInvoices": "No invoices found"
+  },
+  "utilities": {
+    "title": "Electricity & Water Management",
+    "subtitle": "Record monthly utility meter readings for each room",
+    "recordAll": "Save All Readings",
+    "scanCamera": "Scan via Camera",
+    "oldElec": "Previous Electricity",
+    "newElec": "New Electricity",
+    "usageElec": "Usage (kWh)",
+    "oldWater": "Previous Water",
+    "newWater": "New Water",
+    "usageWater": "Usage (m³)",
+    "savedSuccess": "Utility readings saved successfully!"
   },
   "repairs": {
     "title": "Repairs & Issue Reports",
@@ -196,11 +325,63 @@
     "description": "Detailed Description",
     "priority": "Priority Level",
     "progress": "Resolution Progress",
+    "tenantNote": "Tenant note",
+    "landlordResponse": "Landlord response",
     "status": {
       "pending": "Pending",
       "processing": "Processing",
       "completed": "Completed",
       "cancelled": "Cancelled"
+    },
+    "updatedSuccess": "Repair ticket updated successfully!"
+  },
+  "debts": {
+    "title": "Debt Financials",
+    "subtitle": "Track and follow up on overdue tenant balances",
+    "totalDebt": "Total Outstanding Debt",
+    "unpaidRooms": "Rooms with Debt",
+    "unpaidInvoices": "Unpaid Invoices",
+    "remindAll": "Remind All Debts",
+    "remindRoom": "Send Room Reminder",
+    "remindedSuccess": "Debt reminders sent successfully!"
+  },
+  "payments": {
+    "title": "Transaction History & Payment Gateway",
+    "subtitle": "Track VNPay, VietQR transfers, and cash inflows",
+    "method": "Payment Method",
+    "gatewayRef": "Transaction Code",
+    "paidAt": "Payment Time",
+    "cash": "Cash",
+    "transfer": "Bank Transfer",
+    "vnpay": "VNPay Online Gateway"
+  },
+  "settings": {
+    "title": "System Settings",
+    "subtitle": "Configure VietQR banking, late fee policies, and landlord profile",
+    "banking": {
+      "title": "Banking & VietQR Gateway",
+      "subtitle": "Configure bank account for automatic QR code payments",
+      "bank": "Bank Name",
+      "accountNo": "Account Number",
+      "accountName": "Account Holder Name",
+      "qrPreview": "Payment QR Code Preview",
+      "saved": "Bank settings saved successfully!"
+    },
+    "billing": {
+      "title": "Billing & Overdue Penalty Policy",
+      "subtitle": "Automatically apply late fee penalty when tenants pay past the due date",
+      "graceDays": "Grace Period Days (before penalty)",
+      "penaltyRate": "Late Fee Rate (%)",
+      "saved": "Billing policy updated successfully!"
+    },
+    "account": {
+      "title": "Account & Password Settings",
+      "subtitle": "Manage personal credentials and security",
+      "changePassword": "Change Password",
+      "currentPassword": "Current Password",
+      "newPassword": "New Password",
+      "confirmNewPassword": "Confirm New Password",
+      "saved": "Account information updated successfully!"
     }
   },
   "notifications": {

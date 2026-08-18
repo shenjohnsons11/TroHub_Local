@@ -6,11 +6,13 @@
     "status": "Trạng thái",
     "action": "Thao tác",
     "save": "Lưu lại",
+    "saving": "Đang lưu...",
     "cancel": "Hủy bỏ",
     "confirm": "Xác nhận",
     "delete": "Xóa",
     "edit": "Chỉnh sửa",
     "add": "Thêm mới",
+    "create": "Tạo mới",
     "loading": "Đang tải...",
     "success": "Thành công",
     "error": "Lỗi hệ thống",
@@ -21,7 +23,64 @@
     "unitVnd": "đ",
     "unitKwh": "kWh",
     "unitM3": "m³",
-    "language": "Ngôn ngữ"
+    "language": "Ngôn ngữ",
+    "noData": "Không có dữ liệu",
+    "yes": "Có",
+    "no": "Không",
+    "send": "Gửi",
+    "update": "Cập nhật",
+    "view": "Xem",
+    "month": "Tháng",
+    "year": "Năm",
+    "from": "Từ",
+    "to": "Đến",
+    "room": "Phòng",
+    "tenant": "Người thuê",
+    "phone": "Số điện thoại",
+    "amount": "Số tiền",
+    "note": "Ghi chú",
+    "unspecified": "Chưa xác định"
+  },
+  "statusMap": {
+    "invoice": {
+      "draft": "Nháp",
+      "unpaid": "Chưa thanh toán",
+      "paid": "Đã thanh toán",
+      "overdue": "Quá hạn",
+      "settled": "Đã gộp quyết toán"
+    },
+    "contract": {
+      "draft": "Bản nháp",
+      "pendingTenant": "Chờ khách ký",
+      "pendingOwner": "Chờ chủ duyệt",
+      "active": "Đang hiệu lực",
+      "expired": "Đã hết hạn",
+      "terminated": "Đã thanh lý",
+      "pendingCheckout": "Chờ duyệt trả phòng",
+      "checkedOut": "Đã trả phòng",
+      "cancelled": "Đã hủy"
+    },
+    "room": {
+      "available": "Còn trống",
+      "rented": "Đang thuê",
+      "maintenance": "Đang bảo trì"
+    },
+    "repair": {
+      "pending": "Chờ tiếp nhận",
+      "processing": "Đang xử lý",
+      "completed": "Đã hoàn thành",
+      "cancelled": "Đã hủy"
+    },
+    "priority": {
+      "low": "Thấp",
+      "medium": "Trung bình",
+      "urgent": "Khẩn cấp"
+    },
+    "payment": {
+      "success": "Thành công",
+      "pending": "Đang xử lý",
+      "failed": "Thất bại"
+    }
   },
   "auth": {
     "login": "Đăng nhập",
@@ -114,10 +173,10 @@
     "handleRepair": "Xử lý sự cố",
     "aiAssistant": "Trợ lý AI",
     "occupancy": "Tỷ lệ lấp đầy",
-    "noData": "Chưa có dữ liệu"
-    ,"morning": "Chào buổi sáng"
-    ,"afternoon": "Chào buổi chiều"
-    ,"evening": "Chào buổi tối"
+    "noData": "Chưa có dữ liệu",
+    "morning": "Chào buổi sáng",
+    "afternoon": "Chào buổi chiều",
+    "evening": "Chào buổi tối"
   },
   "rooms": {
     "title": "Quản lý Phòng trọ",
@@ -125,9 +184,14 @@
     "addRoom": "Thêm phòng mới",
     "editRoom": "Chỉnh sửa thông tin phòng",
     "roomCode": "Mã phòng",
+    "roomCodePlaceholder": "Ví dụ: P.101",
     "price": "Giá thuê hàng tháng",
+    "pricePlaceholder": "Ví dụ: 3.500.000",
     "deposit": "Tiền đặt cọc",
+    "depositPlaceholder": "Ví dụ: 3.500.000",
     "area": "Diện tích (m²)",
+    "areaPlaceholder": "Ví dụ: 25",
+    "floor": "Tầng",
     "maxTenants": "Sức chứa tối đa",
     "status": {
       "rented": "Đang thuê",
@@ -137,20 +201,38 @@
     "filterStatus": "Trạng thái phòng",
     "filterFloor": "Lọc theo tầng",
     "searchPlaceholder": "Tìm theo mã phòng...",
-    "emptyRooms": "Chưa có phòng nào được tạo."
+    "emptyRooms": "Chưa có phòng nào được tạo.",
+    "createdSuccess": "Thêm phòng mới thành công!",
+    "updatedSuccess": "Cập nhật phòng thành công!",
+    "deletedSuccess": "Đã xóa phòng!",
+    "deleteConfirmTitle": "Xác nhận xóa phòng",
+    "deleteConfirmMessage": "Bạn có chắc chắn muốn xóa phòng {code}? Thao tác này không thể hoàn tác.",
+    "electricityReading": "Chỉ số điện hiện tại",
+    "waterReading": "Chỉ số nước hiện tại",
+    "allFloors": "Tất cả các tầng",
+    "activeTenant": "Khách đang thuê"
   },
   "tenants": {
     "title": "Quản lý Người thuê",
     "subtitle": "Danh sách khách thuê trọ và phân phòng hiện tại",
     "addTenant": "Thêm người thuê mới",
+    "editTenant": "Chỉnh sửa hồ sơ",
     "unassigned": "Chưa xếp phòng",
     "assigned": "Đã có phòng",
     "fullName": "Họ và tên",
     "phone": "Số điện thoại",
     "idCard": "Số CCCD",
+    "email": "Email",
     "currentRoom": "Phòng hiện tại",
     "startDate": "Ngày chuyển vào",
-    "emptyTenants": "Chưa có người thuê nào."
+    "emptyTenants": "Chưa có người thuê nào.",
+    "lookup": "Tra cứu tài khoản",
+    "lookupHint": "Nhập SĐT/CCCD để tự động điền hồ sơ",
+    "lookupFound": "Đã tìm thấy tài khoản trong hệ thống",
+    "createdSuccess": "Thêm người thuê thành công!",
+    "updatedSuccess": "Cập nhật thông tin thành công!",
+    "deletedSuccess": "Đã xóa người thuê!",
+    "deleteConfirm": "Bạn có chắc muốn xóa khách thuê này?"
   },
   "contracts": {
     "title": "Quản lý Hợp đồng",
@@ -165,28 +247,75 @@
     "endDate": "Ngày hết hạn",
     "depositAmount": "Tiền cọc đã thu",
     "rentalPrice": "Giá thuê chốt",
+    "electricityPrice": "Đơn giá điện",
+    "waterPrice": "Đơn giá nước",
+    "initialElec": "Số điện đầu kỳ",
+    "initialWater": "Số nước đầu kỳ",
+    "services": "Dịch vụ đi kèm",
     "status": {
       "active": "Đang hiệu lực",
       "expired": "Đã hết hạn",
-      "terminated": "Đã thanh lý"
-    }
+      "terminated": "Đã thanh lý",
+      "pendingTenant": "Chờ khách ký",
+      "pendingOwner": "Chờ chủ duyệt"
+    },
+    "createdSuccess": "Tạo hợp đồng thành công!",
+    "approvedSuccess": "Duyệt hợp đồng thành công!",
+    "checkoutSuccess": "Duyệt trả phòng và quyết toán thành công!",
+    "deleteConfirm": "Bạn có chắc muốn xóa hợp đồng này?"
   },
   "invoices": {
     "title": "Quản lý Hóa đơn",
     "subtitle": "Chốt chỉ số điện nước, lập hóa đơn và theo dõi thanh toán",
-    "createInvoice": "Lập hóa đơn mới",
+    "createInvoice": "Tạo hóa đơn mới",
+    "createSingle": "Lập hóa đơn lẻ",
+    "createBulk": "Tạo hóa đơn hàng loạt",
     "recordMeter": "Chốt chỉ số điện nước",
     "printInvoice": "In hóa đơn PDF",
+    "invoiceCode": "Mã HD",
+    "period": "Kỳ thanh toán",
     "electricIndex": "Chỉ số điện (cũ -> mới)",
     "waterIndex": "Chỉ số nước (cũ -> mới)",
+    "roomFee": "Tiền phòng",
+    "electricFee": "Tiền điện",
+    "waterFee": "Tiền nước",
+    "serviceFee": "Phí dịch vụ",
+    "parkingFee": "Tiền gửi xe",
+    "internetFee": "Tiền Internet",
+    "garbageFee": "Tiền rác & vệ sinh",
+    "discount": "Giảm trừ",
+    "penalty": "Phí phạt quá hạn",
     "totalAmount": "Tổng tiền cần thanh toán",
     "dueDate": "Hạn thanh toán",
+    "issuedAt": "Ngày phát hành",
     "status": {
       "unpaid": "Chưa thanh toán",
       "paid": "Đã thanh toán",
-      "overdue": "Quá hạn"
+      "overdue": "Quá hạn",
+      "draft": "Nháp",
+      "settled": "Đã gộp quyết toán"
     },
-    "payNow": "Thanh toán ngay"
+    "payNow": "Thanh toán ngay",
+    "markPaid": "Đánh dấu đã thu",
+    "sendReminder": "Gửi nhắc thanh toán 🔔",
+    "reminderSent": "✅ Đã gửi thông báo nhắc nợ tới Khách thuê thành công!",
+    "ocrMeter": "Quét chỉ số bằng AI",
+    "ocrSuccess": "Đã nhận diện thành công chỉ số!",
+    "ocrError": "Không đọc được chỉ số từ ảnh. Vui lòng nhập tay.",
+    "emptyInvoices": "Không tìm thấy hóa đơn nào"
+  },
+  "utilities": {
+    "title": "Quản lý Điện & Nước",
+    "subtitle": "Ghi nhận chỉ số đồng hồ điện nước hàng tháng cho từng phòng",
+    "recordAll": "Lưu chỉ số tất cả phòng",
+    "scanCamera": "Chụp quét chỉ số",
+    "oldElec": "Số điện cũ",
+    "newElec": "Số điện mới",
+    "usageElec": "Tiêu thụ (kWh)",
+    "oldWater": "Số nước cũ",
+    "newWater": "Số nước mới",
+    "usageWater": "Tiêu thụ (m³)",
+    "savedSuccess": "Đã lưu chỉ số điện nước thành công!"
   },
   "repairs": {
     "title": "Báo sự cố & Sửa chữa",
@@ -196,11 +325,63 @@
     "description": "Mô tả chi tiết",
     "priority": "Mức độ ưu tiên",
     "progress": "Tiến độ xử lý",
+    "tenantNote": "Ghi chú từ khách thuê",
+    "landlordResponse": "Phản hồi của chủ trọ",
     "status": {
       "pending": "Chờ tiếp nhận",
       "processing": "Đang xử lý",
       "completed": "Đã hoàn thành",
       "cancelled": "Đã hủy"
+    },
+    "updatedSuccess": "Cập nhật trạng thái sự cố thành công!"
+  },
+  "debts": {
+    "title": "Báo cáo Công nợ",
+    "subtitle": "Theo dõi và đôn đốc các khoản nợ tiền trọ quá hạn",
+    "totalDebt": "Tổng công nợ",
+    "unpaidRooms": "Số phòng có nợ",
+    "unpaidInvoices": "Số hóa đơn chưa thu",
+    "remindAll": "Nhắc nợ tất cả",
+    "remindRoom": "Gửi nhắc nợ phòng",
+    "remindedSuccess": "Đã gửi nhắc nợ thành công!"
+  },
+  "payments": {
+    "title": "Lịch sử Giao dịch & Cổng thanh toán",
+    "subtitle": "Theo dõi dòng tiền chuyển khoản VNPay, VietQR và tiền mặt",
+    "method": "Phương thức",
+    "gatewayRef": "Mã giao dịch",
+    "paidAt": "Thời gian thanh toán",
+    "cash": "Tiền mặt",
+    "transfer": "Chuyển khoản",
+    "vnpay": "VNPay Cổng trực tuyến"
+  },
+  "settings": {
+    "title": "Cài đặt Hệ thống",
+    "subtitle": "Thiết lập tài khoản ngân hàng VietQR, chính sách phạt và thông tin chủ trọ",
+    "banking": {
+      "title": "Tài khoản Ngân hàng & VietQR",
+      "subtitle": "Cấu hình tài khoản nhận tiền thanh toán tự động qua mã QR",
+      "bank": "Ngân hàng",
+      "accountNo": "Số tài khoản",
+      "accountName": "Tên chủ tài khoản",
+      "qrPreview": "Xem trước mã QR thanh toán",
+      "saved": "Lưu cấu hình ngân hàng thành công!"
+    },
+    "billing": {
+      "title": "Chính sách Hóa đơn & Phạt quá hạn",
+      "subtitle": "Tự động áp dụng phí phạt khi khách đóng tiền trễ hạn",
+      "graceDays": "Số ngày ân hạn (trước khi tính phạt)",
+      "penaltyRate": "Tỷ lệ phạt quá hạn (%)",
+      "saved": "Cập nhật chính sách thành công!"
+    },
+    "account": {
+      "title": "Thông tin Tài khoản & Mật khẩu",
+      "subtitle": "Quản lý thông tin cá nhân và bảo mật",
+      "changePassword": "Đổi mật khẩu",
+      "currentPassword": "Mật khẩu hiện tại",
+      "newPassword": "Mật khẩu mới",
+      "confirmNewPassword": "Xác nhận mật khẩu mới",
+      "saved": "Cập nhật thông tin thành công!"
     }
   },
   "notifications": {
