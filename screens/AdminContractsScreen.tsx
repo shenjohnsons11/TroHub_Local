@@ -334,7 +334,7 @@ export default function AdminContractsScreen({ params }: Props) {
               />
             </AnimatedEntry>
             <View style={styles.headingRow}>
-              <View>
+              <View style={{ flex: 1, paddingRight: 8 }}>
                 <AppText style={styles.title}>{t("contractsMobile.title")}</AppText>
                 <AppText style={styles.subtitle}>{t("contractsMobile.subtitle")}</AppText>
               </View>

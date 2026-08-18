@@ -4,10 +4,12 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "@/components/ui/typography";
 import { Ionicons } from "@expo/vector-icons";
 import { parseCCCDQr, type CCCDQrData } from "../utils/cccdQr";
+import { useTranslation } from "../contexts/LanguageContext";
 
 type Props = { onBack: () => void; onScan?: (result: CCCDQrData) => void };
 
 export default function CCCDScannerScreen({ onBack, onScan }: Props) {
+  const { t } = useTranslation();
   const [permission, requestPermission] = useCameraPermissions();
   const [result, setResult] = useState<CCCDQrData | null>(null);
 
@@ -21,10 +23,10 @@ export default function CCCDScannerScreen({ onBack, onScan }: Props) {
   return (
     <View style={styles.container}>
       {permission?.granted ? <CameraView style={StyleSheet.absoluteFill} facing="back" onBarcodeScanned={result ? undefined : handleBarcodeScanned} barcodeScannerSettings={{ barcodeTypes: ["qr"] }} /> : (
-        <View style={styles.permission}><AppText style={styles.message}>Cần quyền camera để quét mã QR trên CCCD.</AppText><Pressable accessibilityRole="button" style={styles.permissionButton} onPress={requestPermission}><AppText style={styles.permissionText}>Cho phép dùng camera</AppText></Pressable></View>
+        <View style={styles.permission}><AppText style={styles.message}>Camera permission required for QR scan.</AppText><Pressable accessibilityRole="button" style={styles.permissionButton} onPress={requestPermission}><AppText style={styles.permissionText}>{t("common.confirm")}</AppText></Pressable></View>
       )}
-      <View style={styles.header}><AppText style={styles.title}>Quét mã QR CCCD</AppText><Pressable accessibilityRole="button" accessibilityLabel="Đóng camera quét CCCD" onPress={onBack} style={styles.close}><Ionicons name="close" size={24} color="#ffffff" /></Pressable></View>
-      {result ? <View style={styles.result}><AppText style={styles.resultTitle}>Đã đọc CCCD</AppText><AppText style={styles.resultText}>{result.fullName}</AppText><AppText style={styles.resultText}>{result.idCard}</AppText><Pressable accessibilityRole="button" onPress={() => setResult(null)} style={styles.retry}><AppText style={styles.retryText}>Quét lại</AppText></Pressable></View> : <AppText style={styles.hint}>Đặt mã QR trên CCCD vào trong khung.</AppText>}
+      <View style={styles.header}><AppText style={styles.title}>QR Scan CCCD</AppText><Pressable accessibilityRole="button" accessibilityLabel={t("common.close")} onPress={onBack} style={styles.close}><Ionicons name="close" size={24} color="#ffffff" /></Pressable></View>
+      {result ? <View style={styles.result}><AppText style={styles.resultTitle}>{t("common.success")}</AppText><AppText style={styles.resultText}>{result.fullName}</AppText><AppText style={styles.resultText}>{result.idCard}</AppText><Pressable accessibilityRole="button" onPress={() => setResult(null)} style={styles.retry}><AppText style={styles.retryText}>{t("invoices.ocrError")}</AppText></Pressable></View> : <AppText style={styles.hint}>Scan QR Code on CCCD</AppText>}
     </View>
   );
 }

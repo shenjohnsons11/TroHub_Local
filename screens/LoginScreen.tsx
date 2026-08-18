@@ -164,10 +164,9 @@ export default function LoginScreen({ onLogin }: Props) {
               <View style={styles.brandOverlay} />
               <TroHubLogo size="large" inverted />
               <View style={styles.brandCopy}>
-                <AppText style={styles.brandTitle}>Mọi việc ở trọ, rõ ràng hơn.</AppText>
+                <AppText style={styles.brandTitle}>{t("auth.brandTagline")}</AppText>
                 <AppText style={styles.brandDescription}>
-                  Theo dõi hợp đồng, hóa đơn và yêu cầu sửa chữa trong một ứng
-                  dụng thống nhất.
+                  {t("auth.brandDescription")}
                 </AppText>
               </View>
               <View style={styles.brandRule}>

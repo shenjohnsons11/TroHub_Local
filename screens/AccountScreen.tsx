@@ -3,6 +3,7 @@ import { ActivityIndicator, Modal, ScrollView, Switch, StyleSheet, View, Pressab
 import { AppText } from "@/components/ui/typography";
 import Card from "../components/Card";
 import ThemeToggle from "../components/ThemeToggle";
+import LanguageToggle from "../components/LanguageToggle";
 import { useAppTheme } from "../contexts/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import ChangePasswordModal from "../components/ChangePasswordModal";
@@ -197,7 +198,15 @@ export default function AccountScreen({
         )}
 
         <AppText style={[styles.sectionTitle, { color: theme.text }]}>{t("nav.settings")}</AppText>
-        <ThemeToggle />
+        <View style={{ gap: 12, marginBottom: 16 }}>
+          <ThemeToggle />
+          <Card style={[styles.card, { padding: 14 }]}>
+            <AppText style={{ fontSize: 13, fontWeight: "800", color: theme.text, marginBottom: 8 }}>{t("common.language")}</AppText>
+            <View style={{ alignItems: "flex-start" }}>
+              <LanguageToggle />
+            </View>
+          </Card>
+        </View>
 
         {menuItems.map((item) => (
           <Pressable key={item.key} onPress={() => handleMenuPress(item.key)}>

@@ -6,6 +6,7 @@ import * as Speech from "expo-speech";
 import { aiService, type AIPresentation, type AIRole, type AIChatAction, type AIChatResponse } from "../services/aiService";
 import { useAppTheme } from "../contexts/ThemeContext";
 import { UserProfile } from "../types/UserProfile";
+import { useTranslation } from "../contexts/LanguageContext";
 
 let ExpoSpeechRecognitionModule: any = null;
 try {
@@ -27,30 +28,6 @@ interface AIChatScreenProps {
   onAction?: (action: AIChatAction) => void;
 }
 
-const ROLE_PRESENTATIONS: Record<AIRole, AIPresentation> = {
-  landlord: {
-    title: "TroHub AI — Trợ lý Chủ trọ",
-    greeting: "Xin chào Chủ trọ! Tôi có thể giúp gì cho việc quản lý nhà trọ hôm nay?",
-  },
-  tenant: {
-    title: "TroHub AI — Trợ lý Cư dân",
-    greeting: "Xin chào Cư dân! Bạn cần tra cứu hóa đơn hay báo sửa chữa gì không?",
-  },
-};
-
-const QUICK_PROMPTS: Record<AIRole, string[]> = {
-  landlord: [
-    "Thống kê doanh thu tháng này",
-    "Soạn tin nhắn nhắc nợ",
-    "Hướng dẫn tạo hợp đồng mới",
-  ],
-  tenant: [
-    "Hóa đơn của tôi tháng này",
-    "Báo hỏng thiết bị",
-    "Xem lịch thanh toán",
-  ],
-};
-
 function normalizeRole(value: unknown): AIRole | null {
   if (value === "landlord" || value === 1) return "landlord";
   if (value === "tenant" || value === 2) return "tenant";
@@ -61,166 +38,195 @@ function isNonNegativeNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value >= 0;
 }
 
-function isValidISODate(value: unknown): value is string {
-  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const date = new Date(`${value}T00:00:00Z`);
-  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
-}
+function sanitizeAIAction(action: unknown): AIChatAction | null {
+  if (!action || typeof action !== "object") return null;
+  const candidate = action as Record<string, unknown>;
+  const type = candidate.type;
 
-function isAIAction(value: unknown): value is AIChatAction {
-  if (!value || typeof value !== "object") return false;
-  const action = value as Record<string, unknown>;
-  if (action.type === "FILL_CONTRACT_FORM") {
-    return typeof action.roomCode === "string" && !!action.roomCode.trim()
-      && typeof action.tenantName === "string" && !!action.tenantName.trim()
-      && isNonNegativeNumber(action.rentPrice)
-      && isValidISODate(action.startDate);
+  if (type === "NAVIGATE_TAB" && typeof candidate.tab === "string" && candidate.tab.trim()) {
+    return {
+      type: "NAVIGATE_TAB",
+      tab: candidate.tab.trim(),
+      params: candidate.params && typeof candidate.params === "object" ? (candidate.params as Record<string, unknown>) : undefined,
+    };
   }
-  return action.type === "FILL_UTILITY_READING"
-    && typeof action.roomCode === "string" && !!action.roomCode.trim()
-    && isNonNegativeNumber(action.newElec)
-    && isNonNegativeNumber(action.newWater);
-}
 
-function getPresentation(role: AIRole, value: AIChatResponse["presentation"]): AIPresentation {
-  if (!value || typeof value !== "object") return ROLE_PRESENTATIONS[role];
-  const presentation = value as Record<string, unknown>;
-  return {
-    title: typeof presentation.title === "string" && presentation.title.trim()
-      ? presentation.title
-      : ROLE_PRESENTATIONS[role].title,
-    greeting: typeof presentation.greeting === "string" && presentation.greeting.trim()
-      ? presentation.greeting
-      : ROLE_PRESENTATIONS[role].greeting,
-  };
+  if (type === "CREATE_INVOICE" && typeof candidate.roomCode === "string" && candidate.roomCode.trim()) {
+    const rawMonth = typeof candidate.month === "string" ? candidate.month.trim() : "";
+    const validMonth = /^(0?[1-9]|1[0-2])\/\d{4}$/.test(rawMonth)
+      ? rawMonth
+      : `${String(new Date().getMonth() + 1).padStart(2, "0")}/${new Date().getFullYear()}`;
+
+    return {
+      type: "CREATE_INVOICE",
+      roomCode: candidate.roomCode.trim(),
+      month: validMonth,
+      newElectricity: isNonNegativeNumber(candidate.newElectricity) ? candidate.newElectricity : undefined,
+      newWater: isNonNegativeNumber(candidate.newWater) ? candidate.newWater : undefined,
+    };
+  }
+
+  if (
+    type === "FILL_UTILITY_READING" &&
+    typeof candidate.roomCode === "string" &&
+    candidate.roomCode.trim() &&
+    isNonNegativeNumber(candidate.newElec) &&
+    isNonNegativeNumber(candidate.newWater)
+  ) {
+    return {
+      type: "FILL_UTILITY_READING",
+      roomCode: candidate.roomCode.trim(),
+      newElec: candidate.newElec,
+      newWater: candidate.newWater,
+    };
+  }
+
+  return null;
 }
 
 export default function AIChatScreen({ profile, onBack, onAction }: AIChatScreenProps) {
   const { theme } = useAppTheme();
-  const authRole: AIRole = profile?.role === 1 ? "landlord" : "tenant";
-  const initialRole = authRole;
-  const [role, setRole] = useState<AIRole>(initialRole);
-  const [presentation, setPresentation] = useState<AIPresentation>(ROLE_PRESENTATIONS[initialRole]);
+  const { t, language } = useTranslation();
+  const [role, setRole] = useState<AIRole>("landlord");
+  const [presentation, setPresentation] = useState<AIPresentation>({
+    title: t("ai.assistantTitle"),
+    greeting: t("ai.greeting"),
+  });
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "welcome",
-      sender: "ai",
-      text: `${ROLE_PRESENTATIONS[initialRole].greeting} (powered by Gemini 2.5 Flash).`,
-      timestamp: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
-    },
-  ]);
-
   const flatListRef = useRef<FlatList>(null);
 
-  useEffect(() => {
-    setTimeout(() => {
-      flatListRef.current?.scrollToEnd({ animated: true });
-    }, 100);
-  }, [messages]);
+  const quickPrompts: Record<AIRole, string[]> = {
+    landlord: [
+      t("dashboard.revenue"),
+      t("invoices.sendReminder"),
+      t("contracts.createContract"),
+    ],
+    tenant: [
+      t("invoices.title"),
+      t("repairs.title"),
+      t("payments.title"),
+    ],
+  };
 
   useEffect(() => {
-    if (!ExpoSpeechRecognitionModule?.addListener) return;
-    try {
-      const result = ExpoSpeechRecognitionModule.addListener("result", (event: any) => {
-        if (event.isFinal && event.results?.[0]?.transcript) setInputMessage((value) => `${value}${value ? " " : ""}${event.results[0].transcript}`);
-      });
-      const end = ExpoSpeechRecognitionModule.addListener("end", () => setListening(false));
-      return () => { result?.remove(); end?.remove(); };
-    } catch (e) {
-      console.warn("Speech recognition setup failed:", e);
+    let resolvedRole: AIRole = "landlord";
+    if (profile?.role !== undefined) {
+      const normalized = normalizeRole(profile.role);
+      if (normalized) resolvedRole = normalized;
     }
-  }, []);
+    setRole(resolvedRole);
 
-  const handleSend = async (textToSend?: string) => {
-    const query = (textToSend || inputMessage).trim();
-    if (!query || loading) return;
+    setPresentation({
+      title: t("ai.assistantTitle"),
+      greeting: t("ai.greeting"),
+    });
 
-    const userMsg: Message = {
+    setMessages([
+      {
+        id: "welcome",
+        sender: "ai",
+        text: t("ai.greeting"),
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      },
+    ]);
+  }, [profile, t]);
+
+  const handleSend = async (customMessage?: string) => {
+    const textToSend = customMessage || inputMessage;
+    if (!textToSend.trim() || loading) return;
+
+    const userMessage: Message = {
       id: Date.now().toString(),
       sender: "user",
-      text: query,
-      timestamp: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
+      text: textToSend.trim(),
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     };
 
-    setMessages((prev) => [...prev, userMsg]);
-    if (!textToSend) setInputMessage("");
+    setMessages((prev) => [...prev, userMessage]);
+    if (!customMessage) setInputMessage("");
     setLoading(true);
 
     try {
-      const response = await aiService.chat(query);
-      const responseRole = normalizeRole(response.role);
-      const displayRole = responseRole || role;
-      if (responseRole && responseRole !== role) setRole(responseRole);
-      const nextPresentation = getPresentation(displayRole, response.presentation);
-      setPresentation(nextPresentation);
-
-      const aiMsg: Message = {
+      const data: AIChatResponse = await aiService.sendMessage(userMessage.text);
+      
+      const replyText = typeof data.reply === "string" ? data.reply : t("common.error");
+      const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         sender: "ai",
-        text: typeof response.reply === "string" && response.reply
-          ? response.reply
-          : "Xin lỗi, tôi chưa thể trả lời câu hỏi này lúc này.",
-        timestamp: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
+        text: replyText,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       };
 
-      setMessages((prev) => [...prev, aiMsg]);
-      const action = isAIAction(response.action) && response.action.requiresConfirmation === false
-        ? response.action
-        : null;
-      if (authRole === "landlord" && response.role === "landlord" && response.denied !== true && action) onAction?.(action);
-    } catch (error: any) {
-      const errorMsg: Message = {
+      setMessages((prev) => [...prev, aiMessage]);
+
+      const safeAction = sanitizeAIAction(data.action);
+      if (safeAction) {
+        onAction?.(safeAction);
+      }
+    } catch {
+      const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         sender: "ai",
-        text: `⚠️ **Lỗi kết nối:** ${error.message || "Không thể tải phản hồi từ Gemini AI. Vui lòng thử lại."}`,
-        timestamp: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
+        text: t("common.error"),
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       };
-      setMessages((prev) => [...prev, errorMsg]);
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setLoading(false);
     }
   };
 
   const handleVoiceInput = async () => {
-    if (!ExpoSpeechRecognitionModule?.requestPermissionsAsync) {
-      return Alert.alert(
-        "Yêu cầu Development Build",
-        "Tính năng nhận diện giọng nói (Micro) chưa hỗ trợ trực tiếp trên Expo Go. Bạn cần tạo Development Build để sử dụng."
-      );
+    if (!ExpoSpeechRecognitionModule) {
+      Alert.alert(t("common.error"), "Speech recognition not available on this device.");
+      return;
     }
     try {
-      const permission = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
-      if (!permission.granted) return Alert.alert("Chưa có quyền micro", "Hãy cấp quyền micro và nhận diện giọng nói để nhập bằng giọng nói.");
-      setListening(true);
-      ExpoSpeechRecognitionModule.start({ lang: "vi-VN", interimResults: false, maxAlternatives: 1 });
+      const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+      if (!result.granted) {
+        Alert.alert(t("common.error"), "Microphone permission required.");
+        return;
+      }
+      if (listening) {
+        ExpoSpeechRecognitionModule.stop();
+        setListening(false);
+      } else {
+        setListening(true);
+        ExpoSpeechRecognitionModule.start({
+          lang: language === "en" ? "en-US" : "vi-VN",
+          interimResults: false,
+          maxAlternatives: 1,
+        });
+      }
     } catch (error: any) {
-      Alert.alert("Lỗi giọng nói", error.message || "Không thể khởi động nhận diện giọng nói.");
+      setListening(false);
+      Alert.alert(t("common.error"), error.message || t("common.error"));
     }
   };
 
-  const speak = (text: string) => Speech.speak(text.replace(/\*\*/g, ""), { language: "vi-VN" });
+  const speak = (text: string) => Speech.speak(text.replace(/\*\*/g, ""), { language: language === "en" ? "en-US" : "vi-VN" });
 
   const handleCopyText = (text: string) => {
     Clipboard.setString(text);
-    Alert.alert("Thông báo", "Đã sao chép nội dung vào khay nhớ tạm!");
+    Alert.alert(t("common.success"), "Copied to clipboard!");
   };
 
   const handleClearHistory = () => {
-    Alert.alert("Xác nhận", "Bạn có muốn xóa toàn bộ lịch sử trò chuyện?", [
-      { text: "Hủy", style: "cancel" },
+    Alert.alert(t("common.confirm"), "Clear conversation history?", [
+      { text: t("common.cancel"), style: "cancel" },
       {
-        text: "Xóa",
+        text: t("common.delete"),
         style: "destructive",
         onPress: () => {
           setMessages([
             {
               id: "welcome",
               sender: "ai",
-              text: `${presentation.greeting} Lịch sử trò chuyện đã được làm sạch. Bạn cần hỗ trợ thêm gì?`,
-              timestamp: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
+              text: `${presentation.greeting}`,
+              timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
             },
           ]);
         },
@@ -266,7 +272,7 @@ export default function AIChatScreen({ profile, onBack, onAction }: AIChatScreen
               <TouchableOpacity onPress={() => handleCopyText(item.text)} style={styles.copyBtn}>
                 <Ionicons name="copy-outline" size={14} color="#A7F3D0" />
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => speak(item.text)} style={styles.copyBtn} accessibilityLabel="Đọc câu trả lời">
+              <TouchableOpacity onPress={() => speak(item.text)} style={styles.copyBtn} accessibilityLabel="Speak">
                 <Ionicons name="volume-high-outline" size={14} color="#A7F3D0" />
               </TouchableOpacity>
             </View>
@@ -288,7 +294,6 @@ export default function AIChatScreen({ profile, onBack, onAction }: AIChatScreen
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
     >
-      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           {onBack && (
@@ -307,7 +312,7 @@ export default function AIChatScreen({ profile, onBack, onAction }: AIChatScreen
                 <AppText style={styles.badgeText}>Gemini 2.5</AppText>
               </View>
             </View>
-            <AppText style={styles.headerSubtitle}>Trợ lý quản lý nhà trọ thông minh</AppText>
+            <AppText style={styles.headerSubtitle}>{t("ai.assistantTitle")}</AppText>
           </View>
         </View>
 
@@ -316,11 +321,10 @@ export default function AIChatScreen({ profile, onBack, onAction }: AIChatScreen
         </TouchableOpacity>
       </View>
 
-      {/* Quick Prompts Chips */}
       <View style={styles.promptContainer}>
         <FlatList
           horizontal
-          data={QUICK_PROMPTS[role]}
+          data={quickPrompts[role]}
           keyExtractor={(item, idx) => idx.toString()}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 12 }}
@@ -337,7 +341,6 @@ export default function AIChatScreen({ profile, onBack, onAction }: AIChatScreen
         />
       </View>
 
-      {/* Message List */}
       <FlatList
         ref={flatListRef}
         data={messages}
@@ -348,23 +351,22 @@ export default function AIChatScreen({ profile, onBack, onAction }: AIChatScreen
           loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator color="#10B981" size="small" />
-              <AppText style={styles.loadingText}>TroHub AI đang suy nghĩ...</AppText>
+              <AppText style={styles.loadingText}>TroHub AI thinking...</AppText>
             </View>
           ) : null
         }
       />
 
-      {/* Input Bar */}
       <View style={styles.inputBar}>
         <AppTextInput
           style={styles.input}
-          placeholder="Hỏi TroHub AI bất kỳ điều gì..."
+          placeholder={t("ai.placeholder")}
           placeholderTextColor="#6EE7B7"
           value={inputMessage}
           onChangeText={setInputMessage}
           multiline
         />
-        <TouchableOpacity onPress={() => void handleVoiceInput()} disabled={loading || listening} style={styles.sendBtn} accessibilityLabel="Nhập bằng giọng nói">
+        <TouchableOpacity onPress={() => void handleVoiceInput()} disabled={loading || listening} style={styles.sendBtn} accessibilityLabel="Voice">
           <Ionicons name="mic-outline" size={18} color="#FFFFFF" />
         </TouchableOpacity>
         <TouchableOpacity
@@ -448,23 +450,23 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 9,
     fontWeight: "600",
-    color: "#34D399",
+    color: "#A7F3D0",
   },
   iconBtn: {
-    padding: 8,
-    borderRadius: 10,
-    backgroundColor: "rgba(6, 95, 70, 0.4)",
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: "rgba(4, 47, 46, 0.6)",
   },
   promptContainer: {
-    paddingVertical: 10,
-    backgroundColor: "#042F2E",
+    paddingVertical: 8,
+    backgroundColor: "#064E3B",
     borderBottomWidth: 1,
     borderBottomColor: "rgba(16, 185, 129, 0.15)",
   },
   promptChip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#065F46",
+    backgroundColor: "rgba(4, 47, 46, 0.8)",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
@@ -473,17 +475,17 @@ const styles = StyleSheet.create({
     borderColor: "rgba(16, 185, 129, 0.3)",
   },
   promptText: {
-    fontSize: 12,
     color: "#ECFDF5",
+    fontSize: 12,
     fontWeight: "500",
   },
   messageList: {
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
   },
   messageRow: {
     flexDirection: "row",
-    marginBottom: 14,
+    marginBottom: 16,
     alignItems: "flex-end",
   },
   userRow: {
@@ -495,51 +497,53 @@ const styles = StyleSheet.create({
   avatarAi: {
     width: 28,
     height: 28,
-    borderRadius: 14,
-    backgroundColor: "#064E3B",
+    borderRadius: 10,
+    backgroundColor: "#042F2E",
     borderWidth: 1,
-    borderColor: "#10B981",
+    borderColor: "rgba(16, 185, 129, 0.4)",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 8,
-    marginBottom: 2,
+    marginBottom: 4,
   },
   bubble: {
-    maxWidth: "82%",
+    maxWidth: "80%",
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 18,
   },
   userBubble: {
-    backgroundColor: "#047857",
-    borderBottomRightRadius: 2,
+    backgroundColor: "#059669",
+    borderBottomRightRadius: 4,
   },
   aiBubble: {
-    backgroundColor: "#065F46",
-    borderBottomLeftRadius: 2,
+    backgroundColor: "#064E3B",
+    borderBottomLeftRadius: 4,
     borderWidth: 1,
-    borderColor: "rgba(16, 185, 129, 0.25)",
+    borderColor: "rgba(16, 185, 129, 0.2)",
   },
   aiHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 6,
+    marginBottom: 4,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(16, 185, 129, 0.2)",
+    borderBottomColor: "rgba(16, 185, 129, 0.15)",
     paddingBottom: 4,
   },
   aiTitle: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "700",
-    color: "#34D399",
+    color: "#6EE7B7",
+    flex: 1,
   },
   copyBtn: {
     padding: 2,
+    marginLeft: 6,
   },
   messageText: {
-    fontSize: 14,
     color: "#ECFDF5",
+    fontSize: 14,
     lineHeight: 20,
   },
   boldText: {
@@ -547,29 +551,34 @@ const styles = StyleSheet.create({
     color: "#34D399",
   },
   timestamp: {
-    fontSize: 10,
+    fontSize: 9,
     marginTop: 4,
-    textAlign: "right",
+    alignSelf: "flex-end",
   },
   userTime: {
-    color: "rgba(236, 253, 245, 0.7)",
+    color: "#A7F3D0",
   },
   aiTime: {
-    color: "rgba(167, 243, 208, 0.6)",
+    color: "#6EE7B7",
+    opacity: 0.7,
   },
   loadingContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    padding: 10,
-    backgroundColor: "#065F46",
-    borderRadius: 14,
+    backgroundColor: "#064E3B",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 18,
     alignSelf: "flex-start",
-    marginBottom: 14,
+    marginLeft: 36,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "rgba(16, 185, 129, 0.2)",
   },
   loadingText: {
-    fontSize: 12,
     color: "#A7F3D0",
+    fontSize: 12,
+    fontStyle: "italic",
   },
   inputBar: {
     flexDirection: "row",
@@ -583,25 +592,26 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    backgroundColor: "#042F2E",
+    backgroundColor: "#022C22",
     color: "#ECFDF5",
-    fontSize: 14,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     maxHeight: 100,
+    fontSize: 14,
     borderWidth: 1,
     borderColor: "rgba(16, 185, 129, 0.3)",
   },
   sendBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    backgroundColor: "#10B981",
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#059669",
     alignItems: "center",
     justifyContent: "center",
   },
   sendBtnDisabled: {
-    backgroundColor: "rgba(16, 185, 129, 0.3)",
+    backgroundColor: "#042F2E",
+    opacity: 0.5,
   },
 });
