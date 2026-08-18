@@ -26,8 +26,9 @@ router.get('/:id', invoiceController.getInvoiceById);
 // Đánh dấu thanh toán (Tự động sinh Transaction)
 router.put('/:id/pay', invoiceController.payInvoice);
 
-// Gửi nhắc nhở thanh toán (Tự chuyển quá hạn)
-router.put('/:id/remind', requireAdmin, invoiceController.remindInvoice);
+// Gửi nhắc nhở thanh toán (Nhắc nợ)
+router.post('/:id/remind', requireAdmin, invoiceController.remindInvoicePayment);
+router.put('/:id/remind', requireAdmin, invoiceController.remindInvoicePayment);
 
 // Cập nhật hóa đơn
 router.put('/:id', requireAdmin, invoiceController.updateInvoice);

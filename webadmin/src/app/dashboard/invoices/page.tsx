@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Bell, CheckCircle, ChevronLeft, ChevronRight, Eye, Gauge, Plus, ScanSearch, Search, Send, Trash2 } from "lucide-react";
+import { CalendarDays, Bell, CheckCircle, ChevronLeft, ChevronRight, Eye, Gauge, Loader2, Plus, ScanSearch, Search, Send, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { formatCurrency, formatMeterReading, parseMeterReading, unformatNumber } from "@/lib/formatters";
@@ -71,6 +71,7 @@ export default function InvoicesPage() {
 
   // Detail
   const [detailInvoice, setDetailInvoice] = useState<any>(null);
+  const [remindingId, setRemindingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isAddOpen) {
@@ -206,10 +207,13 @@ export default function InvoicesPage() {
   const handleRemind = async (invoiceId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
+      setRemindingId(invoiceId);
       await fetchAPI(`/invoices/${invoiceId}/remind`, { method: "POST" });
-      notification.success("Đã gửi nhắc nhở thành công!");
+      notification.success("✅ Đã gửi thông báo nhắc nợ tới Khách thuê thành công!");
     } catch (err) {
       notification.error(getNotificationMessage(err, "Gửi nhắc nhở thất bại."));
+    } finally {
+      setRemindingId(null);
     }
   };
 
@@ -483,8 +487,20 @@ export default function InvoicesPage() {
                       </Button>
                       {invoice.statusLabel !== "Đã thanh toán" && invoice.statusLabel !== "Đã gộp quyết toán" && (
                         <>
-                          <Button aria-label="Gửi nhắc thanh toán" onClick={e => handleRemind(invoice._id || invoice.id, e)} variant="ghost" size="icon" title="Gửi nhắc thanh toán" className="text-amber-600 hover:bg-amber-50 hover:text-amber-700">
-                            <Bell className="size-4" />
+                          <Button
+                            aria-label="Gửi nhắc thanh toán"
+                            disabled={remindingId === (invoice._id || invoice.id)}
+                            onClick={e => handleRemind(invoice._id || invoice.id, e)}
+                            variant="ghost"
+                            size="icon"
+                            title="Gửi nhắc thanh toán"
+                            className="text-amber-600 hover:bg-amber-50 hover:text-amber-700"
+                          >
+                            {remindingId === (invoice._id || invoice.id) ? (
+                              <Loader2 className="size-4 animate-spin text-amber-600" />
+                            ) : (
+                              <Bell className="size-4" />
+                            )}
                           </Button>
                           <Button aria-label="Đánh dấu hóa đơn đã thu" onClick={e => { e.stopPropagation(); handleMarkPaid(invoice._id || invoice.id); }} variant="ghost" size="icon" title="Đánh dấu đã thu" className="text-primary hover:bg-primary/10 hover:text-primary">
                             <CheckCircle className="size-4" />

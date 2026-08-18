@@ -20,7 +20,8 @@
     "floor": "Tầng {number}",
     "unitVnd": "đ",
     "unitKwh": "kWh",
-    "unitM3": "m³"
+    "unitM3": "m³",
+    "language": "Ngôn ngữ"
   },
   "auth": {
     "login": "Đăng nhập",
@@ -48,7 +49,31 @@
     "inviteCode": "Mã mời đăng ký (6 số)",
     "tenantRegister": "Đăng ký tài khoản Người thuê",
     "tenantMobileOnly": "Tài khoản Người thuê vui lòng đăng nhập trên ứng dụng di động TroHub.",
-    "logout": "Đăng xuất"
+    "logout": "Đăng xuất",
+    "identifierPlaceholder": "Ví dụ: 0901234567 hoặc email@example.com",
+    "identifierHint": "Nhập SĐT hoặc Email đã đăng ký.",
+    "passwordPlaceholder": "Nhập mật khẩu",
+    "passwordPlaceholderMin": "Nhập mật khẩu (từ 6 ký tự)",
+    "rememberMe": "Ghi nhớ đăng nhập",
+    "loggingIn": "Đang đăng nhập...",
+    "registering": "Đang đăng ký...",
+    "fullNamePlaceholder": "Ví dụ: Nguyễn Văn A",
+    "phonePlaceholder": "Ví dụ: 0901.234.567",
+    "emailPlaceholder": "Ví dụ: landlord@gmail.com",
+    "idCardPlaceholder": "Nhập CCCD 12 số",
+    "inviteCodePlaceholder": "Nhập mã mời 6 chữ số",
+    "requestInvite": "Yêu cầu cấp mã mời qua Zalo",
+    "requestInviteTitle": "Yêu cầu cấp mã mời",
+    "requestInviteDescription": "Quét mã QR dưới bằng camera điện thoại để soạn tin nhắn yêu cầu nhanh chóng.",
+    "requestInviteHint": "Hệ thống sẽ soạn sẵn tin nhắn thông tin của bạn và tự mở ứng dụng Zalo chat tới số admin sau khi điền thông tin.",
+    "requestInviteDirect": "Hoặc truy cập trực tiếp trên máy tính",
+    "propertyAddress": "Địa chỉ nhà trọ",
+    "propertyAddressPlaceholder": "Ví dụ: 123 Nguyễn Huệ, Quận 1, TP.HCM",
+    "locating": "Đang lấy vị trí...",
+    "getLocation": "Lấy vị trí GPS hiện tại",
+    "propertyAddressHint": "Địa chỉ được dùng để xác định nhà trọ của bạn.",
+    "propertyLocationAttribution": "Bạn có thể chỉnh sửa địa chỉ sau khi GPS hoàn tất.",
+    "backToLogin": "Quay lại đăng nhập"
   },
   "nav": {
     "overview": "Tổng quan",

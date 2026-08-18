@@ -389,22 +389,109 @@ exports.createBulkInvoices = async (req, res) => {
     }
 };
 
-exports.remindInvoice = async (req, res) => {
+// Gửi nhắc nhở thanh toán hóa đơn (Nhắc nợ)
+exports.remindInvoicePayment = async (req, res) => {
     try {
-        const invoice = await Invoice.findById(req.params.id);
-        if (!invoice) return res.status(404).json({ success: false, message: 'Không tìm thấy hóa đơn' });
+        const { id } = req.params;
+        const invoice = await Invoice.findById(id);
+        if (!invoice) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy hóa đơn' });
+        }
 
+        // 1. Kiểm tra quyền Chủ trọ
+        const landlordId = req.auth?.id;
+        if (!landlordId) {
+            return res.status(401).json({ success: false, message: 'Chưa xác thực thông tin đăng nhập' });
+        }
+
+        let contract = null;
+        if (invoice.contractId) {
+            contract = await Contract.findById(invoice.contractId)
+                .populate({ path: 'roomId', select: 'roomCode landlordId' })
+                .populate({ path: 'tenantId', select: '_id fullName phone email' });
+        }
+
+        if (contract && contract.roomId && contract.roomId.landlordId) {
+            const roomLandlordId = contract.roomId.landlordId._id || contract.roomId.landlordId;
+            if (roomLandlordId.toString() !== landlordId.toString() && req.auth.role !== 1) {
+                return res.status(403).json({ success: false, message: 'Bạn không có quyền thao tác trên hóa đơn này' });
+            }
+        }
+
+        // 2. Tìm thông tin Khách thuê
+        let tenantId = null;
+        let tenantAccount = null;
+
+        if (contract?.tenantId) {
+            tenantId = contract.tenantId._id || contract.tenantId;
+            tenantAccount = typeof contract.tenantId === 'object' && contract.tenantId.fullName ? contract.tenantId : await Account.findById(tenantId);
+        }
+
+        if (!tenantId && invoice.tenant) {
+            tenantAccount = await Account.findOne({ fullName: invoice.tenant, role: 2 });
+            if (tenantAccount) tenantId = tenantAccount._id;
+        }
+
+        if (!tenantId) {
+            return res.status(400).json({ success: false, message: 'Không tìm thấy thông tin Khách thuê cho hóa đơn này' });
+        }
+
+        // 3. Chuẩn bị nội dung thông báo
+        const roomName = contract?.roomId?.roomCode || invoice.room || 'N/A';
+        const formattedAmount = (invoice.totalAmount || 0).toLocaleString('vi-VN');
+        
+        let periodStr = invoice.period || '';
+        let month = '';
+        let year = '';
+        if (periodStr.includes('/')) {
+            const parts = periodStr.split('/');
+            month = parts[0].replace(/\D/g, '') || parts[0];
+            year = parts[1].replace(/\D/g, '') || parts[1];
+        } else {
+            const now = new Date();
+            month = String(now.getMonth() + 1);
+            year = String(now.getFullYear());
+        }
+
+        const title = "🔔 Nhắc nợ Hóa đơn";
+        const message = `Hóa đơn tháng ${month}/${year} phòng ${roomName} số tiền ${formattedAmount}đ đã đến hạn thanh toán. Vui lòng kiểm tra và thanh toán.`;
+        const deepLink = `/tenant/invoices/${invoice._id}`;
+
+        // 4. Cập nhật lượt nhắc nợ / trạng thái hóa đơn
         invoice.remindCount = (invoice.remindCount || 0) + 1;
         if (invoice.remindCount >= 2 && invoice.status === 1) { // 1 = Chưa thanh toán
             invoice.status = 3; // 3 = Quá hạn
         }
         await invoice.save();
-        await triggerInvoiceReminder(invoice);
-        res.status(200).json({ success: true, message: 'Đã gửi yêu cầu thanh toán', data: invoice });
+
+        // 5. Tạo Notification, Socket Realtime & Gửi Expo Push Notification
+        await sendNotification({
+            userId: tenantId,
+            title,
+            content: message,
+            category: "invoice",
+            deepLink,
+            metadata: {
+                invoiceId: invoice._id,
+                period: invoice.period,
+                totalAmount: invoice.totalAmount,
+                action: 'remind',
+            },
+            eventKey: `invoice:${invoice._id}:remind:${invoice.remindCount}:${Date.now()}`,
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Đã gửi thông báo nhắc nợ thành công!",
+            data: invoice
+        });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Lỗi Server: ' + error.message });
+        console.error('[remindInvoicePayment Error]', error);
+        return res.status(500).json({ success: false, message: 'Lỗi Server: ' + error.message });
     }
 };
+
+exports.remindInvoice = exports.remindInvoicePayment;
 
 // 1. Lấy danh sách toàn bộ hóa đơn (Hiển thị lên bảng Web)
 exports.getAllInvoices = async (req, res) => {

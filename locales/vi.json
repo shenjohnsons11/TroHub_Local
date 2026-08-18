@@ -20,7 +20,8 @@
     "floor": "Tầng {number}",
     "unitVnd": "đ",
     "unitKwh": "kWh",
-    "unitM3": "m³"
+    "unitM3": "m³",
+    "language": "Ngôn ngữ"
   },
   "auth": {
     "login": "Đăng nhập",
@@ -48,7 +49,8 @@
     "inviteCode": "Mã mời đăng ký (6 số)",
     "tenantRegister": "Đăng ký tài khoản Người thuê",
     "tenantMobileOnly": "Tài khoản Người thuê vui lòng đăng nhập trên ứng dụng di động TroHub.",
-    "logout": "Đăng xuất"
+    "logout": "Đăng xuất",
+    "backToLogin": "Quay lại đăng nhập"
   },
   "nav": {
     "overview": "Tổng quan",

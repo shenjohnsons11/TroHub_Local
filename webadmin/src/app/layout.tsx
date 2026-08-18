@@ -21,7 +21,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="vi" className="h-full antialiased" suppressHydrationWarning>
+    <html
+      lang="vi"
+      className="h-full antialiased"
+      style={{ backgroundColor: "#04100e" }}
+      suppressHydrationWarning
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>

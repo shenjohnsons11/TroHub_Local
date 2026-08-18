@@ -20,7 +20,8 @@
     "floor": "Floor {number}",
     "unitVnd": "VND",
     "unitKwh": "kWh",
-    "unitM3": "m³"
+    "unitM3": "m³",
+    "language": "Language"
   },
   "auth": {
     "login": "Sign In",
@@ -48,7 +49,8 @@
     "inviteCode": "Registration Invite Code (6 digits)",
     "tenantRegister": "Create Tenant Account",
     "tenantMobileOnly": "Tenant accounts must sign in using the TroHub Mobile App.",
-    "logout": "Sign Out"
+    "logout": "Sign Out",
+    "backToLogin": "Back to sign in"
   },
   "nav": {
     "overview": "Overview",

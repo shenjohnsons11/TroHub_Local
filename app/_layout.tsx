@@ -7,8 +7,8 @@ import { NotificationProvider } from "../providers/NotificationProvider";
 import { LanguageProvider } from "../contexts/LanguageContext";
 import { InboxNotificationProvider } from "../contexts/InboxNotificationContext";
 
-// Giữ Splash Screen hiển thị cho đến khi font load xong
-SplashScreen.preventAutoHideAsync();
+// Keep the native splash visible until the first branded React frame is ready.
+void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -22,12 +22,10 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (fontsLoaded || fontError) {
-      // Font đã sẵn sàng (hoặc lỗi) — ẩn splash screen
-      SplashScreen.hideAsync();
+      void SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError]);
 
-  // Chờ font load xong mới render app
   if (!fontsLoaded && !fontError) {
     return null;
   }
