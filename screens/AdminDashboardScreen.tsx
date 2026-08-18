@@ -13,6 +13,7 @@ import MiniCalendarPopover from "../components/MiniCalendarPopover";
 import { notificationService } from "../services/notificationService";
 import { formatCurrency } from "../utils/formatters";
 import { useLanguage } from "../contexts/LanguageContext";
+import BentoGridDashboard from "../components/BentoGridDashboard";
 
 type Props = { profile?: UserProfile; refreshKey?: number; onNavigate: (tab: any, params?: any) => void; onLogout: () => void };
 
@@ -118,25 +119,7 @@ export default function AdminDashboardScreen({ profile, refreshKey = 0, onNaviga
         <GradientHero icon="wallet-outline" label={t("dashboard.revenue")} value={formatCurrency(stats?.totalRevenue)} detail={`${occupiedRooms}/${totalRooms} ${t("dashboard.occupied").toLowerCase()} · ${occupancyRate}%`} />
       </AnimatedEntry>
 
-      <View style={styles.kpiGrid}>
-        <Metric theme={theme} label={t("dashboard.debt")} value={formatCurrency(stats?.outstandingDebt)} detail={t("dashboard.today")} icon="wallet-outline" urgent danger />
-        <Metric theme={theme} label={t("dashboard.contracts")} value={stats?.pendingContracts || 0} detail={t("dashboard.today")} icon="document-text-outline" urgent={Boolean(stats?.pendingContracts)} />
-        <Metric theme={theme} label={t("dashboard.vacant")} value={vacantRooms} detail={t("dashboard.rooms")} icon="home-outline" />
-        <Metric theme={theme} label={t("dashboard.maintenance")} value={maintenanceRooms} detail={t("dashboard.rooms")} icon="construct-outline" urgent={Boolean(maintenanceRooms)} />
-      </View>
-
-      <AppText style={[styles.sectionTitle, { color: theme.text }]}>{t("dashboard.today")}</AppText>
-      <PriorityCard title={t("dashboard.repairs")} count={stats?.pendingRepairs || 0} description={t("dashboard.repairHint")} urgent={Boolean(stats?.pendingRepairs)} onPress={() => onNavigate("repair")} />
-
-      <AppText style={[styles.sectionTitle, { color: theme.text }]}>{t("dashboard.quickActions")}</AppText>
-      <View style={styles.quickRow}>{quickActions.map(([label, icon, onPress], index) => <AnimatedEntry key={label} delay={index * 45} style={styles.quickWrap}><Pressable accessibilityRole="button" onPress={onPress} style={[styles.quick, { backgroundColor: theme.surfaceElevated, shadowColor: theme.text }]}><View style={[styles.quickIcon, { backgroundColor: theme.primarySoft }]}><Ionicons name={icon} size={22} color={theme.primary} /></View><AppText style={[styles.quickText, { color: theme.text }]}>{label}</AppText></Pressable></AnimatedEntry>)}</View>
-
-      <AppText style={[styles.sectionTitle, { color: theme.text }]}>{t("dashboard.rooms")}</AppText>
-      <View style={styles.grid}>
-        <Metric theme={theme} label={t("dashboard.occupied")} value={occupiedRooms} detail={`${occupancyRate}%`} icon="home-outline" />
-        <Metric theme={theme} label={t("dashboard.tenants")} value={stats?.totalTenants || 0} detail={t("dashboard.active")} icon="people-outline" />
-        <Metric theme={theme} label={t("dashboard.repairs")} value={stats?.pendingRepairs || 0} detail={t("dashboard.today")} icon="construct-outline" urgent />
-      </View>
+      <BentoGridDashboard stats={stats} onNavigate={onNavigate} />
     </ScrollView>
   );
 }
