@@ -15,6 +15,7 @@ import { formatCurrency } from "../utils/formatters";
 import { useLanguage } from "../contexts/LanguageContext";
 import TroHubLogo from "../components/TroHubLogo";
 import VisualAnalyticsDashboard from "../components/VisualAnalyticsDashboard";
+import BentoGridDashboard from "../components/BentoGridDashboard";
 
 type Props = { profile?: UserProfile; refreshKey?: number; onNavigate: (tab: any, params?: any) => void; onLogout: () => void };
 
@@ -25,7 +26,8 @@ export default function AdminDashboardScreen({ profile, refreshKey = 0, onNaviga
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [viewMode, setViewMode] = useState<"standard" | "analytics">("analytics");
+  const [viewMode, setViewMode] = useState<"standard" | "analytics" | "bento">("bento");
+
 
   const loadStats = async () => {
     try {
@@ -125,11 +127,20 @@ export default function AdminDashboardScreen({ profile, refreshKey = 0, onNaviga
       <View style={{ flexDirection: "row", backgroundColor: theme.surfaceElevated, borderRadius: 16, padding: 4, marginBottom: 16 }}>
         <Pressable
           accessibilityRole="button"
+          style={[{ flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: "center", justifyContent: "center" }, viewMode === "bento" && { backgroundColor: theme.primary }]}
+          onPress={() => setViewMode("bento")}
+        >
+          <AppText style={[{ fontSize: 12, fontWeight: "900", color: theme.muted }, viewMode === "bento" && { color: theme.background }]}>
+            🍱 Bento iOS 18
+          </AppText>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
           style={[{ flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: "center", justifyContent: "center" }, viewMode === "analytics" && { backgroundColor: theme.primary }]}
           onPress={() => setViewMode("analytics")}
         >
           <AppText style={[{ fontSize: 12, fontWeight: "900", color: theme.muted }, viewMode === "analytics" && { color: theme.background }]}>
-            📊 Báo cáo Trực Quan
+            📊 Báo cáo
           </AppText>
         </Pressable>
         <Pressable
@@ -138,12 +149,14 @@ export default function AdminDashboardScreen({ profile, refreshKey = 0, onNaviga
           onPress={() => setViewMode("standard")}
         >
           <AppText style={[{ fontSize: 12, fontWeight: "900", color: theme.muted }, viewMode === "standard" && { color: theme.background }]}>
-            📋 Chế độ Tiêu chuẩn
+            📋 Tiêu chuẩn
           </AppText>
         </Pressable>
       </View>
 
-      {viewMode === "analytics" ? (
+      {viewMode === "bento" ? (
+        <BentoGridDashboard stats={stats} onNavigate={onNavigate} />
+      ) : viewMode === "analytics" ? (
         <VisualAnalyticsDashboard stats={stats} onNavigate={onNavigate} />
       ) : (
         <>
@@ -159,6 +172,7 @@ export default function AdminDashboardScreen({ profile, refreshKey = 0, onNaviga
           </View>
         </>
       )}
+
 
       <AppText style={[styles.sectionTitle, { color: theme.text }]}>{t("dashboard.today")}</AppText>
       <PriorityCard title={t("dashboard.repairs")} count={stats?.pendingRepairs || 0} description={t("dashboard.repairHint")} urgent={Boolean(stats?.pendingRepairs)} onPress={() => onNavigate("repair")} />

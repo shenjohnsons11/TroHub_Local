@@ -394,11 +394,19 @@ export default function LoginScreen({ onLogin }: Props) {
       <CCCDScannerModal
         visible={scannerVisible}
         onClose={() => setScannerVisible(false)}
-        onScan={(cccdNumber) => { setIdCard(formatCCCD(cccdNumber)); setIdCardError(""); }}
+        onScan={(cccdNumber, scannedName) => {
+          setIdCard(formatCCCD(cccdNumber));
+          setIdCardError("");
+          if (scannedName && !fullName.trim()) {
+            setFullName(scannedName);
+            if (fullNameError) setFullNameError("");
+          }
+        }}
       />
     </SafeAreaView>
   );
 }
+
 
 const styles = StyleSheet.create({
   identityRow: { flexDirection: "row", gap: 8 },
