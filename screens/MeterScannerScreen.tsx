@@ -1,8 +1,20 @@
 import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Animated, Image, Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
-import { AppText, AppTextInput } from "@/components/ui/typography";
-import { Ionicons } from "@expo/vector-icons";
+import {
+  ActivityIndicator,
+  Animated,
+  Image,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from "react-native";
+import { CameraView, useCameraPermissions } from "expo-camera";
+import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
+import { Ionicons } from "@expo/vector-icons";
+import { AppText, AppTextInput } from "@/components/ui/typography";
 import { useAppTheme } from "../contexts/ThemeContext";
 import { useNotification } from "../hooks/useNotification";
 import { adminService, AdminRoom } from "../services/adminService";
@@ -19,11 +31,17 @@ export default function MeterScannerScreen({ onBack, onSuccess }: Props) {
   const { theme } = useAppTheme();
   const { t } = useTranslation();
   const notification = useNotification();
+  const { width, height } = useWindowDimensions();
+
+  const [permission, requestPermission] = useCameraPermissions();
+  const cameraRef = useRef<CameraView>(null);
+  const permissionRequestedRef = useRef(false);
 
   const [flashOn, setFlashOn] = useState(false);
   const [meterType, setMeterType] = useState<"electricity" | "water">("electricity");
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
   const [rooms, setRooms] = useState<AdminRoom[]>([]);
   const [selectedRoomId, setSelectedRoomId] = useState("");
 
@@ -32,6 +50,17 @@ export default function MeterScannerScreen({ onBack, onSuccess }: Props) {
   const [saving, setSaving] = useState(false);
 
   const laserAnim = useRef(new Animated.Value(0)).current;
+
+  // Frame dimension calculations
+  const frameWidth = Math.min(width - 48, 320);
+  const frameHeight = 160;
+
+  useEffect(() => {
+    if (!permission?.granted && permission?.canAskAgain && !permissionRequestedRef.current) {
+      permissionRequestedRef.current = true;
+      void requestPermission();
+    }
+  }, [permission?.canAskAgain, permission?.granted, requestPermission]);
 
   useEffect(() => {
     const animation = Animated.loop(
@@ -60,20 +89,74 @@ export default function MeterScannerScreen({ onBack, onSuccess }: Props) {
 
   const translateY = laserAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, 180],
+    outputRange: [0, frameHeight - 4],
   });
 
-  const handlePickFromGallery = async () => {
+  const processOCR = async (base64Data: string) => {
+    setScanning(true);
+    setStatusMessage(
+      meterType === "electricity"
+        ? "Gemini Vision AI đang đọc chỉ số điện (kWh)..."
+        : "Gemini Vision AI đang đọc chỉ số nước (m³)..."
+    );
     try {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) {
-        notification.error(t("common.error"));
+      const res = await ocrService.recognizeMeterReading(base64Data, meterType);
+      if (res && res.digits) {
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setScannedDigits(res.digits);
+        setModalVisible(true);
+      } else {
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        notification.error(t("invoices.ocrError"));
+      }
+    } catch (err: any) {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      notification.error(err?.message || t("invoices.ocrError"));
+    } finally {
+      setScanning(false);
+      setStatusMessage("");
+    }
+  };
+
+  const handleCaptureCamera = async () => {
+    if (scanning || !cameraRef.current) return;
+    try {
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      setScanning(true);
+      setStatusMessage("Đang chụp ảnh đồng hồ...");
+
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.85,
+        base64: true,
+        skipProcessing: false,
+      });
+
+      if (!photo?.base64 && !photo?.uri) {
+        throw new Error("Không thể chụp ảnh từ Camera.");
+      }
+
+      setCapturedImage(photo.uri);
+      const base64Img = photo.base64 ? `data:image/jpeg;base64,${photo.base64}` : photo.uri;
+      await processOCR(base64Img);
+    } catch (e: any) {
+      notification.error(e?.message || "Không thể chụp ảnh");
+      setScanning(false);
+      setStatusMessage("");
+    }
+  };
+
+  const handlePickFromGallery = async () => {
+    if (scanning) return;
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        notification.error("Cần quyền truy cập Thư viện ảnh");
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
-        quality: 0.8,
+        quality: 0.85,
         base64: true,
       });
 
@@ -86,47 +169,6 @@ export default function MeterScannerScreen({ onBack, onSuccess }: Props) {
       notification.error(t("common.error"));
     }
   };
-
-  const handleCaptureCamera = async () => {
-    try {
-      const permission = await ImagePicker.requestCameraPermissionsAsync();
-      if (!permission.granted) {
-        notification.error(t("common.error"));
-        return;
-      }
-      const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        quality: 0.8,
-        base64: true,
-      });
-
-      if (!result.canceled && result.assets[0]?.base64) {
-        const base64Img = `data:image/jpeg;base64,${result.assets[0].base64}`;
-        setCapturedImage(result.assets[0].uri);
-        await processOCR(base64Img);
-      }
-    } catch (e) {
-      notification.error(t("common.error"));
-    }
-  };
-
-  const processOCR = async (base64Data: string) => {
-    setScanning(true);
-    try {
-      const res = await ocrService.recognizeMeterReading(base64Data, meterType);
-      if (res && res.digits) {
-        setScannedDigits(res.digits);
-        setModalVisible(true);
-      } else {
-        notification.error(t("invoices.ocrError"));
-      }
-    } catch (err: any) {
-      notification.error(err?.message || t("invoices.ocrError"));
-    } finally {
-      setScanning(false);
-    }
-  };
-
 
   const handleSaveMeterReading = async () => {
     if (!selectedRoomId) {
@@ -160,101 +202,136 @@ export default function MeterScannerScreen({ onBack, onSuccess }: Props) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.cameraView}>
-        <View style={styles.header}>
-          {onBack && (
-            <Pressable accessibilityRole="button" onPress={onBack} style={styles.iconBtn}>
-              <Ionicons name="arrow-back" size={24} color="#ffffff" />
-            </Pressable>
-          )}
-
-          <View style={styles.typeSelector}>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => setMeterType("electricity")}
-              style={[
-                styles.typeTab,
-                meterType === "electricity" && { backgroundColor: "#f59e0b" },
-              ]}
-            >
-              <Ionicons name="flash" size={14} color={meterType === "electricity" ? "#ffffff" : "#cbd5e1"} />
-              <AppText style={[styles.typeTabText, { color: meterType === "electricity" ? "#ffffff" : "#cbd5e1" }]}>
-                {t("nav.utilities")}
-              </AppText>
-            </Pressable>
-
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => setMeterType("water")}
-              style={[
-                styles.typeTab,
-                meterType === "water" && { backgroundColor: "#3b82f6" },
-              ]}
-            >
-              <Ionicons name="water" size={14} color={meterType === "water" ? "#ffffff" : "#cbd5e1"} />
-              <AppText style={[styles.typeTabText, { color: meterType === "water" ? "#ffffff" : "#cbd5e1" }]}>
-                {t("nav.utilities")}
-              </AppText>
-            </Pressable>
-          </View>
-
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => setFlashOn((f) => !f)}
-            style={[styles.iconBtn, flashOn && { backgroundColor: "rgba(234, 179, 8, 0.3)" }]}
-          >
-            <Ionicons name={flashOn ? "flash" : "flash-off"} size={22} color={flashOn ? "#eab308" : "#ffffff"} />
-          </Pressable>
-        </View>
-
-        <View style={styles.viewfinderContainer}>
-          <AppText style={styles.instructionText}>
-            {t("utilities.scanCamera")}
+      {/* 1. Camera View or Permission Prompt */}
+      {permission?.granted ? (
+        <CameraView
+          ref={cameraRef}
+          style={StyleSheet.absoluteFillObject}
+          facing="back"
+          enableTorch={flashOn}
+        />
+      ) : (
+        <View style={styles.permissionContainer}>
+          <Ionicons name="camera-outline" size={64} color="#10B981" />
+          <AppText style={styles.permissionTitle}>Quyền truy cập Camera</AppText>
+          <AppText style={styles.permissionDesc}>
+            Ứng dụng cần quyền Camera để chụp và nhận diện mặt đồng hồ điện nước qua AI Vision.
           </AppText>
-
-          <View style={styles.boundingBox}>
-            <View style={[styles.corner, styles.topLeft]} />
-            <View style={[styles.corner, styles.topRight]} />
-            <View style={[styles.corner, styles.bottomLeft]} />
-            <View style={[styles.corner, styles.bottomRight]} />
-
-            <Animated.View
-              style={[
-                styles.laserLine,
-                {
-                  transform: [{ translateY }],
-                  backgroundColor: meterType === "electricity" ? "#10b981" : "#3b82f6",
-                },
-              ]}
-            />
-          </View>
+          <Pressable style={styles.permissionBtn} onPress={requestPermission}>
+            <AppText style={styles.permissionBtnText}>Cho phép dùng Camera</AppText>
+          </Pressable>
         </View>
+      )}
 
-        <View style={styles.footerControls}>
-          <Pressable accessibilityRole="button" onPress={handlePickFromGallery} style={styles.galleryBtn}>
-            <Ionicons name="images-outline" size={24} color="#ffffff" />
-            <AppText style={styles.galleryBtnText}>Gallery</AppText>
+      {/* 2. Top Header Navigation & Type Selector */}
+      <View style={styles.header}>
+        {onBack ? (
+          <Pressable accessibilityRole="button" onPress={onBack} style={styles.iconBtn}>
+            <Ionicons name="arrow-back" size={24} color="#ffffff" />
+          </Pressable>
+        ) : (
+          <View style={{ width: 44 }} />
+        )}
+
+        <View style={styles.typeSelector}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setMeterType("electricity")}
+            style={[
+              styles.typeTab,
+              meterType === "electricity" && { backgroundColor: "#F59E0B" },
+            ]}
+          >
+            <Ionicons name="flash" size={14} color={meterType === "electricity" ? "#ffffff" : "#cbd5e1"} />
+            <AppText style={[styles.typeTabText, { color: meterType === "electricity" ? "#ffffff" : "#cbd5e1" }]}>
+              ⚡ Điện (kWh)
+            </AppText>
           </Pressable>
 
           <Pressable
             accessibilityRole="button"
-            onPress={handleCaptureCamera}
-            disabled={scanning}
-            style={styles.shutterBtn}
+            onPress={() => setMeterType("water")}
+            style={[
+              styles.typeTab,
+              meterType === "water" && { backgroundColor: "#3B82F6" },
+            ]}
           >
-            <View style={styles.shutterInner}>
-              {scanning ? (
-                <ActivityIndicator color="#10b981" size="small" />
-              ) : (
-                <Ionicons name="camera" size={32} color="#10b981" />
-              )}
-            </View>
+            <Ionicons name="water" size={14} color={meterType === "water" ? "#ffffff" : "#cbd5e1"} />
+            <AppText style={[styles.typeTabText, { color: meterType === "water" ? "#ffffff" : "#cbd5e1" }]}>
+              💧 Nước (m³)
+            </AppText>
           </Pressable>
+        </View>
 
-          <View style={{ width: 60 }} />
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => setFlashOn((f) => !f)}
+          style={[styles.iconBtn, flashOn && { backgroundColor: "rgba(234, 179, 8, 0.4)" }]}
+        >
+          <Ionicons name={flashOn ? "flash" : "flash-off"} size={22} color={flashOn ? "#F59E0B" : "#ffffff"} />
+        </Pressable>
+      </View>
+
+      {/* 3. Center Viewfinder Frame & Laser */}
+      <View style={styles.viewfinderContainer}>
+        <AppText style={styles.instructionText}>
+          {meterType === "electricity"
+            ? "Hướng camera vào dãy số đồng hồ Điện (kWh)"
+            : "Hướng camera vào dãy số đồng hồ Nước (m³)"}
+        </AppText>
+
+        <View style={[styles.boundingBox, { width: frameWidth, height: frameHeight }]}>
+          <View style={[styles.corner, styles.topLeft, { borderColor: meterType === "electricity" ? "#F59E0B" : "#3B82F6" }]} />
+          <View style={[styles.corner, styles.topRight, { borderColor: meterType === "electricity" ? "#F59E0B" : "#3B82F6" }]} />
+          <View style={[styles.corner, styles.bottomLeft, { borderColor: meterType === "electricity" ? "#F59E0B" : "#3B82F6" }]} />
+          <View style={[styles.corner, styles.bottomRight, { borderColor: meterType === "electricity" ? "#F59E0B" : "#3B82F6" }]} />
+
+          <Animated.View
+            style={[
+              styles.laserLine,
+              {
+                width: frameWidth - 16,
+                transform: [{ translateY }],
+                backgroundColor: meterType === "electricity" ? "#F59E0B" : "#3B82F6",
+                shadowColor: meterType === "electricity" ? "#F59E0B" : "#3B82F6",
+              },
+            ]}
+          />
         </View>
       </View>
 
+      {/* 4. Scanning AI Status Overlay */}
+      {scanning ? (
+        <View style={styles.processingOverlay}>
+          <View style={styles.processingCard}>
+            <ActivityIndicator size="large" color="#10B981" />
+            <AppText style={styles.processingText}>{statusMessage || "Đang phân tích ảnh..."}</AppText>
+          </View>
+        </View>
+      ) : null}
+
+      {/* 5. Footer Shutter & Gallery Controls */}
+      <View style={styles.footerControls}>
+        <Pressable accessibilityRole="button" onPress={handlePickFromGallery} style={styles.galleryBtn}>
+          <Ionicons name="images-outline" size={24} color="#ffffff" />
+          <AppText style={styles.galleryBtnText}>Thư viện</AppText>
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
+          onPress={handleCaptureCamera}
+          disabled={scanning}
+          style={styles.shutterBtn}
+        >
+          <View style={[styles.shutterInner, { backgroundColor: meterType === "electricity" ? "#F59E0B" : "#3B82F6" }]}>
+            <Ionicons name="camera" size={30} color="#ffffff" />
+          </View>
+        </Pressable>
+
+        <View style={{ width: 64 }} />
+      </View>
+
+      {/* 6. Modal Confirmation & Save */}
       <Modal
         visible={modalVisible}
         transparent
@@ -266,32 +343,34 @@ export default function MeterScannerScreen({ onBack, onSuccess }: Props) {
 
           <View style={[styles.sheetContent, { backgroundColor: theme.surfaceElevated }]}>
             <View style={styles.sheetHeader}>
-              <AppText style={[styles.sheetTitle, { color: theme.text }]}>{t("invoices.recordMeter")}</AppText>
+              <AppText style={[styles.sheetTitle, { color: theme.text }]}>
+                {meterType === "electricity" ? "⚡ Kết quả đọc chỉ số Điện" : "💧 Kết quả đọc chỉ số Nước"}
+              </AppText>
               <Pressable accessibilityRole="button" onPress={() => setModalVisible(false)}>
-                <Ionicons name="close-circle-outline" size={26} color={theme.muted} />
+                <Ionicons name="close-circle" size={26} color={theme.muted} />
               </Pressable>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.sheetBody}>
               <AnimatedEntry>
-                <View style={[styles.resultCard, { backgroundColor: theme.surface }]}>
+                <View style={[styles.resultCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
                   <AppText style={[styles.resultLabel, { color: theme.muted }]}>
-                    {t("invoices.recordMeter")} (OCR):
+                    Chỉ số tiêu thụ nhận diện được ({meterType === "electricity" ? "kWh" : "m³"}):
                   </AppText>
 
                   <View style={styles.digitsRow}>
                     <AppTextInput
-                      style={[styles.digitsInput, { color: theme.primary }]}
+                      style={[styles.digitsInput, { color: meterType === "electricity" ? "#F59E0B" : "#3B82F6" }]}
                       value={scannedDigits}
                       onChangeText={setScannedDigits}
                       keyboardType="numeric"
-                      maxLength={6}
+                      maxLength={8}
                     />
-                    <Ionicons name="create-outline" size={20} color={theme.muted} />
+                    <Ionicons name="create-outline" size={22} color={theme.muted} />
                   </View>
 
-                  <AppText style={[styles.accuracyTag, { color: "#10b981" }]}>
-                    ✓ OCR Engine
+                  <AppText style={[styles.accuracyTag, { color: "#10B981" }]}>
+                    ✓ Gemini Vision AI OCR
                   </AppText>
                 </View>
               </AnimatedEntry>
@@ -313,7 +392,7 @@ export default function MeterScannerScreen({ onBack, onSuccess }: Props) {
                         ]}
                       >
                         <AppText style={[styles.roomChipText, { color: selected ? "#ffffff" : theme.text }]}>
-                          {t("common.room")} {rm.roomCode}
+                          Phòng {rm.roomCode}
                         </AppText>
                       </Pressable>
                     );
@@ -321,12 +400,12 @@ export default function MeterScannerScreen({ onBack, onSuccess }: Props) {
                 </ScrollView>
               </View>
 
-              {capturedImage && (
+              {capturedImage ? (
                 <View style={styles.previewContainer}>
-                  <AppText style={[styles.fieldLabel, { color: theme.muted }]}>{t("common.details")}:</AppText>
+                  <AppText style={[styles.fieldLabel, { color: theme.muted }]}>Ảnh chụp:</AppText>
                   <Image source={{ uri: capturedImage }} style={styles.previewImg} />
                 </View>
-              )}
+              ) : null}
 
               <Pressable
                 accessibilityRole="button"
@@ -339,7 +418,7 @@ export default function MeterScannerScreen({ onBack, onSuccess }: Props) {
                 ) : (
                   <>
                     <Ionicons name="checkmark-circle-outline" size={20} color="#ffffff" />
-                    <AppText style={styles.saveBtnText}>{t("common.save")}</AppText>
+                    <AppText style={styles.saveBtnText}>Lưu chỉ số nháp</AppText>
                   </>
                 )}
               </Pressable>
@@ -353,7 +432,24 @@ export default function MeterScannerScreen({ onBack, onSuccess }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#000000" },
-  cameraView: { flex: 1, justifyContent: "space-between" },
+  permissionContainer: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#111827",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+    gap: 16,
+  },
+  permissionTitle: { fontSize: 20, fontWeight: "900", color: "#FFFFFF" },
+  permissionDesc: { fontSize: 13, color: "#9CA3AF", textAlign: "center", lineHeight: 20 },
+  permissionBtn: {
+    backgroundColor: "#10B981",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 16,
+    marginTop: 8,
+  },
+  permissionBtnText: { color: "#FFFFFF", fontSize: 14, fontWeight: "900" },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -381,175 +477,157 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
     borderRadius: 20,
   },
   typeTabText: {
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: "800",
   },
   viewfinderContainer: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    paddingBottom: 40,
   },
   instructionText: {
     color: "#ffffff",
     fontSize: 13,
-    fontWeight: "600",
-    marginBottom: 20,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 16,
+    fontWeight: "700",
+    marginBottom: 24,
     textAlign: "center",
+    paddingHorizontal: 20,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    paddingVertical: 6,
+    borderRadius: 12,
+    overflow: "hidden",
   },
   boundingBox: {
-    width: 280,
-    height: 180,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.3)",
-    overflow: "hidden",
     position: "relative",
-    backgroundColor: "rgba(0,0,0,0.2)",
+    borderRadius: 16,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    backgroundColor: "rgba(255,255,255,0.04)",
   },
   corner: {
     position: "absolute",
     width: 24,
     height: 24,
-    borderColor: "#ffffff",
+    borderWidth: 4,
   },
-  topLeft: { top: 0, left: 0, borderTopWidth: 4, borderLeftWidth: 4, borderTopLeftRadius: 16 },
-  topRight: { top: 0, right: 0, borderTopWidth: 4, borderRightWidth: 4, borderTopRightRadius: 16 },
-  bottomLeft: { bottom: 0, left: 0, borderBottomWidth: 4, borderLeftWidth: 4, borderBottomLeftRadius: 16 },
-  bottomRight: { bottom: 0, right: 0, borderBottomWidth: 4, borderRightWidth: 4, borderBottomRightRadius: 16 },
+  topLeft: { top: 0, left: 0, borderRightWidth: 0, borderBottomWidth: 0, borderTopLeftRadius: 16 },
+  topRight: { top: 0, right: 0, borderLeftWidth: 0, borderBottomWidth: 0, borderTopRightRadius: 16 },
+  bottomLeft: { bottom: 0, left: 0, borderRightWidth: 0, borderTopWidth: 0, borderBottomLeftRadius: 16 },
+  bottomRight: { bottom: 0, right: 0, borderLeftWidth: 0, borderTopWidth: 0, borderBottomRightRadius: 16 },
   laserLine: {
-    width: "100%",
-    height: 2,
-    shadowColor: "#10b981",
+    height: 3,
+    borderRadius: 2,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 6,
+    shadowOpacity: 0.9,
+    shadowRadius: 8,
     elevation: 4,
   },
+  processingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.65)",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 20,
+  },
+  processingCard: {
+    backgroundColor: "rgba(17, 24, 39, 0.95)",
+    padding: 24,
+    borderRadius: 20,
+    alignItems: "center",
+    gap: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+  },
+  processingText: { color: "#FFFFFF", fontSize: 13, fontWeight: "800" },
   footerControls: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-around",
-    paddingBottom: 48,
-    paddingHorizontal: 20,
+    justifyContent: "space-between",
+    paddingHorizontal: 28,
+    paddingBottom: 44,
+    zIndex: 10,
   },
   galleryBtn: {
     alignItems: "center",
-    justifyContent: "center",
-    width: 60,
+    gap: 4,
+    width: 64,
   },
-  galleryBtnText: {
-    color: "#ffffff",
-    fontSize: 11,
-    fontWeight: "600",
-    marginTop: 4,
-  },
+  galleryBtnText: { color: "#FFFFFF", fontSize: 11, fontWeight: "700" },
   shutterBtn: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "rgba(255,255,255,0.3)",
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    borderWidth: 4,
+    borderColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
+    padding: 4,
   },
   shutterInner: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: "#ffffff",
+    width: "100%",
+    height: "100%",
+    borderRadius: 32,
     alignItems: "center",
     justifyContent: "center",
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
+    backgroundColor: "rgba(0,0,0,0.65)",
     justifyContent: "flex-end",
   },
   sheetContent: {
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingHorizontal: 20,
-    paddingTop: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
     paddingBottom: 36,
     maxHeight: "85%",
   },
   sheetHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 16,
   },
-  sheetTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-  },
-  sheetBody: {
-    gap: 16,
-  },
+  sheetTitle: { fontSize: 16, fontWeight: "900" },
+  sheetBody: { gap: 16 },
   resultCard: {
     borderRadius: 18,
+    borderWidth: 1,
     padding: 16,
-    alignItems: "center",
+    gap: 8,
   },
-  resultLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-    marginBottom: 8,
-  },
+  resultLabel: { fontSize: 12, fontWeight: "700" },
   digitsRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    justifyContent: "space-between",
   },
   digitsInput: {
     fontSize: 32,
     fontWeight: "900",
-    letterSpacing: 2,
-    textAlign: "center",
-    minWidth: 140,
+    letterSpacing: 3,
+    flex: 1,
   },
-  accuracyTag: {
-    fontSize: 11,
-    fontWeight: "700",
-    marginTop: 6,
-  },
-  roomSelectSection: {
-    gap: 8,
-  },
-  fieldLabel: {
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  roomChipsRow: {
-    gap: 8,
-    paddingVertical: 4,
-  },
+  accuracyTag: { fontSize: 11, fontWeight: "800" },
+  roomSelectSection: { gap: 8 },
+  fieldLabel: { fontSize: 13, fontWeight: "800" },
+  roomChipsRow: { gap: 8, paddingVertical: 4 },
   roomChip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 12,
     borderWidth: 1,
   },
-  roomChipText: {
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  previewContainer: {
-    gap: 8,
-  },
-  previewImg: {
-    width: "100%",
-    height: 120,
-    borderRadius: 12,
-  },
+  roomChipText: { fontSize: 13, fontWeight: "800" },
+  previewContainer: { gap: 6 },
+  previewImg: { width: "100%", height: 140, borderRadius: 14 },
   saveBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -559,9 +637,5 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginTop: 8,
   },
-  saveBtnText: {
-    color: "#ffffff",
-    fontSize: 15,
-    fontWeight: "800",
-  },
+  saveBtnText: { color: "#FFFFFF", fontSize: 15, fontWeight: "900" },
 });
