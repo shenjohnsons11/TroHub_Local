@@ -13,6 +13,8 @@ import MiniCalendarPopover from "../components/MiniCalendarPopover";
 import { notificationService } from "../services/notificationService";
 import { formatCurrency } from "../utils/formatters";
 import { useLanguage } from "../contexts/LanguageContext";
+import TroHubLogo from "../components/TroHubLogo";
+import VisualAnalyticsDashboard from "../components/VisualAnalyticsDashboard";
 
 type Props = { profile?: UserProfile; refreshKey?: number; onNavigate: (tab: any, params?: any) => void; onLogout: () => void };
 
@@ -23,6 +25,7 @@ export default function AdminDashboardScreen({ profile, refreshKey = 0, onNaviga
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [viewMode, setViewMode] = useState<"standard" | "analytics">("analytics");
 
   const loadStats = async () => {
     try {
@@ -46,6 +49,7 @@ export default function AdminDashboardScreen({ profile, refreshKey = 0, onNaviga
   const occupancyRate = totalRooms ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
   const quickActions = [
     [`${t("dashboard.aiAssistant")} 🤖`, "sparkles-outline", () => onNavigate("ai_chat")],
+    [t("dashboard.scanMeter"), "camera-outline", () => onNavigate("scan_meter")],
     [t("dashboard.addRoom"), "add-circle-outline", () => onNavigate("rooms", { action: "create" })],
     [t("dashboard.tenantList"), "people-outline", () => onNavigate("tenants")],
     [t("dashboard.createContract"), "document-text-outline", () => onNavigate("contract", { action: "create" })],
@@ -56,6 +60,9 @@ export default function AdminDashboardScreen({ profile, refreshKey = 0, onNaviga
     <ScrollView style={[styles.container, { backgroundColor: theme.background }]} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void loadStats(); }} colors={[theme.primary]} tintColor={theme.primary} />}>
       <View style={styles.heading}>
         <View style={{ flex: 1, paddingRight: 10 }}>
+          <View style={{ marginBottom: 6 }}>
+            <TroHubLogo compact />
+          </View>
           <AppText style={[styles.eyebrow, { color: theme.primary }]}>{t("dashboard.eyebrow")}</AppText>
           <AppText style={[styles.title, { color: theme.text }]}>
             {t(greetingKey)} {name},
@@ -114,16 +121,44 @@ export default function AdminDashboardScreen({ profile, refreshKey = 0, onNaviga
         </View>
       ) : null}
 
-      <AnimatedEntry>
-        <GradientHero icon="wallet-outline" label={t("dashboard.revenue")} value={formatCurrency(stats?.totalRevenue)} detail={`${occupiedRooms}/${totalRooms} ${t("dashboard.occupied").toLowerCase()} · ${occupancyRate}%`} />
-      </AnimatedEntry>
-
-      <View style={styles.kpiGrid}>
-        <Metric theme={theme} label={t("dashboard.debt")} value={formatCurrency(stats?.outstandingDebt)} detail={t("dashboard.today")} icon="wallet-outline" urgent danger />
-        <Metric theme={theme} label={t("dashboard.contracts")} value={stats?.pendingContracts || 0} detail={t("dashboard.today")} icon="document-text-outline" urgent={Boolean(stats?.pendingContracts)} />
-        <Metric theme={theme} label={t("dashboard.vacant")} value={vacantRooms} detail={t("dashboard.rooms")} icon="home-outline" />
-        <Metric theme={theme} label={t("dashboard.maintenance")} value={maintenanceRooms} detail={t("dashboard.rooms")} icon="construct-outline" urgent={Boolean(maintenanceRooms)} />
+      {/* Segmented Mode Switcher */}
+      <View style={{ flexDirection: "row", backgroundColor: theme.surfaceElevated, borderRadius: 16, padding: 4, marginBottom: 16 }}>
+        <Pressable
+          accessibilityRole="button"
+          style={[{ flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: "center", justifyContent: "center" }, viewMode === "analytics" && { backgroundColor: theme.primary }]}
+          onPress={() => setViewMode("analytics")}
+        >
+          <AppText style={[{ fontSize: 12, fontWeight: "900", color: theme.muted }, viewMode === "analytics" && { color: theme.background }]}>
+            📊 Báo cáo Trực Quan
+          </AppText>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          style={[{ flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: "center", justifyContent: "center" }, viewMode === "standard" && { backgroundColor: theme.primary }]}
+          onPress={() => setViewMode("standard")}
+        >
+          <AppText style={[{ fontSize: 12, fontWeight: "900", color: theme.muted }, viewMode === "standard" && { color: theme.background }]}>
+            📋 Chế độ Tiêu chuẩn
+          </AppText>
+        </Pressable>
       </View>
+
+      {viewMode === "analytics" ? (
+        <VisualAnalyticsDashboard stats={stats} onNavigate={onNavigate} />
+      ) : (
+        <>
+          <AnimatedEntry>
+            <GradientHero icon="wallet-outline" label={t("dashboard.revenue")} value={formatCurrency(stats?.totalRevenue)} detail={`${occupiedRooms}/${totalRooms} ${t("dashboard.occupied").toLowerCase()} · ${occupancyRate}%`} />
+          </AnimatedEntry>
+
+          <View style={styles.kpiGrid}>
+            <Metric theme={theme} label={t("dashboard.debt")} value={formatCurrency(stats?.outstandingDebt)} detail={t("dashboard.today")} icon="wallet-outline" urgent danger onPress={() => onNavigate("invoice")} />
+            <Metric theme={theme} label={t("dashboard.contracts")} value={stats?.pendingContracts || 0} detail={t("dashboard.today")} icon="document-text-outline" urgent={Boolean(stats?.pendingContracts)} onPress={() => onNavigate("contract")} />
+            <Metric theme={theme} label={t("dashboard.vacant")} value={vacantRooms} detail={t("dashboard.rooms")} icon="home-outline" onPress={() => onNavigate("rooms")} />
+            <Metric theme={theme} label={t("dashboard.maintenance")} value={maintenanceRooms} detail={t("dashboard.rooms")} icon="construct-outline" urgent={Boolean(maintenanceRooms)} onPress={() => onNavigate("rooms")} />
+          </View>
+        </>
+      )}
 
       <AppText style={[styles.sectionTitle, { color: theme.text }]}>{t("dashboard.today")}</AppText>
       <PriorityCard title={t("dashboard.repairs")} count={stats?.pendingRepairs || 0} description={t("dashboard.repairHint")} urgent={Boolean(stats?.pendingRepairs)} onPress={() => onNavigate("repair")} />
@@ -133,17 +168,36 @@ export default function AdminDashboardScreen({ profile, refreshKey = 0, onNaviga
 
       <AppText style={[styles.sectionTitle, { color: theme.text }]}>{t("dashboard.rooms")}</AppText>
       <View style={styles.grid}>
-        <Metric theme={theme} label={t("dashboard.occupied")} value={occupiedRooms} detail={`${occupancyRate}%`} icon="home-outline" />
-        <Metric theme={theme} label={t("dashboard.tenants")} value={stats?.totalTenants || 0} detail={t("dashboard.active")} icon="people-outline" />
-        <Metric theme={theme} label={t("dashboard.repairs")} value={stats?.pendingRepairs || 0} detail={t("dashboard.today")} icon="construct-outline" urgent />
+        <Metric theme={theme} label={t("dashboard.occupied")} value={occupiedRooms} detail={`${occupancyRate}%`} icon="home-outline" onPress={() => onNavigate("rooms")} />
+        <Metric theme={theme} label={t("dashboard.tenants")} value={stats?.totalTenants || 0} detail={t("dashboard.active")} icon="people-outline" onPress={() => onNavigate("tenants")} />
+        <Metric theme={theme} label={t("dashboard.repairs")} value={stats?.pendingRepairs || 0} detail={t("dashboard.today")} icon="construct-outline" urgent onPress={() => onNavigate("repair")} />
       </View>
     </ScrollView>
   );
 }
 
-function Metric({ theme, label, value, detail, icon, urgent = false, danger = false }: { theme: any; label: string; value: React.ReactNode; detail: string; icon: React.ComponentProps<typeof Ionicons>["name"]; urgent?: boolean; danger?: boolean }) {
+function Metric({ theme, label, value, detail, icon, urgent = false, danger = false, onPress }: { theme: any; label: string; value: React.ReactNode; detail: string; icon: React.ComponentProps<typeof Ionicons>["name"]; urgent?: boolean; danger?: boolean; onPress?: () => void }) {
   const accent = danger ? theme.danger : urgent ? theme.warning : theme.primary;
-  return <AnimatedEntry style={styles.metricWrap}><View style={[styles.metric, { backgroundColor: theme.surfaceElevated, shadowColor: theme.text }]}><View style={[styles.metricIcon, { backgroundColor: urgent ? theme.warningSoft : theme.primarySoft }]}><Ionicons name={icon} size={20} color={accent} /></View><AppText style={[styles.metricValue, { color: theme.text }]}>{value}</AppText><AppText style={[styles.metricLabel, { color: theme.text }]}>{label}</AppText><AppText style={[styles.metricDetail, { color: urgent ? accent : theme.muted }]}>{detail}</AppText></View></AnimatedEntry>;
+  return (
+    <AnimatedEntry style={styles.metricWrap}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        onPress={onPress}
+        style={({ pressed }) => [
+          styles.metric,
+          { backgroundColor: theme.surfaceElevated, shadowColor: theme.text, opacity: pressed && onPress ? 0.8 : 1 }
+        ]}
+      >
+        <View style={[styles.metricIcon, { backgroundColor: urgent ? theme.warningSoft : theme.primarySoft }]}>
+          <Ionicons name={icon} size={20} color={accent} />
+        </View>
+        <AppText style={[styles.metricValue, { color: theme.text }]}>{value}</AppText>
+        <AppText style={[styles.metricLabel, { color: theme.text }]}>{label}</AppText>
+        <AppText style={[styles.metricDetail, { color: urgent ? accent : theme.muted }]}>{detail}</AppText>
+      </Pressable>
+    </AnimatedEntry>
+  );
 }
 
 const styles = StyleSheet.create({

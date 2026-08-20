@@ -21,11 +21,15 @@
     "unitVnd": "đ",
     "unitKwh": "kWh",
     "unitM3": "m³",
-    "language": "Ngôn ngữ"
+    "language": "Ngôn ngữ",
+    "room": "Phòng"
   },
   "auth": {
+    "brandTagline": "Hệ Thống Quản Lý Nhà Trọ Thông Minh",
+    "brandDescription": "Theo dõi hợp đồng, hóa đơn và yêu cầu sửa chữa trong một ứng dụng thống nhất.",
     "login": "Đăng nhập",
     "loginTitle": "Chào mừng trở lại",
+
     "loginDescription": "Đăng nhập tài khoản Quản trị nhà trọ TroHub.",
     "register": "Đăng ký",
     "registerLandlord": "Đăng ký Chủ trọ",
@@ -54,16 +58,20 @@
   },
   "nav": {
     "overview": "Tổng quan",
-    "rooms": "Quản lý Phòng",
+    "rooms": "Phòng",
+    "roomsManage": "Quản lý Phòng",
     "tenants": "Người thuê",
     "contracts": "Hợp đồng",
     "invoices": "Hóa đơn",
     "utilities": "Điện & Nước",
-    "repairs": "Sửa chữa & Sự cố",
+    "repairs": "Sửa chữa",
+    "incident": "Sự cố",
     "settings": "Cài đặt",
     "payments": "Cổng thanh toán",
     "debts": "Công nợ",
-    "notifications": "Thông báo"
+    "notifications": "Thông báo",
+    "home": "Trang chủ",
+    "account": "Tài khoản"
   },
   "dashboard": {
     "eyebrow": "TỔNG QUAN VẬN HÀNH",
@@ -89,6 +97,7 @@
     "tenantList": "Người thuê",
     "createContract": "Tạo hợp đồng",
     "handleRepair": "Xử lý sự cố",
+    "scanMeter": "Quét điện nước AI 📸",
     "aiAssistant": "Trợ lý AI",
     "occupancy": "Tỷ lệ lấp đầy",
     "noData": "Chưa có dữ liệu"
@@ -142,6 +151,12 @@
     "endDate": "Ngày hết hạn",
     "depositAmount": "Tiền cọc đã thu",
     "rentalPrice": "Giá thuê chốt",
+    "roomInfo": "Thông tin phòng",
+    "terms": "Điều khoản hợp đồng",
+    "signContract": "Ký xác nhận hợp đồng",
+    "rentFee": "Tiền thuê hàng tháng",
+    "deposit": "Tiền cọc",
+    "parking": "Phí gửi xe",
     "status": {
       "active": "Đang hiệu lực",
       "expired": "Đã hết hạn",
@@ -163,8 +178,10 @@
       "paid": "Đã thanh toán",
       "overdue": "Quá hạn"
     },
+    "sendReminder": "Nhắc nợ Hóa đơn",
     "payNow": "Thanh toán ngay"
   },
+
   "repairs": {
     "title": "Báo sự cố & Sửa chữa",
     "subtitle": "Tiếp nhận phản ánh sự cố từ người thuê và theo dõi tiến độ",
@@ -194,11 +211,16 @@
   },
   "ai": {
     "title": "Trợ lý AI TroHub Co-pilot",
+    "assistantTitle": "TroHub AI Co-pilot",
+    "greeting": "Xin chào! Tôi là Trợ lý TroHub AI. Tôi có thể giúp gì cho bạn hôm nay?",
+    "placeholder": "Hỏi AI hoặc nhập yêu cầu...",
+    "systemError": "Không thể kết nối với AI. Vui lòng kiểm tra lại API Key hoặc kết nối mạng.",
     "subtitle": "Hỏi đáp thông minh, tự động phân tích doanh thu và gợi ý quản lý",
     "inputPlaceholder": "Hỏi AI TroHub (Ví dụ: Danh sách phòng chưa đóng tiền điện tháng này...)",
     "send": "Gửi câu hỏi",
     "suggested": "Gợi ý câu hỏi"
   },
+
   "mobile": {
     "addTenant": {
       "required": "Vui lòng điền đầy đủ thông tin và chọn phòng!",

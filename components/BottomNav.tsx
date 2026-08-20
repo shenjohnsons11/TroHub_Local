@@ -31,41 +31,40 @@ type Props = {
 };
 
 type IconName = React.ComponentProps<typeof Ionicons>["name"];
-type LabelKey = "home" | "invoices" | "repair" | "contract" | "account" | "overview" | "rooms" | "incident";
 
 const tenantTabs: {
   key: Tab;
-  label: LabelKey;
+  label: string;
   icon: IconName;
   activeIcon: IconName;
 }[] = [
   {
     key: "home",
-    label: "home",
+    label: "nav.home",
     icon: "home-outline",
     activeIcon: "home",
   },
   {
     key: "invoice",
-    label: "invoices",
+    label: "nav.invoices",
     icon: "receipt-outline",
     activeIcon: "receipt",
   },
   {
     key: "repair",
-    label: "repair",
+    label: "nav.repairs",
     icon: "construct-outline",
     activeIcon: "construct",
   },
   {
     key: "contract",
-    label: "contract",
+    label: "nav.contracts",
     icon: "document-text-outline",
     activeIcon: "document-text",
   },
   {
     key: "account",
-    label: "account",
+    label: "nav.account",
     icon: "person-outline",
     activeIcon: "person",
   },
@@ -73,37 +72,37 @@ const tenantTabs: {
 
 const landlordTabs: {
   key: Tab;
-  label: LabelKey;
+  label: string;
   icon: IconName;
   activeIcon: IconName;
 }[] = [
   {
     key: "home",
-    label: "overview",
+    label: "nav.overview",
     icon: "grid-outline",
     activeIcon: "grid",
   },
   {
     key: "rooms",
-    label: "rooms",
+    label: "nav.rooms",
     icon: "home-outline",
     activeIcon: "home",
   },
   {
     key: "contract",
-    label: "contract",
+    label: "nav.contracts",
     icon: "document-text-outline",
     activeIcon: "document-text",
   },
   {
     key: "invoice",
-    label: "invoices",
+    label: "nav.invoices",
     icon: "receipt-outline",
     activeIcon: "receipt",
   },
   {
     key: "repair",
-    label: "incident",
+    label: "nav.incident",
     icon: "construct-outline",
     activeIcon: "construct",
   },

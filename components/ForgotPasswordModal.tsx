@@ -78,19 +78,19 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
   const handleSubmit = async () => {
     setError("");
     if (step === "request" && !identifier.trim()) {
-      setError("Vui lòng nhập số điện thoại hoặc Email");
+      setError(t("auth.enterPhone"));
       return;
     }
     if (step === "verify" && !/^\d{6}$/.test(otp)) {
-      setError("Mã OTP phải gồm đúng 6 chữ số");
+      setError(t("auth.enterOtp"));
       return;
     }
     if (step === "reset" && newPassword.length < 6) {
-      setError("Mật khẩu mới phải có ít nhất 6 ký tự");
+      setError(t("auth.passwordMinLength"));
       return;
     }
     if (step === "reset" && newPassword !== confirmPassword) {
-      setError("Xác nhận mật khẩu không khớp");
+      setError(t("auth.passwordMismatch"));
       return;
     }
 
@@ -98,23 +98,40 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
       setIsSubmitting(true);
       if (step === "request") {
         const message = await authService.requestPasswordReset(identifier.trim());
-        notification.success(message, { title: "Đã gửi OTP" });
+        notification.success(message || t("common.success"));
         setSecondsUntilResend(60);
         setStep("verify");
       } else if (step === "verify") {
-        const token = await authService.verifyPasswordResetOtp(identifier.trim(), otp);
+        const token = await authService.verifyPasswordResetOtp(identifier.trim(), otp.trim());
         setResetToken(token);
+        notification.success(t("common.success"));
         setStep("reset");
-      } else {
-        await authService.resetPassword(resetToken, newPassword);
-        notification.success("Đặt lại mật khẩu thành công. Vui lòng đăng nhập bằng mật khẩu mới.", { title: "Thành công" });
+      } else if (step === "reset") {
+        const message = await authService.resetPassword({
+          phone: identifier.trim(),
+          token: resetToken,
+          newPassword,
+        });
+        notification.success(message || t("common.success"));
         handleClose();
       }
-    } catch (caughtError) {
-      notification.error(
-        getNotificationMessage(caughtError, "Không thể khôi phục mật khẩu. Vui lòng thử lại."),
-        { title: "Lỗi" },
-      );
+    } catch (err) {
+      setError(getNotificationMessage(err, t("common.error")));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (secondsUntilResend > 0 || isSubmitting) return;
+    try {
+      setIsSubmitting(true);
+      setError("");
+      await authService.requestPasswordReset(identifier.trim());
+      setSecondsUntilResend(60);
+      notification.success(t("common.success"));
+    } catch (err) {
+      setError(getNotificationMessage(err, t("common.error")));
     } finally {
       setIsSubmitting(false);
     }
@@ -122,29 +139,36 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
 
   const subtitle =
     step === "request"
-      ? "Nhập SĐT hoặc Email để nhận mã OTP qua Email đã đăng ký."
+      ? t("auth.forgotPasswordDescription")
       : step === "verify"
-      ? "Nhập mã OTP 6 số đã được gửi đến Email của bạn."
-      : "Tạo mật khẩu mới cho tài khoản TroHub.";
+      ? t("auth.verifyOtp")
+      : t("auth.newPassword");
+
+  const buttonText =
+    step === "request"
+      ? t("auth.sendOtp")
+      : step === "verify"
+      ? t("auth.verifyOtp")
+      : t("common.save");
 
   return (
     <Modal
       visible={visible}
       transparent
-      animationType="slide"
+      animationType="fade"
       onRequestClose={isSubmitting ? () => undefined : handleClose}
     >
       <View style={styles.overlay}>
         <KeyboardAvoidingView
-          style={styles.keyboard}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.keyboardContainer}
         >
-          <ScrollView
-            style={styles.formScroll}
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={styles.scroll}
-          >
-            <View style={styles.box} accessibilityViewIsModal>
+          <View style={styles.dialog} accessibilityViewIsModal>
+            <ScrollView
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
               <View style={styles.header}>
                 <View style={styles.headerText}>
                   <AppText
@@ -153,7 +177,7 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
                     accessibilityRole="header"
                     accessibilityLiveRegion="polite"
                   >
-                    {t("auth.forgotPasswordTitle") || "Quên mật khẩu"}
+                    {t("auth.forgotPasswordTitle")}
                   </AppText>
                   <AppText style={styles.subtitle}>{subtitle}</AppText>
                 </View>
@@ -162,16 +186,15 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
                   onPress={handleClose}
                   disabled={isSubmitting}
                   accessibilityRole="button"
-                  accessibilityLabel="Đóng"
+                  accessibilityLabel={t("common.close")}
                 >
                   <Ionicons name="close" size={22} color={theme.text} />
                 </Pressable>
               </View>
 
-              {/* STEP 1: REQUEST OTP */}
               {step === "request" && (
                 <View key="step-request" pointerEvents={isSubmitting ? "none" : "auto"}>
-                  <AppText style={styles.label}>{t("auth.phoneOrEmail") || "Số điện thoại hoặc Email"}</AppText>
+                  <AppText style={styles.label}>{t("auth.phone")}</AppText>
                   <AppTextInput
                     key="input-identifier"
                     style={[styles.input, error ? styles.inputError : null]}
@@ -182,17 +205,16 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
                     }}
                     keyboardType="email-address"
                     autoCapitalize="none"
-                    placeholder="Nhập SĐT hoặc Email"
+                    placeholder="0901234567"
                     placeholderTextColor={theme.muted}
                     editable={!isSubmitting}
                   />
                 </View>
               )}
 
-              {/* STEP 2: VERIFY OTP */}
               {step === "verify" && (
                 <View key="step-verify" pointerEvents={isSubmitting ? "none" : "auto"}>
-                  <AppText style={styles.label}>Mã OTP 6 số</AppText>
+                  <AppText style={styles.label}>OTP (6 digits)</AppText>
                   <AppTextInput
                     key="input-otp"
                     style={[styles.input, error ? styles.inputError : null]}
@@ -210,16 +232,15 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
                   />
                   {secondsUntilResend > 0 ? (
                     <AppText style={styles.resendText}>
-                      Gửi lại mã sau {secondsUntilResend}s
+                      {t("auth.resendOtp")} ({secondsUntilResend}s)
                     </AppText>
                   ) : null}
                 </View>
               )}
 
-              {/* STEP 3: RESET NEW PASSWORD */}
               {step === "reset" && (
                 <View key="step-reset" pointerEvents={isSubmitting ? "none" : "auto"}>
-                  <AppText style={styles.label}>{t("auth.newPassword") || "Mật khẩu mới"}</AppText>
+                  <AppText style={styles.label}>{t("auth.newPassword")}</AppText>
                   <AppTextInput
                     key="input-new-password"
                     ref={newPasswordRef}
@@ -231,12 +252,12 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
                     }}
                     secureTextEntry
                     autoCapitalize="none"
-                    placeholder="Nhập mật khẩu mới (tối thiểu 6 ký tự)"
+                    placeholder="••••••"
                     placeholderTextColor={theme.muted}
                     editable={!isSubmitting}
                   />
 
-                  <AppText style={styles.label}>{t("auth.confirmPassword") || "Xác nhận mật khẩu mới"}</AppText>
+                  <AppText style={styles.label}>{t("auth.confirmPassword")}</AppText>
                   <AppTextInput
                     key="input-confirm-password"
                     style={[styles.input, error ? styles.inputError : null]}
@@ -247,7 +268,7 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
                     }}
                     secureTextEntry
                     autoCapitalize="none"
-                    placeholder="Nhập lại mật khẩu mới"
+                    placeholder="••••••"
                     placeholderTextColor={theme.muted}
                     editable={!isSubmitting}
                   />
@@ -260,66 +281,136 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
                 </AppText>
               ) : null}
 
-              <AppButton
-                onPress={handleSubmit}
-                disabled={isSubmitting}
-                loading={isSubmitting}
-                icon={step === "reset" ? "lock-closed-outline" : "send-outline"}
-                style={styles.button}
-              >
-                {step === "request"
-                  ? "Gửi mã OTP"
-                  : step === "verify"
-                  ? "Xác minh OTP"
-                  : "🔒 Đặt lại mật khẩu"}
-              </AppButton>
-            </View>
-          </ScrollView>
+              <View style={styles.buttonRow}>
+                {step === "verify" && (
+                  <Pressable
+                    style={styles.resendBtn}
+                    onPress={handleResend}
+                    disabled={secondsUntilResend > 0 || isSubmitting}
+                  >
+                    <AppText style={[styles.resendBtnText, { color: secondsUntilResend > 0 ? theme.muted : theme.primary }]}>
+                      {t("auth.resendOtp")}
+                    </AppText>
+                  </Pressable>
+                )}
+
+                <AppButton
+                  loading={isSubmitting}
+                  disabled={isSubmitting}
+                  onPress={handleSubmit}
+                  style={styles.submitBtn}
+                >
+                  {buttonText}
+                </AppButton>
+              </View>
+            </ScrollView>
+          </View>
         </KeyboardAvoidingView>
       </View>
     </Modal>
   );
 }
 
-const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) =>
+const createStyles = (theme: any) =>
   StyleSheet.create({
-    overlay: { flex: 1, backgroundColor: theme.overlay, justifyContent: "flex-end" },
-    keyboard: { flex: 1, justifyContent: "flex-end" },
-    formScroll: { flex: 1, flexShrink: 1 },
-    scroll: { flexGrow: 1, justifyContent: "flex-end" },
-    box: {
-      backgroundColor: theme.surface,
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
-      paddingHorizontal: 22,
-      paddingTop: 22,
-      paddingBottom: 32,
-    },
-    header: { flexDirection: "row", justifyContent: "space-between", gap: 14, marginBottom: 18 },
-    headerText: { flex: 1 },
-    title: { fontSize: 22, fontWeight: "900", color: theme.text },
-    subtitle: { color: theme.muted, fontSize: 13, marginTop: 5, lineHeight: 20 },
-    closeButton: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: theme.surfaceElevated,
-      alignItems: "center",
+    overlay: {
+      flex: 1,
+      backgroundColor: "rgba(0, 0, 0, 0.6)",
       justifyContent: "center",
+      alignItems: "center",
+      padding: 16,
     },
-    label: { fontSize: 13, color: theme.muted, marginBottom: 8, marginTop: 12, fontWeight: "700" },
-    input: {
-      height: 48,
-      backgroundColor: theme.surfaceElevated,
-      borderRadius: 10,
-      paddingHorizontal: 14,
+    keyboardContainer: {
+      width: "100%",
+      maxWidth: 420,
+    },
+    dialog: {
+      backgroundColor: theme.surface,
+      borderRadius: 24,
+      overflow: "hidden",
       borderWidth: 1,
       borderColor: theme.border,
-      color: theme.text,
-      fontSize: 14,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.15,
+      shadowRadius: 20,
+      elevation: 10,
     },
-    inputError: { borderColor: theme.danger, backgroundColor: theme.warningSoft },
-    resendText: { fontSize: 12, color: theme.primary, fontWeight: "700", marginTop: 6, textAlign: "right" },
-    errorText: { color: theme.danger, fontSize: 12, fontWeight: "600", marginTop: 6 },
-    button: { marginTop: 22 },
+    scrollContent: {
+      padding: 24,
+    },
+    header: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      marginBottom: 20,
+    },
+    headerText: {
+      flex: 1,
+      marginRight: 12,
+    },
+    title: {
+      fontSize: 20,
+      fontWeight: "900",
+      color: theme.text,
+    },
+    subtitle: {
+      fontSize: 13,
+      color: theme.muted,
+      marginTop: 4,
+      lineHeight: 18,
+    },
+    closeButton: {
+      padding: 6,
+      borderRadius: 12,
+      backgroundColor: theme.surfaceElevated,
+    },
+    label: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: theme.text,
+      marginBottom: 8,
+      marginTop: 12,
+    },
+    input: {
+      backgroundColor: theme.surfaceElevated,
+      borderRadius: 14,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      fontSize: 15,
+      color: theme.text,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    inputError: {
+      borderColor: theme.danger,
+    },
+    errorText: {
+      color: theme.danger,
+      fontSize: 13,
+      fontWeight: "600",
+      marginTop: 12,
+    },
+    resendText: {
+      color: theme.muted,
+      fontSize: 12,
+      fontWeight: "600",
+      marginTop: 8,
+      textAlign: "right",
+    },
+    buttonRow: {
+      marginTop: 24,
+      gap: 12,
+    },
+    resendBtn: {
+      paddingVertical: 8,
+      alignItems: "center",
+    },
+    resendBtnText: {
+      fontSize: 13,
+      fontWeight: "800",
+    },
+    submitBtn: {
+      width: "100%",
+    },
   });

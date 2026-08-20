@@ -1,163 +1,176 @@
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, View } from "react-native";
+import {
+  ActivityIndicator,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  View,
+} from "react-native";
 import { AppText, AppTextInput } from "@/components/ui/typography";
 import { Ionicons } from "@expo/vector-icons";
-import { invoiceService } from "../services/invoiceService";
-import { useNotification } from "../hooks/useNotification";
-import { getNotificationMessage } from "../utils/notificationMessages";
 import { useAppTheme } from "../contexts/ThemeContext";
+import { useNotification } from "../hooks/useNotification";
+import { adminService } from "../services/adminService";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
-import AppButton from "../components/ui/AppButton";
 import GradientHero from "../components/ui/GradientHero";
-import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
+import AppButton from "../components/ui/AppButton";
 import ProgressStepper from "../components/ui/ProgressStepper";
+import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
 import MeterCameraModal from "../components/MeterCameraModal";
 import { formatCurrency, formatMeterReading, formatNumberInput, parseMeterReading, unformatNumber } from "../utils/formatters";
-import type { MeterType } from "../utils/meterReadingTarget";
+import { consumePendingAIAction } from "../utils/aiActions";
+import { useTranslation } from "../contexts/LanguageContext";
 
 type IconName = React.ComponentProps<typeof Ionicons>["name"];
 
-const bulkSteps: { label: string; icon: IconName }[] = [
-  { label: "Chọn kỳ", icon: "calendar-outline" },
-  { label: "Chốt điện/nước", icon: "speedometer-outline" },
-  { label: "Preview", icon: "eye-outline" },
-  { label: "Phát hành", icon: "paper-plane-outline" },
-];
+type BulkInvoiceItem = {
+  contractId: string;
+  roomId: string;
+  room: string;
+  tenant: string;
+  tenantUserId: string;
+  roomAmount: number;
+  electricityOld: number;
+  electricityNew: string;
+  electricityPrice: number;
+  waterOld: number;
+  waterNew: string;
+  waterPrice: number;
+  services: number;
+  selected: boolean;
+};
 
-export default function BulkInvoiceScreen({ onNavigate, params }: { onNavigate: (tab: any) => void; params?: any }) {
+type Props = {
+  onNavigate: (tab: any, params?: any) => void;
+};
+
+export default function BulkInvoiceScreen({ onNavigate }: Props) {
   const { theme } = useAppTheme();
+  const { t } = useTranslation();
   const notification = useNotification();
+  const styles = createStyles(theme);
+
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [data, setData] = useState<BulkInvoiceItem[]>([]);
+  const [period, setPeriod] = useState("");
+  const [dueDate, setDueDate] = useState("");
   const [workflowStep, setWorkflowStep] = useState(1);
-  const [data, setData] = useState<any[]>([]);
-  const [scanTarget, setScanTarget] = useState<{ index: number; roomCode: string; meterType: MeterType } | null>(null);
+  const [scanTarget, setScanTarget] = useState<{ index: number; roomCode: string; meterType: "electricity" | "water" } | null>(null);
+
+  const bulkSteps = [
+    { label: t("invoices.period"), icon: "calendar-outline" as IconName },
+    { label: t("invoices.recordMeter"), icon: "speedometer-outline" as IconName },
+    { label: "Preview", icon: "eye-outline" as IconName },
+    { label: t("common.send"), icon: "paper-plane-outline" as IconName },
+  ];
 
   useEffect(() => {
     void loadData();
-    // Keep the original mount-only fetch contract.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const res = await invoiceService.getBulkPreview();
-      setData((res || []).map((item) => ({
-        ...item,
+      const res = await adminService.getBulkInvoicePreview();
+      const currentMonth = new Date().getMonth() + 1;
+      const currentYear = new Date().getFullYear();
+      setPeriod(`${currentMonth.toString().padStart(2, "0")}/${currentYear}`);
+      setDueDate(`${currentYear}-${currentMonth.toString().padStart(2, "0")}-10`);
+
+      const initialData: BulkInvoiceItem[] = (res.previews || []).map((item: any) => ({
+        contractId: item.contractId,
+        roomId: item.roomId,
+        room: item.room,
+        tenant: item.tenant,
+        tenantUserId: item.tenantUserId,
+        roomAmount: item.roomAmount,
+        electricityOld: item.electricityOld ?? 0,
+        electricityNew: formatMeterReading(item.electricityDraft ?? item.electricityOld ?? 0),
+        electricityPrice: item.electricityPrice ?? 3500,
+        waterOld: item.waterOld ?? 0,
+        waterNew: formatMeterReading(item.waterDraft ?? item.waterOld ?? 0),
+        waterPrice: item.waterPrice ?? 15000,
+        services: item.services ?? 0,
         selected: true,
-        electricityNew: item.electricityDraft !== undefined ? formatMeterReading(item.electricityDraft) : "",
-        waterNew: item.waterDraft !== undefined ? formatMeterReading(item.waterDraft) : "",
-      })));
-    } catch (error) {
-      notification.error(getNotificationMessage(error, "Không thể tải dữ liệu hóa đơn."));
+      }));
+      setData(initialData);
+    } catch {
+      notification.error(t("common.error"));
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    const action = params?.aiAction;
-    if (action?.type !== "FILL_UTILITY_READING" || !data.length) return;
-    setData((current) => current.map((item) => item.room?.trim().toLowerCase() === action.roomCode?.trim().toLowerCase() ? { ...item, electricityNew: formatMeterReading(action.newElec), waterNew: formatMeterReading(action.newWater), aiAction: true } : item));
-  }, [params?.aiAction, data.length]);
-
-  const handleInputChange = (index: number, field: string, value: string) => {
-    const newData = [...data];
-    const isMeter = field === "electricityNew" || field === "waterNew";
-    newData[index][field] = isMeter && parseMeterReading(value) !== null ? formatMeterReading(value) : isMeter ? value : formatNumberInput(value);
-    setData(newData);
+  const handleInputChange = (index: number, field: keyof BulkInvoiceItem, value: any) => {
+    setData((current) => current.map((item, idx) => idx === index ? { ...item, [field]: value } : item));
   };
 
   const toggleSelection = (index: number) => {
-    const newData = [...data];
-    newData[index].selected = !newData[index].selected;
-    setData(newData);
+    setData((current) => current.map((item, idx) => idx === index ? { ...item, selected: !item.selected } : item));
   };
 
   const toggleSelectAll = () => {
-    const allSelected = data.every((item) => item.selected);
-    setData(data.map((item) => ({ ...item, selected: !allSelected })));
+    const nextState = !data.every((i) => i.selected);
+    setData((current) => current.map((item) => ({ ...item, selected: nextState })));
   };
 
-  const calculateTotal = (item: any) => {
-    const eOld = item.electricityOld || 0;
-    const eNew = parseMeterReading(item.electricityNew) ?? eOld;
-    const wOld = item.waterOld || 0;
-    const wNew = parseMeterReading(item.waterNew) ?? wOld;
-    const eAmount = Math.round(Math.max(0, eNew - eOld) * (item.electricityPrice || 0));
-    const wAmount = Math.round(Math.max(0, wNew - wOld) * (item.waterPrice || 0));
-    return unformatNumber(item.roomAmount) + unformatNumber(item.services) + eAmount + wAmount;
+  const calculateTotal = (item: BulkInvoiceItem) => {
+    const elecUsage = Math.max(0, (parseMeterReading(item.electricityNew) ?? item.electricityOld) - item.electricityOld);
+    const waterUsage = Math.max(0, (parseMeterReading(item.waterNew) ?? item.waterOld) - item.waterOld);
+    return (item.roomAmount || 0) + (elecUsage * item.electricityPrice) + (waterUsage * item.waterPrice) + (item.services || 0);
   };
 
   const handleSubmit = async () => {
-    const selectedData = data.filter((item) => item.selected);
-    if (selectedData.length === 0) {
-      notification.warning("Vui lòng chọn ít nhất 1 phòng để tạo hóa đơn.");
+    const selected = data.filter((i) => i.selected);
+    if (selected.length === 0) {
+      notification.error(t("common.noData"));
       return;
     }
 
-    let hasError = false;
-    for (const item of selectedData) {
-      if (item.electricityPrice > 0) {
-        if (item.electricityNew === undefined || item.electricityNew === "") hasError = true;
-        if ((parseMeterReading(item.electricityNew) ?? -1) < item.electricityOld) hasError = true;
-      } else {
-        item.electricityNew = item.electricityOld;
-      }
-      if (item.waterPrice > 0) {
-        if (item.waterNew === undefined || item.waterNew === "") hasError = true;
-        if ((parseMeterReading(item.waterNew) ?? -1) < item.waterOld) hasError = true;
-      } else {
-        item.waterNew = item.waterOld;
-      }
-    }
-
-    if (hasError) {
-      notification.warning("Vui lòng nhập đầy đủ chỉ số mới. Chỉ số mới phải lớn hơn hoặc bằng chỉ số cũ.");
-      return;
-    }
-
-    setWorkflowStep(2);
-    const confirmed = await notification.confirm({
-      title: "Phát hành hóa đơn",
-      message: `Phát hành ${selectedData.length} hóa đơn cùng lúc?`,
-      confirmText: "Phát hành",
-    });
-    if (!confirmed) return setWorkflowStep(1);
-
-    setSubmitting(true);
-    setWorkflowStep(3);
-    const closeLoading = notification.loading("Đang phát hành hóa đơn...");
     try {
-      const invoices = selectedData.map((item) => ({
-        ...item,
-        roomAmount: unformatNumber(item.roomAmount),
-        services: unformatNumber(item.services),
+      setSubmitting(true);
+      const invoicesPayload = selected.map((item) => ({
+        contractId: item.contractId,
+        roomId: item.roomId,
+        tenantUserId: item.tenantUserId,
+        period,
+        dueDate,
+        room: item.room,
+        tenant: item.tenant,
+        roomAmount: item.roomAmount,
+        electricityOld: item.electricityOld,
         electricityNew: parseMeterReading(item.electricityNew) ?? item.electricityOld,
+        electricityPrice: item.electricityPrice,
+        waterOld: item.waterOld,
         waterNew: parseMeterReading(item.waterNew) ?? item.waterOld,
+        waterPrice: item.waterPrice,
+        services: item.services,
+        discount: 0,
+        total: calculateTotal(item),
+        status: 1,
       }));
-      await invoiceService.bulkCreate({ invoices });
-      notification.success("Đã tạo hóa đơn hàng loạt.");
+
+      await adminService.createBulkInvoices({ invoices: invoicesPayload });
+      notification.success(t("common.success"));
       onNavigate("invoice");
-    } catch (error) {
-      notification.error(getNotificationMessage(error, "Không thể tạo hóa đơn."));
-      setWorkflowStep(1);
+    } catch {
+      notification.error(t("common.error"));
     } finally {
-      closeLoading();
       setSubmitting(false);
     }
   };
 
-  const styles = createStyles(theme);
-  const selectedCount = data.filter((item) => item.selected).length;
-  const allSelected = data.length > 0 && data.every((item) => item.selected);
+  const selectedCount = data.filter((i) => i.selected).length;
+  const allSelected = data.length > 0 && selectedCount === data.length;
 
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={theme.primary} />
-        <AppText style={styles.loadingText}>Đang chuẩn bị kỳ hóa đơn...</AppText>
+        <ActivityIndicator color={theme.primary} size="large" />
+        <AppText style={styles.loadingText}>{t("common.loading")}</AppText>
       </View>
     );
   }
@@ -165,15 +178,15 @@ export default function BulkInvoiceScreen({ onNavigate, params }: { onNavigate: 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <View style={styles.header}>
-        <Pressable accessibilityLabel="Quay lại hóa đơn" accessibilityRole="button" onPress={() => onNavigate("invoice")} style={styles.headerButton}>
+        <Pressable accessibilityLabel={t("common.back")} accessibilityRole="button" onPress={() => onNavigate("invoice")} style={styles.headerButton}>
           <Ionicons name="arrow-back" size={22} color={theme.text} />
         </Pressable>
         <View style={styles.headerCopy}>
-          <AppText accessibilityRole="header" style={styles.title}>Lập hóa đơn hàng loạt</AppText>
-          <AppText style={styles.headerSubtitle}>Kỳ hiện tại đã được hệ thống chuẩn bị.</AppText>
+          <AppText accessibilityRole="header" style={styles.title}>{t("invoices.title")}</AppText>
+          <AppText style={styles.headerSubtitle}>{t("invoices.period")}: {period}</AppText>
         </View>
         <Pressable
-          accessibilityLabel={allSelected ? "Bỏ chọn tất cả phòng" : "Chọn tất cả phòng"}
+          accessibilityLabel={t("common.all")}
           accessibilityRole="checkbox"
           accessibilityState={{ checked: allSelected }}
           onPress={toggleSelectAll}
@@ -197,22 +210,22 @@ export default function BulkInvoiceScreen({ onNavigate, params }: { onNavigate: 
             <AnimatedEntry>
               <GradientHero
                 icon="receipt-outline"
-                label="KỲ HÓA ĐƠN SẴN SÀNG"
-                value={`${selectedCount}/${data.length} phòng`}
-                detail="Kiểm tra chỉ số điện, nước và tổng tiền trước khi phát hành."
+                label={t("invoices.title")}
+                value={`${selectedCount}/${data.length} ${t("nav.rooms")}`}
+                detail={t("invoices.period")}
               />
             </AnimatedEntry>
             <View style={styles.sectionHeading}>
-              <AppText style={styles.sectionTitle}>Chốt điện & nước</AppText>
-              <AppText style={styles.sectionSubtitle}>Nhập chỉ số mới cho từng phòng được chọn.</AppText>
+              <AppText style={styles.sectionTitle}>{t("invoices.recordMeter")}</AppText>
+              <AppText style={styles.sectionSubtitle}>{t("dashboard.property")}</AppText>
             </View>
           </View>
         }
         ListEmptyComponent={
           <IllustratedEmptyState
             kind="invoice"
-            title="Chưa có dữ liệu lập hóa đơn"
-            description="Không có hợp đồng nào đang hiệu lực để lập hóa đơn trong kỳ này."
+            title={t("common.noData")}
+            description={t("invoices.emptyDescription")}
           />
         }
         renderItem={({ item, index }) => {
@@ -224,7 +237,7 @@ export default function BulkInvoiceScreen({ onNavigate, params }: { onNavigate: 
                   <Pressable
                     accessibilityRole="checkbox"
                     accessibilityState={{ checked: item.selected }}
-                    accessibilityLabel={`Chọn phòng ${item.room}`}
+                    accessibilityLabel={item.room}
                     onPress={() => toggleSelection(index)}
                     style={styles.roomIdentity}
                   >
@@ -232,31 +245,31 @@ export default function BulkInvoiceScreen({ onNavigate, params }: { onNavigate: 
                       <Ionicons name={item.selected ? "checkbox" : "square-outline"} size={23} color={item.selected ? theme.primary : theme.muted} />
                     </View>
                     <View>
-                      <AppText style={styles.roomText}>Phòng {item.room}</AppText>
+                      <AppText style={styles.roomText}>{t("common.room")} {item.room}</AppText>
                       <AppText style={styles.tenantText}>{item.tenant}</AppText>
                     </View>
                   </Pressable>
                 </View>
 
                 <AppText style={styles.totalValue}>{formatCurrency(total)}</AppText>
-                <AppText style={styles.totalLabel}>Tổng dự kiến</AppText>
+                <AppText style={styles.totalLabel}>{t("invoices.totalAmount")}</AppText>
 
                 <View style={styles.tintedSection}>
                   <View style={styles.inputRow}>
-                    <InvoiceField label="Tiền phòng" iconColor={theme.primary} styles={styles}>
+                    <InvoiceField label={t("invoices.roomFee")} iconColor={theme.primary} styles={styles}>
                       <AppTextInput
                         style={styles.input}
-                        placeholder="Tiền phòng"
+                        placeholder="0"
                         placeholderTextColor={theme.muted}
                         keyboardType="numeric"
                         value={item.roomAmount !== undefined ? formatNumberInput(item.roomAmount) : ""}
                         onChangeText={(value) => handleInputChange(index, "roomAmount", value)}
                       />
                     </InvoiceField>
-                    <InvoiceField label="Phí dịch vụ" iconColor={theme.primary} styles={styles}>
+                    <InvoiceField label={t("invoices.serviceFee")} iconColor={theme.primary} styles={styles}>
                       <AppTextInput
                         style={styles.input}
-                        placeholder="Dịch vụ"
+                        placeholder="0"
                         placeholderTextColor={theme.muted}
                         keyboardType="numeric"
                         value={item.services !== undefined ? formatNumberInput(item.services) : ""}
@@ -265,33 +278,25 @@ export default function BulkInvoiceScreen({ onNavigate, params }: { onNavigate: 
                     </InvoiceField>
                   </View>
                   <View style={styles.inputRow}>
-                    <InvoiceField label={`Điện cũ · ${formatMeterReading(item.electricityOld) || "0"} kWh`} icon="flash-outline" iconColor={theme.primary} styles={styles} accessory={<Pressable accessibilityRole="button" accessibilityLabel={`Quét đồng hồ điện phòng ${item.room}`} disabled={!item.selected || submitting || item.electricityPrice <= 0} onPress={() => setScanTarget({ index, roomCode: item.room, meterType: "electricity" })} style={styles.scanInline}><Ionicons name="camera-outline" size={14} color={theme.primary} /><AppText style={styles.scanInlineText}>Quét</AppText></Pressable>}>
-                      {item.electricityPrice > 0 ? (
-                        <AppTextInput
-                          style={styles.input}
-                          placeholder="Điện mới"
-                          placeholderTextColor={theme.muted}
-                          keyboardType="decimal-pad"
-                          value={item.electricityNew !== undefined ? item.electricityNew : ""}
-                          onChangeText={(value) => handleInputChange(index, "electricityNew", value)}
-                        />
-                      ) : (
-                        <AppText style={styles.noMeterText}>Không tính theo khối</AppText>
-                      )}
+                    <InvoiceField label={`${t("utilities.oldElec")} · ${formatMeterReading(item.electricityOld) || "0"} kWh`} icon="flash-outline" iconColor={theme.primary} styles={styles} accessory={<Pressable accessibilityRole="button" accessibilityLabel={`Scan ${item.room}`} disabled={!item.selected || submitting || item.electricityPrice <= 0} onPress={() => setScanTarget({ index, roomCode: item.room, meterType: "electricity" })} style={styles.scanInline}><Ionicons name="camera-outline" size={14} color={theme.primary} /><AppText style={styles.scanInlineText}>OCR</AppText></Pressable>}>
+                      <AppTextInput
+                        style={styles.input}
+                        placeholder="0"
+                        placeholderTextColor={theme.muted}
+                        keyboardType="decimal-pad"
+                        value={item.electricityNew !== undefined ? item.electricityNew : ""}
+                        onChangeText={(value) => handleInputChange(index, "electricityNew", value)}
+                      />
                     </InvoiceField>
-                    <InvoiceField label={`Nước cũ · ${formatMeterReading(item.waterOld) || "0"} m³`} icon="water-outline" iconColor={theme.primary} styles={styles} accessory={<Pressable accessibilityRole="button" accessibilityLabel={`Quét đồng hồ nước phòng ${item.room}`} disabled={!item.selected || submitting || item.waterPrice <= 0} onPress={() => setScanTarget({ index, roomCode: item.room, meterType: "water" })} style={styles.scanInline}><Ionicons name="camera-outline" size={14} color={theme.primary} /><AppText style={styles.scanInlineText}>Quét</AppText></Pressable>}>
-                      {item.waterPrice > 0 ? (
-                        <AppTextInput
-                          style={styles.input}
-                          placeholder="Nước mới"
-                          placeholderTextColor={theme.muted}
-                          keyboardType="decimal-pad"
-                          value={item.waterNew !== undefined ? item.waterNew : ""}
-                          onChangeText={(value) => handleInputChange(index, "waterNew", value)}
-                        />
-                      ) : (
-                        <AppText style={styles.noMeterText}>Không tính theo khối</AppText>
-                      )}
+                    <InvoiceField label={`${t("utilities.oldWater")} · ${formatMeterReading(item.waterOld) || "0"} m³`} icon="water-outline" iconColor={theme.primary} styles={styles} accessory={<Pressable accessibilityRole="button" accessibilityLabel={`Scan ${item.room}`} disabled={!item.selected || submitting || item.waterPrice <= 0} onPress={() => setScanTarget({ index, roomCode: item.room, meterType: "water" })} style={styles.scanInline}><Ionicons name="camera-outline" size={14} color={theme.primary} /><AppText style={styles.scanInlineText}>OCR</AppText></Pressable>}>
+                      <AppTextInput
+                        style={styles.input}
+                        placeholder="0"
+                        placeholderTextColor={theme.muted}
+                        keyboardType="decimal-pad"
+                        value={item.waterNew !== undefined ? item.waterNew : ""}
+                        onChangeText={(value) => handleInputChange(index, "waterNew", value)}
+                      />
                     </InvoiceField>
                   </View>
                 </View>
@@ -309,7 +314,7 @@ export default function BulkInvoiceScreen({ onNavigate, params }: { onNavigate: 
           disabled={submitting || data.length === 0}
           onPress={() => void handleSubmit()}
         >
-          {`Phát hành ${selectedCount} hóa đơn`}
+          {`${t("common.send")} (${selectedCount})`}
         </AppButton>
       </View>
       <MeterCameraModal
@@ -320,7 +325,7 @@ export default function BulkInvoiceScreen({ onNavigate, params }: { onNavigate: 
         onRead={(meterType, digits) => {
           if (!scanTarget) return;
           setData((current) => current.map((item, index) => index === scanTarget.index ? { ...item, [meterType === "electricity" ? "electricityNew" : "waterNew"]: formatMeterReading(digits) } : item));
-          notification.success(`Đã điền chỉ số ${meterType === "electricity" ? "điện" : "nước"} phòng ${scanTarget.roomCode}.`);
+          notification.success(t("common.success"));
         }}
       />
     </KeyboardAvoidingView>
