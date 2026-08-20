@@ -153,8 +153,11 @@ export default function AIChatWidget() {
         body: JSON.stringify({ message: userMessage.text }),
       });
 
-      const data = response.data as AIChatResponse | undefined;
-      const replyText = typeof data?.reply === "string" ? data.reply : t("common.error");
+      const replyText = typeof response?.reply === "string" && response.reply.trim()
+        ? response.reply
+        : (typeof response?.data?.reply === "string" && response.data.reply.trim()
+            ? response.data.reply
+            : (t("ai.systemError") || t("common.error")));
 
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -165,20 +168,22 @@ export default function AIChatWidget() {
 
       setMessages((prev) => [...prev, aiMessage]);
 
-      if (isAIAction(data?.action)) {
-        dispatchAIAction(data.action);
+      const action = response?.action || response?.data?.action;
+      if (isAIAction(action)) {
+        dispatchAIAction(action);
       }
-    } catch {
+    } catch (err: any) {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         sender: "ai",
-        text: t("common.error"),
+        text: err?.message || t("ai.systemError") || t("common.error"),
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setLoading(false);
     }
+
   };
 
   const handleCopy = (text: string, id: string) => {

@@ -152,7 +152,9 @@ export default function AIChatScreen({ profile, onBack, onAction }: AIChatScreen
     try {
       const data: AIChatResponse = await aiService.sendMessage(userMessage.text);
       
-      const replyText = typeof data.reply === "string" ? data.reply : t("common.error");
+      const replyText = typeof data.reply === "string" && data.reply.trim() 
+        ? data.reply 
+        : t("ai.systemError");
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         sender: "ai",
@@ -166,17 +168,18 @@ export default function AIChatScreen({ profile, onBack, onAction }: AIChatScreen
       if (safeAction) {
         onAction?.(safeAction);
       }
-    } catch {
+    } catch (err: any) {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         sender: "ai",
-        text: t("common.error"),
+        text: t("ai.systemError"),
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setLoading(false);
     }
+
   };
 
   const handleVoiceInput = async () => {

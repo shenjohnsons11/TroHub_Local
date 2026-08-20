@@ -10,8 +10,54 @@ const {
     getRolePresentation,
 } = require('./aiPolicy');
 
-const apiKey = process.env.GEMINI_API_KEY;
-const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
+function getGeminiApiKey(role) {
+    const normalized = normalizeRole(role);
+    if (role === 1 || role === '1' || normalized === 'landlord') {
+        return process.env.GEMINI_LANDLORD_API_KEY || process.env.GEMINI_API_KEY || null;
+    }
+    return process.env.GEMINI_TENANT_API_KEY || process.env.GEMINI_API_KEY || null;
+}
+
+function getGenAIClient(role) {
+    const landlordKey = process.env.GEMINI_LANDLORD_API_KEY || process.env.GEMINI_API_KEY || null;
+    const tenantKey = process.env.GEMINI_TENANT_API_KEY || process.env.GEMINI_API_KEY || null;
+
+    const normalized = normalizeRole(role);
+    const isLandlord = role === 1 || role === '1' || normalized === 'landlord';
+
+    // Role 1 = Chủ trọ -> Primary: Landlord Key, Fallback: Tenant Key
+    // Role 2 = Khách thuê -> Primary: Tenant Key, Fallback: Landlord Key
+    const primaryKey = isLandlord ? landlordKey : tenantKey;
+    const fallbackKey = isLandlord ? tenantKey : landlordKey;
+
+    const primaryClient = primaryKey ? new GoogleGenAI({ apiKey: primaryKey }) : null;
+    const fallbackClient = fallbackKey ? new GoogleGenAI({ apiKey: fallbackKey }) : null;
+
+    return {
+        primaryClient,
+        fallbackClient,
+        primaryKey,
+        fallbackKey,
+    };
+}
+
+function isRateLimitOrQuotaError(err) {
+    if (!err) return false;
+    if (err.status === 429 || err.statusCode === 429 || err.status === 503 || err.statusCode === 503) return true;
+    const msg = String(err.message || '').toLowerCase();
+    return msg.includes('429')
+        || msg.includes('503')
+        || msg.includes('resource_exhausted')
+        || msg.includes('resourceexhausted')
+        || msg.includes('quota')
+        || msg.includes('rate limit')
+        || msg.includes('too many requests')
+        || msg.includes('high demand')
+        || msg.includes('unavailable')
+        || msg.includes('overloaded');
+}
+
+
 
 const isNonNegativeNumber = (value) => Number.isFinite(value) && value >= 0;
 const isNonEmptyString = (value) => typeof value === 'string' && value.trim().length > 0;
@@ -70,44 +116,67 @@ function parseAIResponse(rawText) {
 
 async function getUserContext(userId, role) {
     const normalizedRole = normalizeRole(role);
+    const defaultStats = {
+        totalRooms: 0,
+        vacantRooms: 0,
+        occupiedRooms: 0,
+        maintenanceRooms: 0,
+        activeContracts: 0,
+        pendingContracts: 0,
+        totalDebt: 0,
+        unpaidInvoiceCount: 0,
+        totalRevenueCollected: 0,
+    };
+
     try {
         const mongoose = require('mongoose');
-        if (mongoose.connection.readyState !== 1) {
-            return { role: normalizedRole === 'landlord' ? 'Chủ trọ' : 'Người thuê', status: 'DB disconnected' };
+        if (mongoose.connection.readyState !== 1 || !userId || !mongoose.Types.ObjectId.isValid(String(userId))) {
+            return {
+                role: normalizedRole === 'landlord' ? 'Chủ trọ' : 'Người thuê',
+                stats: normalizedRole === 'landlord' ? defaultStats : undefined,
+                status: 'DB disconnected or demo context'
+            };
         }
         if (normalizedRole === 'landlord') { // Landlord / Admin
-            const rooms = await Room.find({ landlordId: userId }).lean();
-            const roomIds = rooms.map(r => r._id);
+            const rooms = await Room.find({ landlordId: userId }).lean().catch(() => []);
+            const safeRooms = Array.isArray(rooms) ? rooms : [];
+            const roomIds = safeRooms.map(r => r._id);
             
-            const totalRooms = rooms.length;
-            const vacantRooms = rooms.filter(r => r.status === 0).length;
-            const occupiedRooms = rooms.filter(r => r.status === 1).length;
-            const maintenanceRooms = rooms.filter(r => r.status === 2).length;
+            const totalRooms = safeRooms.length;
+            const vacantRooms = safeRooms.filter(r => r.status === 0).length;
+            const occupiedRooms = safeRooms.filter(r => r.status === 1).length;
+            const maintenanceRooms = safeRooms.filter(r => r.status === 2).length;
 
-            const contracts = await Contract.find({ roomId: { $in: roomIds } }).populate('roomId tenantId').lean();
-            const activeContracts = contracts.filter(c => c.status === 1).length;
-            const pendingContracts = contracts.filter(c => c.status === 0).length;
+            const contracts = roomIds.length > 0
+                ? await Contract.find({ roomId: { $in: roomIds } }).populate('roomId tenantId').lean().catch(() => [])
+                : [];
+            const safeContracts = Array.isArray(contracts) ? contracts : [];
+            const activeContracts = safeContracts.filter(c => c.status === 1).length;
+            const pendingContracts = safeContracts.filter(c => c.status === 0).length;
 
-            const contractIds = contracts.map(c => c._id);
-            const invoices = await Invoice.find({ contractId: { $in: contractIds } }).lean();
+            const contractIds = safeContracts.map(c => c._id);
+            const invoices = contractIds.length > 0
+                ? await Invoice.find({ contractId: { $in: contractIds } }).lean().catch(() => [])
+                : [];
+            const safeInvoices = Array.isArray(invoices) ? invoices : [];
 
-            const unpaidInvoices = invoices.filter(i => i.status === 1 || i.status === 3);
-            const totalDebt = unpaidInvoices.reduce((sum, i) => sum + (i.totalAmount || 0), 0);
+            const unpaidInvoices = safeInvoices.filter(i => i.status === 1 || i.status === 3);
+            const totalDebt = unpaidInvoices.reduce((sum, i) => sum + (Number(i.totalAmount) || 0), 0);
             
-            const paidInvoices = invoices.filter(i => i.status === 2);
-            const totalPaidAmount = paidInvoices.reduce((sum, i) => sum + (i.totalAmount || 0), 0);
+            const paidInvoices = safeInvoices.filter(i => i.status === 2);
+            const totalPaidAmount = paidInvoices.reduce((sum, i) => sum + (Number(i.totalAmount) || 0), 0);
 
             // Chi tiết hóa đơn chưa thanh toán cho tin nhắn nhắc nợ
             const debtDetails = unpaidInvoices.slice(0, 10).map(i => ({
                 room: i.room || 'N/A',
                 tenant: i.tenant || 'N/A',
-                period: i.period,
-                totalAmount: i.totalAmount,
+                period: i.period || '',
+                totalAmount: Number(i.totalAmount) || 0,
                 dueDate: i.dueDate ? new Date(i.dueDate).toLocaleDateString('vi-VN') : 'N/A',
                 status: i.status === 3 ? 'Quá hạn' : 'Chưa thanh toán'
             }));
 
-            const landlord = await Account.findById(userId).lean();
+            const landlord = await Account.findById(userId).lean().catch(() => null);
 
             return {
                 role: 'Chủ trọ',
@@ -131,25 +200,29 @@ async function getUserContext(userId, role) {
                 debtDetails
             };
         } else { // Tenant (role = 2)
-            const tenant = await Account.findById(userId).lean();
-            const contracts = await Contract.find({ tenantId: userId, status: 1 }).populate('roomId').lean();
-            const contractIds = contracts.map(c => c._id);
+            const tenant = await Account.findById(userId).lean().catch(() => null);
+            const contracts = await Contract.find({ tenantId: userId, status: 1 }).populate('roomId').lean().catch(() => []);
+            const safeContracts = Array.isArray(contracts) ? contracts : [];
+            const contractIds = safeContracts.map(c => c._id);
 
-            const invoices = await Invoice.find({ contractId: { $in: contractIds } }).lean();
-            const unpaidInvoices = invoices.filter(i => i.status === 1 || i.status === 3);
+            const invoices = contractIds.length > 0
+                ? await Invoice.find({ contractId: { $in: contractIds } }).lean().catch(() => [])
+                : [];
+            const safeInvoices = Array.isArray(invoices) ? invoices : [];
+            const unpaidInvoices = safeInvoices.filter(i => i.status === 1 || i.status === 3);
 
             return {
                 role: 'Người thuê',
                 tenantName: tenant?.fullName || 'Người thuê',
-                rooms: contracts.map(c => ({
+                rooms: safeContracts.map(c => ({
                     roomCode: c.roomId?.roomCode || 'N/A',
-                    rentPrice: c.fixedRentPrice,
+                    rentPrice: c.fixedRentPrice || 0,
                     startDate: c.startDate ? new Date(c.startDate).toLocaleDateString('vi-VN') : '',
                     endDate: c.endDate ? new Date(c.endDate).toLocaleDateString('vi-VN') : ''
                 })),
                 unpaidInvoices: unpaidInvoices.map(i => ({
-                    period: i.period,
-                    totalAmount: i.totalAmount,
+                    period: i.period || '',
+                    totalAmount: Number(i.totalAmount) || 0,
                     dueDate: i.dueDate ? new Date(i.dueDate).toLocaleDateString('vi-VN') : '',
                     status: i.status === 3 ? 'Quá hạn' : 'Chưa thanh toán'
                 }))
@@ -157,9 +230,13 @@ async function getUserContext(userId, role) {
         }
     } catch (err) {
         console.error('[AI_SERVICE_CONTEXT_ERROR]', err);
-        return { role: normalizedRole === 'landlord' ? 'Chủ trọ' : 'Người thuê' };
+        return {
+            role: normalizedRole === 'landlord' ? 'Chủ trọ' : 'Người thuê',
+            stats: normalizedRole === 'landlord' ? defaultStats : undefined
+        };
     }
 }
+
 
 async function askTroHubAI(message, userId, role) {
     if (!message || typeof message !== 'string' || !message.trim()) {
@@ -213,39 +290,84 @@ HƯỚNG DẪN TRẢ LỜI:
 ${roleGuidance}
 `;
 
-    const candidateModels = ['gemini-2.5-flash', 'gemini-3.5-flash', 'gemini-3.6-flash', 'gemini-flash-latest'];
-    let lastError = null;
+    const candidateModels = ['gemini-flash-latest', 'gemini-3.5-flash', 'gemini-3.6-flash'];
+    const { primaryClient, fallbackClient, primaryKey, fallbackKey } = getGenAIClient(role);
 
-    if (!ai) {
-        throw new Error('Dịch vụ AI hiện chưa được cấu hình.');
+    if (!primaryClient && !fallbackClient) {
+        return {
+            reply: '⚠️ Chưa cấu hình Gemini API Key trong tệp .env. Vui lòng bổ sung GEMINI_LANDLORD_API_KEY hoặc GEMINI_API_KEY để sử dụng Chatbot.',
+            action: null,
+            role: normalizedRole,
+            presentation,
+            denied: false,
+        };
     }
 
-    for (const modelName of candidateModels) {
-        try {
-            const response = await ai.models.generateContent({
-                model: modelName,
-                contents: message.trim(),
-                config: {
-                    systemInstruction: systemInstruction,
+
+    const attempts = [];
+    if (primaryClient) {
+        attempts.push({ client: primaryClient, isFallback: false, key: primaryKey });
+    }
+    if (fallbackClient && fallbackKey !== primaryKey) {
+        attempts.push({ client: fallbackClient, isFallback: true, key: fallbackKey });
+    }
+
+    let lastError = null;
+
+    for (const { client, isFallback } of attempts) {
+        if (isFallback) {
+            console.warn('[AI_SERVICE_WARN] Primary Key hit rate limit/exhausted. Auto-switched to Fallback Gemini API Key!');
+        }
+
+        for (const modelName of candidateModels) {
+            try {
+                const response = await client.models.generateContent({
+                    model: modelName,
+                    contents: message.trim(),
+                    config: {
+                        systemInstruction: systemInstruction,
+                    }
+                });
+                if (response && response.text) {
+                    const result = parseAIResponse(response.text);
+                    return {
+                        ...result,
+                        action: authorizeAIAction(normalizedRole, result.action),
+                        role: normalizedRole,
+                        presentation,
+                        denied: false,
+                        usingFallbackKey: isFallback,
+                    };
                 }
-            });
-            if (response && response.text) {
-                const result = parseAIResponse(response.text);
-                return {
-                    ...result,
-                    action: authorizeAIAction(normalizedRole, result.action),
-                    role: normalizedRole,
-                    presentation,
-                    denied: false,
-                };
+            } catch (err) {
+                console.warn(`[AI_SERVICE_WARN] Model ${modelName} (${isFallback ? 'fallback' : 'primary'} key) encountered issue:`, err.message);
+                lastError = err;
             }
-        } catch (err) {
-            console.warn(`[AI_SERVICE_WARN] Model ${modelName} encountered issue:`, err.message);
-            lastError = err;
         }
     }
 
-    throw new Error(lastError ? lastError.message : 'Dịch vụ AI hiện chưa sẵn sàng, vui lòng thử lại sau.');
+    if (lastError && isRateLimitOrQuotaError(lastError)) {
+        return {
+            reply: '⚠️ Hệ thống Gemini API hiện đang tạm thời vượt giới hạn lượt gọi hoặc đang quá tải (Rate Limit 429/503). Vui lòng đợi khoảng 1 phút rồi thử lại nhé!',
+            action: null,
+            role: normalizedRole,
+            presentation,
+            denied: false,
+            rateLimited: true,
+        };
+    }
+
+    throw new Error(lastError?.message || 'Dịch vụ AI hiện chưa sẵn sàng, vui lòng thử lại sau.');
 }
 
-module.exports = { askTroHubAI, getUserContext, parseAIResponse };
+
+module.exports = {
+    askTroHubAI,
+    getUserContext,
+    parseAIResponse,
+    getGenAIClient,
+    getGeminiApiKey,
+    isRateLimitOrQuotaError,
+};
+
+
