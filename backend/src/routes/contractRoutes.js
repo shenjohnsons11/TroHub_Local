@@ -15,8 +15,10 @@ router.get('/history', requireAdmin, contractController.getContractHistory);
 // Xem chi tiết hợp đồng
 router.get('/:id', contractController.getContractById);
 
-// Cập nhật hợp đồng (Admin)
+// Cập nhật & Xóa hợp đồng (Admin)
 router.put('/:id', requireAdmin, contractController.updateContract);
+router.delete('/:id', requireAdmin, contractController.deleteContract);
+
 
 // Người thuê gọi API này để ký hợp đồng (Chuyển status thành 4)
 router.put('/:id/sign', requireTenant, contractController.signContract);

@@ -473,3 +473,47 @@ exports.updateContract = async (req, res) => {
         return sendContractError(res, error, 'Lỗi khi cập nhật hợp đồng');
     }
 };
+
+// 8. Xóa hợp đồng (Chủ trọ xóa hợp đồng nháp / chưa ký hoặc hợp đồng đã hủy)
+exports.deleteContract = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const contract = await Contract.findById(id);
+        if (!contract) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy hợp đồng!" });
+        }
+
+        // Nếu hợp đồng đang có hiệu lực (status = 1), không cho xóa trực tiếp (phải thanh lý/quyết toán)
+        if (contract.status === 1) {
+            return res.status(400).json({
+                success: false,
+                message: "Hợp đồng đang có hiệu lực không thể xóa trực tiếp. Vui lòng thực hiện quy trình Quyết toán / Trả phòng!"
+            });
+        }
+
+        const roomId = contract.roomId?._id || contract.roomId;
+
+        // Xóa hợp đồng khỏi database
+        await Contract.findByIdAndDelete(id);
+
+        // Kiểm tra xem phòng còn hợp đồng hiệu lực hoặc đang chờ nào khác không
+        if (roomId) {
+            const activeOrPendingContract = await Contract.findOne({
+                roomId,
+                status: { $in: [0, 1, 4, 5] }
+            });
+            if (!activeOrPendingContract) {
+                // Đặt lại phòng về trạng thái Trống (0)
+                await Room.findByIdAndUpdate(roomId, { status: 0 });
+            }
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Xóa hợp đồng thành công!"
+        });
+    } catch (error) {
+        return sendContractError(res, error, 'Lỗi khi xóa hợp đồng');
+    }
+};
+

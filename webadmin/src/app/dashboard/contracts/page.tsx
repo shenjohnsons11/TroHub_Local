@@ -639,12 +639,15 @@ export default function ContractsPage() {
                         {t("contracts.checkout")}
                       </Button>
                     )}
-                    <Button onClick={() => openEditModal(contract)} variant="ghost" size="sm" className="mr-2">
-                      <Edit className="size-4" />{t("common.edit")}
-                    </Button>
+                    {contract.status === 0 && (
+                      <Button onClick={() => openEditModal(contract)} variant="ghost" size="sm" className="mr-2">
+                        <Edit className="size-4" />{t("common.edit")}
+                      </Button>
+                    )}
                     <Button aria-label={t("common.delete")} onClick={() => handleDelete(contract._id || contract.id)} variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive">
                       <Trash2 className="w-4 h-4" />
                     </Button>
+
                   </TableCell>
                 </TableRow>
               ))
