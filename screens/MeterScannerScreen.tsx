@@ -113,19 +113,20 @@ export default function MeterScannerScreen({ onBack, onSuccess }: Props) {
   const processOCR = async (base64Data: string) => {
     setScanning(true);
     try {
-      const res = await ocrService.scanMeter(base64Data);
+      const res = await ocrService.recognizeMeterReading(base64Data, meterType);
       if (res && res.digits) {
         setScannedDigits(res.digits);
         setModalVisible(true);
       } else {
         notification.error(t("invoices.ocrError"));
       }
-    } catch {
-      notification.error(t("invoices.ocrError"));
+    } catch (err: any) {
+      notification.error(err?.message || t("invoices.ocrError"));
     } finally {
       setScanning(false);
     }
   };
+
 
   const handleSaveMeterReading = async () => {
     if (!selectedRoomId) {
