@@ -570,6 +570,7 @@ exports.createInvoice = async (req, res) => {
             let resolvedRoom = room || "";
             let resolvedTenant = tenant || "";
 
+            let resolvedContract = null;
             if (req.body.roomId) {
                 const Room = require('../models/Room');
                 const targetRoom = await Room.findById(req.body.roomId);
@@ -580,6 +581,7 @@ exports.createInvoice = async (req, res) => {
                         .populate('tenantId', 'fullName')
                         .sort({ createdAt: -1 });
                     if (contract) {
+                        resolvedContract = contract;
                         resolvedContractId = contract._id;
                         if (!resolvedTenant && contract.tenantId) {
                             resolvedTenant = contract.tenantId.fullName || "";
@@ -597,6 +599,7 @@ exports.createInvoice = async (req, res) => {
                     resolvedRoomId = targetRoom._id;
                     const contract = await Contract.findOne({ roomId: targetRoom._id, status: { $in: [0, 1, 4, 5] } }).sort({ createdAt: -1 });
                     if (contract) {
+                        resolvedContract = contract;
                         resolvedContractId = contract._id;
                         resolvedRoomId = contract.roomId?._id || contract.roomId;
                     }
@@ -641,7 +644,43 @@ exports.createInvoice = async (req, res) => {
                 }
             }
 
-            const amounts = calculateInvoiceAmounts({ ...req.body, penalty: 0 });
+            const targetRoomObj = resolvedRoomId ? await Room.findById(resolvedRoomId) : null;
+            const electricityOld = req.body.electricityOld !== undefined && req.body.electricityOld !== null && req.body.electricityOld !== ''
+                ? Number(req.body.electricityOld)
+                : (targetRoomObj?.lastElectricityReading || 0);
+            const electricityNew = req.body.electricityNew !== undefined && req.body.electricityNew !== null && req.body.electricityNew !== ''
+                ? Number(req.body.electricityNew)
+                : (targetRoomObj?.draftElectricity !== undefined && targetRoomObj?.draftElectricity !== null ? Number(targetRoomObj.draftElectricity) : electricityOld);
+            const electricityPrice = req.body.electricityPrice !== undefined && req.body.electricityPrice !== null && req.body.electricityPrice !== ''
+                ? Number(req.body.electricityPrice)
+                : (resolvedContract?.electricityPrice || 3500);
+
+            const waterOld = req.body.waterOld !== undefined && req.body.waterOld !== null && req.body.waterOld !== ''
+                ? Number(req.body.waterOld)
+                : (targetRoomObj?.lastWaterReading || 0);
+            const waterNew = req.body.waterNew !== undefined && req.body.waterNew !== null && req.body.waterNew !== ''
+                ? Number(req.body.waterNew)
+                : (targetRoomObj?.draftWater !== undefined && targetRoomObj?.draftWater !== null ? Number(targetRoomObj.draftWater) : waterOld);
+            const waterPrice = req.body.waterPrice !== undefined && req.body.waterPrice !== null && req.body.waterPrice !== ''
+                ? Number(req.body.waterPrice)
+                : (resolvedContract?.waterPrice || 15000);
+
+            const roomAmount = req.body.roomAmount !== undefined && req.body.roomAmount !== null && req.body.roomAmount !== ''
+                ? Number(req.body.roomAmount)
+                : (resolvedContract?.monthlyRent || resolvedContract?.fixedRentPrice || targetRoomObj?.basePrice || targetRoomObj?.defaultRentPrice || 0);
+
+            const amounts = calculateInvoiceAmounts({
+                ...req.body,
+                electricityOld,
+                electricityNew,
+                electricityPrice,
+                waterOld,
+                waterNew,
+                waterPrice,
+                roomAmount,
+                penalty: 0
+            });
+
             const policySnapshot = await buildInvoicePolicySnapshot(
                 req,
                 req.body.issuedAt,
