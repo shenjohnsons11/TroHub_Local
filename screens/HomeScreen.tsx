@@ -133,11 +133,11 @@ export default function HomeScreen({ profile, refreshKey, onNavigate, onLogout }
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={t("mobile.home.logout")}
-            onPress={onLogout}
-            style={styles.logoutButton}
+            accessibilityLabel={t("nav.settings")}
+            onPress={() => onNavigate("account" as any)}
+            style={styles.bellButton}
           >
-            <Ionicons name="log-out-outline" size={22} color={theme.warningForeground} />
+            <Ionicons name="settings-outline" size={22} color={theme.text} />
           </Pressable>
         </View>
       </View>

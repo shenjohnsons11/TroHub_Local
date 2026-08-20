@@ -13,6 +13,7 @@ import { StatCard } from "@/components/calm-ops/stat-card";
 import { StatusBadge } from "@/components/calm-ops/status-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLanguage } from "@/components/language-provider";
+import { VisualAnalyticsDashboard } from "@/components/VisualAnalyticsDashboard";
 
 
 type Stats = { totalRooms: number; occupiedRooms: number; vacantRooms: number; maintenanceRooms: number; totalTenants: number; pendingRepairs: number; pendingContracts: number; totalRevenue: number; outstandingDebt: number };
@@ -22,6 +23,7 @@ export default function DashboardPage() {
   const notification = useNotification();
   const { t } = useLanguage();
   const [stats, setStats] = useState<Stats | null>(null);
+  const [viewMode, setViewMode] = useState<"analytics" | "standard">("analytics");
   const load = useCallback(async () => {
     try {
       const response = await fetchAPI("/dashboard/stats");
@@ -42,16 +44,46 @@ export default function DashboardPage() {
   const greetingKey = hour >= 5 && hour < 12 ? "dashboard.morning" : hour >= 12 && hour < 18 ? "dashboard.afternoon" : "dashboard.evening";
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow={t("dashboard.eyebrow")} title={t(greetingKey)} description={t("dashboard.today")} />
-
-      <PriorityPanel title={t("dashboard.today")} count={stats.pendingRepairs + stats.pendingContracts} action={<Link href="/dashboard/repairs" className="text-sm font-extrabold text-primary hover:underline">{t("dashboard.viewAll")}</Link>}>
-        <div>
-          <Link href="/dashboard/repairs" className="flex min-h-20 items-center justify-between gap-4 rounded-[16px] bg-muted p-4 transition hover:bg-[var(--calm-forest-soft)]">
-            <div><p className="font-black">{stats.pendingRepairs} {t("dashboard.openRequests")}</p><p className="mt-1 text-sm text-muted-foreground">{t("dashboard.repairHint")}</p></div>
-            <StatusBadge tone="progress">{t("dashboard.today")}</StatusBadge>
-          </Link>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <PageHeader eyebrow={t("dashboard.eyebrow")} title={t(greetingKey)} description={t("dashboard.today")} />
+        <div className="flex rounded-xl bg-muted p-1 border border-border/40">
+          <button
+            type="button"
+            onClick={() => setViewMode("analytics")}
+            className={`rounded-lg px-4 py-2 text-xs font-black transition-all ${
+              viewMode === "analytics"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            📊 Báo Cáo Trực Quan
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("standard")}
+            className={`rounded-lg px-4 py-2 text-xs font-black transition-all ${
+              viewMode === "standard"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            📋 Thẻ Tiêu Chuẩn
+          </button>
         </div>
-      </PriorityPanel>
+      </div>
+
+      {viewMode === "analytics" ? (
+        <VisualAnalyticsDashboard stats={stats} />
+      ) : (
+        <>
+          <PriorityPanel title={t("dashboard.today")} count={stats.pendingRepairs + stats.pendingContracts} action={<Link href="/dashboard/repairs" className="text-sm font-extrabold text-primary hover:underline">{t("dashboard.viewAll")}</Link>}>
+            <div>
+              <Link href="/dashboard/repairs" className="flex min-h-20 items-center justify-between gap-4 rounded-[16px] bg-muted p-4 transition hover:bg-[var(--calm-forest-soft)]">
+                <div><p className="font-black">{stats.pendingRepairs} {t("dashboard.openRequests")}</p><p className="mt-1 text-sm text-muted-foreground">{t("dashboard.repairHint")}</p></div>
+                <StatusBadge tone="progress">{t("dashboard.today")}</StatusBadge>
+              </Link>
+            </div>
+          </PriorityPanel>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label={t("dashboard.revenue")} value={formatCurrency(stats.totalRevenue)} detail={t("dashboard.active")} icon={CircleDollarSign} />
@@ -88,7 +120,7 @@ export default function DashboardPage() {
 
       <div className="grid gap-4 lg:grid-cols-[1.2fr_.8fr]">
         <section className="calm-surface overflow-hidden bg-[linear-gradient(135deg,var(--primary),color-mix(in_srgb,var(--primary)_62%,#04100e))] p-6 text-primary-foreground sm:p-8">
-          <div className="flex items-start justify-between gap-5"><span className="grid size-12 place-items-center rounded-[16px] bg-primary-foreground/12"><CircleDollarSign className="size-6" /></span><span className="rounded-full bg-primary-foreground/12 px-3 py-1 text-xs font-bold">Dữ liệu thực</span></div>
+          <div className="flex items-start justify-between gap-5"><span className="grid size-12 place-items-center rounded-[16px] bg-primary-foreground/12"><CircleDollarSign className="size-6" /></span><span className="rounded-full bg-primary-foreground/12 px-3 py-1 text-xs font-bold">{t("dashboard.property")}</span></div>
           <p className="mt-8 text-sm font-bold opacity-75">{t("dashboard.revenue")}</p>
           <p className="mt-1 text-4xl font-black tracking-[-.05em] sm:text-5xl">{formatCurrency(stats.totalRevenue)}</p>
           <Link href="/dashboard/payments" className="mt-5 inline-flex items-center gap-2 text-sm font-bold">{t("dashboard.viewAll")} <ArrowUpRight className="size-4" /></Link>
@@ -106,6 +138,8 @@ export default function DashboardPage() {
           </div>
         </section>
       </div>
+        </>
+      )}
     </div>
   );
 }

@@ -1,34 +1,25 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
-
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { TroHubLogo } from "@/components/trohub-logo";
 import { useNotification } from "@/hooks/use-notification";
+import { fetchAPI } from "@/lib/api";
 import { getNotificationMessage } from "@/lib/notification-messages";
-import { getPasswordPolicyError } from "@/lib/password-policy";
-import {
-  completePasswordReset,
-  requestPasswordReset,
-  verifyPasswordReset,
-} from "@/lib/password-reset";
 import { useLanguage } from "@/components/language-provider";
-import { LanguageToggle } from "@/components/language-toggle";
 
 type Step = "identifier" | "otp" | "password" | "done";
 
 export default function ForgotPasswordPage() {
-  const notification = useNotification();
   const { t } = useLanguage();
-
+  const notification = useNotification();
   const [step, setStep] = useState<Step>("identifier");
   const [identifier, setIdentifier] = useState("");
   const [otp, setOtp] = useState("");
-  const [resetToken, setResetToken] = useState("");
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [secondsUntilResend, setSecondsUntilResend] = useState(0);
@@ -36,53 +27,71 @@ export default function ForgotPasswordPage() {
 
   useEffect(() => {
     if (secondsUntilResend <= 0) return;
-    const timer = window.setInterval(
-      () => setSecondsUntilResend((value) => Math.max(0, value - 1)),
-      1000,
-    );
-    return () => window.clearInterval(timer);
+    const timer = setInterval(() => {
+      setSecondsUntilResend((value) => Math.max(0, value - 1));
+    }, 1000);
+    return () => clearInterval(timer);
   }, [secondsUntilResend]);
 
   const requestOtp = async () => {
-    if (!identifier.trim()) return notification.warning("Vui lòng nhập số điện thoại hoặc tên đăng nhập.");
+    if (!identifier.trim()) {
+      notification.warning(t("auth.enterPhone"));
+      return;
+    }
     try {
       setLoading(true);
-      const result = await requestPasswordReset(identifier.trim());
-      setStep("otp");
+      await fetchAPI("/auth/forgot-password", {
+        method: "POST",
+        body: JSON.stringify({ phone: identifier.trim() }),
+      });
+      notification.success(t("common.success"));
       setSecondsUntilResend(60);
-      notification.success(result.message);
+      setStep("otp");
     } catch (error) {
-      notification.error(getNotificationMessage(error, "Không thể gửi mã xác minh."));
+      notification.error(getNotificationMessage(error, t("common.error")));
     } finally {
       setLoading(false);
     }
   };
 
   const verifyOtp = async () => {
-    if (!/^\d{6}$/.test(otp)) return notification.warning("Mã xác minh phải gồm đúng 6 chữ số.");
+    if (otp.length < 6) {
+      notification.warning(t("auth.enterOtp"));
+      return;
+    }
     try {
       setLoading(true);
-      const result = await verifyPasswordReset(identifier.trim(), otp);
-      setResetToken(result.resetToken);
+      await fetchAPI("/auth/verify-reset-otp", {
+        method: "POST",
+        body: JSON.stringify({ phone: identifier.trim(), otp }),
+      });
+      notification.success(t("common.success"));
       setStep("password");
     } catch (error) {
-      notification.error(getNotificationMessage(error, "Mã xác minh không hợp lệ."));
+      notification.error(getNotificationMessage(error, t("common.error")));
     } finally {
       setLoading(false);
     }
   };
 
-  const complete = async () => {
-    const policyError = getPasswordPolicyError(password);
-    if (policyError) return notification.warning(policyError);
-    if (password !== confirmation) return notification.warning("Mật khẩu xác nhận không khớp.");
+  const resetPassword = async () => {
+    if (!password || password.length < 6) {
+      notification.warning(t("auth.passwordMinLength"));
+      return;
+    }
+    if (password !== confirmation) {
+      notification.warning(t("auth.passwordMismatch"));
+      return;
+    }
     try {
       setLoading(true);
-      const result = await completePasswordReset(resetToken, password);
-      notification.success(result.message);
+      await fetchAPI("/auth/reset-password", {
+        method: "POST",
+        body: JSON.stringify({ phone: identifier.trim(), otp, newPassword: password }),
+      });
       setStep("done");
     } catch (error) {
-      notification.error(getNotificationMessage(error, "Không thể đặt lại mật khẩu."));
+      notification.error(getNotificationMessage(error, t("common.error")));
     } finally {
       setLoading(false);
     }
@@ -91,15 +100,11 @@ export default function ForgotPasswordPage() {
   const stepNumber = step === "identifier" ? 1 : step === "otp" ? 2 : 3;
 
   return (
-    <main className="relative grid min-h-[100dvh] place-items-center bg-background px-4 py-16">
-      <div className="absolute right-5 top-5 flex items-center gap-2">
-        <LanguageToggle />
-        <ThemeToggle />
-      </div>
-      <section className="w-full max-w-[460px]">
+    <div className="flex min-h-screen items-center justify-center bg-background p-4 sm:p-6">
+      <div className="calm-surface w-full max-w-md p-6 sm:p-9">
         <TroHubLogo />
         <div className="mt-9 border-t border-border pt-8">
-          <div className="mb-7 flex gap-2" aria-label={`Bước ${stepNumber} trên 3`}>
+          <div className="mb-7 flex gap-2" aria-label={`Step ${stepNumber} / 3`}>
             {[1, 2, 3].map((value) => (
               <span key={value} className={`h-1.5 flex-1 rounded-[3px] ${value <= stepNumber ? "bg-primary" : "bg-border"}`} />
             ))}
@@ -107,25 +112,25 @@ export default function ForgotPasswordPage() {
 
           {step === "done" ? (
             <div>
-              <h1 className="text-3xl font-black tracking-[-0.025em]">Mật khẩu đã được cập nhật</h1>
-              <p className="mt-3 leading-relaxed text-muted-foreground">Bạn có thể đăng nhập lại bằng mật khẩu mới.</p>
+              <h1 className="text-3xl font-black tracking-[-0.025em]">{t("auth.resetPassword")}</h1>
+              <p className="mt-3 leading-relaxed text-muted-foreground">{t("common.success")}</p>
               <Link
                 href="/"
                 className="mt-7 flex h-12 w-full items-center justify-center rounded-[10px] bg-primary px-4 font-bold text-primary-foreground transition-transform active:scale-[0.98]"
               >
-                Quay lại đăng nhập
+                {t("auth.login")}
               </Link>
             </div>
           ) : (
             <>
-              <p className="text-sm font-bold text-primary">Bước {stepNumber} / 3</p>
+              <p className="text-sm font-bold text-primary">Step {stepNumber} / 3</p>
               <h1 className="mt-2 text-3xl font-black tracking-[-0.025em]">
                 {step === "identifier" ? t("auth.forgotPasswordTitle") : step === "otp" ? t("auth.verifyOtp") : t("auth.newPassword")}
               </h1>
               <div className="mt-7 space-y-5">
                 {step === "identifier" && (
                   <div className="space-y-2">
-                    <Label htmlFor="identifier">Số điện thoại hoặc tên đăng nhập</Label>
+                    <Label htmlFor="identifier">{t("auth.phone")}</Label>
                     <Input
                       id="identifier"
                       autoComplete="username"
@@ -138,7 +143,7 @@ export default function ForgotPasswordPage() {
                 )}
                 {step === "otp" && (
                   <div className="space-y-2">
-                    <Label htmlFor="otp">Mã OTP 6 số</Label>
+                    <Label htmlFor="otp">OTP (6 digits)</Label>
                     <Input
                       id="otp"
                       inputMode="numeric"
@@ -154,14 +159,14 @@ export default function ForgotPasswordPage() {
                       onClick={requestOtp}
                       className="w-full text-right text-sm font-bold text-primary disabled:text-muted-foreground"
                     >
-                      {secondsUntilResend ? `Gửi lại sau ${secondsUntilResend}s` : "Gửi lại mã"}
+                      {secondsUntilResend ? `${t("auth.resendOtp")} (${secondsUntilResend}s)` : t("auth.resendOtp")}
                     </button>
                   </div>
                 )}
                 {step === "password" && (
                   <>
                     <div className="space-y-2">
-                      <Label htmlFor="password">Mật khẩu mới</Label>
+                      <Label htmlFor="password">{t("auth.newPassword")}</Label>
                       <Input
                         id="password"
                         type="password"
@@ -169,11 +174,11 @@ export default function ForgotPasswordPage() {
                         disabled={loading}
                         onChange={(event) => setPassword(event.target.value)}
                         className="h-12"
-                        placeholder="Nhập mật khẩu mới"
+                        placeholder="••••••"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="confirmation">Xác nhận mật khẩu</Label>
+                      <Label htmlFor="confirmation">{t("auth.confirmPassword")}</Label>
                       <Input
                         id="confirmation"
                         type="password"
@@ -181,32 +186,28 @@ export default function ForgotPasswordPage() {
                         disabled={loading}
                         onChange={(event) => setConfirmation(event.target.value)}
                         className="h-12"
-                        placeholder="Nhập lại mật khẩu mới"
+                        placeholder="••••••"
                       />
                     </div>
                   </>
                 )}
                 <Button
                   disabled={loading}
-                  onClick={step === "identifier" ? requestOtp : step === "otp" ? verifyOtp : complete}
+                  onClick={step === "identifier" ? requestOtp : step === "otp" ? verifyOtp : resetPassword}
                   className="h-12 w-full font-bold"
                 >
-                  {loading
-                    ? t("common.loading")
-                    : step === "identifier"
-                    ? "Gửi mã xác minh"
-                    : step === "otp"
-                    ? "Xác minh OTP"
-                    : "🔒 Đặt lại mật khẩu"}
+                  {loading ? t("common.loading") : step === "identifier" ? t("auth.sendOtp") : step === "otp" ? t("auth.verifyOtp") : t("common.save")}
                 </Button>
-                <Link href="/" className="block text-center text-sm font-bold text-muted-foreground hover:text-foreground">
-                  Quay lại đăng nhập
-                </Link>
+                <div className="text-center">
+                  <Link href="/" className="inline-flex items-center gap-2 text-sm font-bold text-muted-foreground hover:text-foreground">
+                    <ArrowLeft className="h-4 w-4" /> {t("auth.login")}
+                  </Link>
+                </div>
               </div>
             </>
           )}
         </div>
-      </section>
-    </main>
+      </div>
+    </div>
   );
 }

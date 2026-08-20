@@ -33,4 +33,8 @@ export const aiService = {
       token
     );
   },
+  async sendMessage(message: string): Promise<AIChatResponse> {
+    return this.chat(message);
+  },
 };
+

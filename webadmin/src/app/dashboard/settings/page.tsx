@@ -3,14 +3,17 @@
 import Link from "next/link";
 import { ArrowUpRight, Landmark, ReceiptText, Settings2, UserRound, LogOut } from "lucide-react";
 import { PageHeader } from "@/components/calm-ops/page-header";
-
-const items = [
-  { href: "/dashboard/settings/account", title: "Tài khoản", description: "Thông tin Chủ trọ và mật khẩu.", icon: UserRound },
-  { href: "/dashboard/settings/banking", title: "Ngân hàng", description: "Thông tin nhận tiền và VietQR.", icon: Landmark },
-  { href: "/dashboard/settings/billing", title: "Chính sách hóa đơn", description: "Ngày ân hạn và tỷ lệ phạt một lần.", icon: ReceiptText },
-];
+import { useLanguage } from "@/components/language-provider";
 
 export default function SettingsPage() {
+  const { t } = useLanguage();
+
+  const items = [
+    { href: "/dashboard/settings/account", title: t("settings.account.title"), description: t("settings.account.subtitle"), icon: UserRound },
+    { href: "/dashboard/settings/banking", title: t("settings.banking.title"), description: t("settings.banking.subtitle"), icon: Landmark },
+    { href: "/dashboard/settings/billing", title: t("settings.billing.title"), description: t("settings.billing.subtitle"), icon: ReceiptText },
+  ];
+
   const handleLogout = () => {
     localStorage.removeItem("trohub_token");
     localStorage.removeItem("trohub_user");
@@ -19,13 +22,13 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Thiết lập vận hành" title="Cài đặt" description="Quản lý hồ sơ, nhận thanh toán và chính sách hóa đơn tại một nơi." />
+      <PageHeader eyebrow={t("nav.settings")} title={t("settings.title")} description={t("settings.subtitle")} />
       <div className="grid gap-4 md:grid-cols-3">
         {items.map(({ href, title, description, icon: Icon }) => (
           <Link
             key={href}
             href={href}
-            aria-label={`Mở ${title}`}
+            aria-label={`Open ${title}`}
             className="group calm-surface relative min-h-52 overflow-hidden p-5 transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/35"
           >
             <span className="grid size-12 place-items-center rounded-[16px] bg-accent text-primary">
@@ -39,7 +42,7 @@ export default function SettingsPage() {
       </div>
       <div className="flex items-center gap-3 rounded-[20px] bg-primary px-5 py-4 text-primary-foreground shadow-[var(--calm-shadow)]">
         <Settings2 aria-hidden="true" className="size-5" />
-        <p className="text-sm font-bold">Mọi thay đổi được áp dụng trực tiếp cho vận hành TroHub.</p>
+        <p className="text-sm font-bold">TroHub Security & Config</p>
       </div>
 
       <div className="pt-4 border-t border-border/50">
@@ -48,7 +51,7 @@ export default function SettingsPage() {
           className="flex min-h-12 items-center justify-center gap-3 rounded-[16px] bg-destructive px-6 py-3 text-sm font-bold text-destructive-foreground transition-all hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-destructive/30"
         >
           <LogOut className="size-5" aria-hidden="true" />
-          Đăng xuất
+          {t("auth.logout")}
         </button>
       </div>
     </div>
