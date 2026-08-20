@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, Building2, CircleDollarSign, FileSignature, FileText, ReceiptText, Users, WalletCards, Wrench } from "lucide-react";
+import { ArrowUpRight, Building2, CircleDollarSign, FileSignature, FileText, MapPin, ReceiptText, Users, WalletCards, Wrench } from "lucide-react";
 import { useNotification } from "@/hooks/use-notification";
 import { fetchAPI } from "@/lib/api";
 import { getNotificationMessage } from "@/lib/notification-messages";
@@ -23,11 +23,20 @@ export default function DashboardPage() {
   const notification = useNotification();
   const { t } = useLanguage();
   const [stats, setStats] = useState<Stats | null>(null);
+  const [propertyAddress, setPropertyAddress] = useState<string>("");
   const [viewMode, setViewMode] = useState<"bento" | "analytics" | "standard">("bento");
   const load = useCallback(async () => {
     try {
-      const response = await fetchAPI("/dashboard/stats");
-      setStats({ ...EMPTY_STATS, ...(response.data || {}) });
+      const [statsRes, userRes] = await Promise.allSettled([
+        fetchAPI("/dashboard/stats"),
+        fetchAPI("/auth/me"),
+      ]);
+      if (statsRes.status === "fulfilled") {
+        setStats({ ...EMPTY_STATS, ...(statsRes.value.data || {}) });
+      }
+      if (userRes.status === "fulfilled" && userRes.value?.user?.propertyAddress) {
+        setPropertyAddress(userRes.value.user.propertyAddress);
+      }
     } catch (error) {
       notification.error(getNotificationMessage(error, t("common.error")));
       setStats(EMPTY_STATS);
@@ -82,6 +91,14 @@ export default function DashboardPage() {
           </button>
         </div>
       </div>
+
+      {propertyAddress ? (
+        <div className="flex items-center gap-2.5 rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm">
+          <MapPin className="size-4 shrink-0 text-primary" />
+          <span className="font-bold text-foreground">🏠 {propertyAddress}</span>
+        </div>
+      ) : null}
+
 
       {viewMode === "bento" ? (
         <BentoGridDashboard stats={stats} />
