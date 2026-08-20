@@ -39,7 +39,9 @@
     "phone": "Số điện thoại",
     "amount": "Số tiền",
     "note": "Ghi chú",
-    "unspecified": "Chưa xác định"
+    "unspecified": "Chưa xác định",
+    "active": "Đang hoạt động",
+    "inactive": "Ngừng hoạt động"
   },
   "statusMap": {
     "invoice": {
@@ -147,7 +149,8 @@
     "settings": "Cài đặt",
     "payments": "Cổng thanh toán",
     "debts": "Công nợ",
-    "notifications": "Thông báo"
+    "notifications": "Thông báo",
+    "services": "Dịch vụ đi kèm"
   },
   "dashboard": {
     "eyebrow": "TỔNG QUAN VẬN HÀNH",
@@ -610,5 +613,15 @@
     "confirmDesc": "Hợp đồng nháp sẽ được tạo và chờ người thuê duyệt.",
     "back": "Quay lại",
     "continue": "Tiếp tục"
+  },
+  "services": {
+    "billingMode": "Chế độ tính phí",
+    "unit": "Đơn vị",
+    "code": "Mã dịch vụ",
+    "billingFixed": "Phí cố định (tháng)",
+    "billingQty": "Theo số lượng",
+    "billingMeter": "Theo đồng hồ (điện/nước)",
+    "defaultPrice": "Giá mặc định",
+    "defaultQuantity": "Số lượng mặc định"
   }
 }

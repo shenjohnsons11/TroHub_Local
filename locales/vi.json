@@ -22,7 +22,9 @@
     "unitKwh": "kWh",
     "unitM3": "m³",
     "language": "Ngôn ngữ",
-    "room": "Phòng"
+    "room": "Phòng",
+    "active": "Đang hoạt động",
+    "inactive": "Ngừng hoạt động"
   },
   "auth": {
     "brandTagline": "Hệ Thống Quản Lý Nhà Trọ Thông Minh",
@@ -70,7 +72,8 @@
     "debts": "Công nợ",
     "notifications": "Thông báo",
     "home": "Trang chủ",
-    "account": "Tài khoản"
+    "account": "Tài khoản",
+    "services": "Dịch vụ đi kèm"
   },
   "dashboard": {
     "eyebrow": "TỔNG QUAN VẬN HÀNH",
@@ -945,5 +948,15 @@
       "changeFailed": "Không thể đổi mật khẩu. Vui lòng thử lại.",
       "updatePassword": "Cập nhật mật khẩu"
     }
+  },
+  "services": {
+    "billingMode": "Chế độ tính phí",
+    "unit": "Đơn vị",
+    "code": "Mã dịch vụ",
+    "billingFixed": "Phí cố định (tháng)",
+    "billingQty": "Theo số lượng",
+    "billingMeter": "Theo đồng hồ (điện/nước)",
+    "defaultPrice": "Giá mặc định",
+    "defaultQuantity": "Số lượng mặc định"
   }
 }

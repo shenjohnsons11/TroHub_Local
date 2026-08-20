@@ -39,7 +39,9 @@
     "phone": "Phone Number",
     "amount": "Amount",
     "note": "Note",
-    "unspecified": "Unspecified"
+    "unspecified": "Unspecified",
+    "active": "Active",
+    "inactive": "Inactive"
   },
   "statusMap": {
     "invoice": {
@@ -147,7 +149,8 @@
     "settings": "Settings",
     "payments": "Payment Gateway",
     "debts": "Outstanding Debts",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "services": "Add-on Services"
   },
   "dashboard": {
     "eyebrow": "OPERATIONS OVERVIEW",
@@ -610,5 +613,15 @@
     "confirmDesc": "A draft will be created and await tenant approval.",
     "back": "Back",
     "continue": "Continue"
+  },
+  "services": {
+    "billingMode": "Billing Mode",
+    "unit": "Unit",
+    "code": "Service Code",
+    "billingFixed": "Fixed (monthly)",
+    "billingQty": "By Quantity",
+    "billingMeter": "By Meter (electric/water)",
+    "defaultPrice": "Default Price",
+    "defaultQuantity": "Default Quantity"
   }
 }
