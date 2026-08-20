@@ -392,6 +392,14 @@
   "tenantRepair": {
     "noRoom": "Chưa có phòng", "typeRequired": "Vui lòng nhập loại sự cố", "descriptionRequired": "Vui lòng nhập mô tả sự cố", "descriptionMin": "Mô tả phải có ít nhất 10 ký tự", "submitted": "Yêu cầu sửa chữa của Người thuê đã được gửi.", "submitFailed": "Không thể gửi yêu cầu sửa chữa của Người thuê.", "permission": "Quyền truy cập", "imagePermission": "Bạn cần cấp quyền truy cập thư viện ảnh để tải ảnh lên.", "imageFailed": "Không thể chọn ảnh.", "deleteTitle": "Xóa yêu cầu sửa chữa", "deleteMessage": "Bạn có chắc chắn muốn xóa yêu cầu này không?", "deleted": "Yêu cầu sửa chữa của Người thuê đã được xóa.", "deleteFailed": "Không thể xóa yêu cầu sửa chữa.", "deleteManyTitle": "Xóa các yêu cầu sửa chữa", "deleteManyMessage": "Bạn có chắc chắn muốn xóa {count} yêu cầu đã chọn không?", "deletedMany": "Đã xóa {count} yêu cầu sửa chữa của Người thuê.", "deleteManyFailed": "Không thể xóa một số yêu cầu.", "pending": "Chờ tiếp nhận", "processing": "Đang xử lý", "done": "Đã hoàn thành",
     "title": "Yêu cầu sửa chữa", "subtitle": "Gửi thông tin sự cố để chủ trọ xử lý nhanh hơn.", "new": "Tạo yêu cầu mới", "room": "Phòng", "type": "Loại sự cố", "typePlaceholder": "Điện, nước, internet, máy lạnh...", "description": "Mô tả", "descriptionPlaceholder": "Ví dụ: Máy lạnh không hoạt động, nước chảy yếu...", "upload": "Tải ảnh sự cố", "uploadHint": "PNG, JPG hoặc JPEG ({count} ảnh đã chọn)", "removeImage": "Xóa ảnh {index}", "submit": "Gửi yêu cầu", "history": "Yêu cầu đã gửi", "selected": "Đã chọn {count}", "deleteAll": "Xóa tất cả", "selectAll": "Chọn tất cả yêu cầu sửa chữa", "empty": "Chưa có yêu cầu sửa chữa", "emptyDescription": "Các yêu cầu đã gửi sẽ xuất hiện tại đây.", "select": "Chọn yêu cầu {type}", "roomDate": "Phòng {room} • {date}"
+  },
+  "i18n": {
+    "language": { "label": "Ngôn ngữ", "switchVietnamese": "Chuyển sang Tiếng Việt", "switchEnglish": "Chuyển sang Tiếng Anh" },
+    "loading": { "propertyData": "Đang tải dữ liệu không gian sống..." },
+    "theme": { "title": "Giao diện", "light": "Chế độ sáng", "dark": "Chế độ tối", "system": "Giao diện tự động", "toDark": "Chuyển sang chế độ tối", "toSystem": "Chuyển sang chế độ tự động", "toLight": "Chuyển sang chế độ sáng" },
+    "security": {
+      "changePassword": "Đổi mật khẩu", "changePasswordSubtitle": "Cập nhật mật khẩu đăng nhập tài khoản", "closeChangePassword": "Đóng đổi mật khẩu", "currentPassword": "Mật khẩu hiện tại", "passwordRequired": "Vui lòng nhập mật khẩu hiện tại", "newPasswordRequired": "Vui lòng nhập mật khẩu mới", "passwordTooShort": "Mật khẩu mới phải trên 6 ký tự", "passwordMustDiffer": "Mật khẩu mới không được trùng mật khẩu hiện tại", "confirmPasswordRequired": "Vui lòng xác nhận mật khẩu mới", "passwordMismatch": "Mật khẩu xác nhận không khớp", "changed": "Đổi mật khẩu thành công", "changeFailed": "Không thể đổi mật khẩu. Vui lòng thử lại.", "updatePassword": "Cập nhật mật khẩu"
+    }
   }
 }
 }

@@ -190,6 +190,22 @@
       "system": "System"
     }
   },
+  "i18n": {
+    "language": {
+      "label": "Language",
+      "switchVietnamese": "Switch to Vietnamese",
+      "switchEnglish": "Switch to English"
+    },
+    "loading": { "propertyData": "Loading your property data...", "spaceAlt": "Loading property space" },
+    "brand": { "tagline": "Rental property management" },
+    "priority": { "label": "Priority", "defaultTitle": "Needs attention" },
+    "meter": { "previousPeriod": "{label} · previous period", "currentPeriod": "Current period", "consumption": "Usage", "checkReading": "Check the reading", "amount": "Amount", "unitPrice": "Unit price", "readingTooLow": "The current reading cannot be lower than the previous reading." },
+    "theme": { "toDark": "Switch to dark mode", "toSystem": "Switch to automatic appearance", "toLight": "Switch to light mode", "lightActive": "Active: Light mode", "darkActive": "Active: Dark mode", "systemActive": "Active: Automatic appearance (time / system)" },
+    "temporaryPassword": { "title": "Temporary password created", "description": "Copy and send it directly to tenant {name}. This password is shown only once.", "copied": "Copied", "copy": "Copy password" },
+    "notificationBell": { "fallbackTitle": "Notification", "checkout": "Checkout", "invoice": "Payment", "repair": "Issue", "contract": "Contract", "system": "System", "aria": "Notifications{count}", "unread": " ({count} unread)", "title": "Operations notifications", "needsAttention": "{count} items need attention", "markRead": "Mark as read", "empty": "No notifications", "today": "Today", "yesterday": "Yesterday", "older": "Earlier" },
+    "invoiceDrawer": { "title": "Invoice Details", "roomTenant": "Room {room} · {tenant}", "close": "Close invoice details", "period": "Billing period", "dueDate": "Due date", "status": "Status", "phone": "Phone number", "notUpdated": "Not updated", "total": "Total due", "depositDetail": "Deposit Details", "chargeDetail": "Charge Details", "contractDeposit": "Contract Deposit", "roomRent": "Room Rent", "service": "Service", "unit": "unit", "electricity": "Electricity", "water": "Water", "otherServices": "Other Services", "lateFee": "Late Fee", "discount": "Discount", "meterHint": "Meter reading and cost for this period", "previous": "Previous", "current": "Current", "consumption": "Usage", "amount": "Amount", "unitPrice": "Unit price" },
+    "paymentDrawer": { "roomRent": "Room Rent", "electricity": "Electricity", "water": "Water", "services": "Additional Services", "lateFee": "Late Fee", "discount": "Discount", "title": "Payment Details", "description": "Reconcile {period} invoice for the tenant.", "tenant": "Tenant", "room": "Room", "period": "Billing period", "paidAt": "Paid on", "transactionCode": "TroHub code", "gatewayReference": "Gateway reference", "notAvailable": "Not available", "method": "Method", "invoiceDetail": "Invoice Details", "total": "Total paid" }
+  },
   "ai": {
     "title": "TroHub Co-pilot AI Assistant",
     "subtitle": "Smart Q&A, automatic revenue analysis, and management suggestions",

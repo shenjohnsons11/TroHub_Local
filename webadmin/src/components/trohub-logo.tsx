@@ -1,7 +1,11 @@
+"use client";
+
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/components/language-provider";
 
 export function TroHubLogo({ compact = false, className }: { compact?: boolean; className?: string }) {
+  const { t } = useLanguage();
   return (
     <span className={cn("inline-flex items-center gap-3", className)} aria-label="TRO HUB">
       <span className="relative flex-shrink-0" aria-hidden="true">
@@ -18,7 +22,7 @@ export function TroHubLogo({ compact = false, className }: { compact?: boolean; 
       {!compact && (
         <span className="grid gap-0.5 leading-none">
           <strong className="text-xl font-black tracking-[-.03em] text-foreground">TRO HUB</strong>
-          <small className="text-[9px] font-bold text-muted-foreground">Quản lý nhà trọ</small>
+          <small className="text-[9px] font-bold text-muted-foreground">{t("i18n.brand.tagline")}</small>
         </span>
       )}
     </span>

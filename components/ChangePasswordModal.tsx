@@ -6,6 +6,7 @@ import { useAppTheme } from "../contexts/ThemeContext";
 import { useNotification } from "../hooks/useNotification";
 import AppButton from "./ui/AppButton";
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "../contexts/LanguageContext";
 
 type Props = {
   visible: boolean;
@@ -14,6 +15,7 @@ type Props = {
 
 export default function ChangePasswordModal({ visible, onClose }: Props) {
   const { theme } = useAppTheme();
+  const { t } = useTranslation();
   const notification = useNotification();
   const styles = createStyles(theme);
   const [oldPassword, setOldPassword] = useState("");
@@ -55,30 +57,30 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
     let isValid = true;
 
     if (!oldPassword.trim()) {
-      setOldError("Vui lòng nhập mật khẩu hiện tại");
+      setOldError(t("i18n.security.passwordRequired"));
       isValid = false;
     } else {
       setOldError("");
     }
 
     if (!newPassword.trim()) {
-      setNewError("Vui lòng nhập mật khẩu mới");
+      setNewError(t("i18n.security.newPasswordRequired"));
       isValid = false;
     } else if (newPassword.length <= 6) {
-      setNewError("Mật khẩu mới phải trên 6 ký tự");
+      setNewError(t("i18n.security.passwordTooShort"));
       isValid = false;
     } else if (newPassword === oldPassword) {
-      setNewError("Mật khẩu mới không được trùng mật khẩu hiện tại");
+      setNewError(t("i18n.security.passwordMustDiffer"));
       isValid = false;
     } else {
       setNewError("");
     }
 
     if (!confirmPassword.trim()) {
-      setConfirmError("Vui lòng xác nhận mật khẩu mới");
+      setConfirmError(t("i18n.security.confirmPasswordRequired"));
       isValid = false;
     } else if (confirmPassword !== newPassword) {
-      setConfirmError("Mật khẩu xác nhận không khớp");
+      setConfirmError(t("i18n.security.passwordMismatch"));
       isValid = false;
     } else {
       setConfirmError("");
@@ -91,11 +93,11 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
 
       await authService.changePassword(oldPassword, newPassword);
 
-      notification.success("Đổi mật khẩu thành công", { title: "Thành công" });
+      notification.success(t("i18n.security.changed"), { title: t("common.success") });
       handleClose();
     } catch (error) {
       console.log("Lỗi đổi mật khẩu:", error);
-      notification.error("Không thể đổi mật khẩu. Vui lòng thử lại.", { title: "Lỗi" });
+      notification.error(t("i18n.security.changeFailed"), { title: t("common.error") });
     } finally {
       setIsSubmitting(false);
     }
@@ -127,10 +129,10 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
                 accessibilityRole="header"
                 accessibilityLiveRegion="polite"
               >
-                Đổi mật khẩu
+                {t("i18n.security.changePassword")}
               </AppText>
               <AppText style={styles.subtitle}>
-                Cập nhật mật khẩu đăng nhập tài khoản
+                {t("i18n.security.changePasswordSubtitle")}
               </AppText>
             </View>
 
@@ -139,13 +141,13 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
               onPress={handleClose}
               disabled={isSubmitting}
               accessibilityRole="button"
-              accessibilityLabel="Đóng đổi mật khẩu"
+              accessibilityLabel={t("i18n.security.closeChangePassword")}
             >
               <Ionicons name="close" size={22} color={theme.text} />
             </Pressable>
           </View>
 
-          <AppText style={styles.label}>Mật khẩu hiện tại</AppText>
+          <AppText style={styles.label}>{t("i18n.security.currentPassword")}</AppText>
           <AppTextInput
             style={[styles.input, oldError ? styles.inputError : null]}
             value={oldPassword}
@@ -160,7 +162,7 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
           />
           {oldError ? <AppText style={styles.errorText}>{oldError}</AppText> : null}
 
-          <AppText style={styles.label}>Mật khẩu mới</AppText>
+          <AppText style={styles.label}>{t("auth.newPassword")}</AppText>
           <AppTextInput
             style={[styles.input, newError ? styles.inputError : null]}
             value={newPassword}
@@ -175,7 +177,7 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
           />
           {newError ? <AppText style={styles.errorText}>{newError}</AppText> : null}
 
-          <AppText style={styles.label}>Xác nhận mật khẩu mới</AppText>
+          <AppText style={styles.label}>{t("auth.confirmPassword")}</AppText>
           <AppTextInput
             style={[styles.input, confirmError ? styles.inputError : null]}
             value={confirmPassword}
@@ -198,7 +200,7 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
             loading={isSubmitting}
             icon="lock-closed-outline"
           >
-            Cập nhật mật khẩu
+            {t("i18n.security.updatePassword")}
           </AppButton>
         </View>
         </ScrollView>
