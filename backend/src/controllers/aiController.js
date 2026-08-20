@@ -3,7 +3,7 @@ const { askTroHubAI } = require('../services/aiService');
 async function chatWithAI(req, res, next) {
     try {
         const { message } = req.body;
-        const { id: userId, role } = req.auth;
+        const { id: userId, role } = req.auth || req.user || {};
 
         if (typeof message !== 'string' || !message.trim()) {
             return res.status(400).json({
@@ -22,12 +22,15 @@ async function chatWithAI(req, res, next) {
         });
     } catch (error) {
         console.error('[AI_CONTROLLER_ERROR]', error);
-        return res.status(500).json({
+        return res.status(200).json({
             success: false,
+            reply: error.message || 'Không thể kết nối với AI. Vui lòng kiểm tra lại API Key hoặc kết nối mạng.',
+            action: null,
             code: 'AI_ERROR',
-            message: error.message || 'Lỗi khi xử lý câu hỏi với Trợ lý TroHub AI.'
+            timestamp: new Date().toISOString()
         });
     }
+
 }
 
 module.exports = { chatWithAI };

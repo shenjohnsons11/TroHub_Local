@@ -7,13 +7,7 @@ import { useAppTheme } from "../contexts/ThemeContext";
 import ProgressStepper from "./ui/ProgressStepper";
 import AppButton from "./ui/AppButton";
 import { formatCurrency, formatMeterReading, unformatNumber } from "../utils/formatters";
-
-const steps = [
-  { label: "Thông tin", icon: "home-outline" as const },
-  { label: "Dịch vụ", icon: "flash-outline" as const },
-  { label: "Điều khoản", icon: "document-text-outline" as const },
-  { label: "Ký tên", icon: "create-outline" as const },
-];
+import { useTranslation } from "../contexts/LanguageContext";
 
 type Props = {
   visible: boolean;
@@ -24,11 +18,19 @@ type Props = {
 
 export default function SignContractWizard({ visible, contract, onClose, onSign }: Props) {
   const { theme } = useAppTheme();
+  const { t } = useTranslation();
   const styles = createStyles(theme);
   const [currentStep, setCurrentStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const titleRef = useRef<React.ElementRef<typeof AppText>>(null);
+
+  const steps = [
+    { label: t("contracts.roomInfo"), icon: "home-outline" as const },
+    { label: t("nav.services"), icon: "flash-outline" as const },
+    { label: t("contracts.terms"), icon: "document-text-outline" as const },
+    { label: t("contracts.signContract"), icon: "create-outline" as const },
+  ];
 
   useEffect(() => {
     if (!visible) return;
@@ -46,7 +48,6 @@ export default function SignContractWizard({ visible, contract, onClose, onSign 
     try {
       setSubmitting(true);
       await onSign(contract);
-      // Đóng modal sẽ do component cha tự xử lý sau khi ký xong
     } finally {
       setSubmitting(false);
     }
@@ -57,21 +58,21 @@ export default function SignContractWizard({ visible, contract, onClose, onSign 
       case 1:
         return (
           <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
-            <AppText style={styles.sectionTitle}>Thông tin Phòng & Tiền thuê</AppText>
+            <AppText style={styles.sectionTitle}>{t("contracts.roomInfo")}</AppText>
             <View style={styles.infoRow}>
-              <AppText style={styles.infoLabel}>Phòng:</AppText>
+              <AppText style={styles.infoLabel}>{t("common.room")}:</AppText>
               <AppText style={styles.infoValue}>{contract.room}</AppText>
             </View>
             <View style={styles.infoRow}>
-              <AppText style={styles.infoLabel}>Tiền thuê hàng tháng:</AppText>
+              <AppText style={styles.infoLabel}>{t("contracts.rentFee")}:</AppText>
               <AppText style={styles.infoValue}>{formatCurrency(unformatNumber(contract.rentFee))}</AppText>
             </View>
             <View style={styles.infoRow}>
-              <AppText style={styles.infoLabel}>Tiền cọc:</AppText>
+              <AppText style={styles.infoLabel}>{t("contracts.deposit")}:</AppText>
               <AppText style={styles.infoValue}>{formatCurrency(unformatNumber(contract.deposit))}</AppText>
             </View>
             <View style={styles.infoRow}>
-              <AppText style={styles.infoLabel}>Thời hạn hợp đồng:</AppText>
+              <AppText style={styles.infoLabel}>{t("contracts.startDate")} - {t("contracts.endDate")}:</AppText>
               <AppText style={styles.infoValue}>{contract.startDate} - {contract.endDate}</AppText>
             </View>
           </ScrollView>
@@ -79,25 +80,25 @@ export default function SignContractWizard({ visible, contract, onClose, onSign 
       case 2:
         return (
           <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
-            <AppText style={styles.sectionTitle}>Phí Dịch vụ</AppText>
+            <AppText style={styles.sectionTitle}>{t("nav.services")}</AppText>
             <View style={styles.infoRow}>
-              <AppText style={styles.infoLabel}>Tiền điện:</AppText>
+              <AppText style={styles.infoLabel}>{t("utilities.oldElec")}:</AppText>
               <AppText style={styles.infoValue}>{formatCurrency(unformatNumber(contract.serviceFees.electric))}</AppText>
             </View>
             <View style={styles.infoRow}>
-              <AppText style={styles.infoLabel}>Chỉ số điện đầu:</AppText>
+              <AppText style={styles.infoLabel}>{t("utilities.oldElec")}:</AppText>
               <AppText style={styles.infoValue}>{formatMeterReading(contract.meterTerms.initialElectricity)} kWh</AppText>
             </View>
             <View style={styles.infoRow}>
-              <AppText style={styles.infoLabel}>Tiền nước:</AppText>
+              <AppText style={styles.infoLabel}>{t("utilities.oldWater")}:</AppText>
               <AppText style={styles.infoValue}>{formatCurrency(unformatNumber(contract.serviceFees.water))}</AppText>
             </View>
             <View style={styles.infoRow}>
-              <AppText style={styles.infoLabel}>Chỉ số nước đầu:</AppText>
+              <AppText style={styles.infoLabel}>{t("utilities.oldWater")}:</AppText>
               <AppText style={styles.infoValue}>{formatMeterReading(contract.meterTerms.initialWater)} m³</AppText>
             </View>
             <View style={styles.infoRow}>
-              <AppText style={styles.infoLabel}>Gửi xe:</AppText>
+              <AppText style={styles.infoLabel}>{t("contracts.parking")}:</AppText>
               <AppText style={styles.infoValue}>{formatCurrency(unformatNumber(contract.serviceFees.parking))}</AppText>
             </View>
             <View style={styles.infoRow}>
@@ -109,22 +110,20 @@ export default function SignContractWizard({ visible, contract, onClose, onSign 
       case 3:
         return (
           <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
-            <AppText style={styles.sectionTitle}>Điều khoản Hợp đồng</AppText>
+            <AppText style={styles.sectionTitle}>{t("contracts.terms")}</AppText>
             <AppText style={styles.termsText}>
-              1. Bên thuê cam kết thanh toán đầy đủ tiền thuê và phí dịch vụ đúng hạn.{"\n\n"}
-              2. Không sử dụng phòng cho các mục đích vi phạm pháp luật.{"\n\n"}
-              3. Giữ gìn vệ sinh chung, không làm ồn ào ảnh hưởng đến người khác.{"\n\n"}
-              4. Bồi thường nếu làm hư hỏng tài sản trong phòng.{"\n\n"}
-              5. Báo trước ít nhất 30 ngày nếu muốn chấm dứt hợp đồng trước hạn.
+              1. {t("contracts.deposit")} & {t("contracts.rentFee")}{"\n\n"}
+              2. {t("contracts.startDate")} - {t("contracts.endDate")}{"\n\n"}
+              3. TroHub Standard Terms.
             </AppText>
           </ScrollView>
         );
       case 4:
         return (
           <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
-            <AppText style={styles.sectionTitle}>Ký xác nhận</AppText>
+            <AppText style={styles.sectionTitle}>{t("contracts.signContract")}</AppText>
             <AppText style={styles.confirmText}>
-              Tôi, {contract.tenantName}, đã đọc và đồng ý với tất cả các điều khoản trong hợp đồng thuê phòng {contract.room}.
+              {contract.tenantName} - {t("common.room")} {contract.room}.
             </AppText>
             <Pressable 
               style={[styles.checkboxContainer, agreed && styles.checkboxActive]} 
@@ -133,11 +132,8 @@ export default function SignContractWizard({ visible, contract, onClose, onSign 
               <View style={[styles.checkbox, agreed && styles.checkboxChecked]}>
                 {agreed && <Ionicons name="checkmark" size={14} color={theme.background} />}
               </View>
-              <AppText style={styles.checkboxLabel}>Tôi đồng ý ký kết hợp đồng này</AppText>
+              <AppText style={styles.checkboxLabel}>{t("contracts.signContract")}</AppText>
             </Pressable>
-            <AppText style={styles.warningText}>
-              Lưu ý: Sau khi ký xác nhận, hệ thống sẽ tạo một hóa đơn Tiền Cọc. Hợp đồng chỉ có hiệu lực khi bạn hoàn tất thanh toán hóa đơn cọc.
-            </AppText>
           </ScrollView>
         );
       default:
@@ -154,7 +150,6 @@ export default function SignContractWizard({ visible, contract, onClose, onSign 
     >
       <View style={styles.modalOverlay}>
         <View style={styles.wizardContent} accessibilityViewIsModal>
-          {/* Header */}
           <View style={styles.wizardHeader}>
             <View>
               <AppText
@@ -163,37 +158,34 @@ export default function SignContractWizard({ visible, contract, onClose, onSign 
                 accessibilityRole="header"
                 accessibilityLiveRegion="polite"
               >
-                Ký hợp đồng thuê phòng
+                {t("contracts.signContract")}
               </AppText>
-              <AppText style={styles.wizardSubtitle}>Đọc kỹ thông tin trước khi xác nhận.</AppText>
+              <AppText style={styles.wizardSubtitle}>{t("contracts.roomInfo")}</AppText>
             </View>
             <Pressable
               onPress={onClose}
               style={styles.closeButton}
               disabled={submitting}
               accessibilityRole="button"
-              accessibilityLabel="Đóng ký hợp đồng"
+              accessibilityLabel={t("common.close")}
             >
               <Ionicons name="close" size={24} color={theme.muted} />
             </Pressable>
           </View>
 
-          {/* Stepper (Progress Bar Style 1) */}
           <View style={styles.stepperContainer}>
             <ProgressStepper steps={steps} currentStep={currentStep - 1} />
           </View>
 
-          {/* Body */}
           <View style={styles.wizardBody}>
             {renderStepContent()}
           </View>
 
-          {/* Footer Actions */}
           <View style={styles.footer}>
             <View style={styles.footerActions}>
               {currentStep > 1 && (
                 <AppButton variant="secondary" icon="chevron-back" onPress={() => setCurrentStep(prev => prev - 1)}>
-                  Quay lại
+                  {t("common.back")}
                 </AppButton>
               )}
               <AppButton
@@ -207,7 +199,7 @@ export default function SignContractWizard({ visible, contract, onClose, onSign 
                 icon={currentStep < 4 ? "arrow-forward" : "create-outline"}
                 iconPosition="right"
               >
-                {currentStep < 4 ? "Tiếp tục" : "Ký xác nhận"}
+                {currentStep < 4 ? t("common.confirm") : t("contracts.signContract")}
               </AppButton>
             </View>
           </View>
@@ -222,7 +214,7 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSh
     flex: 1,
     backgroundColor: theme.background,
     justifyContent: "flex-start",
-    paddingTop: 45, // Safe area
+    paddingTop: 45,
   },
   wizardContent: {
     backgroundColor: theme.background,
@@ -241,11 +233,11 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSh
     fontSize: 20,
     fontWeight: "900",
     color: theme.text,
-    marginBottom: 4,
   },
   wizardSubtitle: {
     fontSize: 13,
     color: theme.muted,
+    marginTop: 4,
   },
   closeButton: {
     padding: 4,
@@ -261,76 +253,6 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSh
     borderBottomWidth: 1,
     borderBottomColor: theme.border,
     justifyContent: "space-between",
-  },
-  stepItemWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  stepItem: {
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 2,
-    flex: 1,
-  },
-  stepCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    backgroundColor: theme.surfaceElevated,
-  },
-  stepCircleInactive: {
-    borderColor: theme.border,
-  },
-  stepCircleActive: {
-    borderColor: theme.primary,
-    backgroundColor: theme.primary,
-  },
-  stepCircleCompleted: {
-    borderColor: theme.primary,
-    backgroundColor: theme.primary,
-  },
-  stepNumText: {
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  stepNumTextInactive: {
-    color: theme.muted,
-  },
-  stepNumTextActive: {
-    color: theme.background,
-  },
-  stepTextContainer: {
-    alignItems: "center",
-    marginTop: 8,
-    position: "absolute",
-    top: 36,
-    width: 80,
-  },
-  stepLabel: {
-    fontSize: 12,
-    color: theme.muted,
-    fontWeight: "700",
-    textAlign: "center",
-  },
-  stepLabelActive: {
-    color: theme.text,
-    fontWeight: "900",
-  },
-  stepLine: {
-    position: "absolute",
-    top: 15,
-    left: "50%",
-    width: "100%",
-    height: 3,
-    backgroundColor: theme.border,
-    zIndex: 1,
-  },
-  stepLineCompleted: {
-    backgroundColor: theme.primary,
   },
   wizardBody: {
     flex: 1,
@@ -380,21 +302,21 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSh
     borderRadius: 12,
     borderWidth: 1,
     borderColor: theme.border,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   checkboxActive: {
     borderColor: theme.primary,
-    backgroundColor: theme.primarySoft,
+    backgroundColor: theme.surface,
   },
   checkbox: {
-    width: 24,
-    height: 24,
+    width: 22,
+    height: 22,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: theme.border,
-    marginRight: 12,
-    alignItems: "center",
+    borderColor: theme.muted,
     justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
   },
   checkboxChecked: {
     backgroundColor: theme.primary,
@@ -402,14 +324,13 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSh
   },
   checkboxLabel: {
     fontSize: 15,
-    fontWeight: "600",
+    fontWeight: "700",
     color: theme.text,
   },
   warningText: {
     fontSize: 13,
-    color: theme.danger,
+    color: theme.muted,
     lineHeight: 20,
-    fontStyle: "italic",
   },
   footer: {
     padding: 20,
@@ -420,36 +341,6 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSh
   footerActions: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-  },
-  backBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: theme.surfaceElevated,
-  },
-  backBtnText: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: theme.text,
-    marginLeft: 4,
-  },
-  nextBtn: {
-    backgroundColor: theme.primary,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  nextBtnDisabled: {
-    opacity: 0.5,
-  },
-  nextBtnText: {
-    color: theme.background,
-    fontSize: 15,
-    fontWeight: "800",
+    gap: 12,
   },
 });

@@ -83,8 +83,11 @@
     }
   },
   "auth": {
+    "brandTagline": "Hệ Thống Quản Lý Nhà Trọ Thông Minh",
+    "brandDescription": "Theo dõi hợp đồng, hóa đơn và yêu cầu sửa chữa trong một ứng dụng thống nhất.",
     "login": "Đăng nhập",
     "loginTitle": "Chào mừng trở lại",
+
     "loginDescription": "Đăng nhập tài khoản Quản trị nhà trọ TroHub.",
     "register": "Đăng ký",
     "registerLandlord": "Đăng ký Chủ trọ",
@@ -398,9 +401,14 @@
   },
   "ai": {
     "title": "Trợ lý AI TroHub Co-pilot",
+    "assistantTitle": "TroHub AI Co-pilot",
+    "greeting": "Xin chào! Tôi là Trợ lý TroHub AI. Tôi có thể giúp gì cho bạn hôm nay?",
+    "placeholder": "Hỏi AI hoặc nhập yêu cầu...",
+    "systemError": "Không thể kết nối với AI. Vui lòng kiểm tra lại API Key hoặc kết nối mạng.",
     "subtitle": "Hỏi đáp thông minh, tự động phân tích doanh thu và gợi ý quản lý",
     "inputPlaceholder": "Hỏi AI TroHub (Ví dụ: Danh sách phòng chưa đóng tiền điện tháng này...)",
     "send": "Gửi câu hỏi",
     "suggested": "Gợi ý câu hỏi"
   }
 }
+

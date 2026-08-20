@@ -7,23 +7,10 @@ import { AppNotification } from "../types/Notification";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
 import { notificationService } from "../services/notificationService";
 import { resolveNotificationTarget } from "../utils/notificationNavigation";
+import { useTranslation } from "../contexts/LanguageContext";
 
 interface SectionData { title: string; data: AppNotification[]; }
 type FilterCategory = "all" | "checkout" | "contract" | "invoice" | "utility" | "repair";
-const TENANT_FILTERS: Array<{ key: FilterCategory; label: string }> = [
-  { key: "all", label: "Tất cả" },
-  { key: "contract", label: "Hợp đồng" },
-  { key: "invoice", label: "Hóa đơn" },
-  { key: "utility", label: "Điện nước" },
-  { key: "repair", label: "Sửa chữa" },
-];
-const LANDLORD_FILTERS: Array<{ key: FilterCategory; label: string }> = [
-  { key: "all", label: "Tất cả" },
-  { key: "checkout", label: "Trả phòng" },
-  { key: "repair", label: "Sửa chữa" },
-  { key: "contract", label: "Hợp đồng" },
-  { key: "invoice", label: "Thanh toán" },
-];
 
 export type NotificationScreenProps = {
   onBack?: () => void;
@@ -35,11 +22,25 @@ export type NotificationScreenProps = {
 
 export default function NotificationsScreen({ onBack, onNavigate, refreshKey = 0, onUnreadChanged, mode = "tenant" }: NotificationScreenProps) {
   const { theme } = useAppTheme();
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<FilterCategory>("all");
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const filters = mode === "landlord" ? LANDLORD_FILTERS : TENANT_FILTERS;
+
+  const filters: Array<{ key: FilterCategory; label: string }> = mode === "landlord" ? [
+    { key: "all", label: t("common.all") },
+    { key: "checkout", label: t("contracts.title") },
+    { key: "repair", label: t("repairs.title") },
+    { key: "contract", label: t("contracts.title") },
+    { key: "invoice", label: t("payments.title") },
+  ] : [
+    { key: "all", label: t("common.all") },
+    { key: "contract", label: t("contracts.title") },
+    { key: "invoice", label: t("invoices.title") },
+    { key: "utility", label: t("nav.utilities") },
+    { key: "repair", label: t("repairs.title") },
+  ];
 
   const loadNotifications = async () => {
     try {
@@ -61,9 +62,8 @@ export default function NotificationsScreen({ onBack, onNavigate, refreshKey = 0
       await notificationService.markAsRead(item.id);
       onUnreadChanged?.();
       return true;
-    } catch (error) {
+    } catch {
       setNotifications(previous);
-      console.log("Lỗi đánh dấu đã đọc:", error);
       return false;
     }
   };
@@ -74,42 +74,59 @@ export default function NotificationsScreen({ onBack, onNavigate, refreshKey = 0
     try {
       await notificationService.markAllAsRead();
       onUnreadChanged?.();
-    } catch (error) {
+    } catch {
       setNotifications(previous);
-      console.log("Lỗi đánh dấu tất cả đã đọc:", error);
     }
   };
 
   const handleItemPress = async (item: AppNotification) => {
-    if (!await handleMarkAsRead(item) || !onNavigate) return;
-    const target = resolveNotificationTarget(item);
-    onNavigate(target.tab, target.params);
+    await handleMarkAsRead(item);
+    const target = resolveNotificationTarget(item, mode);
+    if (!target) return;
+    onNavigate?.(target.tab, target.params);
   };
 
-  const sections = useMemo(() => {
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
-    const filtered = notifications.filter((item) =>
-      (selectedCategory === "all" || item.type === selectedCategory) &&
-      (item.title.toLowerCase().includes(search.toLowerCase()) || item.content.toLowerCase().includes(search.toLowerCase()))
-    );
-    const today = filtered.filter((item) => new Date(item.createdAt) >= startOfToday);
-    const older = filtered.filter((item) => new Date(item.createdAt) < startOfToday);
-    return ([
-      ...(today.length ? [{ title: "Hôm nay", data: today }] : []),
-      ...(older.length ? [{ title: "Cũ hơn", data: older }] : []),
-    ] as SectionData[]);
-  }, [notifications, search, selectedCategory]);
+  const isToday = (date: Date) => {
+    const today = new Date();
+    return date.getDate() === today.getDate() && date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
+  };
+
+  const isYesterday = (date: Date) => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    return date.getDate() === yesterday.getDate() && date.getMonth() === yesterday.getMonth() && date.getFullYear() === yesterday.getFullYear();
+  };
+
+  const filteredNotifications = useMemo(() => notifications.filter((item) => {
+    const matchesCategory = selectedCategory === "all" || item.type === selectedCategory;
+    const matchesSearch = !search.trim() || item.title.toLowerCase().includes(search.toLowerCase()) || item.content.toLowerCase().includes(search.toLowerCase());
+    return matchesCategory && matchesSearch;
+  }), [notifications, search, selectedCategory]);
+
+  const sections: SectionData[] = useMemo(() => {
+    const groups: { today: AppNotification[]; yesterday: AppNotification[]; older: AppNotification[] } = { today: [], yesterday: [], older: [] };
+    filteredNotifications.forEach((item) => {
+      const date = new Date(item.createdAt);
+      if (isToday(date)) groups.today.push(item);
+      else if (isYesterday(date)) groups.yesterday.push(item);
+      else groups.older.push(item);
+    });
+    const result: SectionData[] = [];
+    if (groups.today.length > 0) result.push({ title: t("notifications.today"), data: groups.today });
+    if (groups.yesterday.length > 0) result.push({ title: t("notifications.yesterday"), data: groups.yesterday });
+    if (groups.older.length > 0) result.push({ title: t("notifications.older"), data: groups.older });
+    return result;
+  }, [filteredNotifications, t]);
 
   const getCategoryTheme = (type: string) => {
     switch (type) {
-      case "checkout": return { icon: "exit-outline", color: "#DC2626", bg: "rgba(220, 38, 38, 0.12)", label: "Trả phòng", action: "Duyệt trả phòng" };
-      case "invoice": return { icon: "card-outline", color: "#0F9AB5", bg: "rgba(15, 154, 181, 0.12)", label: "Hóa đơn", action: "Xem hóa đơn" };
-      case "repair": return { icon: "construct-outline", color: "#E65A35", bg: "rgba(230, 90, 53, 0.12)", label: "Sửa chữa", action: "Xem ảnh sự cố" };
-      case "contract": return { icon: "document-text-outline", color: "#059669", bg: "rgba(5, 150, 105, 0.12)", label: "Hợp đồng", action: "Xem hợp đồng" };
-      case "tenant": return { icon: "people-outline", color: "#3b82f6", bg: "rgba(59, 130, 246, 0.12)", label: "Phòng" };
-      case "utility": return { icon: "flash-outline", color: "#D4A017", bg: "rgba(212, 160, 23, 0.14)", label: "Điện nước" };
-      default: return { icon: "notifications-outline", color: "#64748b", bg: "rgba(100, 116, 139, 0.12)", label: "Hệ thống" };
+      case "checkout": return { icon: "log-out-outline", color: "#ef4444", bg: "rgba(239, 68, 68, 0.12)", label: t("contracts.title"), action: t("common.confirm") };
+      case "invoice": return { icon: "receipt-outline", color: "#10b981", bg: "rgba(16, 185, 129, 0.12)", label: t("payments.title"), action: t("invoices.title") };
+      case "contract": return { icon: "document-text-outline", color: "#6366f1", bg: "rgba(99, 102, 241, 0.12)", label: t("contracts.title"), action: t("contracts.title") };
+      case "repair": return { icon: "build-outline", color: "#f59e0b", bg: "rgba(245, 158, 11, 0.12)", label: t("repairs.title"), action: t("repairs.title") };
+      case "tenant": return { icon: "people-outline", color: "#3b82f6", bg: "rgba(59, 130, 246, 0.12)", label: t("common.room") };
+      case "utility": return { icon: "flash-outline", color: "#D4A017", bg: "rgba(212, 160, 23, 0.14)", label: t("nav.utilities") };
+      default: return { icon: "notifications-outline", color: "#64748b", bg: "rgba(100, 116, 139, 0.12)", label: "System" };
     }
   };
 
@@ -117,13 +134,13 @@ export default function NotificationsScreen({ onBack, onNavigate, refreshKey = 0
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.header, { backgroundColor: theme.surface }]}>
         <View style={styles.headerTop}>
-          {onBack && <Pressable accessibilityRole="button" accessibilityLabel="Quay lại" onPress={onBack} style={styles.backBtn}><Ionicons name="arrow-back" size={24} color={theme.text} /></Pressable>}
-          <AppText style={[styles.title, { color: theme.text }]}>Thông báo</AppText>
-          <Pressable accessibilityRole="button" accessibilityLabel="Đánh dấu tất cả đã đọc" onPress={handleMarkAll} style={styles.markAllBtn}><Ionicons name="checkmark-done" size={18} color={theme.primary} /><AppText style={[styles.markAllText, { color: theme.primary }]}>Đánh dấu tất cả đã đọc</AppText></Pressable>
+          {onBack && <Pressable accessibilityRole="button" accessibilityLabel={t("common.back")} onPress={onBack} style={styles.backBtn}><Ionicons name="arrow-back" size={24} color={theme.text} /></Pressable>}
+          <AppText style={[styles.title, { color: theme.text }]}>{t("notifications.title")}</AppText>
+          <Pressable accessibilityRole="button" accessibilityLabel={t("notifications.markAllRead")} onPress={handleMarkAll} style={styles.markAllBtn}><Ionicons name="checkmark-done" size={18} color={theme.primary} /><AppText style={[styles.markAllText, { color: theme.primary }]}>{t("notifications.markAllRead")}</AppText></Pressable>
         </View>
         <View style={[styles.searchBox, { backgroundColor: theme.surfaceElevated }]}>
           <Ionicons name="search" size={20} color={theme.muted} />
-          <AppTextInput style={[styles.searchInput, { color: theme.text }]} placeholder="Tìm kiếm thông báo..." placeholderTextColor={theme.muted} value={search} onChangeText={setSearch} />
+          <AppTextInput style={[styles.searchInput, { color: theme.text }]} placeholder={t("common.search")} placeholderTextColor={theme.muted} value={search} onChangeText={setSearch} />
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
           {filters.map((filter) => {
@@ -142,11 +159,11 @@ export default function NotificationsScreen({ onBack, onNavigate, refreshKey = 0
           const config = getCategoryTheme(item.type);
           return <AnimatedEntry delay={Math.min(index, 6) * 40}><Pressable accessibilityRole="button" accessibilityLabel={`${item.title}${mode === "landlord" && config.action ? `. ${config.action}` : ""}`} style={[styles.card, { backgroundColor: item.isRead ? theme.surface : theme.surfaceElevated }]} onPress={() => void handleItemPress(item)}>
             <View style={[styles.iconBox, { backgroundColor: config.bg }]}><Ionicons name={config.icon as any} size={22} color={config.color} /></View>
-            <View style={styles.content}><View style={styles.contentTop}><AppText style={[styles.cardTitle, { color: theme.text, fontWeight: item.isRead ? "600" : "800" }]} numberOfLines={1}>{item.title}</AppText><View style={[styles.badgePill, { backgroundColor: config.bg }]}><AppText style={[styles.badgeText, { color: config.color }]}>{config.label}</AppText></View></View><AppText style={[styles.body, { color: theme.muted }]} numberOfLines={2}>{item.content}</AppText>{mode === "landlord" && config.action ? <View style={styles.actionRow}><AppText style={[styles.actionText, { color: config.color }]}>{config.action}</AppText><Ionicons name="arrow-forward" size={14} color={config.color} /></View> : null}<View style={styles.metaRow}><AppText style={[styles.time, { color: theme.muted }]}>{new Date(item.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}</AppText><AppText style={[styles.readState, { color: item.isRead ? theme.muted : theme.danger }]}>{item.isRead ? "Đã đọc" : "Mới"}</AppText></View></View>
+            <View style={styles.content}><View style={styles.contentTop}><AppText style={[styles.cardTitle, { color: theme.text, fontWeight: item.isRead ? "600" : "800" }]} numberOfLines={1}>{item.title}</AppText><View style={[styles.badgePill, { backgroundColor: config.bg }]}><AppText style={[styles.badgeText, { color: config.color }]}>{config.label}</AppText></View></View><AppText style={[styles.body, { color: theme.muted }]} numberOfLines={2}>{item.content}</AppText>{mode === "landlord" && config.action ? <View style={styles.actionRow}><AppText style={[styles.actionText, { color: config.color }]}>{config.action}</AppText><Ionicons name="arrow-forward" size={14} color={config.color} /></View> : null}<View style={styles.metaRow}><AppText style={[styles.time, { color: theme.muted }]}>{new Date(item.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</AppText><AppText style={[styles.readState, { color: item.isRead ? theme.muted : theme.danger }]}>{item.isRead ? t("notifications.read") : t("notifications.unread")}</AppText></View></View>
             {!item.isRead && <View style={[styles.unreadDot, { backgroundColor: theme.danger }]} />}
           </Pressable></AnimatedEntry>;
         }}
-        ListEmptyComponent={<View style={[styles.emptyBox, { backgroundColor: theme.surface, borderColor: theme.border }]}><Ionicons name="notifications-off-outline" size={60} color={theme.muted} /><AppText style={[styles.emptyText, { color: theme.text }]}>Không có thông báo nào</AppText><AppText style={[styles.emptyHint, { color: theme.muted }]}>Thông báo mới sẽ xuất hiện tại đây.</AppText></View>}
+        ListEmptyComponent={<View style={[styles.emptyBox, { backgroundColor: theme.surface, borderColor: theme.border }]}><Ionicons name="notifications-off-outline" size={60} color={theme.muted} /><AppText style={[styles.emptyText, { color: theme.text }]}>{t("notifications.empty")}</AppText><AppText style={[styles.emptyHint, { color: theme.muted }]}>{t("notifications.empty")}</AppText></View>}
       />
     </View>
   );
