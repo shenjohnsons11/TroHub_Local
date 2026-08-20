@@ -22,14 +22,17 @@ const FALLBACK_KEY = "trohub_language";
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Language>("vi");
   const languageRef = useRef<Language>("vi");
+  const userInteracted = useRef(false);
 
   useEffect(() => {
     try {
       const legacy = safeStorageString(localStorage.getItem(FALLBACK_KEY));
       const stored = safeStorageString(localStorage.getItem(STORAGE_KEY)) || legacy;
       const next = normalizeLanguage(stored) || "vi";
-      languageRef.current = next;
-      setLanguageState(next);
+      if (!userInteracted.current) {
+        languageRef.current = next;
+        setLanguageState(next);
+      }
       if (legacy) {
         localStorage.setItem(STORAGE_KEY, next);
         localStorage.removeItem(FALLBACK_KEY);
@@ -42,6 +45,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   }, [language]);
 
   const changeLanguage = useCallback((requested?: Language) => {
+    userInteracted.current = true;
     const target = resolveLanguageTarget(languageRef.current, requested);
     languageRef.current = target;
     setLanguageState(target);

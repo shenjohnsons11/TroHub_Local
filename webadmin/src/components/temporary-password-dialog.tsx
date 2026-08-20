@@ -4,6 +4,7 @@ import { Check, Copy } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/components/language-provider";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +26,7 @@ export function TemporaryPasswordDialog({
   temporaryPassword,
   onOpenChange,
 }: Props) {
+  const { t } = useLanguage();
   const [copied, setCopied] = useState(false);
 
   const changeOpen = (nextOpen: boolean) => {
@@ -41,10 +43,9 @@ export function TemporaryPasswordDialog({
     <Dialog open={open} onOpenChange={changeOpen}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Mật khẩu tạm đã được tạo</DialogTitle>
+          <DialogTitle>{t("i18n.temporaryPassword.title")}</DialogTitle>
           <DialogDescription>
-            Sao chép và gửi trực tiếp cho Người thuê {nguoiThueName}. Mật khẩu
-            này chỉ hiển thị một lần.
+            {t("i18n.temporaryPassword.description", { name: nguoiThueName })}
           </DialogDescription>
         </DialogHeader>
         <div className="rounded-[10px] bg-muted p-4">
@@ -54,7 +55,7 @@ export function TemporaryPasswordDialog({
         </div>
         <Button onClick={copyPassword} className="h-11 w-full">
           {copied ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
-          {copied ? "Đã sao chép" : "Sao chép mật khẩu"}
+          {copied ? t("i18n.temporaryPassword.copied") : t("i18n.temporaryPassword.copy")}
         </Button>
       </DialogContent>
     </Dialog>

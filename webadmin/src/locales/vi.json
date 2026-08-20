@@ -399,6 +399,22 @@
       "system": "Hệ thống"
     }
   },
+  "i18n": {
+    "language": {
+      "label": "Ngôn ngữ",
+      "switchVietnamese": "Chuyển sang Tiếng Việt",
+      "switchEnglish": "Chuyển sang Tiếng Anh"
+    },
+    "loading": { "propertyData": "Đang tải dữ liệu không gian sống...", "spaceAlt": "Không gian đang tải" },
+    "brand": { "tagline": "Quản lý nhà trọ" },
+    "priority": { "label": "Ưu tiên", "defaultTitle": "Cần xử lý" },
+    "meter": { "previousPeriod": "{label} · kỳ trước", "currentPeriod": "Kỳ này", "consumption": "Tiêu thụ", "checkReading": "Kiểm tra chỉ số", "amount": "Thành tiền", "unitPrice": "Đơn giá", "readingTooLow": "Chỉ số kỳ này không được nhỏ hơn kỳ trước." },
+    "theme": { "toDark": "Chuyển sang chế độ tối", "toSystem": "Chuyển sang chế độ tự động", "toLight": "Chuyển sang chế độ sáng", "lightActive": "Đang bật: Chế độ sáng", "darkActive": "Đang bật: Chế độ tối", "systemActive": "Đang bật: Giao diện tự động (Theo giờ / Hệ thống)" },
+    "temporaryPassword": { "title": "Mật khẩu tạm đã được tạo", "description": "Sao chép và gửi trực tiếp cho Người thuê {name}. Mật khẩu này chỉ hiển thị một lần.", "copied": "Đã sao chép", "copy": "Sao chép mật khẩu" },
+    "notificationBell": { "fallbackTitle": "Thông báo", "checkout": "Trả phòng", "invoice": "Thanh toán", "repair": "Sự cố", "contract": "Hợp đồng", "system": "Hệ thống", "aria": "Thông báo{count}", "unread": " ({count} chưa đọc)", "title": "Thông báo vận hành", "needsAttention": "{count} việc cần chú ý", "markRead": "Đánh dấu đã đọc", "empty": "Không có thông báo nào", "today": "Hôm nay", "yesterday": "Hôm qua", "older": "Cũ hơn" },
+    "invoiceDrawer": { "title": "Chi tiết hóa đơn", "roomTenant": "Phòng {room} · {tenant}", "close": "Đóng chi tiết hóa đơn", "period": "Kỳ thanh toán", "dueDate": "Hạn thanh toán", "status": "Trạng thái", "phone": "Số điện thoại", "notUpdated": "Chưa cập nhật", "total": "Tổng thanh toán", "depositDetail": "Chi tiết tiền cọc", "chargeDetail": "Chi tiết khoản thu", "contractDeposit": "Tiền cọc hợp đồng", "roomRent": "Tiền phòng", "service": "Dịch vụ", "unit": "đơn vị", "electricity": "Điện", "water": "Nước", "otherServices": "Dịch vụ khác", "lateFee": "Phí quá hạn", "discount": "Giảm trừ", "meterHint": "Chỉ số & chi phí theo kỳ", "previous": "Kỳ trước", "current": "Kỳ này", "consumption": "Tiêu thụ", "amount": "Thành tiền", "unitPrice": "Đơn giá" },
+    "paymentDrawer": { "roomRent": "Tiền phòng", "electricity": "Tiền điện", "water": "Tiền nước", "services": "Dịch vụ cộng thêm", "lateFee": "Tiền phạt quá hạn", "discount": "Giảm trừ", "title": "Chi tiết thanh toán", "description": "Đối soát hóa đơn {period} của Người thuê.", "tenant": "Người thuê", "room": "Phòng", "period": "Kỳ hóa đơn", "paidAt": "Ngày thanh toán", "transactionCode": "Mã TroHub", "gatewayReference": "Mã đối soát", "notAvailable": "Không có", "method": "Phương thức", "invoiceDetail": "Chi tiết hóa đơn", "total": "Tổng thanh toán" }
+  },
   "ai": {
     "title": "Trợ lý AI TroHub Co-pilot",
     "assistantTitle": "TroHub AI Co-pilot",
