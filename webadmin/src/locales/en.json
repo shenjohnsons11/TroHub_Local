@@ -181,7 +181,10 @@
     "noData": "No data yet",
     "morning": "Good morning",
     "afternoon": "Good afternoon",
-    "evening": "Good evening"
+    "evening": "Good evening",
+    "viewBento": "📊 Overview",
+    "viewReport": "📈 Reports",
+    "viewStandard": "📋 Standard"
   },
   "rooms": {
     "title": "Room Management",
@@ -623,5 +626,22 @@
     "billingMeter": "By Meter (electric/water)",
     "defaultPrice": "Default Price",
     "defaultQuantity": "Default Quantity"
+  },
+  "account": {
+    "profileAndSecurity": "Profile & Security",
+    "appPreferences": "App Preferences",
+    "systemAndLegal": "System & Legal",
+    "editProfile": "Edit Profile",
+    "changePassword": "Change Password",
+    "idCard": "Citizen ID (CCCD)",
+    "banking": "Bank Account (VietQR)",
+    "pushNotifications": "Push Notifications",
+    "themeMode": "Theme & Appearance",
+    "terms": "Terms & Privacy Policy",
+    "appVersion": "App Version",
+    "logout": "Log Out",
+    "roleLandlord": "Landlord 🔑",
+    "roleTenant": "Tenant 🏠",
+    "saveSuccess": "Profile updated successfully!"
   }
 }

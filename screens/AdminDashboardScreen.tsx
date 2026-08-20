@@ -131,7 +131,7 @@ export default function AdminDashboardScreen({ profile, refreshKey = 0, onNaviga
           onPress={() => setViewMode("bento")}
         >
           <AppText style={[{ fontSize: 12, fontWeight: "900", color: theme.muted }, viewMode === "bento" && { color: theme.background }]}>
-            🍱 Bento iOS 18
+            {t("dashboard.viewBento")}
           </AppText>
         </Pressable>
         <Pressable
@@ -140,7 +140,7 @@ export default function AdminDashboardScreen({ profile, refreshKey = 0, onNaviga
           onPress={() => setViewMode("analytics")}
         >
           <AppText style={[{ fontSize: 12, fontWeight: "900", color: theme.muted }, viewMode === "analytics" && { color: theme.background }]}>
-            📊 Báo cáo
+            {t("dashboard.viewReport")}
           </AppText>
         </Pressable>
         <Pressable
@@ -149,10 +149,11 @@ export default function AdminDashboardScreen({ profile, refreshKey = 0, onNaviga
           onPress={() => setViewMode("standard")}
         >
           <AppText style={[{ fontSize: 12, fontWeight: "900", color: theme.muted }, viewMode === "standard" && { color: theme.background }]}>
-            📋 Tiêu chuẩn
+            {t("dashboard.viewStandard")}
           </AppText>
         </Pressable>
       </View>
+
 
       {viewMode === "bento" ? (
         <BentoGridDashboard stats={stats} onNavigate={onNavigate} />

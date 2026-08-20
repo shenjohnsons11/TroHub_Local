@@ -1,26 +1,39 @@
 import React, { useState, useEffect } from "react";
-import { ActivityIndicator, Modal, ScrollView, Switch, StyleSheet, View, Pressable } from "react-native";
-import { AppText } from "@/components/ui/typography";
-import Card from "../components/Card";
-import ThemeToggle from "../components/ThemeToggle";
-import LanguageToggle from "../components/LanguageToggle";
-import { useAppTheme } from "../contexts/ThemeContext";
+import {
+  ActivityIndicator,
+  Alert,
+  Modal,
+  ScrollView,
+  Switch,
+  StyleSheet,
+  View,
+  Pressable,
+} from "react-native";
+import { AppText, AppTextInput } from "@/components/ui/typography";
 import { Ionicons } from "@expo/vector-icons";
-import ChangePasswordModal from "../components/ChangePasswordModal";
+import { LinearGradient } from "expo-linear-gradient";
+import { useAppTheme } from "../contexts/ThemeContext";
+import { useTranslation, useLanguage } from "../contexts/LanguageContext";
 import { UserProfile } from "../types/UserProfile";
-import { invoiceService } from "../services/invoiceService";
-import { repairService } from "../services/repairService";
-import { contractService } from "../services/contractService";
-import { formatPhone } from "../utils/formatters";
-import { getExpoPushToken, isPushEnabled, notificationPlatform, openNotificationSettings, requestNotificationPermission, setPushEnabled } from "../services/pushNotificationService";
+import ChangePasswordModal from "../components/ChangePasswordModal";
+import AnimatedEntry from "../components/ui/AnimatedEntry";
+import { formatPhone, formatCCCD, unformatDigits } from "../utils/formatters";
+import {
+  getExpoPushToken,
+  isPushEnabled,
+  notificationPlatform,
+  requestNotificationPermission,
+  setPushEnabled,
+} from "../services/pushNotificationService";
 import { notificationService } from "../services/notificationService";
-import { useTranslation } from "../contexts/LanguageContext";
+import { authService } from "../services/authService";
 
 type Props = {
   profile: UserProfile;
   onLogout: () => void;
-  onNavigate?: (screen: "invoice" | "contract" | "profile", params?: any) => void;
+  onNavigate?: (screen: any, params?: any) => void;
   onPushTokenChange?: (token: string | null) => void;
+  onProfileUpdate?: (profile: UserProfile) => void;
 };
 
 export default function AccountScreen({
@@ -28,71 +41,29 @@ export default function AccountScreen({
   onLogout,
   onNavigate,
   onPushTokenChange,
+  onProfileUpdate,
 }: Props) {
-  const { theme } = useAppTheme();
+  const { theme, isDark, toggleTheme } = useAppTheme();
   const { t } = useTranslation();
-  const styles = createStyles(theme);
+  const { language, setLanguage } = useLanguage();
+
   const [passwordVisible, setPasswordVisible] = useState(false);
-  const [settingsVisible, setSettingsVisible] = useState(false);
+  const [editProfileVisible, setEditProfileVisible] = useState(false);
   const [pushEnabled, setPushPreference] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
   const [pushError, setPushError] = useState("");
-  const [stats, setStats] = useState({ invoices: 0, repairs: 0, months: 0, hasContract: false });
 
-  const menuItems = [
-    {
-      key: "profile",
-      icon: "person-outline",
-      title: t("auth.account"),
-      desc: t("auth.account"),
-    },
-    {
-      key: "contract",
-      icon: "document-text-outline",
-      title: t("nav.contracts"),
-      desc: t("nav.contracts"),
-    },
-    {
-      key: "payment",
-      icon: "receipt-outline",
-      title: t("payments.title"),
-      desc: t("payments.title"),
-    },
-    {
-      key: "password",
-      icon: "lock-closed-outline",
-      title: t("auth.resetPassword"),
-      desc: t("auth.resetPassword"),
-    },
-  ];
+  // Edit profile form state
+  const [editName, setEditName] = useState(profile.fullName || "");
+  const [editPhone, setEditPhone] = useState(formatPhone(profile.phone));
+  const [editEmail, setEditEmail] = useState(profile.email || "");
+  const [editSaving, setEditSaving] = useState(false);
+
+  const isLandlord = profile.role === 1 || String(profile.role) === "1";
 
   useEffect(() => {
-    async function loadStats() {
-      try {
-        const [invoices, repairs, contract] = await Promise.all([
-          invoiceService.getInvoices(),
-          repairService.getRequests(),
-          contractService.getContract()
-        ]);
-        const isSigned = contract && ["active", "awaiting_approval", "requesting_termination"].includes(contract.status);
-        setStats({
-          invoices: invoices.length,
-          repairs: repairs.length,
-          months: contract?.usedMonths || 0,
-          hasContract: !!isSigned
-        });
-      } catch (error) {
-        console.log("Lỗi tải thống kê AccountScreen:", error);
-      }
-    }
-    loadStats();
-  }, []);
-
-  const openSettings = async () => {
-    setPushError("");
-    setPushPreference(await isPushEnabled(profile.id));
-    setSettingsVisible(true);
-  };
+    void isPushEnabled(profile.id).then(setPushPreference);
+  }, [profile.id]);
 
   const handlePushChange = async (next: boolean) => {
     const previous = pushEnabled;
@@ -118,7 +89,7 @@ export default function AccountScreen({
         setPushPreference(false);
         onPushTokenChange?.(null);
       }
-    } catch (error) {
+    } catch (error: any) {
       setPushPreference(previous);
       setPushError(error instanceof Error ? error.message : t("common.error"));
     } finally {
@@ -126,24 +97,27 @@ export default function AccountScreen({
     }
   };
 
-  const handleMenuPress = (key: string) => {
-    if (key === "profile") {
-      onNavigate?.("profile");
+  const handleSaveProfile = async () => {
+    if (!editName.trim()) {
+      Alert.alert(t("common.error"), t("auth.fullName"));
       return;
     }
-
-    if (key === "password") {
-      setPasswordVisible(true);
-      return;
-    }
-
-    if (key === "contract") {
-      onNavigate?.("contract");
-      return;
-    }
-
-    if (key === "payment") {
-      onNavigate?.("invoice", { filter: "paid" });
+    try {
+      setEditSaving(true);
+      const updated = {
+        ...profile,
+        fullName: editName.trim(),
+        phone: unformatDigits(editPhone),
+        email: editEmail.trim(),
+      };
+      await authService.updateProfile(updated);
+      onProfileUpdate?.(updated);
+      setEditProfileVisible(false);
+      Alert.alert(t("common.success"), t("account.saveSuccess"));
+    } catch (err: any) {
+      Alert.alert(t("common.error"), err?.message || "Không thể cập nhật hồ sơ");
+    } finally {
+      setEditSaving(false);
     }
   };
 
@@ -154,300 +128,516 @@ export default function AccountScreen({
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.titleRow}>
-          <AppText style={[styles.title, { color: theme.text }]}>{t("auth.account")}</AppText>
-          <Pressable accessibilityRole="button" accessibilityLabel={t("nav.settings")} onPress={() => void openSettings()} style={[styles.settingsButton, { backgroundColor: theme.primarySoft }]}>
-            <Ionicons name="settings-outline" size={22} color={theme.primary} />
-          </Pressable>
-        </View>
+        {/* ========================================================= */}
+        {/* 1. HERO BENTO CARD: AVATAR & USER IDENTITY                */}
+        {/* ========================================================= */}
+        <AnimatedEntry delay={80}>
+          <View style={[styles.heroBentoCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+            <LinearGradient
+              colors={isDark ? ["rgba(16, 185, 129, 0.18)", "rgba(6, 78, 59, 0.05)"] : ["rgba(16, 185, 129, 0.12)", "rgba(240, 253, 244, 0.6)"]}
+              style={styles.heroGradient}
+            >
+              <View style={styles.heroTopRow}>
+                {/* Glowing Avatar */}
+                <View style={[styles.avatarOuter, { borderColor: theme.primary }]}>
+                  <LinearGradient colors={["#10B981", "#047857"]} style={styles.avatarInner}>
+                    <AppText style={styles.avatarLetter}>
+                      {(profile.fullName || "U").charAt(0).toUpperCase()}
+                    </AppText>
+                  </LinearGradient>
+                </View>
 
-        <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <AppText style={styles.avatarText}>
-              {profile.fullName.charAt(0).toUpperCase()}
+                {/* Identity Info */}
+                <View style={styles.identityInfo}>
+                  <View style={styles.roleBadgeRow}>
+                    <View style={[styles.roleBadge, { backgroundColor: isLandlord ? "rgba(16, 185, 129, 0.2)" : "rgba(59, 130, 246, 0.2)" }]}>
+                      <AppText style={[styles.roleBadgeText, { color: isLandlord ? "#10B981" : "#3B82F6" }]}>
+                        {isLandlord ? t("account.roleLandlord") : t("account.roleTenant")}
+                      </AppText>
+                    </View>
+                    {!isLandlord && profile.room ? (
+                      <View style={[styles.roomBadge, { backgroundColor: theme.primarySoft }]}>
+                        <AppText style={[styles.roomBadgeText, { color: theme.primary }]}>
+                          Phòng {profile.room}
+                        </AppText>
+                      </View>
+                    ) : null}
+                  </View>
+
+                  <AppText style={[styles.userName, { color: theme.text }]} numberOfLines={1}>
+                    {profile.fullName || "Chưa cập nhật tên"}
+                  </AppText>
+                  <AppText style={[styles.userContact, { color: theme.muted }]}>
+                    📱 {formatPhone(profile.phone)}
+                  </AppText>
+                  {profile.email ? (
+                    <AppText style={[styles.userEmail, { color: theme.muted }]} numberOfLines={1}>
+                      ✉️ {profile.email}
+                    </AppText>
+                  ) : null}
+                </View>
+              </View>
+
+              {/* Landlord Property Address Badge */}
+              {profile.propertyAddress ? (
+                <View style={[styles.propertyRow, { backgroundColor: isDark ? "rgba(0,0,0,0.3)" : "rgba(255,255,255,0.7)" }]}>
+                  <Ionicons name="location" size={15} color="#10B981" />
+                  <AppText style={[styles.propertyAddressText, { color: theme.text }]} numberOfLines={1}>
+                    {profile.propertyAddress}
+                  </AppText>
+                </View>
+              ) : null}
+            </LinearGradient>
+          </View>
+        </AnimatedEntry>
+
+        {/* ========================================================= */}
+        {/* 2. BENTO GROUP 1: HỒ SƠ & BẢO MẬT                         */}
+        {/* ========================================================= */}
+        <AnimatedEntry delay={140}>
+          <View style={styles.sectionHeaderRow}>
+            <Ionicons name="shield-checkmark" size={16} color={theme.primary} />
+            <AppText style={[styles.sectionTitle, { color: theme.text }]}>
+              {t("account.profileAndSecurity")}
             </AppText>
           </View>
 
-          <AppText style={styles.name}>{profile.fullName}</AppText>
-          <AppText style={styles.phone}>{formatPhone(profile.phone)}</AppText>
+          <View style={styles.bentoGrid2x2}>
+            {/* Tile 1: Chỉnh sửa thông tin */}
+            <Pressable
+              style={[styles.bentoTile, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
+              onPress={() => {
+                setEditName(profile.fullName || "");
+                setEditPhone(formatPhone(profile.phone));
+                setEditEmail(profile.email || "");
+                setEditProfileVisible(true);
+              }}
+            >
+              <View style={[styles.tileIconCircle, { backgroundColor: "rgba(59, 130, 246, 0.15)" }]}>
+                <Ionicons name="person" size={20} color="#3B82F6" />
+              </View>
+              <AppText style={[styles.tileTitle, { color: theme.text }]}>{t("account.editProfile")}</AppText>
+              <AppText style={[styles.tileSubtitle, { color: theme.muted }]}>Tên, SĐT, Email</AppText>
+            </Pressable>
 
-          <View style={styles.roomBadge}>
-            <AppText style={styles.roomText}>
-              {stats.hasContract ? `${t("common.room")} ${profile.room}` : t("common.noData")}
-            </AppText>
-          </View>
-        </View>
+            {/* Tile 2: Đổi mật khẩu */}
+            <Pressable
+              style={[styles.bentoTile, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
+              onPress={() => setPasswordVisible(true)}
+            >
+              <View style={[styles.tileIconCircle, { backgroundColor: "rgba(245, 158, 11, 0.15)" }]}>
+                <Ionicons name="lock-closed" size={20} color="#F59E0B" />
+              </View>
+              <AppText style={[styles.tileTitle, { color: theme.text }]}>{t("account.changePassword")}</AppText>
+              <AppText style={[styles.tileSubtitle, { color: theme.muted }]}>Bảo mật tài khoản</AppText>
+            </Pressable>
 
-        {stats.hasContract && (
-          <View style={styles.statRow}>
-            <Card style={[styles.card, styles.statCard]}>
-              <AppText style={styles.statNumber}>{stats.invoices}</AppText>
-              <AppText style={styles.statLabel}>{t("nav.invoices")}</AppText>
-            </Card>
-
-            <Card style={[styles.card, styles.statCard]}>
-              <AppText style={styles.statNumber}>{stats.repairs}</AppText>
-              <AppText style={styles.statLabel}>{t("nav.repairs")}</AppText>
-            </Card>
-
-            <Card style={[styles.card, styles.statCard]}>
-              <AppText style={styles.statNumber}>{stats.months}</AppText>
-              <AppText style={styles.statLabel}>{t("common.month")}</AppText>
-            </Card>
-          </View>
-        )}
-
-        <AppText style={[styles.sectionTitle, { color: theme.text }]}>{t("nav.settings")}</AppText>
-        <View style={{ gap: 12, marginBottom: 16 }}>
-          <ThemeToggle />
-          <Card style={[styles.card, { padding: 14 }]}>
-            <AppText style={{ fontSize: 13, fontWeight: "800", color: theme.text, marginBottom: 8 }}>{t("common.language")}</AppText>
-            <View style={{ alignItems: "flex-start" }}>
-              <LanguageToggle />
+            {/* Tile 3: Căn cước công dân */}
+            <View style={[styles.bentoTile, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+              <View style={[styles.tileIconCircle, { backgroundColor: "rgba(16, 185, 129, 0.15)" }]}>
+                <Ionicons name="card" size={20} color="#10B981" />
+              </View>
+              <AppText style={[styles.tileTitle, { color: theme.text }]}>{t("account.idCard")}</AppText>
+              <AppText style={[styles.tileSubtitle, { color: "#10B981", fontWeight: "800" }]}>
+                {profile.idCard ? formatCCCD(profile.idCard) : "Chưa xác thực"}
+              </AppText>
             </View>
-          </Card>
-        </View>
 
-        {menuItems.map((item) => (
-          <Pressable key={item.key} onPress={() => handleMenuPress(item.key)}>
-            <Card style={[styles.card, styles.menuCard]}>
-              <View style={styles.menuIcon}>
-                <Ionicons name={item.icon as any} size={20} color={theme.primary} />
-              </View>
-              <View style={styles.menuInfo}>
-                <AppText style={styles.menuTitle}>{item.title}</AppText>
-                <AppText style={styles.menuDesc}>{item.desc}</AppText>
+            {/* Tile 4: Role-specific Tile */}
+            {isLandlord ? (
+              <Pressable
+                style={[styles.bentoTile, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
+                onPress={() => onNavigate?.("admin_settings")}
+              >
+                <View style={[styles.tileIconCircle, { backgroundColor: "rgba(139, 92, 246, 0.15)" }]}>
+                  <Ionicons name="qr-code" size={20} color="#8B5CF6" />
+                </View>
+                <AppText style={[styles.tileTitle, { color: theme.text }]}>{t("account.banking")}</AppText>
+                <AppText style={[styles.tileSubtitle, { color: theme.muted }]}>Cấu hình nhận tiền</AppText>
+              </Pressable>
+            ) : (
+              <Pressable
+                style={[styles.bentoTile, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
+                onPress={() => onNavigate?.("contract")}
+              >
+                <View style={[styles.tileIconCircle, { backgroundColor: "rgba(139, 92, 246, 0.15)" }]}>
+                  <Ionicons name="document-text" size={20} color="#8B5CF6" />
+                </View>
+                <AppText style={[styles.tileTitle, { color: theme.text }]}>Hợp đồng thuê</AppText>
+                <AppText style={[styles.tileSubtitle, { color: theme.muted }]}>Xem điều khoản & cọc</AppText>
+              </Pressable>
+            )}
+          </View>
+        </AnimatedEntry>
+
+        {/* ========================================================= */}
+        {/* 3. BENTO GROUP 2: TÙY CHỌN ỨNG DỤNG                      */}
+        {/* ========================================================= */}
+        <AnimatedEntry delay={200}>
+          <View style={styles.sectionHeaderRow}>
+            <Ionicons name="options" size={16} color={theme.primary} />
+            <AppText style={[styles.sectionTitle, { color: theme.text }]}>
+              {t("account.appPreferences")}
+            </AppText>
+          </View>
+
+          {/* Bento List Card: Language, Notification, Theme */}
+          <View style={[styles.bentoListCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+            {/* Row 1: Ngôn ngữ */}
+            <View style={styles.bentoListRow}>
+              <View style={styles.rowLeft}>
+                <View style={[styles.rowIconCircle, { backgroundColor: "rgba(16, 185, 129, 0.15)" }]}>
+                  <Ionicons name="globe-outline" size={18} color="#10B981" />
+                </View>
+                <AppText style={[styles.rowLabel, { color: theme.text }]}>{t("common.language")}</AppText>
               </View>
 
-              <Ionicons name="chevron-forward" size={20} color={theme.muted} />
-            </Card>
+              {/* Segmented Language Switcher */}
+              <View style={[styles.langSegmented, { backgroundColor: theme.background, borderColor: theme.border }]}>
+                <Pressable
+                  style={[styles.langPill, language === "vi" && { backgroundColor: theme.primary }]}
+                  onPress={() => void setLanguage("vi")}
+                >
+                  <AppText style={[styles.langPillText, { color: language === "vi" ? theme.background : theme.muted }]}>
+                    🇻🇳 VI
+                  </AppText>
+                </Pressable>
+                <Pressable
+                  style={[styles.langPill, language === "en" && { backgroundColor: theme.primary }]}
+                  onPress={() => void setLanguage("en")}
+                >
+                  <AppText style={[styles.langPillText, { color: language === "en" ? theme.background : theme.muted }]}>
+                    🇬🇧 EN
+                  </AppText>
+                </Pressable>
+              </View>
+            </View>
+
+            <View style={[styles.rowDivider, { backgroundColor: theme.border }]} />
+
+            {/* Row 2: Thông báo đẩy */}
+            <View style={styles.bentoListRow}>
+              <View style={styles.rowLeft}>
+                <View style={[styles.rowIconCircle, { backgroundColor: "rgba(59, 130, 246, 0.15)" }]}>
+                  <Ionicons name="notifications-outline" size={18} color="#3B82F6" />
+                </View>
+                <View>
+                  <AppText style={[styles.rowLabel, { color: theme.text }]}>{t("account.pushNotifications")}</AppText>
+                  <AppText style={[styles.rowSubLabel, { color: theme.muted }]}>Cảnh báo hóa đơn & sự cố</AppText>
+                </View>
+              </View>
+
+              {pushLoading ? (
+                <ActivityIndicator size="small" color={theme.primary} />
+              ) : (
+                <Switch
+                  value={pushEnabled}
+                  onValueChange={(val) => void handlePushChange(val)}
+                  trackColor={{ false: isDark ? "#374151" : "#E5E7EB", true: "#10B981" }}
+                  thumbColor="#FFFFFF"
+                />
+              )}
+            </View>
+
+            <View style={[styles.rowDivider, { backgroundColor: theme.border }]} />
+
+            {/* Row 3: Giao diện sáng / tối */}
+            <View style={styles.bentoListRow}>
+              <View style={styles.rowLeft}>
+                <View style={[styles.rowIconCircle, { backgroundColor: "rgba(245, 158, 11, 0.15)" }]}>
+                  <Ionicons name={isDark ? "moon-outline" : "sunny-outline"} size={18} color="#F59E0B" />
+                </View>
+                <View>
+                  <AppText style={[styles.rowLabel, { color: theme.text }]}>{t("account.themeMode")}</AppText>
+                  <AppText style={[styles.rowSubLabel, { color: theme.muted }]}>{isDark ? "Chế độ Tối (Dark)" : "Chế độ Sáng (Light)"}</AppText>
+                </View>
+              </View>
+
+              <Switch
+                value={isDark}
+                onValueChange={toggleTheme}
+                trackColor={{ false: "#E5E7EB", true: "#10B981" }}
+                thumbColor="#FFFFFF"
+              />
+            </View>
+          </View>
+        </AnimatedEntry>
+
+        {/* ========================================================= */}
+        {/* 4. BENTO GROUP 3: HỆ THỐNG & ĐĂNG XUẤT                    */}
+        {/* ========================================================= */}
+        <AnimatedEntry delay={260}>
+          <View style={styles.sectionHeaderRow}>
+            <Ionicons name="information-circle" size={16} color={theme.primary} />
+            <AppText style={[styles.sectionTitle, { color: theme.text }]}>
+              {t("account.systemAndLegal")}
+            </AppText>
+          </View>
+
+          <View style={[styles.bentoListCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+            <View style={styles.bentoListRow}>
+              <View style={styles.rowLeft}>
+                <View style={[styles.rowIconCircle, { backgroundColor: "rgba(107, 114, 128, 0.15)" }]}>
+                  <Ionicons name="shield-outline" size={18} color="#6B7280" />
+                </View>
+                <AppText style={[styles.rowLabel, { color: theme.text }]}>{t("account.terms")}</AppText>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={theme.muted} />
+            </View>
+
+            <View style={[styles.rowDivider, { backgroundColor: theme.border }]} />
+
+            <View style={styles.bentoListRow}>
+              <View style={styles.rowLeft}>
+                <View style={[styles.rowIconCircle, { backgroundColor: "rgba(107, 114, 128, 0.15)" }]}>
+                  <Ionicons name="cube-outline" size={18} color="#6B7280" />
+                </View>
+                <AppText style={[styles.rowLabel, { color: theme.text }]}>{t("account.appVersion")}</AppText>
+              </View>
+              <AppText style={[styles.versionPill, { color: theme.primary, backgroundColor: theme.primarySoft }]}>
+                v2.0 AI Edition
+              </AppText>
+            </View>
+          </View>
+
+          {/* Big Rounded Red Logout Button */}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t("account.logout")}
+            style={({ pressed }) => [styles.logoutButton, pressed && { opacity: 0.85 }]}
+            onPress={() => {
+              Alert.alert(
+                t("account.logout"),
+                "Bạn có chắc chắn muốn đăng xuất khỏi TroHub?",
+                [
+                  { text: t("common.cancel"), style: "cancel" },
+                  { text: t("account.logout"), style: "destructive", onPress: onLogout },
+                ]
+              );
+            }}
+          >
+            <Ionicons name="log-out-outline" size={20} color="#FFFFFF" />
+            <AppText style={styles.logoutButtonText}>{t("account.logout")}</AppText>
           </Pressable>
-        ))}
-
+        </AnimatedEntry>
       </ScrollView>
 
-      <Modal transparent animationType="slide" visible={settingsVisible} onRequestClose={() => setSettingsVisible(false)}>
-        <View style={styles.drawerBackdrop}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setSettingsVisible(false)} />
-          <View style={styles.drawer}>
-            <View style={styles.drawerHandle} />
-            <AppText style={styles.drawerTitle}>{t("nav.settings")}</AppText>
-            <Pressable style={styles.drawerRow} onPress={() => { setSettingsVisible(false); onNavigate?.("profile"); }}>
-              <Ionicons name="person-outline" size={21} color="#CFEDE1" /><AppText style={styles.drawerText}>{t("auth.account")}</AppText><Ionicons name="chevron-forward" size={19} color="#9BC9B7" />
-            </Pressable>
-            <Pressable style={styles.drawerRow} onPress={() => { setSettingsVisible(false); setPasswordVisible(true); }}>
-              <Ionicons name="lock-closed-outline" size={21} color="#CFEDE1" /><AppText style={styles.drawerText}>{t("auth.resetPassword")}</AppText><Ionicons name="chevron-forward" size={19} color="#9BC9B7" />
-            </Pressable>
-            <View style={styles.drawerRow}>
-              <Ionicons name="notifications-outline" size={21} color="#CFEDE1" /><AppText style={styles.drawerText}>{t("notifications.title")}</AppText>
-              {pushLoading ? <ActivityIndicator color="#CFEDE1" /> : <Switch value={pushEnabled} onValueChange={(next) => void handlePushChange(next)} trackColor={{ false: "#3A685A", true: "#22C55E" }} thumbColor="#F8FFFB" />}
+      {/* ========================================================= */}
+      {/* 5. MODAL CHỈNH SỬA HỒ SƠ                                  */}
+      {/* ========================================================= */}
+      <Modal visible={editProfileVisible} transparent animationType="slide" onRequestClose={() => setEditProfileVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+            <View style={styles.modalHeader}>
+              <AppText style={[styles.modalTitle, { color: theme.text }]}>{t("account.editProfile")}</AppText>
+              <Pressable onPress={() => setEditProfileVisible(false)}>
+                <Ionicons name="close" size={24} color={theme.text} />
+              </Pressable>
             </View>
-            {!!pushError && <View style={styles.pushError}><AppText style={styles.pushErrorText}>{pushError}</AppText><Pressable onPress={() => void openNotificationSettings()}><AppText style={styles.openSettingsText}>{t("nav.settings")}</AppText></Pressable></View>}
-            <Pressable style={styles.logoutAction} onPress={() => { setSettingsVisible(false); onLogout(); }}>
-              <Ionicons name="log-out-outline" size={20} color="#FFE2E5" /><AppText style={styles.logoutActionText}>{t("auth.logout")}</AppText>
-            </Pressable>
+
+            <View style={styles.modalBody}>
+              <View style={styles.fieldGroup}>
+                <AppText style={[styles.fieldLabel, { color: theme.text }]}>{t("auth.fullName")}</AppText>
+                <AppTextInput
+                  value={editName}
+                  onChangeText={setEditName}
+                  placeholder="Nguyễn Văn A"
+                  placeholderTextColor={theme.muted}
+                  style={[styles.input, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border }]}
+                />
+              </View>
+
+              <View style={styles.fieldGroup}>
+                <AppText style={[styles.fieldLabel, { color: theme.text }]}>{t("auth.phone")}</AppText>
+                <AppTextInput
+                  value={editPhone}
+                  onChangeText={(val) => setEditPhone(formatPhone(val))}
+                  keyboardType="phone-pad"
+                  placeholder="0901.234.567"
+                  placeholderTextColor={theme.muted}
+                  style={[styles.input, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border }]}
+                />
+              </View>
+
+              <View style={styles.fieldGroup}>
+                <AppText style={[styles.fieldLabel, { color: theme.text }]}>Email</AppText>
+                <AppTextInput
+                  value={editEmail}
+                  onChangeText={setEditEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  placeholder="email@example.com"
+                  placeholderTextColor={theme.muted}
+                  style={[styles.input, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border }]}
+                />
+              </View>
+
+              <Pressable
+                style={[styles.saveModalBtn, { backgroundColor: theme.primary }]}
+                disabled={editSaving}
+                onPress={handleSaveProfile}
+              >
+                {editSaving ? (
+                  <ActivityIndicator size="small" color={theme.background} />
+                ) : (
+                  <AppText style={[styles.saveModalBtnText, { color: theme.background }]}>{t("common.save")}</AppText>
+                )}
+              </Pressable>
+            </View>
           </View>
         </View>
       </Modal>
 
-      <ChangePasswordModal
-        visible={passwordVisible}
-        onClose={() => setPasswordVisible(false)}
-      />
+      {/* Change Password Modal */}
+      <ChangePasswordModal visible={passwordVisible} onClose={() => setPasswordVisible(false)} />
     </>
   );
 }
 
-const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSheet.create({
-  container: {
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  content: { padding: 18, paddingBottom: 60 },
+  heroBentoCard: {
+    borderRadius: 24,
+    borderWidth: 1,
+    overflow: "hidden",
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  heroGradient: { padding: 20 },
+  heroTopRow: { flexDirection: "row", alignItems: "center", gap: 16 },
+  avatarOuter: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 3,
+    padding: 2,
+  },
+  avatarInner: {
     flex: 1,
+    borderRadius: 32,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 40,
-    paddingBottom: 40,
-  },
-  titleRow: {
+  avatarLetter: { color: "#FFFFFF", fontSize: 28, fontWeight: "900" },
+  identityInfo: { flex: 1 },
+  roleBadgeRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 },
+  roleBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
+  roleBadgeText: { fontSize: 11, fontWeight: "900" },
+  roomBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
+  roomBadgeText: { fontSize: 11, fontWeight: "900" },
+  userName: { fontSize: 19, fontWeight: "900" },
+  userContact: { fontSize: 13, fontWeight: "700", marginTop: 2 },
+  userEmail: { fontSize: 12, fontWeight: "600", marginTop: 1 },
+  propertyRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "900",
-  },
-  settingsButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  profileCard: {
-    alignItems: "center",
-    paddingVertical: 24,
-    marginBottom: 20,
-  },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: theme.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 12,
-  },
-  avatarText: {
-    color: "#fff",
-    fontSize: 32,
-    fontWeight: "900",
-  },
-  name: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: theme.text,
-    marginBottom: 4,
-  },
-  phone: {
-    fontSize: 14,
-    color: theme.muted,
-    marginBottom: 10,
-  },
-  roomBadge: {
-    backgroundColor: theme.primarySoft,
+    gap: 6,
+    marginTop: 14,
     paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingVertical: 8,
     borderRadius: 12,
   },
-  roomText: {
-    color: theme.primary,
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  statRow: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 24,
-  },
-  card: {
-    borderRadius: 16,
-  },
-  statCard: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: 14,
-  },
-  statNumber: {
-    fontSize: 18,
-    fontWeight: "900",
-    color: theme.primary,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: theme.muted,
-    marginTop: 2,
-    fontWeight: "600",
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    marginBottom: 12,
-  },
-  menuCard: {
-    flexDirection: "row",
-    alignItems: "center",
+  propertyAddressText: { fontSize: 12, fontWeight: "700", flex: 1 },
+  sectionHeaderRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10, marginTop: 6 },
+  sectionTitle: { fontSize: 14, fontWeight: "900", letterSpacing: 0.2 },
+  bentoGrid2x2: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 20 },
+  bentoTile: {
+    width: "48%",
+    borderRadius: 20,
+    borderWidth: 1,
     padding: 16,
-    marginBottom: 10,
+    gap: 6,
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  menuIcon: {
+  tileIconCircle: {
     width: 40,
     height: 40,
-    borderRadius: 12,
-    backgroundColor: theme.primarySoft,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 14,
+    marginBottom: 4,
   },
-  menuInfo: {
+  tileTitle: { fontSize: 13, fontWeight: "800" },
+  tileSubtitle: { fontSize: 11, fontWeight: "600" },
+  bentoListCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  bentoListRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+  },
+  rowLeft: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
+  rowIconCircle: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" },
+  rowLabel: { fontSize: 14, fontWeight: "800" },
+  rowSubLabel: { fontSize: 11, fontWeight: "600", marginTop: 2 },
+  rowDivider: { height: 1, opacity: 0.6 },
+  langSegmented: { flexDirection: "row", borderWidth: 1, borderRadius: 12, padding: 3 },
+  langPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 9 },
+  langPillText: { fontSize: 12, fontWeight: "900" },
+  versionPill: { fontSize: 11, fontWeight: "800", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  logoutButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#EF4444",
+    borderRadius: 18,
+    paddingVertical: 15,
+    marginTop: 8,
+    shadowColor: "#EF4444",
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  logoutButtonText: { color: "#FFFFFF", fontSize: 15, fontWeight: "900" },
+  modalOverlay: {
     flex: 1,
-  },
-  menuTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: theme.text,
-    marginBottom: 2,
-  },
-  menuDesc: {
-    fontSize: 12,
-    color: theme.muted,
-  },
-  drawerBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(0,0,0,0.6)",
     justifyContent: "flex-end",
   },
-  drawer: {
-    backgroundColor: "#1A3026",
+  modalCard: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
+    borderWidth: 1,
     padding: 24,
     paddingBottom: 40,
   },
-  drawerHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: "#3A685A",
-    borderRadius: 2,
-    alignSelf: "center",
-    marginBottom: 16,
+  modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
+  modalTitle: { fontSize: 18, fontWeight: "900" },
+  modalBody: { gap: 14 },
+  fieldGroup: { gap: 6 },
+  fieldLabel: { fontSize: 13, fontWeight: "800" },
+  input: {
+    height: 48,
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    fontSize: 14,
+    fontWeight: "600",
   },
-  drawerTitle: {
-    fontSize: 20,
-    fontWeight: "900",
-    color: "#fff",
-    marginBottom: 20,
-  },
-  drawerRow: {
-    flexDirection: "row",
+  saveModalBtn: {
+    height: 48,
+    borderRadius: 14,
     alignItems: "center",
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#3A685A",
-  },
-  drawerText: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#CFEDE1",
-    marginLeft: 14,
-  },
-  pushError: {
-    backgroundColor: "rgba(239, 68, 68, 0.2)",
-    borderRadius: 10,
-    padding: 12,
+    justifyContent: "center",
     marginTop: 10,
   },
-  pushErrorText: {
-    color: "#FCA5A5",
-    fontSize: 13,
-    marginBottom: 4,
-  },
-  openSettingsText: {
-    color: "#93C5FD",
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  logoutAction: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 16,
-    marginTop: 10,
-  },
-  logoutActionText: {
-    color: "#FFE2E5",
-    fontSize: 16,
-    fontWeight: "800",
-    marginLeft: 14,
-  },
+  saveModalBtnText: { fontSize: 15, fontWeight: "900" },
 });
