@@ -15,12 +15,12 @@ import { useLanguage } from "@/components/language-provider";
 export default function AccountSettingsPage() {
   const { t } = useLanguage();
   const notification = useNotification();
-  const [form, setForm] = useState({ name: "", phone: "", email: "", password: "" });
+  const [form, setForm] = useState({ name: "", phone: "", email: "", propertyAddress: "", password: "" });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     void fetchAPI("/settings")
-      .then(({ data }) => setForm({ name: data?.name || "", phone: formatPhone(data?.phone), email: data?.email || "", password: "" }))
+      .then(({ data }) => setForm({ name: data?.name || "", phone: formatPhone(data?.phone), email: data?.email || "", propertyAddress: data?.propertyAddress || "", password: "" }))
       .catch((error) => notification.error(getNotificationMessage(error, t("common.error"))));
   }, [notification, t]);
 
@@ -45,8 +45,10 @@ export default function AccountSettingsPage() {
     ["name", t("auth.fullName"), "text"],
     ["phone", t("auth.phone"), "tel"],
     ["email", t("auth.email"), "email"],
+    ["propertyAddress", t("auth.propertyAddress"), "text"],
     ["password", t("settings.account.newPassword"), "password"],
   ] as const;
+
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">

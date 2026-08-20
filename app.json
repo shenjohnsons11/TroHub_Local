@@ -16,9 +16,11 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.TroHub",
       "infoPlist": {
+        "NSCameraUsageDescription": "Cho phép TroHub dùng camera để quét CCCD và đồng hồ điện nước.",
         "NSSpeechRecognitionUsageDescription": "Cho phép TroHub chuyển giọng nói thành văn bản.",
         "NSMicrophoneUsageDescription": "Cho phép TroHub dùng micro để nhận diện giọng nói."
       }
+
     },
     "android": {
       "adaptiveIcon": {

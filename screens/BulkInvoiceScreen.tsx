@@ -263,19 +263,20 @@ export default function BulkInvoiceScreen({ onNavigate }: Props) {
                         placeholderTextColor={theme.muted}
                         keyboardType="numeric"
                         value={item.roomAmount !== undefined ? formatNumberInput(item.roomAmount) : ""}
-                        onChangeText={(value) => handleInputChange(index, "roomAmount", value)}
+                        onChangeText={(value) => handleInputChange(index, "roomAmount", unformatNumber(value))}
                       />
                     </InvoiceField>
-                    <InvoiceField label={t("invoices.serviceFee")} iconColor={theme.primary} styles={styles}>
+                    <InvoiceField label={`${t("invoices.serviceFee")} (Internet, Xe, Rác...)`} iconColor={theme.primary} styles={styles}>
                       <AppTextInput
                         style={styles.input}
                         placeholder="0"
                         placeholderTextColor={theme.muted}
                         keyboardType="numeric"
                         value={item.services !== undefined ? formatNumberInput(item.services) : ""}
-                        onChangeText={(value) => handleInputChange(index, "services", value)}
+                        onChangeText={(value) => handleInputChange(index, "services", unformatNumber(value))}
                       />
                     </InvoiceField>
+
                   </View>
                   <View style={styles.inputRow}>
                     <InvoiceField label={`${t("utilities.oldElec")} · ${formatMeterReading(item.electricityOld) || "0"} kWh`} icon="flash-outline" iconColor={theme.primary} styles={styles} accessory={<Pressable accessibilityRole="button" accessibilityLabel={`Scan ${item.room}`} disabled={!item.selected || submitting || item.electricityPrice <= 0} onPress={() => setScanTarget({ index, roomCode: item.room, meterType: "electricity" })} style={styles.scanInline}><Ionicons name="camera-outline" size={14} color={theme.primary} /><AppText style={styles.scanInlineText}>OCR</AppText></Pressable>}>

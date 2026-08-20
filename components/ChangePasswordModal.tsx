@@ -6,7 +6,7 @@ import { useAppTheme } from "../contexts/ThemeContext";
 import { useNotification } from "../hooks/useNotification";
 import AppButton from "./ui/AppButton";
 import { Ionicons } from "@expo/vector-icons";
-import { useLanguage } from "../contexts/LanguageContext";
+import { useTranslation } from "../contexts/LanguageContext";
 
 type Props = {
   visible: boolean;
@@ -15,7 +15,7 @@ type Props = {
 
 export default function ChangePasswordModal({ visible, onClose }: Props) {
   const { theme } = useAppTheme();
-  const { t } = useLanguage();
+  const { t } = useTranslation();
   const notification = useNotification();
   const styles = createStyles(theme);
   const [oldPassword, setOldPassword] = useState("");
@@ -57,30 +57,30 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
     let isValid = true;
 
     if (!oldPassword.trim()) {
-      setOldError(t("auth.currentPassword"));
+      setOldError(t("i18n.security.passwordRequired"));
       isValid = false;
     } else {
       setOldError("");
     }
 
     if (!newPassword.trim()) {
-      setNewError(t("auth.newPassword"));
+      setNewError(t("i18n.security.newPasswordRequired"));
       isValid = false;
     } else if (newPassword.length <= 6) {
-      setNewError(t("auth.passwordMinLength"));
+      setNewError(t("i18n.security.passwordTooShort"));
       isValid = false;
     } else if (newPassword === oldPassword) {
-      setNewError(t("auth.newPassword"));
+      setNewError(t("i18n.security.passwordMustDiffer"));
       isValid = false;
     } else {
       setNewError("");
     }
 
     if (!confirmPassword.trim()) {
-      setConfirmError(t("auth.confirmPassword"));
+      setConfirmError(t("i18n.security.confirmPasswordRequired"));
       isValid = false;
     } else if (confirmPassword !== newPassword) {
-      setConfirmError(t("auth.passwordMismatch"));
+      setConfirmError(t("i18n.security.passwordMismatch"));
       isValid = false;
     } else {
       setConfirmError("");
@@ -90,11 +90,14 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
 
     try {
       setIsSubmitting(true);
+
       await authService.changePassword(oldPassword, newPassword);
-      notification.success(t("common.success"));
+
+      notification.success(t("i18n.security.changed"), { title: t("common.success") });
       handleClose();
     } catch (error) {
-      notification.error(t("common.error"));
+      console.log("Lỗi đổi mật khẩu:", error);
+      notification.error(t("i18n.security.changeFailed"), { title: t("common.error") });
     } finally {
       setIsSubmitting(false);
     }
@@ -126,10 +129,10 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
                 accessibilityRole="header"
                 accessibilityLiveRegion="polite"
               >
-                {t("auth.changePassword")}
+                {t("i18n.security.changePassword")}
               </AppText>
               <AppText style={styles.subtitle}>
-                {t("settings.security")}
+                {t("i18n.security.changePasswordSubtitle")}
               </AppText>
             </View>
 
@@ -138,13 +141,13 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
               onPress={handleClose}
               disabled={isSubmitting}
               accessibilityRole="button"
-              accessibilityLabel={t("common.close")}
+              accessibilityLabel={t("i18n.security.closeChangePassword")}
             >
               <Ionicons name="close" size={22} color={theme.text} />
             </Pressable>
           </View>
 
-          <AppText style={styles.label}>{t("auth.currentPassword")}</AppText>
+          <AppText style={styles.label}>{t("i18n.security.currentPassword")}</AppText>
           <AppTextInput
             style={[styles.input, oldError ? styles.inputError : null]}
             value={oldPassword}
@@ -197,7 +200,7 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
             loading={isSubmitting}
             icon="lock-closed-outline"
           >
-            {t("common.save")}
+            {t("i18n.security.updatePassword")}
           </AppButton>
         </View>
         </ScrollView>
@@ -228,7 +231,7 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSh
     flexDirection: "row",
     justifyContent: "space-between",
     gap: 14,
-    marginBottom: 16,
+    marginBottom: 18,
   },
   headerText: {
     flex: 1,
@@ -241,7 +244,8 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSh
   subtitle: {
     color: theme.muted,
     fontSize: 13,
-    marginTop: 4,
+    marginTop: 5,
+    lineHeight: 20,
   },
   closeButton: {
     width: 44,
@@ -251,30 +255,52 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSh
     alignItems: "center",
     justifyContent: "center",
   },
+  closeText: {
+    fontSize: 26,
+    color: theme.text,
+    marginTop: -2,
+  },
   label: {
     fontSize: 13,
-    fontWeight: "700",
-    color: theme.text,
-    marginBottom: 6,
+    color: theme.muted,
+    marginBottom: 8,
     marginTop: 10,
+    fontWeight: "700",
   },
   input: {
-    backgroundColor: theme.background,
+    height: 48,
+    backgroundColor: theme.surfaceElevated,
+    borderRadius: 10,
+    paddingHorizontal: 14,
     borderWidth: 1,
     borderColor: theme.border,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 15,
     color: theme.text,
+    fontSize: 14,
   },
   inputError: {
     borderColor: theme.danger,
+    backgroundColor: theme.warningSoft,
   },
   errorText: {
     color: theme.danger,
     fontSize: 12,
-    marginTop: 4,
     fontWeight: "600",
+    marginTop: 6,
+  },
+  button: {
+    height: 52,
+    backgroundColor: theme.primary,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 22,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
+  buttonText: {
+    color: theme.background,
+    fontSize: 15,
+    fontWeight: "900",
   },
 });

@@ -9,7 +9,7 @@ import { useTranslation } from "../contexts/LanguageContext";
 type Props = {
   visible: boolean;
   onClose: () => void;
-  onScan: (cccdNumber: string) => void;
+  onScan: (cccdNumber: string, fullName?: string) => void;
 };
 
 const VIEWFINDER_SIZE = 260;
@@ -64,12 +64,14 @@ export default function CCCDScannerModal({ visible, onClose, onScan }: Props) {
     const parts = rawText.split("|");
     const cccdNumber = (parts[0] || rawText).replace(/\D/g, "").slice(0, 12);
     if (cccdNumber.length !== 12) return;
+    const fullName = parts[2] ? parts[2].trim() : undefined;
 
     scanningRef.current = true;
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    onScan(cccdNumber);
+    onScan(cccdNumber, fullName);
     onClose();
   };
+
 
   const cameraReady = Boolean(permission?.granted);
 

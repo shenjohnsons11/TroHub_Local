@@ -1,20 +1,29 @@
-import Image from "next/image";
+"use client";
 
-export function AppLoading({ message = "Đang tải dữ liệu ứng dụng..." }: { message?: string }) {
+import Image from "next/image";
+import { TroHubLogo } from "@/components/trohub-logo";
+import { Loader2 } from "lucide-react";
+import { useLanguage } from "@/components/language-provider";
+
+export function AppLoading({ message }: { message?: string }) {
+  const { t } = useLanguage();
+  const displayMessage = message || t("i18n.loading.propertyData");
   return (
-    <div className="app-loading" role="status" aria-live="polite" aria-label={message}>
-      <div className="app-loading-logo" aria-hidden="true">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-background p-6" role="status" aria-live="polite">
+      <TroHubLogo />
+      <div className="app-loading-frame mt-8 mb-6 overflow-hidden rounded-2xl border bg-card shadow-sm w-full max-w-[340px] aspect-[1.6] relative" aria-hidden="true">
         <Image
-          src="/logo_3d_glass.png"
-          alt=""
-          width={224}
-          height={224}
+          src="/trohub-property-loading.png"
+          alt={t("i18n.loading.spaceAlt")}
+          fill
+          className="object-cover"
           priority
         />
       </div>
-      <span className="app-loading-ring" aria-hidden="true" />
-      <p>TroHub - Hệ Sinh Thái Quản Lý Nhà Trọ Thông Minh</p>
-      <span className="sr-only">{message}</span>
+      <div className="app-loading-track flex flex-col items-center gap-3">
+        <Loader2 className="size-6 animate-spin text-primary motion-reduce:animate-none" />
+        <p className="text-sm font-semibold text-muted-foreground">{displayMessage}</p>
+      </div>
     </div>
   );
 }
