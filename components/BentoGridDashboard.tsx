@@ -241,10 +241,11 @@ function createStyles(theme: any) {
     waveContainer: {
       flexDirection: "row",
       alignItems: "flex-end",
-      justify.content: "space-between",
+      justifyContent: "space-between",
       height: 45,
       marginVertical: 4,
     },
+
     waveBar: { width: 8, borderRadius: 4 },
     insightsPill: {
       flexDirection: "row",
