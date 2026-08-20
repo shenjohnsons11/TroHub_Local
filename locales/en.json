@@ -22,7 +22,9 @@
     "unitKwh": "kWh",
     "unitM3": "m³",
     "language": "Language",
-    "room": "Room"
+    "room": "Room",
+    "active": "Active",
+    "inactive": "Inactive"
   },
   "auth": {
     "brandTagline": "Smart Property Management System",
@@ -70,7 +72,8 @@
     "debts": "Debts",
     "notifications": "Notifications",
     "home": "Home",
-    "account": "Account"
+    "account": "Account",
+    "services": "Add-on Services"
   },
   "dashboard": {
     "eyebrow": "OPERATIONS OVERVIEW",
@@ -945,5 +948,15 @@
       "changeFailed": "Could not change the password. Please try again.",
       "updatePassword": "Update Password"
     }
+  },
+  "services": {
+    "billingMode": "Billing Mode",
+    "unit": "Unit",
+    "code": "Service Code",
+    "billingFixed": "Fixed (monthly)",
+    "billingQty": "By Quantity",
+    "billingMeter": "By Meter (electric/water)",
+    "defaultPrice": "Default Price",
+    "defaultQuantity": "Default Quantity"
   }
 }
