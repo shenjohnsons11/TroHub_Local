@@ -82,21 +82,22 @@ export default function SignContractWizard({ visible, contract, onClose, onSign 
           <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
             <AppText style={styles.sectionTitle}>{t("nav.services")}</AppText>
             <View style={styles.infoRow}>
-              <AppText style={styles.infoLabel}>{t("utilities.oldElec")}:</AppText>
-              <AppText style={styles.infoValue}>{formatCurrency(unformatNumber(contract.serviceFees.electric))}</AppText>
+              <AppText style={styles.infoLabel}>{t("contracts.electricityPrice")}:</AppText>
+              <AppText style={styles.infoValue}>{formatCurrency(unformatNumber(contract.serviceFees.electric))} / kWh</AppText>
             </View>
             <View style={styles.infoRow}>
-              <AppText style={styles.infoLabel}>{t("utilities.oldElec")}:</AppText>
+              <AppText style={styles.infoLabel}>{t("contracts.initialElec")}:</AppText>
               <AppText style={styles.infoValue}>{formatMeterReading(contract.meterTerms.initialElectricity)} kWh</AppText>
             </View>
             <View style={styles.infoRow}>
-              <AppText style={styles.infoLabel}>{t("utilities.oldWater")}:</AppText>
-              <AppText style={styles.infoValue}>{formatCurrency(unformatNumber(contract.serviceFees.water))}</AppText>
+              <AppText style={styles.infoLabel}>{t("contracts.waterPrice")}:</AppText>
+              <AppText style={styles.infoValue}>{formatCurrency(unformatNumber(contract.serviceFees.water))} / m³</AppText>
             </View>
             <View style={styles.infoRow}>
-              <AppText style={styles.infoLabel}>{t("utilities.oldWater")}:</AppText>
+              <AppText style={styles.infoLabel}>{t("contracts.initialWater")}:</AppText>
               <AppText style={styles.infoValue}>{formatMeterReading(contract.meterTerms.initialWater)} m³</AppText>
             </View>
+
             <View style={styles.infoRow}>
               <AppText style={styles.infoLabel}>{t("contracts.parking")}:</AppText>
               <AppText style={styles.infoValue}>{formatCurrency(unformatNumber(contract.serviceFees.parking))}</AppText>

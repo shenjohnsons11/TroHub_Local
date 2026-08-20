@@ -151,6 +151,10 @@
     "endDate": "Ngày hết hạn",
     "depositAmount": "Tiền cọc đã thu",
     "rentalPrice": "Giá thuê chốt",
+    "electricityPrice": "Đơn giá điện",
+    "waterPrice": "Đơn giá nước",
+    "initialElec": "Chỉ số điện đầu kỳ",
+    "initialWater": "Chỉ số nước đầu kỳ",
     "roomInfo": "Thông tin phòng",
     "terms": "Điều khoản hợp đồng",
     "signContract": "Ký xác nhận hợp đồng",
@@ -158,6 +162,7 @@
     "deposit": "Tiền cọc",
     "parking": "Phí gửi xe",
     "status": {
+
       "active": "Đang hiệu lực",
       "expired": "Đã hết hạn",
       "terminated": "Đã thanh lý"

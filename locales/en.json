@@ -151,6 +151,10 @@
     "endDate": "Expiration Date",
     "depositAmount": "Deposit Collected",
     "rentalPrice": "Fixed Rent",
+    "electricityPrice": "Electricity Price",
+    "waterPrice": "Water Price",
+    "initialElec": "Starting Electricity",
+    "initialWater": "Starting Water",
     "roomInfo": "Room Information",
     "terms": "Lease Terms",
     "signContract": "Sign & Confirm Contract",
@@ -158,6 +162,7 @@
     "deposit": "Deposit",
     "parking": "Parking Fee",
     "status": {
+
       "active": "Active",
       "expired": "Expired",
       "terminated": "Terminated"
