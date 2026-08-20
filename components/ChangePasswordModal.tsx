@@ -6,6 +6,7 @@ import { useAppTheme } from "../contexts/ThemeContext";
 import { useNotification } from "../hooks/useNotification";
 import AppButton from "./ui/AppButton";
 import { Ionicons } from "@expo/vector-icons";
+import { useLanguage } from "../contexts/LanguageContext";
 
 type Props = {
   visible: boolean;
@@ -14,6 +15,7 @@ type Props = {
 
 export default function ChangePasswordModal({ visible, onClose }: Props) {
   const { theme } = useAppTheme();
+  const { t } = useLanguage();
   const notification = useNotification();
   const styles = createStyles(theme);
   const [oldPassword, setOldPassword] = useState("");
@@ -55,30 +57,30 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
     let isValid = true;
 
     if (!oldPassword.trim()) {
-      setOldError("Vui lòng nhập mật khẩu hiện tại");
+      setOldError(t("auth.currentPassword"));
       isValid = false;
     } else {
       setOldError("");
     }
 
     if (!newPassword.trim()) {
-      setNewError("Vui lòng nhập mật khẩu mới");
+      setNewError(t("auth.newPassword"));
       isValid = false;
     } else if (newPassword.length <= 6) {
-      setNewError("Mật khẩu mới phải trên 6 ký tự");
+      setNewError(t("auth.passwordMinLength"));
       isValid = false;
     } else if (newPassword === oldPassword) {
-      setNewError("Mật khẩu mới không được trùng mật khẩu hiện tại");
+      setNewError(t("auth.newPassword"));
       isValid = false;
     } else {
       setNewError("");
     }
 
     if (!confirmPassword.trim()) {
-      setConfirmError("Vui lòng xác nhận mật khẩu mới");
+      setConfirmError(t("auth.confirmPassword"));
       isValid = false;
     } else if (confirmPassword !== newPassword) {
-      setConfirmError("Mật khẩu xác nhận không khớp");
+      setConfirmError(t("auth.passwordMismatch"));
       isValid = false;
     } else {
       setConfirmError("");
@@ -88,14 +90,11 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
 
     try {
       setIsSubmitting(true);
-
       await authService.changePassword(oldPassword, newPassword);
-
-      notification.success("Đổi mật khẩu thành công", { title: "Thành công" });
+      notification.success(t("common.success"));
       handleClose();
     } catch (error) {
-      console.log("Lỗi đổi mật khẩu:", error);
-      notification.error("Không thể đổi mật khẩu. Vui lòng thử lại.", { title: "Lỗi" });
+      notification.error(t("common.error"));
     } finally {
       setIsSubmitting(false);
     }
@@ -127,10 +126,10 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
                 accessibilityRole="header"
                 accessibilityLiveRegion="polite"
               >
-                Đổi mật khẩu
+                {t("auth.changePassword")}
               </AppText>
               <AppText style={styles.subtitle}>
-                Cập nhật mật khẩu đăng nhập tài khoản
+                {t("settings.security")}
               </AppText>
             </View>
 
@@ -139,13 +138,13 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
               onPress={handleClose}
               disabled={isSubmitting}
               accessibilityRole="button"
-              accessibilityLabel="Đóng đổi mật khẩu"
+              accessibilityLabel={t("common.close")}
             >
               <Ionicons name="close" size={22} color={theme.text} />
             </Pressable>
           </View>
 
-          <AppText style={styles.label}>Mật khẩu hiện tại</AppText>
+          <AppText style={styles.label}>{t("auth.currentPassword")}</AppText>
           <AppTextInput
             style={[styles.input, oldError ? styles.inputError : null]}
             value={oldPassword}
@@ -160,7 +159,7 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
           />
           {oldError ? <AppText style={styles.errorText}>{oldError}</AppText> : null}
 
-          <AppText style={styles.label}>Mật khẩu mới</AppText>
+          <AppText style={styles.label}>{t("auth.newPassword")}</AppText>
           <AppTextInput
             style={[styles.input, newError ? styles.inputError : null]}
             value={newPassword}
@@ -175,7 +174,7 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
           />
           {newError ? <AppText style={styles.errorText}>{newError}</AppText> : null}
 
-          <AppText style={styles.label}>Xác nhận mật khẩu mới</AppText>
+          <AppText style={styles.label}>{t("auth.confirmPassword")}</AppText>
           <AppTextInput
             style={[styles.input, confirmError ? styles.inputError : null]}
             value={confirmPassword}
@@ -198,7 +197,7 @@ export default function ChangePasswordModal({ visible, onClose }: Props) {
             loading={isSubmitting}
             icon="lock-closed-outline"
           >
-            Cập nhật mật khẩu
+            {t("common.save")}
           </AppButton>
         </View>
         </ScrollView>
@@ -229,7 +228,7 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSh
     flexDirection: "row",
     justifyContent: "space-between",
     gap: 14,
-    marginBottom: 18,
+    marginBottom: 16,
   },
   headerText: {
     flex: 1,
@@ -242,8 +241,7 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSh
   subtitle: {
     color: theme.muted,
     fontSize: 13,
-    marginTop: 5,
-    lineHeight: 20,
+    marginTop: 4,
   },
   closeButton: {
     width: 44,
@@ -253,52 +251,30 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSh
     alignItems: "center",
     justifyContent: "center",
   },
-  closeText: {
-    fontSize: 26,
-    color: theme.text,
-    marginTop: -2,
-  },
   label: {
     fontSize: 13,
-    color: theme.muted,
-    marginBottom: 8,
-    marginTop: 10,
     fontWeight: "700",
+    color: theme.text,
+    marginBottom: 6,
+    marginTop: 10,
   },
   input: {
-    height: 48,
-    backgroundColor: theme.surfaceElevated,
-    borderRadius: 10,
-    paddingHorizontal: 14,
+    backgroundColor: theme.background,
     borderWidth: 1,
     borderColor: theme.border,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 15,
     color: theme.text,
-    fontSize: 14,
   },
   inputError: {
     borderColor: theme.danger,
-    backgroundColor: theme.warningSoft,
   },
   errorText: {
     color: theme.danger,
     fontSize: 12,
+    marginTop: 4,
     fontWeight: "600",
-    marginTop: 6,
-  },
-  button: {
-    height: 52,
-    backgroundColor: theme.primary,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 22,
-  },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  buttonText: {
-    color: theme.background,
-    fontSize: 15,
-    fontWeight: "900",
   },
 });

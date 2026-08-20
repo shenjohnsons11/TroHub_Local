@@ -25,8 +25,11 @@
     "room": "Room"
   },
   "auth": {
+    "brandTagline": "Smart Property Management System",
+    "brandDescription": "Track contracts, invoices, and repair requests in one unified app.",
     "login": "Sign In",
     "loginTitle": "Welcome Back",
+
     "loginDescription": "Sign in to your TroHub Landlord Management account.",
     "register": "Register",
     "registerLandlord": "Register Landlord",
@@ -175,8 +178,10 @@
       "paid": "Paid",
       "overdue": "Overdue"
     },
+    "sendReminder": "Send Payment Reminder",
     "payNow": "Pay Now"
   },
+
   "repairs": {
     "title": "Repairs & Issue Reports",
     "subtitle": "Receive incident reports from tenants and track progress",
@@ -206,11 +211,16 @@
   },
   "ai": {
     "title": "TroHub Co-pilot AI Assistant",
+    "assistantTitle": "TroHub AI Co-pilot",
+    "greeting": "Hello! I am your TroHub AI Assistant. How can I help you today?",
+    "placeholder": "Ask AI or enter a request...",
+    "systemError": "Unable to connect to AI. Please check the API Key or network connection.",
     "subtitle": "Smart Q&A, automatic revenue analysis, and management suggestions",
     "inputPlaceholder": "Ask TroHub AI (e.g., Rooms with unpaid electricity bills this month...)",
     "send": "Send Query",
     "suggested": "Suggested Questions"
   },
+
   "mobile": {
     "addTenant": {
       "required": "Please complete all fields and choose a room.",
