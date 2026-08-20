@@ -181,7 +181,10 @@
     "noData": "Chưa có dữ liệu",
     "morning": "Chào buổi sáng",
     "afternoon": "Chào buổi chiều",
-    "evening": "Chào buổi tối"
+    "evening": "Chào buổi tối",
+    "viewBento": "📊 Tổng quan",
+    "viewReport": "📈 Báo cáo",
+    "viewStandard": "📋 Tiêu chuẩn"
   },
   "rooms": {
     "title": "Quản lý Phòng trọ",
@@ -623,5 +626,22 @@
     "billingMeter": "Theo đồng hồ (điện/nước)",
     "defaultPrice": "Giá mặc định",
     "defaultQuantity": "Số lượng mặc định"
+  },
+  "account": {
+    "profileAndSecurity": "Hồ sơ & Bảo mật",
+    "appPreferences": "Tùy chọn ứng dụng",
+    "systemAndLegal": "Hệ thống & Pháp lý",
+    "editProfile": "Chỉnh sửa thông tin",
+    "changePassword": "Đổi mật khẩu",
+    "idCard": "Căn cước công dân (CCCD)",
+    "banking": "Tài khoản nhận tiền (VietQR)",
+    "pushNotifications": "Thông báo đẩy",
+    "themeMode": "Giao diện ứng dụng",
+    "terms": "Điều khoản & Chính sách",
+    "appVersion": "Phiên bản ứng dụng",
+    "logout": "Đăng xuất tài khoản",
+    "roleLandlord": "Chủ trọ 🔑",
+    "roleTenant": "Khách thuê 🏠",
+    "saveSuccess": "Cập nhật thông tin thành công!"
   }
 }

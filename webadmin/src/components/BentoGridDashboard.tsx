@@ -10,13 +10,14 @@ type Props = {
 };
 
 export function BentoGridDashboard({ stats }: Props) {
-  const totalRooms = stats?.totalRooms || 8;
-  const occupiedRooms = stats?.occupiedRooms || 3;
-  const vacantRooms = stats?.vacantRooms || Math.max(0, totalRooms - occupiedRooms);
-  const occupancyRate = Math.round((occupiedRooms / Math.max(totalRooms, 1)) * 100);
-  const outstandingDebt = stats?.outstandingDebt || 0;
-  const pendingRepairs = stats?.pendingRepairs || 0;
-  const pendingContracts = stats?.pendingContracts || 0;
+  const totalRooms = Number(stats?.totalRooms ?? 0);
+  const occupiedRooms = Number(stats?.occupiedRooms ?? 0);
+  const vacantRooms = Number(stats?.vacantRooms ?? Math.max(0, totalRooms - occupiedRooms));
+  const occupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
+  const totalRevenue = Number(stats?.totalRevenue ?? 0);
+  const outstandingDebt = Number(stats?.outstandingDebt ?? 0);
+  const pendingRepairs = Number(stats?.pendingRepairs ?? 0);
+  const pendingContracts = Number(stats?.pendingContracts ?? 0);
 
   return (
     <div className="space-y-6">
@@ -29,15 +30,16 @@ export function BentoGridDashboard({ stats }: Props) {
               TỔNG DOANH THU THÁNG NÀY
             </span>
             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-black text-emerald-500 border border-emerald-500/20">
-              <TrendingUp className="size-3.5" /> +12.8% Tăng trưởng
+              <TrendingUp className="size-3.5" /> {totalRevenue > 0 ? "Thực tế" : "Chưa có phát sinh"}
             </span>
           </div>
 
           <div className="mt-4">
             <h2 className="text-4xl font-black tracking-tight text-foreground sm:text-5xl">
-              {formatCurrency(stats?.totalRevenue || 18460000)}
+              {formatCurrency(totalRevenue)}
             </h2>
           </div>
+
 
           {/* 3D Wave Bar Chart Animation */}
           <div className="mt-8 flex h-24 items-end justify-between gap-3 border-b border-border/40 pb-4">

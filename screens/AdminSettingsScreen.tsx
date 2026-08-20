@@ -2,28 +2,48 @@ import React, { useEffect, useState } from "react";
 import { ActivityIndicator, ScrollView, Switch, StyleSheet, View, Pressable } from "react-native";
 import { AppText, AppTextInput } from "@/components/ui/typography";
 import { Ionicons } from "@expo/vector-icons";
-import ThemeToggle from "../components/ThemeToggle";
-import LanguageToggle from "../components/LanguageToggle";
 import { useAppTheme } from "../contexts/ThemeContext";
 import { useNotification } from "../hooks/useNotification";
 import { UserProfile } from "../types/UserProfile";
 import ChangePasswordModal from "../components/ChangePasswordModal";
 import AppButton from "../components/ui/AppButton";
-import GradientHero from "../components/ui/GradientHero";
+import AnimatedEntry from "../components/ui/AnimatedEntry";
 import { formatPhone, unformatDigits } from "../utils/formatters";
-import { getExpoPushToken, isPushEnabled, notificationPlatform, openNotificationSettings, requestNotificationPermission, setPushEnabled } from "../services/pushNotificationService";
+import {
+  getExpoPushToken,
+  isPushEnabled,
+  notificationPlatform,
+  openNotificationSettings,
+  requestNotificationPermission,
+  setPushEnabled,
+} from "../services/pushNotificationService";
 import { notificationService } from "../services/notificationService";
-import { useTranslation } from "../contexts/LanguageContext";
+import { useTranslation, useLanguage } from "../contexts/LanguageContext";
 
-type Props = { profile: UserProfile; onSave: (profile: UserProfile) => void; onBack: () => void; onLogout: () => void; onPushTokenChange?: (token: string | null) => void };
+type Props = {
+  profile: UserProfile;
+  onSave: (profile: UserProfile) => void;
+  onBack: () => void;
+  onLogout: () => void;
+  onPushTokenChange?: (token: string | null) => void;
+};
 
-export default function AdminSettingsScreen({ profile, onSave, onBack, onLogout, onPushTokenChange }: Props) {
-  const { theme } = useAppTheme();
+export default function AdminSettingsScreen({
+  profile,
+  onSave,
+  onBack,
+  onLogout,
+  onPushTokenChange,
+}: Props) {
+  const { theme, isDark, toggleTheme } = useAppTheme();
   const { t } = useTranslation();
+  const { language, setLanguage } = useLanguage();
   const notification = useNotification();
+
   const [fullName, setFullName] = useState(profile.fullName || "");
   const [phone, setPhone] = useState(formatPhone(profile.phone));
   const [email, setEmail] = useState(profile.email || "");
+  const [propertyAddress, setPropertyAddress] = useState(profile.propertyAddress || "");
   const [bankId, setBankId] = useState(profile.bankId || "");
   const [bankAccountNo, setBankAccountNo] = useState(profile.bankAccountNo || "");
   const [bankAccountName, setBankAccountName] = useState(profile.bankAccountName || "");
@@ -42,7 +62,7 @@ export default function AdminSettingsScreen({ profile, onSave, onBack, onLogout,
     setPushError("");
     try {
       if (next) {
-        if (await requestNotificationPermission() !== "granted") {
+        if ((await requestNotificationPermission()) !== "granted") {
           setPushError(t("common.error"));
           return;
         }
@@ -59,7 +79,7 @@ export default function AdminSettingsScreen({ profile, onSave, onBack, onLogout,
         setPushPreference(false);
         onPushTokenChange?.(null);
       }
-    } catch (error) {
+    } catch (error: any) {
       setPushPreference(previous);
       setPushError(error instanceof Error ? error.message : t("common.error"));
     } finally {
@@ -68,74 +88,264 @@ export default function AdminSettingsScreen({ profile, onSave, onBack, onLogout,
   };
 
   const handleSave = () => {
-    if (!fullName.trim()) { notification.error(t("common.error")); return; }
+    if (!fullName.trim()) {
+      notification.error(t("common.error"));
+      return;
+    }
     if ((bankId || bankAccountNo || bankAccountName) && (!bankId || !bankAccountNo || !bankAccountName)) {
       notification.error(t("common.error"));
       return;
     }
-    onSave({ ...profile, fullName, phone: unformatDigits(phone), email, bankId, bankAccountNo, bankAccountName });
+    onSave({
+      ...profile,
+      fullName: fullName.trim(),
+      phone: unformatDigits(phone),
+      email: email.trim(),
+      propertyAddress: propertyAddress.trim(),
+      bankId: bankId.trim().toUpperCase(),
+      bankAccountNo: bankAccountNo.trim(),
+      bankAccountName: bankAccountName.trim().toUpperCase(),
+    });
     notification.success(t("common.success"));
   };
 
-  const inputStyle = [styles.input, { backgroundColor: theme.background, color: theme.text }];
-  return <>
-    <ScrollView style={[styles.container, { backgroundColor: theme.background }]} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-      <Pressable accessibilityRole="button" accessibilityLabel={t("common.back")} style={styles.back} onPress={onBack}><Ionicons name="arrow-back" size={19} color={theme.primary} /><AppText style={[styles.backText, { color: theme.primary }]}>{t("common.back")}</AppText></Pressable>
-      <GradientHero icon="settings-outline" label={t("nav.settings")} value={fullName || t("dashboard.greetingFallback")} detail={t("dashboard.property")} />
-      <Section title={t("nav.settings")} icon="person-outline" theme={theme}>
-        <Field label={t("auth.fullName")} value={fullName} setValue={setFullName} placeholder="Nguyen Van A" style={inputStyle} muted={theme.muted} />
-        <Field label={t("auth.phone")} value={phone} setValue={(value: string) => setPhone(formatPhone(value))} placeholder="0901.234.567" keyboardType="number-pad" style={inputStyle} muted={theme.muted} />
-        <Field label={t("auth.email")} value={email} setValue={setEmail} placeholder="landlord@email.com" keyboardType="email-address" style={inputStyle} muted={theme.muted} autoCapitalize="none" />
-      </Section>
-      <Section title="VietQR" icon="card-outline" theme={theme}>
-        <View style={[styles.note, { backgroundColor: theme.primarySoft }]}><Ionicons name="information-circle-outline" size={20} color={theme.primary} /><AppText style={[styles.noteText, { color: theme.text }]}>VietQR payment config</AppText></View>
-        <Field label="Bank BIN / Code" value={bankId} setValue={setBankId} placeholder="MB / VCB" style={inputStyle} muted={theme.muted} autoCapitalize="characters" />
-        <Field label="Account No" value={bankAccountNo} setValue={setBankAccountNo} placeholder="0123456789" keyboardType="number-pad" style={inputStyle} muted={theme.muted} />
-        <Field label="Account Name" value={bankAccountName} setValue={setBankAccountName} placeholder="NGUYEN VAN A" style={inputStyle} muted={theme.muted} autoCapitalize="characters" />
-      </Section>
-      <View style={{ gap: 12, marginTop: 18 }}>
-        <ThemeToggle />
-        <Section title={t("common.language")} icon="globe-outline" theme={theme}>
-          <View style={{ alignItems: "flex-start", paddingTop: 6 }}>
-            <LanguageToggle />
+  const inputStyle = [styles.input, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border }];
+
+  return (
+    <>
+      <ScrollView
+        style={[styles.container, { backgroundColor: theme.background }]}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t("common.back")}
+          style={styles.back}
+          onPress={onBack}
+        >
+          <Ionicons name="arrow-back" size={20} color={theme.primary} />
+          <AppText style={[styles.backText, { color: theme.primary }]}>{t("common.back")}</AppText>
+        </Pressable>
+
+        {/* Hero Section */}
+        <AnimatedEntry delay={50}>
+          <View style={[styles.heroCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+            <View style={[styles.heroIconCircle, { backgroundColor: "rgba(16, 185, 129, 0.15)" }]}>
+              <Ionicons name="settings" size={26} color="#10B981" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <AppText style={[styles.heroTitle, { color: theme.text }]}>Cài đặt Chủ trọ</AppText>
+              <AppText style={[styles.heroSubtitle, { color: theme.muted }]}>
+                {fullName || "Tài khoản quản trị"}
+              </AppText>
+            </View>
           </View>
-        </Section>
-      </View>
-      <Section title={t("notifications.title")} icon="notifications-outline" theme={theme}>
-        <View style={styles.pushRow}>
-          <View style={styles.pushCopy}><AppText style={[styles.pushTitle, { color: theme.text }]}>{t("notifications.title")}</AppText><AppText style={[styles.pushDescription, { color: theme.muted }]}>Push Notifications</AppText></View>
-          {pushLoading ? <ActivityIndicator color={theme.primary} /> : <Switch accessibilityLabel={t("notifications.title")} value={pushEnabled} onValueChange={(next) => void handlePushChange(next)} />}
-        </View>
-        {!!pushError && <View style={[styles.pushError, { backgroundColor: `${theme.danger}18` }]}><AppText style={[styles.pushErrorText, { color: theme.danger }]}>{pushError}</AppText><Pressable accessibilityRole="button" onPress={() => void openNotificationSettings()} style={styles.openSettings}><AppText style={[styles.openSettingsText, { color: theme.primary }]}>{t("nav.settings")}</AppText></Pressable></View>}
-      </Section>
-      <AppButton icon="save-outline" onPress={handleSave}>{t("common.save")}</AppButton>
-      <AppText style={[styles.sectionLabel, { color: theme.text }]}>{t("nav.settings")}</AppText>
-      <Pressable accessibilityRole="button" style={[styles.security, { backgroundColor: theme.surfaceElevated, shadowColor: theme.text }]} onPress={() => setPasswordVisible(true)}><View style={styles.securityLead}><Ionicons name="lock-closed-outline" size={22} color={theme.primary} /><AppText style={[styles.securityText, { color: theme.text }]}>{t("auth.resetPassword")}</AppText></View><Ionicons name="chevron-forward" size={20} color={theme.muted} /></Pressable>
-      <AppButton icon="log-out-outline" variant="danger" onPress={onLogout} style={styles.logout}>{t("auth.logout")}</AppButton>
-    </ScrollView>
-    <ChangePasswordModal visible={passwordVisible} onClose={() => setPasswordVisible(false)} />
-  </>;
+        </AnimatedEntry>
+
+        {/* Thông tin cá nhân */}
+        <AnimatedEntry delay={100}>
+          <View style={[styles.bentoSection, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+            <View style={styles.sectionHeading}>
+              <View style={[styles.sectionIcon, { backgroundColor: "rgba(59, 130, 246, 0.15)" }]}>
+                <Ionicons name="person" size={18} color="#3B82F6" />
+              </View>
+              <AppText style={[styles.cardTitle, { color: theme.text }]}>{t("auth.account")}</AppText>
+            </View>
+            <Field label={t("auth.fullName")} value={fullName} setValue={setFullName} placeholder="Nguyen Van A" style={inputStyle} muted={theme.muted} />
+            <Field label={t("auth.phone")} value={phone} setValue={(v: string) => setPhone(formatPhone(v))} placeholder="0901.234.567" keyboardType="number-pad" style={inputStyle} muted={theme.muted} />
+            <Field label={t("auth.email")} value={email} setValue={setEmail} placeholder="landlord@email.com" keyboardType="email-address" style={inputStyle} muted={theme.muted} autoCapitalize="none" />
+            <Field label="Địa chỉ nhà trọ" value={propertyAddress} setValue={setPropertyAddress} placeholder="123 Nguyễn Huệ, Quận 1, TP.HCM" style={inputStyle} muted={theme.muted} />
+          </View>
+        </AnimatedEntry>
+
+        {/* Tài khoản VietQR */}
+        <AnimatedEntry delay={150}>
+          <View style={[styles.bentoSection, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+            <View style={styles.sectionHeading}>
+              <View style={[styles.sectionIcon, { backgroundColor: "rgba(139, 92, 246, 0.15)" }]}>
+                <Ionicons name="qr-code" size={18} color="#8B5CF6" />
+              </View>
+              <AppText style={[styles.cardTitle, { color: theme.text }]}>Tài khoản nhận tiền (VietQR)</AppText>
+            </View>
+            <View style={[styles.note, { backgroundColor: theme.primarySoft }]}>
+              <Ionicons name="information-circle" size={18} color={theme.primary} />
+              <AppText style={[styles.noteText, { color: theme.text }]}>
+                Mã VietQR động trên hóa đơn sẽ tự động tạo theo thông tin ngân hàng này.
+              </AppText>
+            </View>
+            <Field label="Mã ngân hàng (BIN / Code)" value={bankId} setValue={setBankId} placeholder="MB / VCB / TCB" style={inputStyle} muted={theme.muted} autoCapitalize="characters" />
+            <Field label="Số tài khoản" value={bankAccountNo} setValue={setBankAccountNo} placeholder="0123456789" keyboardType="number-pad" style={inputStyle} muted={theme.muted} />
+            <Field label="Tên chủ tài khoản" value={bankAccountName} setValue={setBankAccountName} placeholder="NGUYEN VAN A" style={inputStyle} muted={theme.muted} autoCapitalize="characters" />
+          </View>
+        </AnimatedEntry>
+
+        {/* Tùy chọn hệ thống */}
+        <AnimatedEntry delay={200}>
+          <View style={[styles.bentoSection, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+            <View style={styles.sectionHeading}>
+              <View style={[styles.sectionIcon, { backgroundColor: "rgba(245, 158, 11, 0.15)" }]}>
+                <Ionicons name="options" size={18} color="#F59E0B" />
+              </View>
+              <AppText style={[styles.cardTitle, { color: theme.text }]}>{t("account.appPreferences")}</AppText>
+            </View>
+
+            {/* Language switch row */}
+            <View style={styles.pushRow}>
+              <View style={styles.pushCopy}>
+                <AppText style={[styles.pushTitle, { color: theme.text }]}>{t("common.language")}</AppText>
+              </View>
+              <View style={[styles.langSegmented, { backgroundColor: theme.background, borderColor: theme.border }]}>
+                <Pressable
+                  style={[styles.langPill, language === "vi" && { backgroundColor: theme.primary }]}
+                  onPress={() => void setLanguage("vi")}
+                >
+                  <AppText style={[styles.langPillText, { color: language === "vi" ? theme.background : theme.muted }]}>
+                    🇻🇳 VI
+                  </AppText>
+                </Pressable>
+                <Pressable
+                  style={[styles.langPill, language === "en" && { backgroundColor: theme.primary }]}
+                  onPress={() => void setLanguage("en")}
+                >
+                  <AppText style={[styles.langPillText, { color: language === "en" ? theme.background : theme.muted }]}>
+                    🇬🇧 EN
+                  </AppText>
+                </Pressable>
+              </View>
+            </View>
+
+            {/* Dark mode switch row */}
+            <View style={[styles.pushRow, { borderTopWidth: 1, borderTopColor: theme.border, paddingTop: 12 }]}>
+              <View style={styles.pushCopy}>
+                <AppText style={[styles.pushTitle, { color: theme.text }]}>{t("account.themeMode")}</AppText>
+                <AppText style={[styles.pushDescription, { color: theme.muted }]}>
+                  {isDark ? "Chế độ Tối (Dark)" : "Chế độ Sáng (Light)"}
+                </AppText>
+              </View>
+              <Switch value={isDark} onValueChange={toggleTheme} trackColor={{ false: "#E5E7EB", true: "#10B981" }} thumbColor="#FFFFFF" />
+            </View>
+
+            {/* Push notification row */}
+            <View style={[styles.pushRow, { borderTopWidth: 1, borderTopColor: theme.border, paddingTop: 12 }]}>
+              <View style={styles.pushCopy}>
+                <AppText style={[styles.pushTitle, { color: theme.text }]}>{t("account.pushNotifications")}</AppText>
+                <AppText style={[styles.pushDescription, { color: theme.muted }]}>Thông báo sự cố & thanh toán</AppText>
+              </View>
+              {pushLoading ? (
+                <ActivityIndicator color={theme.primary} />
+              ) : (
+                <Switch
+                  value={pushEnabled}
+                  onValueChange={(val) => void handlePushChange(val)}
+                  trackColor={{ false: isDark ? "#374151" : "#E5E7EB", true: "#10B981" }}
+                  thumbColor="#FFFFFF"
+                />
+              )}
+            </View>
+          </View>
+        </AnimatedEntry>
+
+        {/* Nút lưu */}
+        <AnimatedEntry delay={250}>
+          <AppButton icon="save-outline" onPress={handleSave}>
+            {t("common.save")}
+          </AppButton>
+
+          {/* Đổi mật khẩu */}
+          <Pressable
+            accessibilityRole="button"
+            style={[styles.security, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
+            onPress={() => setPasswordVisible(true)}
+          >
+            <View style={styles.securityLead}>
+              <View style={[styles.sectionIcon, { backgroundColor: "rgba(245, 158, 11, 0.15)" }]}>
+                <Ionicons name="lock-closed" size={18} color="#F59E0B" />
+              </View>
+              <AppText style={[styles.securityText, { color: theme.text }]}>{t("account.changePassword")}</AppText>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={theme.muted} />
+          </Pressable>
+
+          {/* Nút Đăng xuất */}
+          <AppButton icon="log-out-outline" variant="danger" onPress={onLogout} style={styles.logout}>
+            {t("account.logout")}
+          </AppButton>
+        </AnimatedEntry>
+      </ScrollView>
+
+      <ChangePasswordModal visible={passwordVisible} onClose={() => setPasswordVisible(false)} />
+    </>
+  );
 }
 
-function Section({ title, icon, theme, children }: any) {
-  return <View style={[styles.card, { backgroundColor: theme.surfaceElevated, shadowColor: theme.text }]}><View style={styles.sectionHeading}><View style={[styles.sectionIcon, { backgroundColor: theme.primarySoft }]}><Ionicons name={icon} size={20} color={theme.primary} /></View><AppText style={[styles.cardTitle, { color: theme.text }]}>{title}</AppText></View>{children}</View>;
-}
 function Field({ label, value, setValue, placeholder, keyboardType, style, muted, autoCapitalize }: any) {
-  return <View style={styles.field}><AppText style={[styles.label, { color: style[1].color }]}>{label}</AppText><AppTextInput style={style} value={value} onChangeText={setValue} placeholder={placeholder} placeholderTextColor={muted} keyboardType={keyboardType} autoCapitalize={autoCapitalize} /></View>;
+  return (
+    <View style={styles.field}>
+      <AppText style={styles.label}>{label}</AppText>
+      <AppTextInput
+        style={style}
+        value={value}
+        onChangeText={setValue}
+        placeholder={placeholder}
+        placeholderTextColor={muted}
+        keyboardType={keyboardType}
+        autoCapitalize={autoCapitalize}
+      />
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 }, content: { padding: 20, paddingTop: 28, paddingBottom: 42 },
-  back: { flexDirection: "row", alignItems: "center", gap: 7, alignSelf: "flex-start", minHeight: 44, marginBottom: 12 }, backText: { fontSize: 14, fontWeight: "900" },
-  card: { borderRadius: 24, padding: 18, marginTop: 18, elevation: 3, shadowOpacity: .08, shadowOffset: { width: 0, height: 5 }, shadowRadius: 10 },
-  sectionHeading: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 }, sectionIcon: { width: 40, height: 40, alignItems: "center", justifyContent: "center", borderRadius: 14 }, cardTitle: { fontSize: 17, fontWeight: "900" },
-  field: { marginTop: 14 }, label: { fontSize: 12, fontWeight: "800", marginBottom: 7 }, input: { minHeight: 48, borderRadius: 16, paddingHorizontal: 14, fontSize: 14 },
-  note: { flexDirection: "row", gap: 9, borderRadius: 16, padding: 12, marginTop: 8 }, noteText: { flex: 1, fontSize: 12, lineHeight: 18, fontWeight: "600" },
-  sectionLabel: { fontSize: 18, fontWeight: "900", marginTop: 26, marginBottom: 12 },
-  security: { minHeight: 60, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderRadius: 20, padding: 16, elevation: 3, shadowOpacity: .08, shadowOffset: { width: 0, height: 5 }, shadowRadius: 10 },
-  securityLead: { flexDirection: "row", alignItems: "center", gap: 10 }, securityText: { fontSize: 15, fontWeight: "800" }, logout: { marginTop: 18 },
-  pushRow: { minHeight: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 16 },
-  pushCopy: { flex: 1 }, pushTitle: { fontSize: 15, fontWeight: "800" }, pushDescription: { fontSize: 12, lineHeight: 18, marginTop: 3 },
-  pushError: { marginTop: 12, borderRadius: 14, padding: 12 }, pushErrorText: { fontSize: 12, lineHeight: 18 },
-  openSettings: { minHeight: 44, justifyContent: "center", alignSelf: "flex-start" }, openSettingsText: { fontSize: 13, fontWeight: "800" },
+  container: { flex: 1 },
+  content: { padding: 18, paddingTop: 24, paddingBottom: 48 },
+  back: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", minHeight: 44, marginBottom: 8 },
+  backText: { fontSize: 14, fontWeight: "900" },
+  heroCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    borderRadius: 22,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 16,
+  },
+  heroIconCircle: { width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center" },
+  heroTitle: { fontSize: 18, fontWeight: "900" },
+  heroSubtitle: { fontSize: 13, fontWeight: "600", marginTop: 2 },
+  bentoSection: {
+    borderRadius: 22,
+    borderWidth: 1,
+    padding: 18,
+    marginBottom: 16,
+  },
+  sectionHeading: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 },
+  sectionIcon: { width: 34, height: 34, alignItems: "center", justifyContent: "center", borderRadius: 12 },
+  cardTitle: { fontSize: 15, fontWeight: "900" },
+  field: { marginTop: 12 },
+  label: { fontSize: 12, fontWeight: "800", marginBottom: 6 },
+  input: { minHeight: 48, borderRadius: 14, borderWidth: 1, paddingHorizontal: 14, fontSize: 14, fontWeight: "600" },
+  note: { flexDirection: "row", gap: 8, borderRadius: 14, padding: 12, marginTop: 8, alignItems: "center" },
+  noteText: { flex: 1, fontSize: 12, lineHeight: 18, fontWeight: "600" },
+  security: {
+    minHeight: 56,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 14,
+    marginTop: 14,
+  },
+  securityLead: { flexDirection: "row", alignItems: "center", gap: 10 },
+  securityText: { fontSize: 14, fontWeight: "800" },
+  logout: { marginTop: 14 },
+  pushRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 16, paddingVertical: 8 },
+  pushCopy: { flex: 1 },
+  pushTitle: { fontSize: 14, fontWeight: "800" },
+  pushDescription: { fontSize: 11, fontWeight: "600", marginTop: 2 },
+  langSegmented: { flexDirection: "row", borderWidth: 1, borderRadius: 12, padding: 3 },
+  langPill: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 9 },
+  langPillText: { fontSize: 11, fontWeight: "900" },
 });

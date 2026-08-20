@@ -18,13 +18,16 @@ export default function BentoGridDashboard({ stats, onNavigate }: Props) {
   const { t } = useTranslation();
   const styles = createStyles(theme);
 
-  const totalRooms = stats?.totalRooms || 8;
-  const occupiedRooms = stats?.occupiedRooms || 3;
-  const vacantRooms = stats?.vacantRooms || Math.max(0, totalRooms - occupiedRooms);
-  const occupancyRate = totalRooms ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
-  const outstandingDebt = stats?.outstandingDebt || 0;
-  const pendingRepairs = stats?.pendingRepairs || 0;
-  const pendingContracts = stats?.pendingContracts || 0;
+  const totalRooms = Number(stats?.totalRooms ?? 0);
+  const occupiedRooms = Number(stats?.occupiedRooms ?? 0);
+  const vacantRooms = Number(stats?.vacantRooms ?? Math.max(0, totalRooms - occupiedRooms));
+  const occupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
+  const totalRevenue = Number(stats?.totalRevenue ?? 0);
+  const outstandingDebt = Number(stats?.outstandingDebt ?? 0);
+  const pendingRepairs = Number(stats?.pendingRepairs ?? 0);
+  const pendingContracts = Number(stats?.pendingContracts ?? 0);
+
+  const waveHeights = totalRevenue > 0 ? [35, 50, 40, 70, 60, 90, 75, 85] : [20, 20, 20, 20, 20, 20, 20, 20];
 
   return (
     <View style={styles.bentoContainer}>
@@ -44,29 +47,32 @@ export default function BentoGridDashboard({ stats, onNavigate }: Props) {
                 <AppText style={styles.bentoEyebrow}>TỔNG DOANH THU</AppText>
                 <View style={styles.growthBadge}>
                   <Ionicons name="trending-up" size={12} color="#10B981" />
-                  <AppText style={styles.growthText}>+12.8%</AppText>
+                  <AppText style={styles.growthText}>
+                    {totalRevenue > 0 ? "Thực tế" : "Chưa phát sinh"}
+                  </AppText>
                 </View>
               </View>
 
               <AppText style={styles.bigRevenueText}>
-                {formatCurrency(stats?.totalRevenue || 18460000)}
+                {formatCurrency(totalRevenue)}
               </AppText>
 
               {/* Decorative Wave Bars */}
               <View style={styles.waveContainer}>
-                {[35, 50, 40, 70, 60, 90, 75, 85].map((val, idx) => (
+                {waveHeights.map((val, idx) => (
                   <View
                     key={idx}
                     style={[
                       styles.waveBar,
                       {
                         height: `${val}%`,
-                        backgroundColor: idx === 5 ? "#10B981" : "rgba(16, 185, 129, 0.3)",
+                        backgroundColor: idx === 5 && totalRevenue > 0 ? "#10B981" : "rgba(16, 185, 129, 0.3)",
                       },
                     ]}
                   />
                 ))}
               </View>
+
 
               <View style={styles.insightsPill}>
                 <Ionicons name="sparkles" size={12} color="#34D399" />

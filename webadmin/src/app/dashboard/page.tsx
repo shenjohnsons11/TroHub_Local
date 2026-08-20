@@ -65,7 +65,7 @@ export default function DashboardPage() {
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            🍱 Bento Grid
+            {t("dashboard.viewBento")}
           </button>
           <button
             type="button"
@@ -76,7 +76,7 @@ export default function DashboardPage() {
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            📊 Báo Cáo Trực Quan
+            {t("dashboard.viewReport")}
           </button>
           <button
             type="button"
@@ -87,9 +87,10 @@ export default function DashboardPage() {
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            📋 Thẻ Tiêu Chuẩn
+            {t("dashboard.viewStandard")}
           </button>
         </div>
+
       </div>
 
       {propertyAddress ? (
