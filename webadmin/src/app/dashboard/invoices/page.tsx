@@ -59,9 +59,25 @@ export default function InvoicesPage() {
   const [isSingleOpen, setIsSingleOpen] = useState(false);
   const [singleRoomId, setSingleRoomId] = useState("");
   const [singlePeriod, setSinglePeriod] = useState(() => { const d = new Date(); return `${d.getMonth()+1}/${d.getFullYear()}`; });
-  const [singleDueDate, setSingleDueDate] = useState(() => new Date().toLocaleDateString("en-CA"));
+  const [singleDueDate, setSingleDueDate] = useState(() => {
+    const due = new Date();
+    due.setDate(due.getDate() + 7);
+    return due.toISOString().split("T")[0];
+  });
   const [singleRooms, setSingleRooms] = useState<any[]>([]);
+  const [singleContracts, setSingleContracts] = useState<any[]>([]);
   const [singleSubmitting, setSingleSubmitting] = useState(false);
+
+  // Meter & price states for Single Invoice
+  const [singleElecOld, setSingleElecOld] = useState("0");
+  const [singleElecNew, setSingleElecNew] = useState("0");
+  const [singleElecPrice, setSingleElecPrice] = useState(DEFAULT_ELECTRICITY_PRICE);
+  const [singleWaterOld, setSingleWaterOld] = useState("0");
+  const [singleWaterNew, setSingleWaterNew] = useState("0");
+  const [singleWaterPrice, setSingleWaterPrice] = useState(DEFAULT_WATER_PRICE);
+  const [singleRoomPrice, setSingleRoomPrice] = useState(0);
+  const [singleTenantName, setSingleTenantName] = useState("");
+  const [singleContractId, setSingleContractId] = useState("");
 
   // Detail
   const [detailInvoice, setDetailInvoice] = useState<any>(null);
@@ -112,8 +128,69 @@ export default function InvoicesPage() {
 
   useEffect(() => {
     loadInvoices();
-    fetchAPI("/rooms").then(r => { if (r.success) setSingleRooms(r.data.filter((rm: any) => rm.status === 1)); }).catch(() => {});
+    Promise.all([
+      fetchAPI("/rooms"),
+      fetchAPI("/contracts"),
+    ]).then(([roomsRes, contractsRes]) => {
+      if (roomsRes.success) {
+        setSingleRooms(roomsRes.data.filter((rm: any) => rm.status === 1 || rm.status === "OCCUPIED" || rm.status === "active" || rm.currentContract));
+      }
+      if (contractsRes.success) {
+        setSingleContracts(contractsRes.data || []);
+      }
+    }).catch(() => {});
   }, []);
+
+  const handleSelectSingleRoom = (roomId: string) => {
+    setSingleRoomId(roomId);
+    const room = singleRooms.find((r: any) => (r._id || r.id) === roomId);
+    if (!room) return;
+
+    const contract = singleContracts.find((c: any) =>
+      c.status === 1 && (typeof c.roomId === "string" ? c.roomId === roomId : (c.roomId?._id === roomId || c.roomId?.id === roomId))
+    );
+
+    const oldElec = room.lastElectricityReading ?? 0;
+    const oldWater = room.lastWaterReading ?? 0;
+    const newElec = (room.draftElectricity !== undefined && room.draftElectricity !== null && room.draftElectricity !== '')
+      ? room.draftElectricity
+      : oldElec;
+    const newWater = (room.draftWater !== undefined && room.draftWater !== null && room.draftWater !== '')
+      ? room.draftWater
+      : oldWater;
+
+    setSingleElecOld(formatMeterReading(oldElec));
+    setSingleElecNew(formatMeterReading(newElec));
+    setSingleWaterOld(formatMeterReading(oldWater));
+    setSingleWaterNew(formatMeterReading(newWater));
+
+    if (contract) {
+      setSingleContractId(contract._id || contract.id || "");
+      setSingleTenantName(contract.tenantId?.fullName || contract.tenantName || "");
+      setSingleElecPrice(contract.electricityPrice ? Number(contract.electricityPrice) : DEFAULT_ELECTRICITY_PRICE);
+      setSingleWaterPrice(contract.waterPrice ? Number(contract.waterPrice) : DEFAULT_WATER_PRICE);
+      setSingleRoomPrice(contract.fixedRentPrice || contract.monthlyRent || contract.rentAmount || room.basePrice || room.defaultRentPrice || 0);
+    } else {
+      setSingleContractId("");
+      setSingleTenantName("");
+      setSingleElecPrice(DEFAULT_ELECTRICITY_PRICE);
+      setSingleWaterPrice(DEFAULT_WATER_PRICE);
+      setSingleRoomPrice(room.basePrice || room.defaultRentPrice || 0);
+    }
+  };
+
+  const singleElecOldNum = parseMeterReading(singleElecOld) ?? 0;
+  const singleElecNewNum = parseMeterReading(singleElecNew) ?? singleElecOldNum;
+  const singleElecUsage = Math.max(0, singleElecNewNum - singleElecOldNum);
+  const singleElecAmount = singleElecUsage * singleElecPrice;
+
+  const singleWaterOldNum = parseMeterReading(singleWaterOld) ?? 0;
+  const singleWaterNewNum = parseMeterReading(singleWaterNew) ?? singleWaterOldNum;
+  const singleWaterUsage = Math.max(0, singleWaterNewNum - singleWaterOldNum);
+  const singleWaterAmount = singleWaterUsage * singleWaterPrice;
+
+  const singleTotalAmount = singleRoomPrice + singleElecAmount + singleWaterAmount;
+
 
   const handleCreateBulkInvoices = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -193,17 +270,60 @@ export default function InvoicesPage() {
 
   const handleCreateSingleInvoice = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!singleRoomId || !singlePeriod || !singleDueDate) { notification.error(t("common.error")); return; }
+    if (!singleRoomId || !singlePeriod || !singleDueDate) {
+      notification.error(t("common.error"));
+      return;
+    }
+
+    const electricityOld = parseMeterReading(singleElecOld);
+    const electricityNew = parseMeterReading(singleElecNew);
+    const waterOld = parseMeterReading(singleWaterOld);
+    const waterNew = parseMeterReading(singleWaterNew);
+
+    if (
+      electricityOld === null ||
+      electricityNew === null ||
+      waterOld === null ||
+      waterNew === null ||
+      electricityNew < electricityOld ||
+      waterNew < waterOld
+    ) {
+      notification.error("Chỉ số kỳ này phải hợp lệ và không nhỏ hơn chỉ số kỳ trước.");
+      return;
+    }
+
     setSingleSubmitting(true);
     try {
-      await fetchAPI("/invoices", { method: "POST", body: JSON.stringify({ roomId: singleRoomId, period: singlePeriod, dueDate: singleDueDate, status: 1 }) });
+      const payload = {
+        roomId: singleRoomId,
+        contractId: singleContractId || undefined,
+        period: singlePeriod,
+        dueDate: singleDueDate,
+        electricityOld,
+        electricityNew,
+        electricityPrice: singleElecPrice,
+        waterOld,
+        waterNew,
+        waterPrice: singleWaterPrice,
+        roomAmount: singleRoomPrice,
+        status: 1, // Unpaid
+      };
+
+      await fetchAPI("/invoices", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+
       notification.success(t("common.success"));
       setIsSingleOpen(false);
       loadInvoices();
     } catch (err) {
       notification.error(getNotificationMessage(err, t("common.error")));
-    } finally { setSingleSubmitting(false); }
+    } finally {
+      setSingleSubmitting(false);
+    }
   };
+
 
   const handleRemind = async (invoiceId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -298,31 +418,189 @@ export default function InvoicesPage() {
             <DialogTrigger className="flex h-10 items-center gap-2 rounded-[16px] border border-border bg-card px-4 text-sm font-bold transition hover:bg-accent">
               <Plus className="size-4" /> {t("invoices.createSingle")}
             </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader><DialogTitle>{t("invoices.createSingle")}</DialogTitle></DialogHeader>
+            <DialogContent className="sm:max-w-[560px] max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>{t("invoices.createSingle")}</DialogTitle>
+              </DialogHeader>
               <form onSubmit={handleCreateSingleInvoice} className="mt-4 space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="singleRoom">{t("common.room")} *</Label>
-                  <select id="singleRoom" value={singleRoomId} onChange={e => setSingleRoomId(e.target.value)} required
-                    className="h-10 w-full rounded-[12px] border border-input bg-background px-3 text-sm">
-                    <option value="">-- {t("common.room")} --</option>
-                    {singleRooms.map((r: any) => <option key={r._id} value={r._id}>{r.roomCode}</option>)}
-                  </select>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="singleRoom">{t("common.room")} *</Label>
+                    <select
+                      id="singleRoom"
+                      value={singleRoomId}
+                      onChange={(e) => handleSelectSingleRoom(e.target.value)}
+                      required
+                      className="h-10 w-full rounded-[12px] border border-input bg-background px-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="">-- {t("common.room")} --</option>
+                      {singleRooms.map((r: any) => (
+                        <option key={r._id || r.id} value={r._id || r.id}>
+                          Phòng {r.roomCode}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="singlePeriod">{t("invoices.period")} *</Label>
+                    <Input
+                      id="singlePeriod"
+                      placeholder="VD: 7/2026"
+                      value={singlePeriod}
+                      onChange={(e) => setSinglePeriod(e.target.value)}
+                      required
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="singlePeriod">{t("invoices.period")} *</Label>
-                  <Input id="singlePeriod" placeholder="VD: 7/2026" value={singlePeriod} onChange={e => setSinglePeriod(e.target.value)} required />
-                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="singleDue">{t("invoices.dueDate")} *</Label>
-                  <Input id="singleDue" type="date" value={singleDueDate} onChange={e => setSingleDueDate(e.target.value)} required />
+                  <Input
+                    id="singleDue"
+                    type="date"
+                    value={singleDueDate}
+                    onChange={(e) => setSingleDueDate(e.target.value)}
+                    required
+                  />
                 </div>
-                <button type="submit" disabled={singleSubmitting} className="flex h-10 w-full items-center justify-center gap-2 rounded-[16px] bg-primary text-sm font-bold text-primary-foreground disabled:opacity-60">
-                  {singleSubmitting ? t("common.loading") : t("invoices.createInvoice")}
+
+                {singleTenantName ? (
+                  <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs">
+                    <span className="font-bold text-primary">Khách thuê: </span>
+                    <span className="font-semibold text-foreground">{singleTenantName}</span>
+                  </div>
+                ) : null}
+
+                {/* Section Điện */}
+                <div className="rounded-[16px] border border-border/60 bg-muted/30 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-xs font-black uppercase text-amber-500">
+                      ⚡ Điện tiêu thụ
+                    </span>
+                    <span className="text-xs font-extrabold text-foreground">
+                      {singleElecUsage} kWh = <span className="text-amber-500">{formatCurrency(singleElecAmount)}</span>
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <Label className="text-[11px] text-muted-foreground font-bold">Chỉ số cũ</Label>
+                      <Input
+                        inputMode="numeric"
+                        value={singleElecOld}
+                        onChange={(e) => setSingleElecOld(formatMeterReading(e.target.value))}
+                        className="mt-1 h-9 text-xs font-bold"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-[11px] text-muted-foreground font-bold">Chỉ số mới</Label>
+                      <Input
+                        inputMode="numeric"
+                        value={singleElecNew}
+                        onChange={(e) => setSingleElecNew(formatMeterReading(e.target.value))}
+                        className="mt-1 h-9 text-xs font-bold"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-[11px] text-muted-foreground font-bold">Đơn giá (đ/kWh)</Label>
+                      <Input
+                        inputMode="numeric"
+                        value={singleElecPrice}
+                        onChange={(e) => setSingleElecPrice(Number(e.target.value) || 0)}
+                        className="mt-1 h-9 text-xs font-bold"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section Nước */}
+                <div className="rounded-[16px] border border-border/60 bg-muted/30 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-xs font-black uppercase text-blue-500">
+                      💧 Nước tiêu thụ
+                    </span>
+                    <span className="text-xs font-extrabold text-foreground">
+                      {singleWaterUsage} m³ = <span className="text-blue-500">{formatCurrency(singleWaterAmount)}</span>
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <Label className="text-[11px] text-muted-foreground font-bold">Chỉ số cũ</Label>
+                      <Input
+                        inputMode="numeric"
+                        value={singleWaterOld}
+                        onChange={(e) => setSingleWaterOld(formatMeterReading(e.target.value))}
+                        className="mt-1 h-9 text-xs font-bold"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-[11px] text-muted-foreground font-bold">Chỉ số mới</Label>
+                      <Input
+                        inputMode="numeric"
+                        value={singleWaterNew}
+                        onChange={(e) => setSingleWaterNew(formatMeterReading(e.target.value))}
+                        className="mt-1 h-9 text-xs font-bold"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-[11px] text-muted-foreground font-bold">Đơn giá (đ/m³)</Label>
+                      <Input
+                        inputMode="numeric"
+                        value={singleWaterPrice}
+                        onChange={(e) => setSingleWaterPrice(Number(e.target.value) || 0)}
+                        className="mt-1 h-9 text-xs font-bold"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section Tiền phòng & Tổng cộng */}
+                <div className="rounded-[16px] border border-border/60 bg-card p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="singleRoomPrice" className="text-xs font-bold text-muted-foreground">
+                      Tiền thuê phòng
+                    </Label>
+                    <Input
+                      id="singleRoomPrice"
+                      type="number"
+                      value={singleRoomPrice}
+                      onChange={(e) => setSingleRoomPrice(Number(e.target.value) || 0)}
+                      className="h-9 w-36 text-right text-xs font-black"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between border-t border-border/50 pt-3">
+                    <span className="text-xs font-black uppercase tracking-wider text-muted-foreground">
+                      Tổng tiền thanh toán
+                    </span>
+                    <span className="text-xl font-black text-emerald-500">
+                      {formatCurrency(singleTotalAmount)}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={singleSubmitting}
+                  className="flex h-11 w-full items-center justify-center gap-2 rounded-[16px] bg-primary text-sm font-bold text-primary-foreground shadow-md transition hover:opacity-90 disabled:opacity-60"
+                >
+                  {singleSubmitting ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" /> {t("common.loading")}
+                    </>
+                  ) : (
+                    t("invoices.createInvoice")
+                  )}
                 </button>
               </form>
             </DialogContent>
           </Dialog>
+
 
           <Dialog open={isAddOpen} onOpenChange={(open) => { setIsAddOpen(open); if (open) setBulkStep(1); }}>
           <DialogTrigger className="flex h-10 items-center justify-center gap-2 rounded-[16px] bg-primary px-4 text-sm font-bold text-primary-foreground shadow-[var(--calm-shadow)] transition hover:opacity-90">

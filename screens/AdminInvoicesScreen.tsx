@@ -47,46 +47,24 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
 
   const handleSelectRoom = (roomId: string) => {
     setSelectedRoomId(roomId);
-    
-    // Find active contract for this room
-    const roomContract = contracts.find(
-      c => c.status === 1 && (typeof c.roomId === "string" ? c.roomId === roomId : c.roomId._id === roomId)
-    );
     const room = rooms.find((item) => item._id === roomId);
-    
-    if (roomContract) {
-      // Find last invoice for this contract
-      const contractInvoices = invoices.filter(
-        inv => inv.contractId && (typeof inv.contractId === "string" ? inv.contractId === roomContract._id : inv.contractId._id === roomContract._id)
-      );
-      
-      if (contractInvoices.length > 0) {
-        // Sort by date descending
-        const sortedInvoices = [...contractInvoices].sort((a, b) => {
-          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-          return dateB - dateA;
-        });
-        const lastInv = sortedInvoices[0];
-        
-        // Auto fill indexes
-        setElecOld(formatMeterReading(room?.lastElectricityReading ?? lastInv.electricityNew));
-        setWaterOld(formatMeterReading(room?.lastWaterReading ?? lastInv.waterNew));
-        setElecNew(formatMeterReading(room?.lastElectricityReading ?? lastInv.electricityNew));
-        setWaterNew(formatMeterReading(room?.lastWaterReading ?? lastInv.waterNew));
-      } else {
-        setElecOld(formatMeterReading(room?.lastElectricityReading));
-        setWaterOld(formatMeterReading(room?.lastWaterReading));
-        setElecNew(formatMeterReading(room?.lastElectricityReading));
-        setWaterNew(formatMeterReading(room?.lastWaterReading));
-      }
-    } else {
-      setElecOld(formatMeterReading(room?.lastElectricityReading));
-      setWaterOld(formatMeterReading(room?.lastWaterReading));
-      setElecNew(formatMeterReading(room?.lastElectricityReading));
-      setWaterNew(formatMeterReading(room?.lastWaterReading));
-    }
+    const oldElec = room?.lastElectricityReading ?? 0;
+    const oldWater = room?.lastWaterReading ?? 0;
+
+    // Lấy chỉ số nháp vừa ghi từ mục Điện & Nước nếu có, ngược lại lấy chỉ số cũ
+    const newElec = (room as any)?.draftElectricity !== undefined && (room as any)?.draftElectricity !== null && (room as any)?.draftElectricity !== ''
+      ? (room as any).draftElectricity
+      : oldElec;
+    const newWater = (room as any)?.draftWater !== undefined && (room as any)?.draftWater !== null && (room as any)?.draftWater !== ''
+      ? (room as any).draftWater
+      : oldWater;
+
+    setElecOld(formatMeterReading(oldElec));
+    setElecNew(formatMeterReading(newElec));
+    setWaterOld(formatMeterReading(oldWater));
+    setWaterNew(formatMeterReading(newWater));
   };
+
 
   const loadData = async () => {
     try {
