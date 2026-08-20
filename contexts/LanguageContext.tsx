@@ -2,8 +2,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createContext, PropsWithChildren, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import viDict from "../locales/vi.json";
 import enDict from "../locales/en.json";
+import { normalizeLanguage, resolveLanguageTarget, type Language } from "../utils/language";
 
-export type Language = "vi" | "en";
+export type { Language } from "../utils/language";
 const STORAGE_KEY = "trohub_lang";
 const FALLBACK_KEY = "trohub_language";
 
@@ -29,6 +30,7 @@ function getNestedValue(obj: any, path: string): string | undefined {
 
 type LanguageContextValue = {
   language: Language;
+  changeLanguage: (language?: Language) => Promise<void>;
   setLanguage: (language: Language) => Promise<void>;
   toggleLanguage: () => Promise<void>;
   t: (key: string, params?: Record<string, string | number>) => string;
@@ -48,13 +50,13 @@ export function LanguageProvider({ children }: PropsWithChildren) {
       try {
         const stored = await AsyncStorage.getItem(STORAGE_KEY);
         const legacy = stored ? null : await AsyncStorage.getItem(FALLBACK_KEY);
-        const next = (stored || legacy || "vi").toLowerCase();
+        const next = normalizeLanguage(stored || legacy) || "vi";
 
-        if (active && !userInteracted.current && (next === "vi" || next === "en")) {
+        if (active && !userInteracted.current) {
           languageRef.current = next;
           setLanguageState(next);
         }
-        if (legacy && (next === "vi" || next === "en")) {
+        if (legacy) {
           await AsyncStorage.setItem(STORAGE_KEY, next);
           await AsyncStorage.removeItem(FALLBACK_KEY);
         }
@@ -66,30 +68,27 @@ export function LanguageProvider({ children }: PropsWithChildren) {
     };
   }, []);
 
-  const setLanguage = useCallback(async (next: Language) => {
+  const changeLanguage = useCallback(async (requested?: Language) => {
     userInteracted.current = true;
-    languageRef.current = next;
-    setLanguageState(next);
+    const target = resolveLanguageTarget(languageRef.current, requested);
+    languageRef.current = target;
+    setLanguageState(target);
     try {
-      await AsyncStorage.setItem(STORAGE_KEY, next);
+      await AsyncStorage.setItem(STORAGE_KEY, target);
+      await AsyncStorage.removeItem(FALLBACK_KEY);
     } catch {}
   }, []);
 
+  const setLanguage = useCallback((next: Language) => changeLanguage(next), [changeLanguage]);
+
   const toggleLanguage = useCallback(async () => {
-    const currentLang = (languageRef.current || "vi").toLowerCase() as Language;
-    const nextLang = currentLang === "vi" ? "en" : "vi";
-    await setLanguage(nextLang);
-  }, [setLanguage]);
+    await changeLanguage();
+  }, [changeLanguage]);
 
   const t = useCallback(
     (key: string, params?: Record<string, string | number>) => {
       const currentDict = copy[language] || copy.vi;
-      let val =
-        getNestedValue(currentDict, key) ||
-        getNestedValue(currentDict, `mobile.${key}`) ||
-        getNestedValue(copy.vi, key) ||
-        getNestedValue(copy.vi, `mobile.${key}`) ||
-        key;
+      let val = getNestedValue(currentDict, key) || getNestedValue(copy.vi, key) || key;
       if (params) {
         for (const [name, replacement] of Object.entries(params)) {
           val = val.replaceAll(`{${name}}`, String(replacement));
@@ -100,7 +99,7 @@ export function LanguageProvider({ children }: PropsWithChildren) {
     [language]
   );
 
-  const value = useMemo(() => ({ language, setLanguage, toggleLanguage, t }), [language, setLanguage, toggleLanguage, t]);
+  const value = useMemo(() => ({ language, changeLanguage, setLanguage, toggleLanguage, t }), [language, changeLanguage, setLanguage, toggleLanguage, t]);
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }
 
