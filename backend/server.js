@@ -72,7 +72,9 @@ app.use('/api/services', serviceRoutes);
 app.use('/api/settings/billing-policy', billingPolicyRoutes);
 app.use('/api/utilities', utilityRoutes);
 app.use('/api/ocr', ocrRoutes);
+app.post('/api/cccd/scan', require('./src/controllers/ocrController').scanCCCD);
 app.use("/vqr", require("./src/routes/vietqrDirectRoutes"));
+
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/landlord', dashboardRoutes);
 app.use('/api/ai', aiRoutes);
