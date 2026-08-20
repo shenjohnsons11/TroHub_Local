@@ -341,7 +341,7 @@ export default function NewContractPage() {
               })}
             </div>
             <div className="grid gap-5 md:grid-cols-2">
-              <Field label={t("utilities.oldElec")} error={errors.electricityPrice}>
+              <Field label={`${t("contracts.electricityPrice")} (đ/kWh)`} error={errors.electricityPrice}>
                 <Input
                   inputMode="numeric"
                   value={draft.electricityPrice}
@@ -349,7 +349,7 @@ export default function NewContractPage() {
                   placeholder="3.500"
                 />
               </Field>
-              <Field label={t("utilities.oldWater")} error={errors.waterPrice}>
+              <Field label={`${t("contracts.waterPrice")} (đ/m³)`} error={errors.waterPrice}>
                 <Input
                   inputMode="numeric"
                   value={draft.waterPrice}
@@ -357,7 +357,7 @@ export default function NewContractPage() {
                   placeholder="15.000"
                 />
               </Field>
-              <Field label={t("utilities.newElec")}>
+              <Field label={`${t("contracts.initialElec")} (kWh)`}>
                 <Input
                   inputMode="decimal"
                   value={draft.initialElectricity}
@@ -371,7 +371,7 @@ export default function NewContractPage() {
                   placeholder="0"
                 />
               </Field>
-              <Field label={t("utilities.newWater")}>
+              <Field label={`${t("contracts.initialWater")} (m³)`}>
                 <Input
                   inputMode="decimal"
                   value={draft.initialWater}
@@ -395,11 +395,12 @@ export default function NewContractPage() {
             <Summary label={t("invoices.period")} value={`${draft.startDate} → ${draft.endDate}`} />
             <Summary label={t("contracts.rentPrice")} value={formatCurrency(draft.fixedRentPrice)} />
             <Summary label={t("contracts.depositAmount")} value={formatCurrency(draft.fixedDeposit)} />
-            <Summary label={t("utilities.oldElec")} value={`${draft.electricityPrice || "3.500"}đ / kWh`} />
-            <Summary label={t("utilities.oldWater")} value={`${draft.waterPrice || "15.000"}đ / m³`} />
+            <Summary label={t("contracts.electricityPrice")} value={`${draft.electricityPrice || "3.500"}đ / kWh`} />
+            <Summary label={t("contracts.waterPrice")} value={`${draft.waterPrice || "15.000"}đ / m³`} />
             <Summary label={t("contracts.services")} value={`${draft.services.length} services`} />
           </div>
         )}
+
       </section>
       <footer className="flex justify-between gap-3">
         <Button variant="outline" disabled={step === 1} onClick={() => setStep((value) => Math.max(1, value - 1))}>

@@ -26,12 +26,12 @@ export function PaymentDetailDrawer({ payment, onOpenChange }: Props) {
   const breakdown = payment?.invoiceBreakdown;
   const rows = breakdown
     ? [
-        [t("invoices.roomFee"), breakdown.roomCharge],
-        [t("utilities.oldElec"), breakdown.electricityCharge],
-        [t("utilities.oldWater"), breakdown.waterCharge],
-        [t("invoices.serviceFee"), breakdown.serviceCharge],
-        [t("invoices.penalty"), breakdown.lateFee],
-        [t("invoices.discount"), -breakdown.discount],
+        [t("i18n.paymentDrawer.roomRent"), breakdown.roomCharge],
+        [t("i18n.paymentDrawer.electricity"), breakdown.electricityCharge],
+        [t("i18n.paymentDrawer.water"), breakdown.waterCharge],
+        [t("i18n.paymentDrawer.services"), breakdown.serviceCharge],
+        [t("i18n.paymentDrawer.lateFee"), breakdown.lateFee],
+        [t("i18n.paymentDrawer.discount"), -breakdown.discount],
       ] as const
     : [];
 
@@ -45,22 +45,22 @@ export function PaymentDetailDrawer({ payment, onOpenChange }: Props) {
                 <ReceiptText className="h-5 w-5" />
               </div>
               <DialogTitle className="text-xl font-black">
-                {t("payments.title")}
+                {t("i18n.paymentDrawer.title")}
               </DialogTitle>
               <DialogDescription>
-                {t("invoices.period")}: {payment.period}
+                {t("i18n.paymentDrawer.description", { period: payment.period })}
               </DialogDescription>
             </DialogHeader>
 
             <dl className="mt-4 divide-y divide-border border-y border-border">
               {[
-                [t("common.tenant"), payment.nguoiThue],
-                [t("common.room"), payment.room],
-                [t("invoices.period"), payment.period],
-                [t("payments.paidAt"), formatPaidAt(payment.paidAt)],
-                [t("invoices.code", { code: "" }), payment.transactionCode],
-                [t("payments.gatewayRef"), payment.gatewayReference || "—"],
-                [t("payments.method"), payment.method],
+                [t("i18n.paymentDrawer.tenant"), payment.nguoiThue],
+                [t("i18n.paymentDrawer.room"), payment.room],
+                [t("i18n.paymentDrawer.period"), payment.period],
+                [t("i18n.paymentDrawer.paidAt"), formatPaidAt(payment.paidAt)],
+                [t("i18n.paymentDrawer.transactionCode"), payment.transactionCode],
+                [t("i18n.paymentDrawer.gatewayReference"), payment.gatewayReference || t("i18n.paymentDrawer.notAvailable")],
+                [t("i18n.paymentDrawer.method"), payment.method],
               ].map(([label, value]) => (
                 <div key={label} className="flex justify-between gap-6 py-3 text-sm">
                   <dt className="text-muted-foreground">{label}</dt>
@@ -70,7 +70,7 @@ export function PaymentDetailDrawer({ payment, onOpenChange }: Props) {
             </dl>
 
             <div className="mt-7">
-              <h3 className="font-black">{t("invoices.title")}</h3>
+              <h3 className="font-black">{t("i18n.paymentDrawer.invoiceDetail")}</h3>
               <div className="mt-3 divide-y divide-border">
                 {rows.map(([label, value]) => (
                   <div key={label} className="flex justify-between gap-5 py-3 text-sm">
@@ -81,7 +81,7 @@ export function PaymentDetailDrawer({ payment, onOpenChange }: Props) {
                   </div>
                 ))}
                 <div className="flex justify-between gap-5 py-4 text-base">
-                  <span className="font-black">{t("invoices.totalAmount")}</span>
+                  <span className="font-black">{t("i18n.paymentDrawer.total")}</span>
                   <span className="font-black text-primary">
                     {formatCurrency(breakdown?.totalAmount || payment.amount)}
                   </span>

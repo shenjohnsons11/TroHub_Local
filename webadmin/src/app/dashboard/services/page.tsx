@@ -241,8 +241,8 @@ export default function ServicesPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>{t("nav.services")}</TableHead>
-                <TableHead>{t("common.status")}</TableHead>
-                <TableHead>{t("rooms.price")}</TableHead>
+                <TableHead>{t("services.billingMode")}</TableHead>
+                <TableHead>{t("services.defaultPrice")}</TableHead>
                 <TableHead>{t("common.status")}</TableHead>
                 <TableHead className="text-right">{t("common.action")}</TableHead>
               </TableRow>
@@ -265,10 +265,10 @@ export default function ServicesPage() {
                   </TableCell>
                   <TableCell>
                     {service.billingMode === "QUANTITY"
-                      ? "QUANTITY"
+                      ? t("services.billingQty")
                       : service.billingMode === "METER" || service.type === 1
-                        ? "METER"
-                        : "FIXED"} · {service.unit}
+                        ? t("services.billingMeter")
+                        : t("services.billingFixed")} · {service.unit}
                   </TableCell>
                   <TableCell className="font-bold">{formatCurrency(service.defaultPrice)}</TableCell>
                   <TableCell>
@@ -301,36 +301,37 @@ export default function ServicesPage() {
           <form onSubmit={handleSubmit} className="space-y-5 pt-2">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="service-name">{t("contracts.services")}</Label>
+                <Label htmlFor="service-name">{t("nav.services")}</Label>
                 <Input id="service-name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Internet" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="service-code">{t("invoices.code", { code: "" })}</Label>
+                <Label htmlFor="service-code">{t("services.code")}</Label>
                 <Input id="service-code" value={form.code} onChange={(event) => setForm({ ...form, code: event.target.value })} placeholder="INTERNET" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="service-type">{t("common.status")}</Label>
+                <Label htmlFor="service-type">{t("services.billingMode")}</Label>
                 <select id="service-type" value={form.billingMode} onChange={(event) => setForm({ ...form, billingMode: event.target.value as ServiceForm["billingMode"] })} className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-                  <option value="FIXED">FIXED</option>
-                  <option value="QUANTITY">QUANTITY</option>
-                  <option value="METER">METER</option>
+                  <option value="FIXED">{t("services.billingFixed")}</option>
+                  <option value="QUANTITY">{t("services.billingQty")}</option>
+                  <option value="METER">{t("services.billingMeter")}</option>
                 </select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="service-unit">{t("common.status")}</Label>
+                <Label htmlFor="service-unit">{t("services.unit")}</Label>
                 <Input id="service-unit" value={form.unit} onChange={(event) => setForm({ ...form, unit: event.target.value })} placeholder="kWh, m3, month" />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="service-price">{t("rooms.price")}</Label>
+              <Label htmlFor="service-price">{t("services.defaultPrice")}</Label>
               <Input id="service-price" inputMode="numeric" value={form.defaultPrice} onChange={(event) => setForm({ ...form, defaultPrice: formatNumberInput(event.target.value) })} placeholder="0" />
             </div>
             {form.billingMode === "QUANTITY" && (
               <div className="space-y-2">
-                <Label htmlFor="service-quantity">{t("common.status")}</Label>
+                <Label htmlFor="service-quantity">{t("services.defaultQuantity")}</Label>
                 <Input id="service-quantity" type="number" min="0" step="1" value={form.defaultQuantity} onChange={(event) => setForm({ ...form, defaultQuantity: event.target.value })} />
               </div>
             )}
+
             {priceImpact && (
               <section className="space-y-4 rounded-[12px] bg-muted p-4">
                 <div>

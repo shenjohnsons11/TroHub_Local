@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, Building2, CircleDollarSign, FileSignature, FileText, ReceiptText, Users, WalletCards, Wrench } from "lucide-react";
+import { ArrowUpRight, Building2, CircleDollarSign, FileSignature, FileText, MapPin, ReceiptText, Users, WalletCards, Wrench } from "lucide-react";
 import { useNotification } from "@/hooks/use-notification";
 import { fetchAPI } from "@/lib/api";
 import { getNotificationMessage } from "@/lib/notification-messages";
@@ -14,7 +14,7 @@ import { StatusBadge } from "@/components/calm-ops/status-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLanguage } from "@/components/language-provider";
 import { VisualAnalyticsDashboard } from "@/components/VisualAnalyticsDashboard";
-
+import { BentoGridDashboard } from "@/components/BentoGridDashboard";
 
 type Stats = { totalRooms: number; occupiedRooms: number; vacantRooms: number; maintenanceRooms: number; totalTenants: number; pendingRepairs: number; pendingContracts: number; totalRevenue: number; outstandingDebt: number };
 const EMPTY_STATS: Stats = { totalRooms: 0, occupiedRooms: 0, vacantRooms: 0, maintenanceRooms: 0, totalTenants: 0, pendingRepairs: 0, pendingContracts: 0, totalRevenue: 0, outstandingDebt: 0 };
@@ -23,11 +23,20 @@ export default function DashboardPage() {
   const notification = useNotification();
   const { t } = useLanguage();
   const [stats, setStats] = useState<Stats | null>(null);
-  const [viewMode, setViewMode] = useState<"analytics" | "standard">("analytics");
+  const [propertyAddress, setPropertyAddress] = useState<string>("");
+  const [viewMode, setViewMode] = useState<"bento" | "analytics" | "standard">("bento");
   const load = useCallback(async () => {
     try {
-      const response = await fetchAPI("/dashboard/stats");
-      setStats({ ...EMPTY_STATS, ...(response.data || {}) });
+      const [statsRes, userRes] = await Promise.allSettled([
+        fetchAPI("/dashboard/stats"),
+        fetchAPI("/auth/me"),
+      ]);
+      if (statsRes.status === "fulfilled") {
+        setStats({ ...EMPTY_STATS, ...(statsRes.value.data || {}) });
+      }
+      if (userRes.status === "fulfilled" && userRes.value?.user?.propertyAddress) {
+        setPropertyAddress(userRes.value.user.propertyAddress);
+      }
     } catch (error) {
       notification.error(getNotificationMessage(error, t("common.error")));
       setStats(EMPTY_STATS);
@@ -47,6 +56,17 @@ export default function DashboardPage() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <PageHeader eyebrow={t("dashboard.eyebrow")} title={t(greetingKey)} description={t("dashboard.today")} />
         <div className="flex rounded-xl bg-muted p-1 border border-border/40">
+          <button
+            type="button"
+            onClick={() => setViewMode("bento")}
+            className={`rounded-lg px-4 py-2 text-xs font-black transition-all ${
+              viewMode === "bento"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            🍱 Bento Grid
+          </button>
           <button
             type="button"
             onClick={() => setViewMode("analytics")}
@@ -72,9 +92,20 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {viewMode === "analytics" ? (
+      {propertyAddress ? (
+        <div className="flex items-center gap-2.5 rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm">
+          <MapPin className="size-4 shrink-0 text-primary" />
+          <span className="font-bold text-foreground">🏠 {propertyAddress}</span>
+        </div>
+      ) : null}
+
+
+      {viewMode === "bento" ? (
+        <BentoGridDashboard stats={stats} />
+      ) : viewMode === "analytics" ? (
         <VisualAnalyticsDashboard stats={stats} />
       ) : (
+
         <>
           <PriorityPanel title={t("dashboard.today")} count={stats.pendingRepairs + stats.pendingContracts} action={<Link href="/dashboard/repairs" className="text-sm font-extrabold text-primary hover:underline">{t("dashboard.viewAll")}</Link>}>
             <div>

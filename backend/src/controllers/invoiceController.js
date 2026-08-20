@@ -563,11 +563,30 @@ exports.createInvoice = async (req, res) => {
             } catch (e) {}
         }
 
-        // Hỗ trợ lưu trực tiếp các trường tính toán từ Frontend
-        if (room || tenant) {
+        // Hỗ trợ lưu trực tiếp các trường tính toán từ Frontend hoặc từ roomId
+        if (room || tenant || req.body.roomId) {
             let resolvedContractId = contractId;
-            let resolvedRoomId = null;
-            if (!resolvedContractId && room) {
+            let resolvedRoomId = req.body.roomId || null;
+            let resolvedRoom = room || "";
+            let resolvedTenant = tenant || "";
+
+            if (req.body.roomId) {
+                const Room = require('../models/Room');
+                const targetRoom = await Room.findById(req.body.roomId);
+                if (targetRoom) {
+                    resolvedRoomId = targetRoom._id;
+                    resolvedRoom = targetRoom.roomCode;
+                    const contract = await Contract.findOne({ roomId: targetRoom._id, status: { $in: [0, 1, 4, 5] } })
+                        .populate('tenantId', 'fullName')
+                        .sort({ createdAt: -1 });
+                    if (contract) {
+                        resolvedContractId = contract._id;
+                        if (!resolvedTenant && contract.tenantId) {
+                            resolvedTenant = contract.tenantId.fullName || "";
+                        }
+                    }
+                }
+            } else if (!resolvedContractId && room) {
                 const Room = require('../models/Room');
                 const roomQuery = { roomCode: room };
                 if (landlordId) roomQuery.landlordId = landlordId;
@@ -657,8 +676,9 @@ exports.createInvoice = async (req, res) => {
                 penaltyAppliedAt: shouldApplyPenalty ? new Date() : null,
                 totalAmount: policySnapshot.penaltyBaseAmount + effectivePenalty,
                 status: shouldApplyPenalty ? 3 : resolvedStatus,
-                room: room || "",
-                tenant: tenant || "",
+                room: resolvedRoom || "",
+                tenant: resolvedTenant || "",
+
                 fromDate: req.body.fromDate || "",
                 toDate: req.body.toDate || "",
                 roomAmount: amounts.roomAmount,

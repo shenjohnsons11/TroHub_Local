@@ -2,9 +2,11 @@
 
 import { Moon, Sun, Laptop } from "lucide-react";
 import { useTheme } from "./theme-provider";
+import { useLanguage } from "./language-provider";
 
 export function ThemeToggle() {
   const { mounted, themeMode, toggleTheme } = useTheme();
+  const { t } = useLanguage();
 
   if (!mounted) return <div className="size-10" />;
 
@@ -15,17 +17,17 @@ export function ThemeToggle() {
       className="theme-icon-button"
       aria-label={
         themeMode === "light"
-          ? "Chuyển sang chế độ tối"
+          ? t("i18n.theme.toDark")
           : themeMode === "dark"
-            ? "Chuyển sang chế độ tự động"
-            : "Chuyển sang chế độ sáng"
+            ? t("i18n.theme.toSystem")
+            : t("i18n.theme.toLight")
       }
       title={
         themeMode === "light"
-          ? "Đang bật: Chế độ sáng"
+          ? t("i18n.theme.lightActive")
           : themeMode === "dark"
-            ? "Đang bật: Chế độ tối"
-            : "Đang bật: Giao diện tự động (Theo giờ / Hệ thống)"
+            ? t("i18n.theme.darkActive")
+            : t("i18n.theme.systemActive")
       }
     >
       {themeMode === "light" ? (
