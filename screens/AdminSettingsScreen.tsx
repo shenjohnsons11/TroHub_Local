@@ -3,6 +3,7 @@ import { ActivityIndicator, ScrollView, Switch, StyleSheet, View, Pressable } fr
 import { AppText, AppTextInput } from "@/components/ui/typography";
 import { Ionicons } from "@expo/vector-icons";
 import ThemeToggle from "../components/ThemeToggle";
+import LanguageToggle from "../components/LanguageToggle";
 import { useAppTheme } from "../contexts/ThemeContext";
 import { useNotification } from "../hooks/useNotification";
 import { UserProfile } from "../types/UserProfile";
@@ -92,7 +93,14 @@ export default function AdminSettingsScreen({ profile, onSave, onBack, onLogout,
         <Field label="Account No" value={bankAccountNo} setValue={setBankAccountNo} placeholder="0123456789" keyboardType="number-pad" style={inputStyle} muted={theme.muted} />
         <Field label="Account Name" value={bankAccountName} setValue={setBankAccountName} placeholder="NGUYEN VAN A" style={inputStyle} muted={theme.muted} autoCapitalize="characters" />
       </Section>
-      <ThemeToggle />
+      <View style={{ gap: 12, marginTop: 18 }}>
+        <ThemeToggle />
+        <Section title={t("common.language")} icon="globe-outline" theme={theme}>
+          <View style={{ alignItems: "flex-start", paddingTop: 6 }}>
+            <LanguageToggle />
+          </View>
+        </Section>
+      </View>
       <Section title={t("notifications.title")} icon="notifications-outline" theme={theme}>
         <View style={styles.pushRow}>
           <View style={styles.pushCopy}><AppText style={[styles.pushTitle, { color: theme.text }]}>{t("notifications.title")}</AppText><AppText style={[styles.pushDescription, { color: theme.muted }]}>Push Notifications</AppText></View>

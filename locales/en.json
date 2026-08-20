@@ -21,11 +21,15 @@
     "unitVnd": "VND",
     "unitKwh": "kWh",
     "unitM3": "m³",
-    "language": "Language"
+    "language": "Language",
+    "room": "Room"
   },
   "auth": {
+    "brandTagline": "Smart Property Management System",
+    "brandDescription": "Track contracts, invoices, and repair requests in one unified app.",
     "login": "Sign In",
     "loginTitle": "Welcome Back",
+
     "loginDescription": "Sign in to your TroHub Landlord Management account.",
     "register": "Register",
     "registerLandlord": "Register Landlord",
@@ -54,16 +58,20 @@
   },
   "nav": {
     "overview": "Overview",
-    "rooms": "Room Management",
+    "rooms": "Rooms",
+    "roomsManage": "Room Management",
     "tenants": "Tenants",
     "contracts": "Contracts",
     "invoices": "Invoices",
-    "utilities": "Electricity & Water",
-    "repairs": "Repairs & Issues",
+    "utilities": "Utilities",
+    "repairs": "Repairs",
+    "incident": "Issues",
     "settings": "Settings",
-    "payments": "Payment Gateway",
-    "debts": "Outstanding Debts",
-    "notifications": "Notifications"
+    "payments": "Payments",
+    "debts": "Debts",
+    "notifications": "Notifications",
+    "home": "Home",
+    "account": "Account"
   },
   "dashboard": {
     "eyebrow": "OPERATIONS OVERVIEW",
@@ -88,8 +96,9 @@
     "addRoom": "Add room",
     "tenantList": "Tenants",
     "createContract": "Create contract",
-    "handleRepair": "Handle repair",
-    "aiAssistant": "AI assistant",
+    "handleRepair": "Handle Issues",
+    "scanMeter": "AI Meter Scan 📸",
+    "aiAssistant": "AI Assistant",
     "occupancy": "Occupancy rate",
     "noData": "No data yet"
     ,"morning": "Good morning"
@@ -141,7 +150,13 @@
     "startDate": "Start Date",
     "endDate": "Expiration Date",
     "depositAmount": "Deposit Collected",
-    "rentalPrice": "Agreed Rent",
+    "rentalPrice": "Fixed Rent",
+    "roomInfo": "Room Information",
+    "terms": "Lease Terms",
+    "signContract": "Sign & Confirm Contract",
+    "rentFee": "Monthly Rent",
+    "deposit": "Deposit",
+    "parking": "Parking Fee",
     "status": {
       "active": "Active",
       "expired": "Expired",
@@ -163,8 +178,10 @@
       "paid": "Paid",
       "overdue": "Overdue"
     },
+    "sendReminder": "Send Payment Reminder",
     "payNow": "Pay Now"
   },
+
   "repairs": {
     "title": "Repairs & Issue Reports",
     "subtitle": "Receive incident reports from tenants and track progress",
@@ -194,11 +211,16 @@
   },
   "ai": {
     "title": "TroHub Co-pilot AI Assistant",
+    "assistantTitle": "TroHub AI Co-pilot",
+    "greeting": "Hello! I am your TroHub AI Assistant. How can I help you today?",
+    "placeholder": "Ask AI or enter a request...",
+    "systemError": "Unable to connect to AI. Please check the API Key or network connection.",
     "subtitle": "Smart Q&A, automatic revenue analysis, and management suggestions",
     "inputPlaceholder": "Ask TroHub AI (e.g., Rooms with unpaid electricity bills this month...)",
     "send": "Send Query",
     "suggested": "Suggested Questions"
   },
+
   "mobile": {
     "addTenant": {
       "required": "Please complete all fields and choose a room.",

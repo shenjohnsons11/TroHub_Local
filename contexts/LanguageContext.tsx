@@ -84,7 +84,12 @@ export function LanguageProvider({ children }: PropsWithChildren) {
   const t = useCallback(
     (key: string, params?: Record<string, string | number>) => {
       const currentDict = copy[language] || copy.vi;
-      let val = getNestedValue(currentDict, key) || getNestedValue(copy.vi, key) || key;
+      let val =
+        getNestedValue(currentDict, key) ||
+        getNestedValue(currentDict, `mobile.${key}`) ||
+        getNestedValue(copy.vi, key) ||
+        getNestedValue(copy.vi, `mobile.${key}`) ||
+        key;
       if (params) {
         for (const [name, replacement] of Object.entries(params)) {
           val = val.replaceAll(`{${name}}`, String(replacement));

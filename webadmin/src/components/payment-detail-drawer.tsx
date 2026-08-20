@@ -14,6 +14,7 @@ import {
   type SuccessfulPayment,
 } from "@/lib/payment-history";
 import { formatCurrency } from "@/lib/formatters";
+import { useLanguage } from "@/components/language-provider";
 
 type Props = {
   payment: SuccessfulPayment | null;
@@ -21,15 +22,16 @@ type Props = {
 };
 
 export function PaymentDetailDrawer({ payment, onOpenChange }: Props) {
+  const { t } = useLanguage();
   const breakdown = payment?.invoiceBreakdown;
   const rows = breakdown
     ? [
-        ["Tiền phòng", breakdown.roomCharge],
-        ["Tiền điện", breakdown.electricityCharge],
-        ["Tiền nước", breakdown.waterCharge],
-        ["Dịch vụ cộng thêm", breakdown.serviceCharge],
-        ["Tiền phạt quá hạn", breakdown.lateFee],
-        ["Giảm trừ", -breakdown.discount],
+        [t("invoices.roomFee"), breakdown.roomCharge],
+        [t("utilities.oldElec"), breakdown.electricityCharge],
+        [t("utilities.oldWater"), breakdown.waterCharge],
+        [t("invoices.serviceFee"), breakdown.serviceCharge],
+        [t("invoices.penalty"), breakdown.lateFee],
+        [t("invoices.discount"), -breakdown.discount],
       ] as const
     : [];
 
@@ -43,22 +45,22 @@ export function PaymentDetailDrawer({ payment, onOpenChange }: Props) {
                 <ReceiptText className="h-5 w-5" />
               </div>
               <DialogTitle className="text-xl font-black">
-                Chi tiết thanh toán
+                {t("payments.title")}
               </DialogTitle>
               <DialogDescription>
-                Đối soát hóa đơn {payment.period} của Người thuê.
+                {t("invoices.period")}: {payment.period}
               </DialogDescription>
             </DialogHeader>
 
             <dl className="mt-4 divide-y divide-border border-y border-border">
               {[
-                ["Người thuê", payment.nguoiThue],
-                ["Phòng", payment.room],
-                ["Kỳ hóa đơn", payment.period],
-                ["Ngày thanh toán", formatPaidAt(payment.paidAt)],
-                ["Mã TroHub", payment.transactionCode],
-                ["Mã đối soát", payment.gatewayReference || "Không có"],
-                ["Phương thức", payment.method],
+                [t("common.tenant"), payment.nguoiThue],
+                [t("common.room"), payment.room],
+                [t("invoices.period"), payment.period],
+                [t("payments.paidAt"), formatPaidAt(payment.paidAt)],
+                [t("invoices.code", { code: "" }), payment.transactionCode],
+                [t("payments.gatewayRef"), payment.gatewayReference || "—"],
+                [t("payments.method"), payment.method],
               ].map(([label, value]) => (
                 <div key={label} className="flex justify-between gap-6 py-3 text-sm">
                   <dt className="text-muted-foreground">{label}</dt>
@@ -68,7 +70,7 @@ export function PaymentDetailDrawer({ payment, onOpenChange }: Props) {
             </dl>
 
             <div className="mt-7">
-              <h3 className="font-black">Chi tiết hóa đơn</h3>
+              <h3 className="font-black">{t("invoices.title")}</h3>
               <div className="mt-3 divide-y divide-border">
                 {rows.map(([label, value]) => (
                   <div key={label} className="flex justify-between gap-5 py-3 text-sm">
@@ -79,7 +81,7 @@ export function PaymentDetailDrawer({ payment, onOpenChange }: Props) {
                   </div>
                 ))}
                 <div className="flex justify-between gap-5 py-4 text-base">
-                  <span className="font-black">Tổng thanh toán</span>
+                  <span className="font-black">{t("invoices.totalAmount")}</span>
                   <span className="font-black text-primary">
                     {formatCurrency(breakdown?.totalAmount || payment.amount)}
                   </span>
