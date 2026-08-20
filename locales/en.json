@@ -421,6 +421,14 @@
   "tenantRepair": {
     "noRoom": "No room assigned", "typeRequired": "Enter the issue type", "descriptionRequired": "Enter an issue description", "descriptionMin": "Description must have at least 10 characters", "submitted": "Tenant repair request sent.", "submitFailed": "Could not send repair request.", "permission": "Permission", "imagePermission": "Allow photo library access to upload images.", "imageFailed": "Could not select images.", "deleteTitle": "Delete Repair Request", "deleteMessage": "Delete this repair request?", "deleted": "Tenant repair request deleted.", "deleteFailed": "Could not delete repair request.", "deleteManyTitle": "Delete Repair Requests", "deleteManyMessage": "Delete {count} selected requests?", "deletedMany": "Deleted {count} tenant repair requests.", "deleteManyFailed": "Could not delete some requests.", "pending": "Pending", "processing": "In Progress", "done": "Completed",
     "title": "Repair Requests", "subtitle": "Report an issue for your landlord to resolve sooner.", "new": "New Request", "room": "Room", "type": "Issue Type", "typePlaceholder": "Electricity, water, internet, air conditioner...", "description": "Description", "descriptionPlaceholder": "Example: Air conditioner is not working, weak water flow...", "upload": "Upload Issue Photos", "uploadHint": "PNG, JPG, or JPEG ({count} images selected)", "removeImage": "Remove image {index}", "submit": "Submit Request", "history": "Submitted Requests", "selected": "{count} selected", "deleteAll": "Delete All", "selectAll": "Select all repair requests", "empty": "No repair requests", "emptyDescription": "Submitted requests will appear here.", "select": "Select request {type}", "roomDate": "Room {room} • {date}"
+  },
+  "i18n": {
+    "language": { "label": "Language", "switchVietnamese": "Switch to Vietnamese", "switchEnglish": "Switch to English" },
+    "loading": { "propertyData": "Loading your property data..." },
+    "theme": { "title": "Appearance", "light": "Light mode", "dark": "Dark mode", "system": "Automatic appearance", "toDark": "Switch to dark mode", "toSystem": "Switch to automatic appearance", "toLight": "Switch to light mode" },
+    "security": {
+      "changePassword": "Change Password", "changePasswordSubtitle": "Update your account sign-in password", "closeChangePassword": "Close password change", "currentPassword": "Current Password", "passwordRequired": "Enter your current password", "newPasswordRequired": "Enter a new password", "passwordTooShort": "Your new password must be longer than 6 characters", "passwordMustDiffer": "Your new password must differ from the current password", "confirmPasswordRequired": "Confirm your new password", "passwordMismatch": "Password confirmation does not match", "changed": "Password changed", "changeFailed": "Could not change the password. Please try again.", "updatePassword": "Update Password"
+    }
   }
 }
 }
