@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const Account = require('../models/Account');
 
-const JWT_SECRET = process.env.JWT_SECRET || '***REMOVED***';
+const JWT_SECRET = process.env.JWT_SECRET || 'trohub_secret_key_2026';
 
 function authError(code, message) {
     const error = new Error(message);

@@ -14,6 +14,7 @@ import {
   type SuccessfulPayment,
 } from "@/lib/payment-history";
 import { formatCurrency } from "@/lib/formatters";
+import { useLanguage } from "@/components/language-provider";
 
 type Props = {
   payment: SuccessfulPayment | null;
@@ -21,15 +22,16 @@ type Props = {
 };
 
 export function PaymentDetailDrawer({ payment, onOpenChange }: Props) {
+  const { t } = useLanguage();
   const breakdown = payment?.invoiceBreakdown;
   const rows = breakdown
     ? [
-        ["Tiền phòng", breakdown.roomCharge],
-        ["Tiền điện", breakdown.electricityCharge],
-        ["Tiền nước", breakdown.waterCharge],
-        ["Dịch vụ cộng thêm", breakdown.serviceCharge],
-        ["Tiền phạt quá hạn", breakdown.lateFee],
-        ["Giảm trừ", -breakdown.discount],
+        [t("i18n.paymentDrawer.roomRent"), breakdown.roomCharge],
+        [t("i18n.paymentDrawer.electricity"), breakdown.electricityCharge],
+        [t("i18n.paymentDrawer.water"), breakdown.waterCharge],
+        [t("i18n.paymentDrawer.services"), breakdown.serviceCharge],
+        [t("i18n.paymentDrawer.lateFee"), breakdown.lateFee],
+        [t("i18n.paymentDrawer.discount"), -breakdown.discount],
       ] as const
     : [];
 
@@ -43,22 +45,22 @@ export function PaymentDetailDrawer({ payment, onOpenChange }: Props) {
                 <ReceiptText className="h-5 w-5" />
               </div>
               <DialogTitle className="text-xl font-black">
-                Chi tiết thanh toán
+                {t("i18n.paymentDrawer.title")}
               </DialogTitle>
               <DialogDescription>
-                Đối soát hóa đơn {payment.period} của Người thuê.
+                {t("i18n.paymentDrawer.description", { period: payment.period })}
               </DialogDescription>
             </DialogHeader>
 
             <dl className="mt-4 divide-y divide-border border-y border-border">
               {[
-                ["Người thuê", payment.nguoiThue],
-                ["Phòng", payment.room],
-                ["Kỳ hóa đơn", payment.period],
-                ["Ngày thanh toán", formatPaidAt(payment.paidAt)],
-                ["Mã TroHub", payment.transactionCode],
-                ["Mã đối soát", payment.gatewayReference || "Không có"],
-                ["Phương thức", payment.method],
+                [t("i18n.paymentDrawer.tenant"), payment.nguoiThue],
+                [t("i18n.paymentDrawer.room"), payment.room],
+                [t("i18n.paymentDrawer.period"), payment.period],
+                [t("i18n.paymentDrawer.paidAt"), formatPaidAt(payment.paidAt)],
+                [t("i18n.paymentDrawer.transactionCode"), payment.transactionCode],
+                [t("i18n.paymentDrawer.gatewayReference"), payment.gatewayReference || t("i18n.paymentDrawer.notAvailable")],
+                [t("i18n.paymentDrawer.method"), payment.method],
               ].map(([label, value]) => (
                 <div key={label} className="flex justify-between gap-6 py-3 text-sm">
                   <dt className="text-muted-foreground">{label}</dt>
@@ -68,7 +70,7 @@ export function PaymentDetailDrawer({ payment, onOpenChange }: Props) {
             </dl>
 
             <div className="mt-7">
-              <h3 className="font-black">Chi tiết hóa đơn</h3>
+              <h3 className="font-black">{t("i18n.paymentDrawer.invoiceDetail")}</h3>
               <div className="mt-3 divide-y divide-border">
                 {rows.map(([label, value]) => (
                   <div key={label} className="flex justify-between gap-5 py-3 text-sm">
@@ -79,7 +81,7 @@ export function PaymentDetailDrawer({ payment, onOpenChange }: Props) {
                   </div>
                 ))}
                 <div className="flex justify-between gap-5 py-4 text-base">
-                  <span className="font-black">Tổng thanh toán</span>
+                  <span className="font-black">{t("i18n.paymentDrawer.total")}</span>
                   <span className="font-black text-primary">
                     {formatCurrency(breakdown?.totalAmount || payment.amount)}
                   </span>

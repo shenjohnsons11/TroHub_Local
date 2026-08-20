@@ -43,7 +43,7 @@ services:
     environment:
       - MONGODB_URI=mongodb://db:27017/trohub
       - MONGODB_DB=trohub
-      - JWT_SECRET=***REMOVED***
+      - JWT_SECRET=trohub_secret_key_2026
       - PORT=3000
     networks:
       - trohub_network

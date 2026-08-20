@@ -1,6 +1,6 @@
 let io = null;
 const jwt = require('jsonwebtoken');
-const JWT_SECRET = process.env.JWT_SECRET || '***REMOVED***';
+const JWT_SECRET = process.env.JWT_SECRET || 'trohub_secret_key_2026';
 
 function initSocket(server) {
     try {

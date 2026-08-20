@@ -3,10 +3,13 @@ import { AccessibilityInfo, Animated, StyleSheet, View } from "react-native";
 import { AppText } from "@/components/ui/typography";
 import { Image } from "expo-image";
 import { useAppTheme } from "../contexts/ThemeContext";
+import { useTranslation } from "../contexts/LanguageContext";
 import TroHubLogo from "./TroHubLogo";
 
-export default function AppLoadingScreen({ message = "Đang tải dữ liệu không gian sống..." }: { message?: string }) {
+export default function AppLoadingScreen({ message }: { message?: string }) {
   const { theme, themeMode } = useAppTheme();
+  const { t } = useTranslation();
+  const displayMessage = message || t("i18n.loading.propertyData");
   const skeleton = useRef(new Animated.Value(0.45)).current;
 
   useEffect(() => {
@@ -27,7 +30,7 @@ export default function AppLoadingScreen({ message = "Đang tải dữ liệu kh
   return (
     <View
       accessibilityRole="progressbar"
-      accessibilityLabel={message}
+      accessibilityLabel={displayMessage}
       style={[styles.screen, { backgroundColor: theme.background }]}
     >
       <TroHubLogo size="large" inverted={themeMode === "dark"} />
@@ -51,7 +54,7 @@ export default function AppLoadingScreen({ message = "Đang tải dữ liệu kh
         />
         <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: theme.overlay, opacity: themeMode === "dark" ? 0.24 : 0.06 }]} />
       </Animated.View>
-      <AppText style={[styles.message, { color: theme.muted }]}>{message}</AppText>
+      <AppText style={[styles.message, { color: theme.muted }]}>{displayMessage}</AppText>
     </View>
   );
 }
