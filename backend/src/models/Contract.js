@@ -45,7 +45,13 @@ const contractSchema = new mongoose.Schema({
     services: [{
         serviceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Service' },
         fixedPrice: { type: Number } // don_gia_chot lúc ký
-    }]
+    }],
+
+    // Chữ ký điện tử & File xuất bản hợp đồng
+    tenantSignature: { type: String }, // Base64 PNG chữ ký tay
+    docxUrl: { type: String },         // Đường dẫn file Word (/public/contracts/hop-dong-[id].docx)
+    pdfUrl: { type: String },          // Đường dẫn file PDF (/public/contracts/hop-dong-[id].pdf)
+    signedAt: { type: Date }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Contract', contractSchema);

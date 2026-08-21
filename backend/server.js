@@ -25,11 +25,15 @@ const ocrRoutes = require('./src/routes/ocrRoutes');
 const paymentController = require('./src/controllers/paymentController');
 const { applyAllOverduePenalties } = require('./src/services/overdueInvoice');
 
+const path = require('path');
+
 const app = express();
 
 // 2. Middleware
 app.use(cors({ origin: '*', credentials: true }));
 app.use(express.json({ limit: '50mb' })); // Giúp API đọc được dữ liệu JSON gửi lên, tăng giới hạn lên 50mb
+app.use('/public', express.static(path.join(__dirname, 'public')));
+
 
 app.use((req, res, next) => {
     const start = Date.now();

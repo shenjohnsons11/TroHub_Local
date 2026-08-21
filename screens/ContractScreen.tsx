@@ -15,8 +15,12 @@ import GradientHero from "../components/ui/GradientHero";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
 import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
 import { ContentSkeleton } from "../components/ui/content-skeleton";
+import * as Linking from "expo-linking";
+import { API_BASE_URL } from "../constants/api";
 import { useTranslation } from "../contexts/LanguageContext";
 import { formatCurrency, formatMeterReading, unformatNumber } from "../utils/formatters";
+
+
 
 const getStatusLabel = (status: ContractStatus, t: (key: string) => string): string => {
   switch (status) {
@@ -128,10 +132,10 @@ export default function ContractScreen({ onNavigate, params }: Props) {
     }
   };
 
-  const handleConfirmSign = async (contract: Contract) => {
+  const handleConfirmSign = async (contract: Contract, signatureBase64?: string) => {
     try {
       setSigningId(contract.id);
-      const result = await contractService.signContract(contract.id);
+      const result = await contractService.signContract(contract.id, signatureBase64);
       notification.success(
         t("tenantContract.signed"),
       );
@@ -157,6 +161,7 @@ export default function ContractScreen({ onNavigate, params }: Props) {
       setSigningId(null);
     }
   };
+
 
   const handleDepositPaymentConfirmed = async (_invoiceId: string) => {
     setPaymentInvoice(null);
@@ -409,7 +414,35 @@ export default function ContractScreen({ onNavigate, params }: Props) {
                 </AppText>
               </View>
             )}
+
+            {/* Thanh tải tài liệu Hợp đồng PDF & DOCX */}
+            <View style={styles.downloadRow}>
+              <Pressable
+                accessibilityRole="button"
+                style={[styles.downloadBtn, { backgroundColor: "rgba(225, 29, 72, 0.1)", borderColor: "rgba(225, 29, 72, 0.3)" }]}
+                onPress={() => {
+                  const url = `${API_BASE_URL}/contracts/${contract.id}/download-pdf`;
+                  Linking.openURL(url);
+                }}
+              >
+                <Ionicons name="document-text" size={15} color="#E11D48" />
+                <AppText style={[styles.downloadBtnText, { color: "#E11D48" }]}>Tải PDF</AppText>
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                style={[styles.downloadBtn, { backgroundColor: "rgba(37, 99, 235, 0.1)", borderColor: "rgba(37, 99, 235, 0.3)" }]}
+                onPress={() => {
+                  const url = `${API_BASE_URL}/contracts/${contract.id}/download-docx`;
+                  Linking.openURL(url);
+                }}
+              >
+                <Ionicons name="document" size={15} color="#2563EB" />
+                <AppText style={[styles.downloadBtnText, { color: "#2563EB" }]}>Tải Word (.docx)</AppText>
+              </Pressable>
+            </View>
           </Card>
+
           </AnimatedEntry>
         );
       }}
@@ -668,4 +701,27 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSh
     fontSize: 14,
     fontWeight: "900",
   },
+  downloadRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: theme.border,
+  },
+  downloadBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  downloadBtnText: {
+    fontSize: 12,
+    fontWeight: "800",
+  },
 });
+

@@ -22,8 +22,14 @@ router.delete('/:id', requireAdmin, contractController.deleteContract);
 
 // Người thuê gọi API này để ký hợp đồng (Chuyển status thành 4)
 router.put('/:id/sign', requireTenant, contractController.signContract);
+router.patch('/:id/sign', requireTenant, contractController.signContract);
+
+// Tải file hợp đồng PDF / DOCX
+router.get('/:id/download-pdf', contractController.downloadPdf);
+router.get('/:id/download-docx', contractController.downloadDocx);
 
 // Chủ trọ duyệt xác nhận hợp đồng (Chuyển status thành 1)
+
 router.put('/:id/confirm', requireAdmin, contractController.confirmContract);
 
 // Chủ trọ quyết toán và duyệt trả phòng

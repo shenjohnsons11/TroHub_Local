@@ -269,9 +269,11 @@ exports.sendContract = async (req, res) => {
 // 4. Người thuê thực hiện Ký hợp đồng (Trên Mobile App)
 exports.signContract = async (req, res) => {
     try {
+        const signature = req.body?.signature || req.body?.tenantSignature || req.body?.signatureBase64;
         const result = await signContractAndEnsureDeposit({
             contractId: req.params.id,
             nguoiThueId: req.auth.id,
+            signature,
         });
         await notifyLandlord({
             event: 'contract_signed',
@@ -282,6 +284,8 @@ exports.signContract = async (req, res) => {
             success: true,
             message: "Ký hợp đồng thành công! Vui lòng thanh toán tiền cọc ngay để hoàn tất.",
             data: result.contract,
+            docxUrl: result.contract.docxUrl,
+            pdfUrl: result.contract.pdfUrl,
             invoiceId: result.invoiceId,
             depositRequired: result.depositRequired,
             depositAmount: result.depositAmount,
@@ -295,6 +299,61 @@ exports.signContract = async (req, res) => {
         });
     }
 };
+
+// 4.01 Tải file PDF Hợp đồng
+exports.downloadPdf = async (req, res) => {
+    try {
+        const path = require('path');
+        const fs = require('fs');
+        const { generateContractDocuments } = require('../services/contractGeneratorService');
+
+        const contract = await Contract.findById(req.params.id);
+        if (!contract) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy hợp đồng!" });
+        }
+
+        const contractsDir = path.join(__dirname, '../../public/contracts');
+        const pdfFilePath = path.join(contractsDir, `hop-dong-${contract._id}.pdf`);
+
+        if (!fs.existsSync(pdfFilePath)) {
+            await generateContractDocuments(contract._id, contract.tenantSignature);
+        }
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="hop-dong-${contract._id}.pdf"`);
+        return res.sendFile(pdfFilePath);
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Lỗi tải file PDF: " + error.message });
+    }
+};
+
+// 4.02 Tải file Word DOCX Hợp đồng
+exports.downloadDocx = async (req, res) => {
+    try {
+        const path = require('path');
+        const fs = require('fs');
+        const { generateContractDocuments } = require('../services/contractGeneratorService');
+
+        const contract = await Contract.findById(req.params.id);
+        if (!contract) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy hợp đồng!" });
+        }
+
+        const contractsDir = path.join(__dirname, '../../public/contracts');
+        const docxFilePath = path.join(contractsDir, `hop-dong-${contract._id}.docx`);
+
+        if (!fs.existsSync(docxFilePath)) {
+            await generateContractDocuments(contract._id, contract.tenantSignature);
+        }
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        res.setHeader('Content-Disposition', `attachment; filename="hop-dong-${contract._id}.docx"`);
+        return res.sendFile(docxFilePath);
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Lỗi tải file DOCX: " + error.message });
+    }
+};
+
 
 // 4.1. Chủ trọ (Admin) duyệt xác nhận hợp đồng (Trên Web/App)
 exports.confirmContract = async (req, res) => {
