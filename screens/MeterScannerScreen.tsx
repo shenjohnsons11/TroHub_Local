@@ -31,7 +31,7 @@ export default function MeterScannerScreen({ onBack, onSuccess }: Props) {
   const { theme } = useAppTheme();
   const { t } = useTranslation();
   const notification = useNotification();
-  const { width, height } = useWindowDimensions();
+  const { width } = useWindowDimensions();
 
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
@@ -47,6 +47,8 @@ export default function MeterScannerScreen({ onBack, onSuccess }: Props) {
 
   const [modalVisible, setModalVisible] = useState(false);
   const [scannedDigits, setScannedDigits] = useState("");
+  const [redDigits, setRedDigits] = useState("");
+  const [scannedNote, setScannedNote] = useState("");
   const [saving, setSaving] = useState(false);
 
   const laserAnim = useRef(new Animated.Value(0)).current;
@@ -96,14 +98,16 @@ export default function MeterScannerScreen({ onBack, onSuccess }: Props) {
     setScanning(true);
     setStatusMessage(
       meterType === "electricity"
-        ? "Gemini Vision AI đang đọc chỉ số điện (kWh)..."
-        : "Gemini Vision AI đang đọc chỉ số nước (m³)..."
+        ? "Gemini Vision AI đang đọc số ĐEN & bỏ qua số ĐỎ (kWh)..."
+        : "Gemini Vision AI đang đọc số ĐEN & bỏ qua số ĐỎ (m³)..."
     );
     try {
       const res = await ocrService.recognizeMeterReading(base64Data, meterType);
       if (res && res.digits) {
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setScannedDigits(res.digits);
+        setRedDigits(res.redDigits || "");
+        setScannedNote(res.note || "✓ Đã tự động lọc bỏ số phụ màu đỏ");
         setModalVisible(true);
       } else {
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -168,6 +172,13 @@ export default function MeterScannerScreen({ onBack, onSuccess }: Props) {
     } catch (e) {
       notification.error(t("common.error"));
     }
+  };
+
+  const handleAdjustDigits = (delta: number) => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const currentNum = parseInt(scannedDigits.replace(/\D/g, "") || "0", 10);
+    const nextNum = Math.max(0, currentNum + delta);
+    setScannedDigits(String(nextNum));
   };
 
   const handleSaveMeterReading = async () => {
@@ -276,8 +287,8 @@ export default function MeterScannerScreen({ onBack, onSuccess }: Props) {
       <View style={styles.viewfinderContainer}>
         <AppText style={styles.instructionText}>
           {meterType === "electricity"
-            ? "Hướng camera vào dãy số đồng hồ Điện (kWh)"
-            : "Hướng camera vào dãy số đồng hồ Nước (m³)"}
+            ? "Hướng camera vào dãy số ĐEN đồng hồ Điện (kWh)"
+            : "Hướng camera vào dãy số ĐEN đồng hồ Nước (m³)"}
         </AppText>
 
         <View style={[styles.boundingBox, { width: frameWidth, height: frameHeight }]}>
@@ -331,7 +342,7 @@ export default function MeterScannerScreen({ onBack, onSuccess }: Props) {
         <View style={{ width: 64 }} />
       </View>
 
-      {/* 6. Modal Confirmation & Save */}
+      {/* 6. Modal Confirmation & Stepper Adjust */}
       <Modal
         visible={modalVisible}
         transparent
@@ -343,9 +354,14 @@ export default function MeterScannerScreen({ onBack, onSuccess }: Props) {
 
           <View style={[styles.sheetContent, { backgroundColor: theme.surfaceElevated }]}>
             <View style={styles.sheetHeader}>
-              <AppText style={[styles.sheetTitle, { color: theme.text }]}>
-                {meterType === "electricity" ? "⚡ Kết quả đọc chỉ số Điện" : "💧 Kết quả đọc chỉ số Nước"}
-              </AppText>
+              <View style={{ gap: 2 }}>
+                <AppText style={[styles.sheetTitle, { color: theme.text }]}>
+                  {meterType === "electricity" ? "⚡ Xác nhận chỉ số Điện" : "💧 Xác nhận chỉ số Nước"}
+                </AppText>
+                <AppText style={[styles.sheetSubtitle, { color: theme.muted }]}>
+                  Chỉ số nguyên tiêu thụ ({meterType === "electricity" ? "kWh" : "m³"})
+                </AppText>
+              </View>
               <Pressable accessibilityRole="button" onPress={() => setModalVisible(false)}>
                 <Ionicons name="close-circle" size={26} color={theme.muted} />
               </Pressable>
@@ -355,10 +371,18 @@ export default function MeterScannerScreen({ onBack, onSuccess }: Props) {
               <AnimatedEntry>
                 <View style={[styles.resultCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
                   <AppText style={[styles.resultLabel, { color: theme.muted }]}>
-                    Chỉ số tiêu thụ nhận diện được ({meterType === "electricity" ? "kWh" : "m³"}):
+                    DÃY SỐ MÀU ĐEN (PHẦN NGUYÊN):
                   </AppText>
 
-                  <View style={styles.digitsRow}>
+                  {/* Stepper + Big Input Row */}
+                  <View style={styles.stepperInputRow}>
+                    <Pressable
+                      style={[styles.stepperBtn, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
+                      onPress={() => handleAdjustDigits(-1)}
+                    >
+                      <Ionicons name="remove" size={24} color={theme.text} />
+                    </Pressable>
+
                     <AppTextInput
                       style={[styles.digitsInput, { color: meterType === "electricity" ? "#F59E0B" : "#3B82F6" }]}
                       value={scannedDigits}
@@ -366,15 +390,37 @@ export default function MeterScannerScreen({ onBack, onSuccess }: Props) {
                       keyboardType="numeric"
                       maxLength={8}
                     />
-                    <Ionicons name="create-outline" size={22} color={theme.muted} />
+
+                    <Pressable
+                      style={[styles.stepperBtn, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
+                      onPress={() => handleAdjustDigits(1)}
+                    >
+                      <Ionicons name="add" size={24} color={theme.text} />
+                    </Pressable>
                   </View>
 
-                  <AppText style={[styles.accuracyTag, { color: "#10B981" }]}>
-                    ✓ Gemini Vision AI OCR
-                  </AppText>
+                  {/* Badges: AI Filter & Red Digits info */}
+                  <View style={styles.badgesRow}>
+                    <View style={styles.greenBadge}>
+                      <Ionicons name="checkmark-circle" size={14} color="#10B981" />
+                      <AppText style={styles.greenBadgeText}>
+                        {scannedNote || "✓ Đã tự động lọc bỏ số phụ màu đỏ"}
+                      </AppText>
+                    </View>
+
+                    {redDigits ? (
+                      <View style={styles.redBadge}>
+                        <Ionicons name="close-circle" size={14} color="#EF4444" />
+                        <AppText style={styles.redBadgeText}>
+                          Số đỏ bỏ qua: <AppText style={{ fontWeight: "900" }}>{redDigits}</AppText>
+                        </AppText>
+                      </View>
+                    ) : null}
+                  </View>
                 </View>
               </AnimatedEntry>
 
+              {/* Room Chip Selection */}
               <View style={styles.roomSelectSection}>
                 <AppText style={[styles.fieldLabel, { color: theme.text }]}>{t("contracts.selectRoom")}</AppText>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.roomChipsRow}>
@@ -400,13 +446,15 @@ export default function MeterScannerScreen({ onBack, onSuccess }: Props) {
                 </ScrollView>
               </View>
 
+              {/* Image Preview */}
               {capturedImage ? (
                 <View style={styles.previewContainer}>
-                  <AppText style={[styles.fieldLabel, { color: theme.muted }]}>Ảnh chụp:</AppText>
+                  <AppText style={[styles.fieldLabel, { color: theme.muted }]}>Ảnh chụp đối chiếu:</AppText>
                   <Image source={{ uri: capturedImage }} style={styles.previewImg} />
                 </View>
               ) : null}
 
+              {/* Save Button */}
               <Pressable
                 accessibilityRole="button"
                 disabled={saving}
@@ -587,35 +635,80 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     padding: 20,
     paddingBottom: 36,
-    maxHeight: "85%",
+    maxHeight: "88%",
   },
   sheetHeader: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     marginBottom: 16,
   },
-  sheetTitle: { fontSize: 16, fontWeight: "900" },
+  sheetTitle: { fontSize: 17, fontWeight: "900" },
+  sheetSubtitle: { fontSize: 12, fontWeight: "600", marginTop: 2 },
   sheetBody: { gap: 16 },
   resultCard: {
     borderRadius: 18,
     borderWidth: 1,
     padding: 16,
-    gap: 8,
+    gap: 12,
   },
-  resultLabel: { fontSize: 12, fontWeight: "700" },
-  digitsRow: {
+  resultLabel: { fontSize: 11, fontWeight: "800", letterSpacing: 0.5 },
+  stepperInputRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 12,
+  },
+  stepperBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
   digitsInput: {
-    fontSize: 32,
+    fontSize: 34,
     fontWeight: "900",
-    letterSpacing: 3,
+    letterSpacing: 4,
+    textAlign: "center",
     flex: 1,
   },
-  accuracyTag: { fontSize: 11, fontWeight: "800" },
+  badgesRow: {
+    flexDirection: "column",
+    gap: 6,
+    marginTop: 4,
+  },
+  greenBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(16, 185, 129, 0.12)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+  },
+  greenBadgeText: {
+    color: "#10B981",
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  redBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(239, 68, 68, 0.12)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+  },
+  redBadgeText: {
+    color: "#EF4444",
+    fontSize: 11,
+    fontWeight: "800",
+  },
   roomSelectSection: { gap: 8 },
   fieldLabel: { fontSize: 13, fontWeight: "800" },
   roomChipsRow: { gap: 8, paddingVertical: 4 },
@@ -627,7 +720,7 @@ const styles = StyleSheet.create({
   },
   roomChipText: { fontSize: 13, fontWeight: "800" },
   previewContainer: { gap: 6 },
-  previewImg: { width: "100%", height: 140, borderRadius: 14 },
+  previewImg: { width: "100%", height: 130, borderRadius: 14 },
   saveBtn: {
     flexDirection: "row",
     alignItems: "center",

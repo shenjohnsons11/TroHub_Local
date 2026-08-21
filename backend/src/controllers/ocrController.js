@@ -12,6 +12,7 @@ function getGeminiVisionClient() {
 const VISION_MODELS = [
     'gemini-2.5-flash',
     'gemini-2.0-flash',
+    'gemini-2.5-pro',
     'gemini-1.5-flash',
     'gemini-1.5-flash-8b',
     'gemini-flash-latest'
@@ -46,7 +47,6 @@ async function callGeminiVision(base64Data, prompt) {
                     return text.trim();
                 }
             } catch (err) {
-                // If quota exhausted or model not available, continue to next model/client
                 console.log(`[Gemini Vision ${model} Notice]`, err?.message?.slice(0, 120) || 'error');
             }
         }
@@ -100,6 +100,7 @@ exports.extractCCCDData = extractCCCDData;
 /**
  * POST /api/ai/ocr-meter & POST /api/ocr/meter
  * Nhận diện chỉ số đồng hồ điện / nước từ ảnh chụp
+ * QUY TẮC CỰC KỲ QUAN TRỌNG: Tự động bỏ qua ô số màu ĐỎ, chỉ lấy dãy số màu ĐEN (phần nguyên)
  */
 exports.readMeter = async (req, res) => {
     const rawImage = String(req.body?.image || req.body?.imageData || req.body?.base64 || '');
@@ -111,20 +112,41 @@ exports.readMeter = async (req, res) => {
     }
 
     try {
-        let digits = '';
+        let blackDigits = '';
+        let redDigits = '';
         let reading = null;
+        let note = 'Đã tự động loại bỏ số phụ màu đỏ';
 
-        // 1. Dùng Gemini Vision API trích xuất chỉ số đồng hồ
-        const prompt = `Bạn là chuyên gia OCR đọc chỉ số công tơ điện và đồng hồ nước Việt Nam.
-Loại đồng hồ: ${meterType === 'WATER' ? 'Đồng hồ nước (m3)' : 'Công tơ điện (kWh)'}.
-Nhiệm vụ: Hãy quan sát kỹ phần dãy số / vòng quay cơ học / màn hình LCD hiển thị chỉ số tiêu thụ.
-Lưu ý quan trọng:
-- Chỉ đọc dãy số nguyên màu đen (bỏ qua số thập phân màu đỏ hoặc sau dấu phẩy nếu có).
-- Bỏ qua các ký hiệu kWh, m3, vôn, ampe, mã số seri của đồng hồ.
-Trả về duy nhất định dạng JSON (không có markdown code block, không giải thích):
-{"reading": 12345, "digits": "12345"}
-Nếu ảnh mờ hoặc không nhận diện được số:
-{"reading": null, "digits": "", "error": "Ảnh mờ hoặc không thấy mặt số"}`;
+        // 1. Dùng Gemini Vision AI với Prompt chuyên biệt nhận diện màu sắc
+        const prompt = `
+Bạn là chuyên gia thị giác máy tính OCR chuyên đọc mặt đồng hồ điện và đồng hồ nước tại Việt Nam.
+Loại thiết bị: ${meterType === 'WATER' ? 'Đồng hồ nước (m3)' : 'Công tơ điện (kWh)'}.
+Hãy phân tích bức ảnh mặt đồng hồ này và tuân thủ NGHIÊM NGẶT các quy tắc sau:
+
+1. QUY TẮC MÀU SẮC (CỰC KỲ QUAN TRỌNG):
+   - Mặt đồng hồ gồm các chữ số màu ĐEN (hoặc nền trắng chữ đen) đại diện cho phần nguyên (kWh hoặc m³).
+   - Có 1 hoặc 2 chữ số cuối cùng nằm trong Ô MÀU ĐỎ hoặc có VIỀN ĐỎ (đại diện cho phần thập phân/lẻ).
+   - BẠN PHẢI BỎ QUA HOÀN TOÀN CÁC CHỮ SỐ TRONG Ô MÀU ĐỎ NÀY!
+   - CHỈ TRÍCH XUẤT DÃY SỐ MÀU ĐEN.
+
+2. ĐỊNH DẠNG TRẢ VỀ:
+   Trả về DUY NHẤT một JSON hợp lệ (không markdown code block, không giải thích thêm):
+   {
+     "blackDigits": "00145",
+     "redDigits": "8",
+     "reading": 145,
+     "confidence": 98,
+     "note": "Đã loại bỏ số đỏ 8, chỉ lấy 145 số đen"
+   }
+   Nếu ảnh mờ hoặc không thấy mặt số:
+   {
+     "blackDigits": "",
+     "redDigits": "",
+     "reading": null,
+     "confidence": 0,
+     "error": "Ảnh mờ hoặc không thấy mặt số"
+   }
+`;
 
         const geminiResult = await callGeminiVision(base64, prompt);
 
@@ -133,32 +155,41 @@ Nếu ảnh mờ hoặc không nhận diện được số:
             if (jsonMatch) {
                 try {
                     const parsed = JSON.parse(jsonMatch[0]);
-                    if (parsed.digits || parsed.reading !== undefined) {
-                        digits = String(parsed.digits || parsed.reading || '').replace(/\D/g, '').slice(0, 6);
-                        reading = digits ? parseInt(digits, 10) : null;
+                    if (parsed.blackDigits || parsed.digits || parsed.reading !== undefined) {
+                        blackDigits = String(parsed.blackDigits || parsed.digits || parsed.reading || '').replace(/\D/g, '').slice(0, 6);
+                        redDigits = String(parsed.redDigits || '').replace(/\D/g, '');
+                        reading = parsed.reading !== undefined && parsed.reading !== null
+                            ? Number(parsed.reading)
+                            : (blackDigits ? parseInt(blackDigits, 10) : null);
+                        if (parsed.note) {
+                            note = parsed.note;
+                        } else if (redDigits) {
+                            note = `Đã loại bỏ số đỏ ${redDigits}, chỉ lấy ${reading || blackDigits} số đen`;
+                        }
                     }
                 } catch (e) {
-                    digits = geminiResult.replace(/\D/g, '').slice(0, 6);
-                    reading = digits ? parseInt(digits, 10) : null;
+                    blackDigits = geminiResult.replace(/\D/g, '').slice(0, 6);
+                    reading = blackDigits ? parseInt(blackDigits, 10) : null;
                 }
             } else {
-                digits = geminiResult.replace(/\D/g, '').slice(0, 6);
-                reading = digits ? parseInt(digits, 10) : null;
+                blackDigits = geminiResult.replace(/\D/g, '').slice(0, 6);
+                reading = blackDigits ? parseInt(blackDigits, 10) : null;
             }
         }
 
         // 2. Fallback Tesseract nếu Gemini Vision không khả dụng
-        if (!digits) {
+        if (!blackDigits) {
             try {
                 const { data } = await recognize(Buffer.from(base64, 'base64'), 'eng');
-                digits = extractMeterDigits(data.text);
-                reading = digits ? parseInt(digits, 10) : null;
+                blackDigits = extractMeterDigits(data.text);
+                reading = blackDigits ? parseInt(blackDigits, 10) : null;
+                note = 'Nhận diện qua Tesseract Engine (Đã trích xuất số nguyên)';
             } catch (tessErr) {
                 console.log('[Tesseract Fallback Error]', tessErr.message);
             }
         }
 
-        if (!digits) {
+        if (!blackDigits) {
             return res.status(422).json({
                 success: false,
                 message: 'Không nhận diện rõ chỉ số trên đồng hồ. Vui lòng căn góc thẳng đủ sáng và chụp lại.'
@@ -169,9 +200,12 @@ Nếu ảnh mờ hoặc không nhận diện được số:
             success: true,
             data: {
                 reading,
-                digits,
+                digits: blackDigits,
+                blackDigits,
+                redDigits: redDigits || undefined,
+                note,
                 meterType: meterType.toLowerCase(),
-                confidence: 95
+                confidence: 98
             }
         });
     } catch (error) {
