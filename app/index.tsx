@@ -269,10 +269,17 @@ export default function App() {
               )}
 
 
+              {activeTab === "scan_meter" && (
+                <MeterScannerScreen onBack={() => setActiveTab("home")} onSuccess={() => setActiveTab("home")} />
+              )}
+
+              {activeTab === "cccd_scan" && <CCCDScannerScreen onBack={() => setActiveTab("home")} />}
+
               {activeTab === "notifications" && <AdminNotificationsScreen onBack={() => handleChangeTab("home")} onNavigate={handleChangeTab} refreshKey={notificationRefreshKey} onUnreadChanged={() => setNotificationRefreshKey((value) => value + 1)} />}
 
               {activeTab === "ai_chat" && <AIChatScreen profile={profile} onBack={() => setActiveTab("home")} onAction={handleAIAction} />}
             </>
+
           ) : (
             <>
               {activeTab === "home" && (
