@@ -31,6 +31,7 @@ function buildSigningResult(contract, invoice, idempotent) {
 async function signContractAndEnsureDeposit({
   contractId,
   nguoiThueId,
+  signature,
   ContractModel = Contract,
   InvoiceModel = Invoice,
   RoomModel = Room,
@@ -70,6 +71,17 @@ async function signContractAndEnsureDeposit({
   }
 
   if (Number(contract.status) === 4 && (depositAmount === 0 || depositInvoice)) {
+    if (signature && !contract.tenantSignature) {
+      contract.tenantSignature = signature;
+      contract.signedAt = new Date();
+      await contract.save();
+      try {
+        const { generateContractDocuments } = require("./contractGeneratorService");
+        await generateContractDocuments(contract._id, signature);
+      } catch (genErr) {
+        console.log("[Contract Document Generation]", genErr.message);
+      }
+    }
     return buildSigningResult(contract, depositInvoice, true);
   }
 
@@ -111,8 +123,18 @@ async function signContractAndEnsureDeposit({
   const previousConfirmedAt = contract.tenantConfirmedAt;
   contract.status = 4;
   contract.tenantConfirmedAt = new Date();
+  if (signature) {
+    contract.tenantSignature = signature;
+    contract.signedAt = new Date();
+  }
   try {
     await contract.save();
+    try {
+      const { generateContractDocuments } = require("./contractGeneratorService");
+      await generateContractDocuments(contract._id, signature);
+    } catch (genErr) {
+      console.log("[Contract Document Generation]", genErr.message);
+    }
   } catch (error) {
     contract.status = previousStatus;
     contract.tenantConfirmedAt = previousConfirmedAt;

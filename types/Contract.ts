@@ -32,4 +32,8 @@ export type Contract = {
     initialWater: number;
   };
   note: string;
+  docxUrl?: string;
+  pdfUrl?: string;
+  tenantSignature?: string;
 };
+

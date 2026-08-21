@@ -41,6 +41,9 @@ type ApiContract = {
   status: number;
   services?: ApiServiceItem[];
   tenantConfirmedAt?: string;
+  docxUrl?: string;
+  pdfUrl?: string;
+  tenantSignature?: string;
   depositPayment?: {
     required: boolean;
     invoiceId: string | null;
@@ -48,6 +51,7 @@ type ApiContract = {
     status: "not_required" | "unpaid" | "paid";
   };
 };
+
 
 type ContractListResponse = {
   success: boolean;
@@ -162,6 +166,9 @@ const mapApiContractToContract = (apiContract: ApiContract): Contract => {
     },
     note:
       "Người thuê cần thanh toán tiền phòng trước ngày 05 hằng tháng. Nếu có nhu cầu gia hạn hợp đồng, vui lòng liên hệ chủ trọ trước 30 ngày.",
+    docxUrl: apiContract.docxUrl,
+    pdfUrl: apiContract.pdfUrl,
+    tenantSignature: apiContract.tenantSignature,
   };
 };
 
@@ -213,8 +220,8 @@ export const contractService = {
     }
   },
 
-  // Người thuê ký xác nhận hợp đồng (status 0 → 4)
-  async signContract(contractId: string): Promise<{
+  // Người thuê ký xác nhận hợp đồng (status 0 → 4) kèm chữ ký Base64
+  async signContract(contractId: string, signatureBase64?: string): Promise<{
     success: boolean;
     invoiceId?: string;
     depositRequired: boolean;
@@ -228,10 +235,9 @@ export const contractService = {
         throw new Error("Không tìm thấy token đăng nhập");
       }
 
-      // Đã sửa lại endpoint để tương thích với backend trên Render
       const response = await apiClient.put<ContractActionResponse>(
         `/contracts/${contractId}/sign`,
-        {},
+        { signature: signatureBase64 },
         token
       );
 
@@ -251,6 +257,7 @@ export const contractService = {
       throw error;
     }
   },
+
 
   // Người thuê yêu cầu trả phòng (status 1 → 5)
   async requestTerminate(contractId: string): Promise<boolean> {

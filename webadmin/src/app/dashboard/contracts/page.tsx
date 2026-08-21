@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Edit, FileSignature, Plus, Search, Send, Trash2 } from "lucide-react";
+import { CheckCircle2, Edit, FileDown, FileSignature, FileText, Plus, Search, Send, Trash2 } from "lucide-react";
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useNotification } from "@/hooks/use-notification";
@@ -624,6 +625,24 @@ export default function ContractsPage() {
                     })()}
                   </TableCell>
                   <TableCell className="text-right">
+                    <a
+                      href={`http://localhost:5000/api/contracts/${contract._id || contract.id}/download-pdf`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 mr-2 font-bold transition-colors"
+                      title="Tải Hợp đồng PDF"
+                    >
+                      <FileDown className="size-3.5" /> PDF
+                    </a>
+                    <a
+                      href={`http://localhost:5000/api/contracts/${contract._id || contract.id}/download-docx`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 mr-2 font-bold transition-colors"
+                      title="Tải File Word (.docx)"
+                    >
+                      <FileText className="size-3.5" /> Word
+                    </a>
                     {contract.status === 0 && (
                       <Button onClick={() => void handleSendContract(contract._id || contract.id)} variant="outline" size="sm" className="mr-2">
                         <Send className="size-4" />{t("common.send")}
@@ -647,9 +666,9 @@ export default function ContractsPage() {
                     <Button aria-label={t("common.delete")} onClick={() => handleDelete(contract._id || contract.id)} variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive">
                       <Trash2 className="w-4 h-4" />
                     </Button>
-
                   </TableCell>
                 </TableRow>
+
               ))
             )}
           </TableBody>
