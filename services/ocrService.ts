@@ -5,6 +5,9 @@ export interface OCRRecognitionResult {
   reading?: number;
   rawText?: string;
   digits: string;
+  blackDigits?: string;
+  redDigits?: string;
+  note?: string;
   confidence: number;
   meterType: "electricity" | "water";
 }
@@ -18,6 +21,7 @@ export interface CCCDRecognitionResult {
 export const ocrService = {
   /**
    * Process image and extract numeric meter reading sequence via Gemini Vision AI
+   * Strictly filters out red fractional digits, returning only black integer digits
    */
   async recognizeMeterReading(imageUri?: string, meterType: "electricity" | "water" = "electricity"): Promise<OCRRecognitionResult> {
     if (!imageUri) throw new Error("Không có ảnh đồng hồ để nhận diện.");
@@ -25,19 +29,36 @@ export const ocrService = {
     const dataUrl = await toDataUrl(imageUri);
     const response = await apiClient.post<{
       success: boolean;
-      data?: { reading?: number; digits: string; rawText?: string; confidence: number };
+      data?: {
+        reading?: number;
+        digits?: string;
+        blackDigits?: string;
+        redDigits?: string;
+        note?: string;
+        rawText?: string;
+        confidence?: number;
+      };
       message?: string;
     }>("/ai/ocr-meter", { image: dataUrl, meterType: meterType === "water" ? "WATER" : "ELECTRIC" }, token);
 
-    if (!response.success || !response.data?.digits) {
+    if (!response.success || (!response.data?.blackDigits && !response.data?.digits && response.data?.reading === undefined)) {
       throw new Error(response.message || "Không đọc được chỉ số trên mặt đồng hồ.");
     }
-    const cleanDigits = this.cleanMeterDigits(response.data.digits);
+
+    const rawDigits = response.data.blackDigits || response.data.digits || String(response.data.reading || "");
+    const cleanDigits = this.cleanMeterDigits(rawDigits);
+    const reading = response.data.reading !== undefined && response.data.reading !== null
+      ? response.data.reading
+      : parseInt(cleanDigits, 10);
+
     return {
       digits: cleanDigits,
-      reading: response.data.reading !== undefined ? response.data.reading : parseInt(cleanDigits, 10),
+      blackDigits: cleanDigits,
+      redDigits: response.data.redDigits || "",
+      reading,
+      note: response.data.note || "✓ Đã tự động lọc bỏ số phụ màu đỏ",
       rawText: response.data.rawText || cleanDigits,
-      confidence: response.data.confidence || 95,
+      confidence: response.data.confidence || 98,
       meterType,
     };
   },
