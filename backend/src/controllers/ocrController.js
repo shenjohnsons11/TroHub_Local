@@ -9,6 +9,14 @@ function getGeminiVisionClient() {
     return { primaryClient, fallbackClient };
 }
 
+const VISION_MODELS = [
+    'gemini-2.5-flash',
+    'gemini-2.0-flash',
+    'gemini-1.5-flash',
+    'gemini-1.5-flash-8b',
+    'gemini-flash-latest'
+];
+
 async function callGeminiVision(base64Data, prompt) {
     const { primaryClient, fallbackClient } = getGeminiVisionClient();
     if (!primaryClient && !fallbackClient) return null;
@@ -24,42 +32,70 @@ async function callGeminiVision(base64Data, prompt) {
         }
     ];
 
-    try {
-        if (primaryClient) {
-            const response = await primaryClient.models.generateContent({
-                model: 'gemini-flash-latest',
-                contents
-            });
-            const text = response?.text || '';
-            if (text) return text;
-        }
-    } catch (primaryErr) {
-        console.log('[Gemini Vision Primary Error]', primaryErr.message);
-    }
+    const clients = [primaryClient, fallbackClient].filter(Boolean);
 
-    try {
-        if (fallbackClient) {
-            const response = await fallbackClient.models.generateContent({
-                model: 'gemini-flash-latest',
-                contents
-            });
-            return response?.text || '';
+    for (const client of clients) {
+        for (const model of VISION_MODELS) {
+            try {
+                const response = await client.models.generateContent({
+                    model,
+                    contents
+                });
+                const text = response?.text || '';
+                if (text && text.trim()) {
+                    return text.trim();
+                }
+            } catch (err) {
+                // If quota exhausted or model not available, continue to next model/client
+                console.log(`[Gemini Vision ${model} Notice]`, err?.message?.slice(0, 120) || 'error');
+            }
         }
-    } catch (fallbackErr) {
-        console.log('[Gemini Vision Fallback Error]', fallbackErr.message);
     }
 
     return null;
 }
 
 function extractMeterDigits(text) {
-    const groups = String(text || '').match(/\d{3,7}/g) || [];
-    return groups
-        .filter((value) => value.length <= 6)
-        .sort((left, right) => right.length - left.length)[0] || '';
+    if (!text) return '';
+    const cleaned = String(text).replace(/[^0-9\s]/g, ' ');
+    const tokens = cleaned.split(/\s+/).filter(Boolean);
+    const preferred = tokens.filter((t) => t.length >= 3 && t.length <= 6);
+    if (preferred.length > 0) return preferred[0];
+    const anyNum = tokens.filter((t) => t.length >= 1 && t.length <= 6);
+    if (anyNum.length > 0) return anyNum[0];
+    return '';
+}
+
+function extractCCCDData(text) {
+    if (!text) return { idCard: '', fullName: '' };
+    const numbers = String(text).match(/\d{12}/g) || [];
+    const idCard = numbers[0] || (String(text).replace(/\D/g, '').slice(0, 12));
+
+    const lines = String(text).split('\n');
+    let fullName = '';
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (
+            trimmed.length >= 4 &&
+            !trimmed.includes('CỘNG HÒA') &&
+            !trimmed.includes('VIỆT NAM') &&
+            !trimmed.includes('CĂN CƯỚC') &&
+            !trimmed.includes('IDENTITY') &&
+            !trimmed.includes('CITIZEN') &&
+            !trimmed.includes('CARD') &&
+            !trimmed.includes('QUỐC TỊCH')
+        ) {
+            if (/^[A-ZÀ-Ỹ\s]+$/.test(trimmed)) {
+                fullName = trimmed;
+                break;
+            }
+        }
+    }
+    return { idCard, fullName };
 }
 
 exports.extractMeterDigits = extractMeterDigits;
+exports.extractCCCDData = extractCCCDData;
 
 /**
  * POST /api/ai/ocr-meter & POST /api/ocr/meter
@@ -75,6 +111,9 @@ exports.readMeter = async (req, res) => {
     }
 
     try {
+        let digits = '';
+        let reading = null;
+
         // 1. Dùng Gemini Vision API trích xuất chỉ số đồng hồ
         const prompt = `Bạn là chuyên gia OCR đọc chỉ số công tơ điện và đồng hồ nước Việt Nam.
 Loại đồng hồ: ${meterType === 'WATER' ? 'Đồng hồ nước (m3)' : 'Công tơ điện (kWh)'}.
@@ -88,8 +127,6 @@ Nếu ảnh mờ hoặc không nhận diện được số:
 {"reading": null, "digits": "", "error": "Ảnh mờ hoặc không thấy mặt số"}`;
 
         const geminiResult = await callGeminiVision(base64, prompt);
-        let digits = '';
-        let reading = null;
 
         if (geminiResult) {
             const jsonMatch = geminiResult.match(/\{[\s\S]*\}/);
@@ -156,6 +193,9 @@ exports.scanCCCD = async (req, res) => {
     }
 
     try {
+        let cleanId = '';
+        let cleanName = '';
+
         const prompt = `Bạn là chuyên gia OCR tài liệu căn cước công dân Việt Nam.
 Hãy quan sát kỹ ảnh mặt trước thẻ Căn cước công dân (CCCD).
 Nhiệm vụ: Trích xuất chính xác 2 trường thông tin:
@@ -175,44 +215,49 @@ Nếu ảnh quá mờ, bị lóa sáng hoặc không tìm thấy đủ 12 số C
             if (jsonMatch) {
                 try {
                     const parsed = JSON.parse(jsonMatch[0]);
-                    const cleanId = String(parsed.idCard || '').replace(/\D/g, '').slice(0, 12);
-                    const cleanName = String(parsed.fullName || '').trim().toUpperCase();
-
-                    if (cleanId.length === 12) {
-                        return res.json({
-                            success: true,
-                            data: {
-                                idCard: cleanId,
-                                fullName: cleanName,
-                                confidence: 98
-                            }
-                        });
-                    }
-                } catch (jsonErr) {
-                    console.log('[JSON Parse Error in CCCD OCR]', jsonErr.message);
+                    cleanId = String(parsed.idCard || '').replace(/\D/g, '').slice(0, 12);
+                    cleanName = String(parsed.fullName || '').trim().toUpperCase();
+                } catch (e) {
+                    const digitsMatch = geminiResult.match(/\d{12}/);
+                    if (digitsMatch) cleanId = digitsMatch[0];
                 }
-            }
-
-            // Thử regex trích xuất 12 chữ số nếu JSON bị bọc text
-            const idMatch = geminiResult.match(/\b\d{12}\b/);
-            if (idMatch) {
-                return res.json({
-                    success: true,
-                    data: {
-                        idCard: idMatch[0],
-                        fullName: '',
-                        confidence: 90
-                    }
-                });
+            } else {
+                const digitsMatch = geminiResult.match(/\d{12}/);
+                if (digitsMatch) cleanId = digitsMatch[0];
             }
         }
 
-        return res.status(422).json({
-            success: false,
-            message: 'Không nhận diện rõ 12 số CCCD. Vui lòng đặt thẻ trong khung căn chỉnh và chụp lại rõ nét.'
+        // Fallback Tesseract nếu Gemini Vision không khả dụng
+        if (!cleanId || cleanId.length < 12) {
+            try {
+                const { data } = await recognize(Buffer.from(base64, 'base64'), 'vie+eng');
+                const extracted = extractCCCDData(data.text);
+                if (extracted.idCard && extracted.idCard.length === 12) {
+                    cleanId = extracted.idCard;
+                    if (!cleanName && extracted.fullName) cleanName = extracted.fullName;
+                }
+            } catch (tessErr) {
+                console.log('[Tesseract CCCD Fallback Error]', tessErr.message);
+            }
+        }
+
+        if (!cleanId || cleanId.length < 12) {
+            return res.status(422).json({
+                success: false,
+                message: 'Không tìm thấy đủ 12 chữ số CCCD. Vui lòng căn góc thẳng và chụp lại.'
+            });
+        }
+
+        return res.json({
+            success: true,
+            data: {
+                idCard: cleanId,
+                fullName: cleanName || 'NGƯỜI DÙNG',
+                confidence: 96
+            }
         });
     } catch (error) {
         console.error('[OCR_CCCD_ERROR]', error);
-        return res.status(500).json({ success: false, message: 'Lỗi xử lý OCR CCCD: ' + error.message });
+        return res.status(500).json({ success: false, message: 'Lỗi nhận diện CCCD: ' + error.message });
     }
 };

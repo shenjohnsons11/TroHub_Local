@@ -248,15 +248,26 @@ export default function App() {
 
               {activeTab === "tenants" && <AdminTenantsScreen />}
 
-              {activeTab === "settings" && (
+              {(activeTab === "settings" || activeTab === "account") && (
+                <AccountScreen
+                  profile={profile!}
+                  onLogout={handleLogout}
+                  onNavigate={handleChangeTab}
+                  onProfileUpdate={(updated) => setProfile(updated)}
+                  onPushTokenChange={(token) => { pushTokenRef.current = token; }}
+                />
+              )}
+
+              {activeTab === "admin_settings" && (
                 <AdminSettingsScreen
                   profile={profile!}
                   onSave={handleSaveProfile}
-                  onBack={() => setActiveTab("home")}
+                  onBack={() => setActiveTab("settings")}
                   onLogout={handleLogout}
                   onPushTokenChange={(token) => { pushTokenRef.current = token; }}
                 />
               )}
+
 
               {activeTab === "notifications" && <AdminNotificationsScreen onBack={() => handleChangeTab("home")} onNavigate={handleChangeTab} refreshKey={notificationRefreshKey} onUnreadChanged={() => setNotificationRefreshKey((value) => value + 1)} />}
 
@@ -297,9 +308,11 @@ export default function App() {
                   profile={profile}
                   onLogout={handleLogout}
                   onNavigate={(screen) => setActiveTab(screen as any)}
+                  onProfileUpdate={(updated) => setProfile(updated)}
                   onPushTokenChange={(token) => { pushTokenRef.current = token; }}
                 />
               )}
+
 
               {activeTab === "notifications" && (
                 <NotificationsScreen onBack={() => handleChangeTab("home")} onNavigate={handleChangeTab} refreshKey={notificationRefreshKey} onUnreadChanged={() => setNotificationRefreshKey((value) => value + 1)} />
