@@ -43,8 +43,10 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+*.traineddata
 
 app-example
+
 
 # generated native folders
 /ios

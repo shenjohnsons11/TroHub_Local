@@ -319,7 +319,32 @@ export const adminService = {
     return response.success;
   },
 
+  async reportUtilityReading(data: { roomId: string; electricity?: number; water?: number }): Promise<boolean> {
+    const token = await authService.getToken();
+    const payload: any = {};
+    if (data.electricity !== undefined) payload.draftElectricity = data.electricity;
+    if (data.water !== undefined) payload.draftWater = data.water;
+
+    const response = await apiClient.post<{ success: boolean }>(
+      `/rooms/${data.roomId}/report-utility`,
+      payload,
+      token
+    );
+    return response.success;
+  },
+
+  async reportBulkUtilities(utilities: { roomId: string; draftElectricity?: number; draftWater?: number }[]): Promise<boolean> {
+    const token = await authService.getToken();
+    const response = await apiClient.post<{ success: boolean }>(
+      "/rooms/bulk-report-utility",
+      { utilities },
+      token
+    );
+    return response.success;
+  },
+
   async getDashboardStats(): Promise<AdminDashboardStats> {
+
     try {
       const response = await apiClient.get<{ success: boolean; data: AdminDashboardStats }>("/landlord/stats");
       const data = response.data || (response as unknown as AdminDashboardStats);
