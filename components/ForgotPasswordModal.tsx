@@ -139,7 +139,7 @@ export default function ForgotPasswordModal({ visible, onClose }: Props) {
 
   const subtitle =
     step === "request"
-      ? t("auth.forgotPasswordDescription")
+      ? t("auth.forgotPasswordDesc")
       : step === "verify"
       ? t("auth.verifyOtp")
       : t("auth.newPassword");

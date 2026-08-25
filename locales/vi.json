@@ -23,8 +23,14 @@
     "unitM3": "m³",
     "language": "Ngôn ngữ",
     "room": "Phòng",
+    "tenant": "Người thuê",
     "active": "Đang hoạt động",
-    "inactive": "Ngừng hoạt động"
+    "inactive": "Ngừng hoạt động",
+    "next": "Tiếp theo",
+    "noData": "Không có dữ liệu",
+    "openMaps": "Mở bản đồ",
+    "send": "Gửi",
+    "unspecified": "Chưa xác định"
   },
   "auth": {
     "brandTagline": "Hệ Thống Quản Lý Nhà Trọ Thông Minh",
@@ -55,7 +61,11 @@
     "tenantRegister": "Đăng ký tài khoản Người thuê",
     "tenantMobileOnly": "Tài khoản Người thuê vui lòng đăng nhập trên ứng dụng di động TroHub.",
     "logout": "Đăng xuất",
-    "backToLogin": "Quay lại đăng nhập"
+    "backToLogin": "Quay lại đăng nhập",
+    "account": "Tài khoản",
+    "enterPhone": "Vui lòng nhập số điện thoại.",
+    "passwordMinLength": "Mật khẩu phải có ít nhất 6 ký tự.",
+    "passwordMismatch": "Mật khẩu xác nhận không khớp."
   },
   "nav": {
     "overview": "Tổng quan",
@@ -74,6 +84,16 @@
     "home": "Trang chủ",
     "account": "Tài khoản",
     "services": "Dịch vụ đi kèm"
+  },
+  "tenantTimeline": {
+    "title": "Mốc sự kiện quan trọng",
+    "dueInvoice": "Hạn thanh toán hóa đơn kỳ {period}",
+    "daysLeft": "Còn {days} ngày",
+    "today": "Hôm nay là hạn chót",
+    "overdue": "Đã quá hạn {days} ngày",
+    "contractEnd": "Hết hạn hợp đồng phòng {room}",
+    "repairSchedule": "Lịch hẹn sửa: {title}",
+    "allDone": "Bạn không có mốc sự kiện nào cần xử lý lúc này!"
   },
   "dashboard": {
     "eyebrow": "TỔNG QUAN VẬN HÀNH",
@@ -166,6 +186,9 @@
     "rentFee": "Tiền thuê hàng tháng",
     "deposit": "Tiền cọc",
     "parking": "Phí gửi xe",
+    "selectRoom": "Chọn phòng",
+    "empty": "Chưa có hợp đồng nào",
+    "emptyDescription": "Hợp đồng thuê phòng của bạn sẽ xuất hiện tại đây khi được kích hoạt.",
     "status": {
       "active": "Đang hiệu lực",
       "expired": "Đã hết hạn",
@@ -180,6 +203,18 @@
     "printInvoice": "In hóa đơn PDF",
     "electricIndex": "Chỉ số điện (cũ -> mới)",
     "waterIndex": "Chỉ số nước (cũ -> mới)",
+    "code": "Mã HĐ: {code}",
+    "period": "Kỳ hóa đơn",
+    "roomFee": "Tiền phòng",
+    "serviceFee": "Phí dịch vụ",
+    "ocrError": "Không đọc được chỉ số từ ảnh. Vui lòng nhập thủ công.",
+    "empty": "Chưa có hóa đơn nào",
+    "emptyDescription": "Các hóa đơn hàng tháng sẽ hiển thị tại đây khi được Chủ trọ phát hành.",
+    "noMatch": "Không có hóa đơn phù hợp",
+    "all": "Tất cả",
+    "unpaid": "Chưa thanh toán",
+    "paid": "Đã thanh toán",
+    "overdue": "Quá hạn",
     "totalAmount": "Tổng tiền cần thanh toán",
     "dueDate": "Hạn thanh toán",
     "status": {
@@ -198,6 +233,8 @@
     "description": "Mô tả chi tiết",
     "priority": "Mức độ ưu tiên",
     "progress": "Tiến độ xử lý",
+    "empty": "Không có sự cố nào",
+    "emptyDescription": "Bấm nút bên dưới để gửi yêu cầu sửa chữa nếu phòng có hư hỏng.",
     "status": {
       "pending": "Chờ tiếp nhận",
       "processing": "Đang xử lý",
@@ -210,12 +247,28 @@
     "bell": "Thông báo 🔔",
     "markAllRead": "Đánh dấu đã đọc tất cả",
     "noNotifications": "Không có thông báo mới.",
+    "empty": "Không có thông báo mới",
+    "emptyDescription": "Bạn sẽ nhận được thông báo về hóa đơn và hợp đồng tại đây.",
+    "today": "Hôm nay",
+    "yesterday": "Hôm qua",
+    "older": "Trước đó",
+    "read": "Đã đọc",
+    "unread": "Chưa đọc",
     "categories": {
       "invoice": "Hóa đơn & Thanh toán",
       "contract": "Hợp đồng",
       "repair": "Sự cố sửa chữa",
       "system": "Hệ thống"
     }
+  },
+  "payments": {
+    "title": "Thanh toán"
+  },
+  "utilities": {
+    "oldElec": "Số điện cũ",
+    "newElec": "Số điện mới",
+    "oldWater": "Số nước cũ",
+    "newWater": "Số nước mới"
   },
   "ai": {
     "title": "Trợ lý AI TroHub Co-pilot",

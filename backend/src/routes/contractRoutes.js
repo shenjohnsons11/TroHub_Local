@@ -3,9 +3,10 @@ const router = express.Router();
 const contractController = require('../controllers/contractController');
 const { requireAdmin } = require('../middleware/requireAdmin');
 const { requireTenant } = require('../middleware/requireTenant');
+const { requireAuth } = require('../middleware/requireAuth');
 
 // Lấy danh sách & Tạo hợp đồng dự thảo
-router.get('/', contractController.getAllContracts);
+router.get('/', requireAuth, contractController.getAllContracts);
 router.post('/', requireAdmin, contractController.createContract);
 router.post('/:id/send', requireAdmin, contractController.sendContract);
 

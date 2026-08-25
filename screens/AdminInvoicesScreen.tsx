@@ -390,24 +390,23 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
           <>
             <GradientHero icon="receipt-outline" label={t("mobile.invoices.heroLabel")} value={formatCurrency(invoices.reduce((sum, invoice) => sum + (invoice.totalAmount || 0), 0))} detail={t("mobile.invoices.heroDetail", { count: invoices.length })} />
 
-            {/* Section Header Row — Tầng 3 */}
-            <View style={styles.sectionRow}>
-              <View style={{ flex: 1 }}>
-                <AppText style={styles.sectionTitle}>{t("mobile.invoices.title")}</AppText>
-                <AppText style={styles.sectionSub}>{t("mobile.invoices.subtitle")}</AppText>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionHeaderCopy}>
+                <AppText style={styles.sectionTitle}>{t("mobile.invoices.title") || "Quản lý hóa đơn"}</AppText>
+                <AppText style={styles.sectionSub}>{t("mobile.invoices.subtitle") || "Theo dõi và phát hành hóa đơn hàng tháng"}</AppText>
               </View>
-              <View style={{ flexDirection: 'row', gap: 6 }}>
+              <View style={styles.actionBar}>
                 <Pressable accessibilityRole="button" style={[styles.sectionBtn, { backgroundColor: theme.primarySoft }]} onPress={() => onNavigate && onNavigate('scan_meter')}>
                   <Ionicons name="camera-outline" size={16} color={theme.primary} />
-                  <AppText style={[styles.sectionBtnText, { color: theme.primary }]}>Quét AI</AppText>
+                  <AppText style={[styles.sectionBtnText, { color: theme.primary }]}>{t("dashboard.scanMeter") || "Quét điện nước AI"}</AppText>
                 </Pressable>
                 <Pressable accessibilityRole="button" style={[styles.sectionBtn, { backgroundColor: theme.primarySoft }]} onPress={() => onNavigate && onNavigate('invoice_bulk')}>
                   <Ionicons name="documents-outline" size={16} color={theme.primary} />
-                  <AppText style={[styles.sectionBtnText, { color: theme.primary }]}>{t("mobile.invoices.bulk")}</AppText>
+                  <AppText style={[styles.sectionBtnText, { color: theme.primary }]}>{t("mobile.invoices.bulk") || "Hàng loạt"}</AppText>
                 </Pressable>
                 <Pressable accessibilityRole="button" style={[styles.sectionBtn, { backgroundColor: theme.primary }]} onPress={() => setModalVisible(true)}>
                   <Ionicons name="add" size={16} color={theme.background} />
-                  <AppText style={[styles.sectionBtnText, { color: theme.background }]}>{t("mobile.invoices.create")}</AppText>
+                  <AppText style={[styles.sectionBtnText, { color: theme.background }]}>{t("mobile.invoices.create") || "Tạo mới"}</AppText>
                 </Pressable>
               </View>
             </View>
@@ -447,13 +446,13 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
             <View style={styles.invoiceInfo}>
               <AppText style={styles.invoicePeriod}>{t("mobile.invoices.code", { code: item.invoiceCode || `HD-${(item.period || "").replace("/", "")}-${(item._id || "000").substring(0, 3).toUpperCase()}` })}</AppText>
               <AppText style={styles.roomCode}>{t("mobile.invoices.room", { roomCode: item.roomCode || item.room || item.contractId?.roomId?.roomCode || "N/A" })}</AppText>
-              <AppText style={styles.invoicePeriod}>{t("mobile.invoices.period", { period: item.period || "" })}</AppText>
+              <AppText style={styles.invoicePeriod}>{t("mobile.invoices.period", { period: item.period === "Tiền cọc" ? t("contracts.deposit") : item.period || "" })}</AppText>
               <AppText style={styles.invoiceAmount}>{t("mobile.invoices.total", { amount: formatCurrency(item.totalAmount) })}</AppText>
               <AppText style={styles.invoiceSub}>{t("mobile.invoices.tenant", { name: item.nguoiThue || item.tenant || item.contractId?.tenantId?.fullName || "N/A" })}</AppText>
             </View>
             <View style={{ alignItems: "flex-end" }}>
               <View style={[styles.statusBadge, { backgroundColor: getStatusBg(item.status) }]}>
-                <AppText style={[styles.statusText, { color: getStatusColor(item.status) }]}>{item.statusLabel || getStatusText(item.status)}</AppText>
+                <AppText style={[styles.statusText, { color: getStatusColor(item.status) }]}>{getStatusText(item.status)}</AppText>
               </View>
               {((item.status as any) === 1 || (item.status as any) === "UNPAID" || (item.status as any) === "Chưa thanh toán") && (
                 <AppButton
@@ -740,22 +739,29 @@ const createStyles = (theme: any) => StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 7,
   },
-  sectionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  sectionHeader: {
     marginTop: 18,
     marginBottom: 6,
   },
+  sectionHeaderCopy: {
+    marginBottom: 12,
+  },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 22,
     fontWeight: '900',
     color: theme.text,
   },
   sectionSub: {
-    fontSize: 11,
+    fontSize: 13,
     color: theme.muted,
     fontWeight: '600',
-    marginTop: 2,
+    marginTop: 4,
+  },
+  actionBar: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    justifyContent: 'flex-start',
   },
   sectionBtn: {
     flexDirection: 'row',
@@ -764,6 +770,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 16,
     gap: 5,
+    minHeight: 38,
   },
   sectionBtnText: {
     fontSize: 12,

@@ -163,7 +163,7 @@ export default function NotificationsScreen({ onBack, onNavigate, refreshKey = 0
             {!item.isRead && <View style={[styles.unreadDot, { backgroundColor: theme.danger }]} />}
           </Pressable></AnimatedEntry>;
         }}
-        ListEmptyComponent={<View style={[styles.emptyBox, { backgroundColor: theme.surface, borderColor: theme.border }]}><Ionicons name="notifications-off-outline" size={60} color={theme.muted} /><AppText style={[styles.emptyText, { color: theme.text }]}>{t("notifications.empty")}</AppText><AppText style={[styles.emptyHint, { color: theme.muted }]}>{t("notifications.empty")}</AppText></View>}
+        ListEmptyComponent={<View style={[styles.emptyBox, { backgroundColor: theme.surface, borderColor: theme.border }]}><Ionicons name="notifications-off-outline" size={60} color={theme.muted} /><AppText style={[styles.emptyText, { color: theme.text }]}>{t("notifications.empty")}</AppText><AppText style={[styles.emptyHint, { color: theme.muted }]}>{t("notifications.emptyDescription")}</AppText></View>}
       />
     </View>
   );

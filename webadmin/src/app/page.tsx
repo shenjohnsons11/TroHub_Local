@@ -70,7 +70,7 @@ export default function LoginPage() {
         throw new Error("Phản hồi đăng nhập không hợp lệ. Vui lòng thử lại.");
       }
       if (session.user.role !== 1) {
-        const message = t("tenantMobileOnly");
+        const message = t("auth.tenantMobileOnly");
         setError(message);
         notification.info(message);
         return;
@@ -78,15 +78,15 @@ export default function LoginPage() {
 
       localStorage.setItem("trohub_token", session.token);
       localStorage.setItem("trohub_user", JSON.stringify(session.user));
-      notification.success(t("loginSuccess"));
+      notification.success(t("auth.loginSuccess"));
       router.replace("/dashboard");
     } catch (caughtError: unknown) {
       const message = getNotificationMessage(
         caughtError,
-        t("loginFailed"),
+        t("auth.loginFailed"),
       );
       setError(message);
-      notification.error(message, { title: t("loginFailed") });
+      notification.error(message, { title: t("auth.loginFailed") });
     } finally {
       setLoading(false);
     }
@@ -100,13 +100,13 @@ export default function LoginPage() {
     try {
       const phoneClean = unformatDigits(identifier);
       const idCardClean = unformatDigits(idCard);
-      if (!fullName.trim()) throw new Error(t("requiredFullName"));
-      if (phoneClean.length !== 10) throw new Error(t("invalidPhone"));
-      if (!/^\S+@\S+\.\S+$/.test(email.trim())) throw new Error(t("invalidEmail"));
+      if (!fullName.trim()) throw new Error(t("auth.requiredFullName"));
+      if (phoneClean.length !== 10) throw new Error(t("auth.invalidPhone"));
+      if (!/^\S+@\S+\.\S+$/.test(email.trim())) throw new Error(t("auth.invalidEmail"));
       if (idCardClean.length !== 12) throw new Error("CCCD phải gồm đúng 12 chữ số.");
-      if (password.length < 6) throw new Error(t("invalidPassword"));
-      if (!propertyAddress.trim()) throw new Error(t("propertyAddress"));
-      if (!inviteCode.trim()) throw new Error(t("invalidInvite"));
+      if (password.length < 6) throw new Error(t("auth.invalidPassword"));
+      if (!propertyAddress.trim()) throw new Error(t("auth.propertyAddress"));
+      if (!inviteCode.trim()) throw new Error(t("auth.invalidInvite"));
 
       await fetchAPI("/auth/register", {
         method: "POST",
@@ -123,13 +123,13 @@ export default function LoginPage() {
           propertyLongitude,
         }),
       });
-      notification.success(t("registerSuccess"));
+      notification.success(t("auth.registerSuccess"));
       setMode("login");
       setIdentifier(phoneClean);
       setPassword("");
       setInviteCode("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("registerFailed"));
+      setError(err instanceof Error ? err.message : t("auth.registerFailed"));
     } finally {
       setLoading(false);
     }
@@ -137,7 +137,7 @@ export default function LoginPage() {
 
   const handleLocate = () => {
     if (!navigator.geolocation) {
-      setError(t("locationUnavailable"));
+      setError(t("auth.locationUnavailable"));
       return;
     }
     setIsLocating(true);
@@ -151,7 +151,7 @@ export default function LoginPage() {
         setPropertyLongitude(longitude);
         setPropertyAddress(response.data.address);
       } catch (error) {
-        const message = getNotificationMessage(error, t("locationUnavailable"));
+        const message = getNotificationMessage(error, t("auth.locationUnavailable"));
         setError(message);
         notification.error(message);
       } finally {
@@ -159,7 +159,7 @@ export default function LoginPage() {
       }
     }, () => {
       setIsLocating(false);
-      setError(t("locationUnavailable"));
+      setError(t("auth.locationUnavailable"));
     }, { enableHighAccuracy: true, timeout: 10000 });
   };
 

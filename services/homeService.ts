@@ -29,16 +29,16 @@ const getProperty = async () => {
 export const homeService = {
   async getHomeData(): Promise<HomeData> {
     try {
-      const [profile, invoices, repairs, contract, property] = await Promise.all([
+      const [profile, invoices, repairs, contracts, property] = await Promise.all([
         userService.getProfile(),
         invoiceService.getInvoices(),
         repairService.getRequests(),
-        contractService.getContract(),
+        contractService.getMyContracts(),
         getProperty(),
       ]);
 
-      const activeContracts = await contractService.getMyContracts();
-      const currentContracts = activeContracts.filter(c => ["active", "awaiting_approval", "requesting_termination"].includes(c.status));
+      const currentContracts = contracts.filter(c => ["active", "awaiting_approval", "requesting_termination"].includes(c.status));
+      const activeContract = contracts.find((contract) => contract.status === "active") || currentContracts[0] || contracts.find((contract) => contract.status === "pending") || null;
       const roomNames = currentContracts.map(c => c.room).filter(Boolean);
       const isSigned = currentContracts.length > 0;
 
@@ -56,7 +56,10 @@ export const homeService = {
         paymentStatusText: unpaidInvoices.length > 0 ? "Chưa thanh toán" : "Đã thanh toán",
         dueDate: unpaidInvoices.length > 0 ? unpaidInvoices[0].dueDate : "Không có",
 
-        contractEndDate: contract?.endDate || "Không có",
+        contractEndDate: activeContract?.endDate || "Không có",
+        myInvoices: unpaidInvoices,
+        activeContract,
+        activeRepairs: repairs.filter((repair) => repair.status !== "done"),
         propertyAddress: property?.propertyAddress,
         propertyLatitude: property?.propertyLatitude,
         propertyLongitude: property?.propertyLongitude,
@@ -77,6 +80,9 @@ export const homeService = {
         paymentStatusText: "Đã thanh toán",
         dueDate: "Không có",
         contractEndDate: "Không có",
+        myInvoices: [],
+        activeContract: null,
+        activeRepairs: [],
         recentRepair: {
           title: "Không có yêu cầu sửa chữa",
           status: "Không có",

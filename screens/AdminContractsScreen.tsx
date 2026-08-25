@@ -281,13 +281,15 @@ export default function AdminContractsScreen({ params }: Props) {
     if (contract.status === 1 && new Date(contract.startDate).getTime() > Date.now()) return theme.primary; // Xanh dương
     if (contract.status === 1) return theme.positive; // Xanh lá
     if (contract.status === 3) return theme.danger;
-    if (contract.status === 0 || contract.status === 4 || contract.status === 5) return theme.warningForeground;
+    if (contract.status === 0 || contract.status === 4) return "#dc2626";
+    if (contract.status === 5) return theme.warningForeground;
     return theme.muted;
   };
   const getStatusBg = (contract: AdminContract) => {
     if (contract.status === 1 && new Date(contract.startDate).getTime() > Date.now()) return theme.primarySoft;
     if (contract.status === 1) return theme.positiveSoft;
-    if (contract.status === 0 || contract.status === 3 || contract.status === 4 || contract.status === 5) return theme.warningSoft;
+    if (contract.status === 0 || contract.status === 4) return "#fef2f2";
+    if (contract.status === 3 || contract.status === 5) return theme.warningSoft;
     return theme.surfaceElevated;
   };
 
@@ -382,8 +384,20 @@ export default function AdminContractsScreen({ params }: Props) {
                       <AppText style={styles.tenantName}>{tenantName} · {formattedPhone}</AppText>
                     </View>
                   </View>
-                  <View style={[styles.statusBadge, { backgroundColor: getStatusBg(item) }]}>
-                    <AppText style={[styles.statusText, { color: getStatusColor(item) }]}>
+                  <View
+                    style={[
+                      styles.statusBadge,
+                      (item.status === 0 || item.status === 4) && styles.pendingBadge,
+                      { backgroundColor: getStatusBg(item) },
+                    ]}
+                  >
+                    <AppText
+                      style={[
+                        styles.statusText,
+                        (item.status === 0 || item.status === 4) && styles.pendingText,
+                        { color: getStatusColor(item) },
+                      ]}
+                    >
                       {getStatusText(item)}
                     </AppText>
                   </View>
@@ -845,7 +859,9 @@ function createStyles(theme: any) {
     roomCode: { color: theme.text, fontSize: 16, fontWeight: "900" },
     tenantName: { color: theme.muted, fontSize: 12, marginTop: 3 },
     statusBadge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
+    pendingBadge: { backgroundColor: "#fef2f2", borderColor: "#fca5a5", borderWidth: 1, paddingVertical: 4 },
     statusText: { fontSize: 10, fontWeight: "900" },
+    pendingText: { color: "#dc2626", fontSize: 12, fontWeight: "800" },
     money: { color: theme.text, fontSize: 28, fontWeight: "900", letterSpacing: -0.8, marginTop: 18 },
     moneyCaption: { color: theme.muted, fontSize: 13 },
     draftContainer: { padding: 20 },

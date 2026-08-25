@@ -41,7 +41,8 @@
     "note": "Ghi chú",
     "unspecified": "Chưa xác định",
     "active": "Đang hoạt động",
-    "inactive": "Ngừng hoạt động"
+    "inactive": "Ngừng hoạt động",
+    "new": "Mới"
   },
   "statusMap": {
     "invoice": {
@@ -136,7 +137,20 @@
     "getLocation": "Lấy vị trí GPS hiện tại",
     "propertyAddressHint": "Địa chỉ được dùng để xác định nhà trọ của bạn.",
     "propertyLocationAttribution": "Bạn có thể chỉnh sửa địa chỉ sau khi GPS hoàn tất.",
-    "backToLogin": "Quay lại đăng nhập"
+    "backToLogin": "Quay lại đăng nhập",
+    "enterPhone": "Vui lòng nhập số điện thoại.",
+    "passwordMinLength": "Mật khẩu phải có ít nhất 6 ký tự.",
+    "passwordMismatch": "Mật khẩu xác nhận không khớp.",
+    "requiredFullName": "Vui lòng nhập họ và tên.",
+    "invalidPhone": "Số điện thoại phải gồm đúng 10 chữ số.",
+    "invalidEmail": "Email không đúng định dạng.",
+    "invalidPassword": "Mật khẩu phải có ít nhất 6 ký tự.",
+    "invalidInvite": "Vui lòng nhập mã mời.",
+    "loginSuccess": "Đăng nhập thành công.",
+    "loginFailed": "Đăng nhập thất bại. Vui lòng kiểm tra thông tin.",
+    "registerSuccess": "Đăng ký thành công. Bạn có thể đăng nhập.",
+    "registerFailed": "Không thể đăng ký. Vui lòng thử lại.",
+    "locationUnavailable": "Không thể lấy vị trí hiện tại. Vui lòng nhập địa chỉ thủ công."
   },
   "nav": {
     "overview": "Tổng quan",
@@ -270,7 +284,17 @@
     "createdSuccess": "Tạo hợp đồng thành công!",
     "approvedSuccess": "Duyệt hợp đồng thành công!",
     "checkoutSuccess": "Duyệt trả phòng và quyết toán thành công!",
-    "deleteConfirm": "Bạn có chắc muốn xóa hợp đồng này?"
+    "deleteConfirm": "Bạn có chắc muốn xóa hợp đồng này?",
+    "activeContracts": "Hợp đồng đang hoạt động",
+    "newContract": "Hợp đồng mới",
+    "rentPrice": "Giá thuê",
+    "rentalTerms": "Điều khoản thuê",
+    "reviewAndSign": "Kiểm tra & ký",
+    "selectRoom": "Chọn phòng",
+    "selectRoomAndTenant": "Chọn phòng & người thuê",
+    "selectTenant": "Chọn người thuê",
+    "signContract": "Ký hợp đồng",
+    "utilitiesAndServices": "Điện nước & dịch vụ"
   },
   "invoices": {
     "title": "Quản lý Hóa đơn",

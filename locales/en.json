@@ -23,8 +23,14 @@
     "unitM3": "m³",
     "language": "Language",
     "room": "Room",
+    "tenant": "Tenant",
     "active": "Active",
-    "inactive": "Inactive"
+    "inactive": "Inactive",
+    "next": "Next",
+    "noData": "No data available",
+    "openMaps": "Open Maps",
+    "send": "Send",
+    "unspecified": "Unspecified"
   },
   "auth": {
     "brandTagline": "Smart Property Management System",
@@ -55,7 +61,11 @@
     "tenantRegister": "Create Tenant Account",
     "tenantMobileOnly": "Tenant accounts must sign in using the TroHub Mobile App.",
     "logout": "Sign Out",
-    "backToLogin": "Back to sign in"
+    "backToLogin": "Back to sign in",
+    "account": "Account",
+    "enterPhone": "Enter your phone number.",
+    "passwordMinLength": "Password must be at least 6 characters.",
+    "passwordMismatch": "Password confirmation does not match."
   },
   "nav": {
     "overview": "Overview",
@@ -74,6 +84,16 @@
     "home": "Home",
     "account": "Account",
     "services": "Add-on Services"
+  },
+  "tenantTimeline": {
+    "title": "My Key Milestones",
+    "dueInvoice": "Invoice payment due for {period}",
+    "daysLeft": "{days} days left",
+    "today": "Due today",
+    "overdue": "{days} days overdue",
+    "contractEnd": "Lease ends for room {room}",
+    "repairSchedule": "Repair appointment: {title}",
+    "allDone": "You have no milestones that need attention right now!"
   },
   "dashboard": {
     "eyebrow": "OPERATIONS OVERVIEW",
@@ -166,6 +186,9 @@
     "rentFee": "Monthly Rent",
     "deposit": "Deposit",
     "parking": "Parking Fee",
+    "selectRoom": "Select a Room",
+    "empty": "No Contracts Yet",
+    "emptyDescription": "Your rental contract will appear here once activated.",
     "status": {
       "active": "Active",
       "expired": "Expired",
@@ -180,6 +203,18 @@
     "printInvoice": "Print Invoice PDF",
     "electricIndex": "Electricity Meter (old -> new)",
     "waterIndex": "Water Meter (old -> new)",
+    "code": "Invoice ID: {code}",
+    "period": "Billing Period",
+    "roomFee": "Room Rent",
+    "serviceFee": "Service Fees",
+    "ocrError": "Could not read the meter from the image. Please enter it manually.",
+    "empty": "No Invoices Yet",
+    "emptyDescription": "Monthly invoices will appear here once issued by your landlord.",
+    "noMatch": "No matching invoices",
+    "all": "All",
+    "unpaid": "Unpaid",
+    "paid": "Paid",
+    "overdue": "Overdue",
     "totalAmount": "Total Amount Due",
     "dueDate": "Payment Due Date",
     "status": {
@@ -198,6 +233,8 @@
     "description": "Detailed Description",
     "priority": "Priority Level",
     "progress": "Resolution Progress",
+    "empty": "No Issues Reported",
+    "emptyDescription": "Tap the button below to submit a repair request if anything in your room needs fixing.",
     "status": {
       "pending": "Pending",
       "processing": "Processing",
@@ -210,12 +247,28 @@
     "bell": "Notifications 🔔",
     "markAllRead": "Mark All as Read",
     "noNotifications": "No new notifications.",
+    "empty": "No New Notifications",
+    "emptyDescription": "You will receive invoice and contract notifications here.",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "older": "Earlier",
+    "read": "Read",
+    "unread": "Unread",
     "categories": {
       "invoice": "Invoices & Payments",
       "contract": "Contracts",
       "repair": "Repair Reports",
       "system": "System"
     }
+  },
+  "payments": {
+    "title": "Payments"
+  },
+  "utilities": {
+    "oldElec": "Previous Electricity",
+    "newElec": "New Electricity",
+    "oldWater": "Previous Water",
+    "newWater": "New Water"
   },
   "ai": {
     "title": "TroHub Co-pilot AI Assistant",

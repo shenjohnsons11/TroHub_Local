@@ -3,6 +3,7 @@ import { createContext, PropsWithChildren, useCallback, useContext, useEffect, u
 import viDict from "../locales/vi.json";
 import enDict from "../locales/en.json";
 import { normalizeLanguage, resolveLanguageTarget, type Language } from "../utils/language";
+import { humanizeTranslationKey } from "../utils/i18nFallback";
 
 export type { Language } from "../utils/language";
 const STORAGE_KEY = "trohub_lang";
@@ -88,7 +89,7 @@ export function LanguageProvider({ children }: PropsWithChildren) {
   const t = useCallback(
     (key: string, params?: Record<string, string | number>) => {
       const currentDict = copy[language] || copy.vi;
-      let val = getNestedValue(currentDict, key) || getNestedValue(copy.vi, key) || key;
+      let val = getNestedValue(currentDict, key) || getNestedValue(copy.vi, key) || humanizeTranslationKey(key);
       if (params) {
         for (const [name, replacement] of Object.entries(params)) {
           val = val.replaceAll(`{${name}}`, String(replacement));

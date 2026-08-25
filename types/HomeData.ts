@@ -1,3 +1,7 @@
+import { Contract } from "./Contract";
+import { Invoice } from "./Invoice";
+import { RepairRequest } from "./RepairRequest";
+
 export type HomeData = {
   tenantName: string;
   room: string;
@@ -6,6 +10,9 @@ export type HomeData = {
   paymentStatusText: string;
   dueDate: string;
   contractEndDate: string;
+  myInvoices: Invoice[];
+  activeContract: Contract | null;
+  activeRepairs: RepairRequest[];
   propertyAddress?: string;
   propertyLatitude?: number;
   propertyLongitude?: number;

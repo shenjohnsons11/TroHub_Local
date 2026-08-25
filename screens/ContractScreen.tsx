@@ -35,7 +35,7 @@ const getStatusLabel = (status: ContractStatus, t: (key: string) => string): str
 
 const getStatusColor = (status: ContractStatus, theme: ReturnType<typeof useAppTheme>["theme"]): string => {
   switch (status) {
-    case "pending": return theme.warningForeground;
+    case "pending": return "#dc2626";
     case "active": return theme.positive;
     case "expired": return theme.muted;
     case "cancelled": return theme.danger;
@@ -46,7 +46,7 @@ const getStatusColor = (status: ContractStatus, theme: ReturnType<typeof useAppT
 
 const getStatusBg = (status: ContractStatus, theme: ReturnType<typeof useAppTheme>["theme"]): string => {
   switch (status) {
-    case "pending": return theme.warningSoft;
+    case "pending": return "#fef2f2";
     case "active": return theme.positiveSoft;
     case "expired": return theme.surfaceElevated;
     case "cancelled": return theme.warningSoft;
@@ -243,8 +243,20 @@ export default function ContractScreen({ onNavigate, params }: Props) {
                 <AppText style={styles.tenantText}>{contract.tenantName}</AppText>
               </View>
 
-              <View style={[styles.statusBadge, { backgroundColor: getStatusBg(contract.status, theme) }]}>
-                <AppText style={[styles.statusText, { color: getStatusColor(contract.status, theme) }]}>
+              <View
+                style={[
+                  styles.statusBadge,
+                  contract.status === "pending" && styles.pendingBadge,
+                  { backgroundColor: getStatusBg(contract.status, theme) },
+                ]}
+              >
+                <AppText
+                  style={[
+                    styles.statusText,
+                    contract.status === "pending" && styles.pendingText,
+                    { color: getStatusColor(contract.status, theme) },
+                  ]}
+                >
                   {getStatusLabel(contract.status, t)}
                 </AppText>
               </View>
@@ -537,8 +549,19 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSh
     paddingVertical: 6,
     borderRadius: 999,
   },
+  pendingBadge: {
+    backgroundColor: "#fef2f2",
+    borderColor: "#fca5a5",
+    borderWidth: 1,
+    paddingVertical: 4,
+  },
   statusText: {
     fontSize: 11,
+    fontWeight: "800",
+  },
+  pendingText: {
+    color: "#dc2626",
+    fontSize: 12,
     fontWeight: "800",
   },
   infoGrid: {
@@ -724,4 +747,3 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSh
     fontWeight: "800",
   },
 });
-
