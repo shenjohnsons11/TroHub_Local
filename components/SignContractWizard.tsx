@@ -7,7 +7,6 @@ import {
   Modal,
   Pressable,
   ScrollView,
-  ActivityIndicator,
 } from "react-native";
 import { WebView } from "react-native-webview";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,6 +16,7 @@ import { Contract } from "../types/Contract";
 import { useAppTheme } from "../contexts/ThemeContext";
 import ProgressStepper from "./ui/ProgressStepper";
 import AppButton from "./ui/AppButton";
+import ContractViewerModal from "./ContractViewerModal";
 import { formatCurrency, formatMeterReading, unformatNumber } from "../utils/formatters";
 import { useTranslation } from "../contexts/LanguageContext";
 
@@ -35,8 +35,9 @@ export default function SignContractWizard({ visible, contract, onClose, onSign 
 
   const [currentStep, setCurrentStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
-  const [agreed, setAgreed] = useState(true);
+  const [agreed, setAgreed] = useState(false);
   const [hasDrawn, setHasDrawn] = useState(false);
+  const [previewVisible, setPreviewVisible] = useState(false);
   const webViewRef = useRef<WebView>(null);
   const titleRef = useRef<React.ElementRef<typeof AppText>>(null);
 
@@ -175,7 +176,9 @@ export default function SignContractWizard({ visible, contract, onClose, onSign 
   useEffect(() => {
     if (!visible) return;
     setCurrentStep(1);
+    setAgreed(false);
     setHasDrawn(false);
+    setPreviewVisible(false);
     const timer = setTimeout(() => {
       const node = findNodeHandle(titleRef.current);
       if (node) AccessibilityInfo.setAccessibilityFocus(node);
@@ -201,7 +204,7 @@ export default function SignContractWizard({ visible, contract, onClose, onSign 
           setSubmitting(false);
         }
       }
-    } catch (e) {
+    } catch {
       setSubmitting(false);
     }
   };
@@ -213,15 +216,11 @@ export default function SignContractWizard({ visible, contract, onClose, onSign 
   };
 
   const handleSignSubmit = () => {
-    if (!agreed) return;
+    if (!agreed || !hasDrawn) return;
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (!webViewRef.current) return;
     setSubmitting(true);
-    if (hasDrawn) {
-      webViewRef.current?.injectJavaScript("window.getSignature(); true;");
-    } else {
-      // Fallback ký không cần chữ ký vẽ
-      onSign(contract).finally(() => setSubmitting(false));
-    }
+    webViewRef.current.injectJavaScript("window.getSignature(); true;");
   };
 
   const renderStepContent = () => {
@@ -280,6 +279,15 @@ export default function SignContractWizard({ visible, contract, onClose, onSign 
               3. Khi có nhu cầu gia hạn hoặc thanh lý hợp đồng, vui lòng thông báo trước 30 ngày.{"\n"}
               4. Hợp đồng điện tử có đầy đủ giá trị pháp lý sau khi ký xác nhận.
             </AppText>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t("contracts.previewPdf")}
+              style={styles.previewPdfBtn}
+              onPress={() => setPreviewVisible(true)}
+            >
+              <Ionicons name="document-text-outline" size={20} color="#059669" />
+              <AppText style={styles.previewPdfText}>{t("contracts.previewPdf")}</AppText>
+            </Pressable>
           </ScrollView>
         );
       case 4:
@@ -293,14 +301,14 @@ export default function SignContractWizard({ visible, contract, onClose, onSign 
             {/* Signature Pad */}
             <View style={styles.canvasSection}>
               <View style={styles.canvasHeader}>
-                <AppText style={styles.canvasTitle}>Vẽ chữ ký tay của bạn:</AppText>
+              <AppText style={styles.canvasTitle}>{t("contracts.drawSignature")}</AppText>
                 <Pressable
                   style={[styles.clearBtn, !hasDrawn && { opacity: 0.4 }]}
                   onPress={handleClearSignature}
                   disabled={!hasDrawn}
                 >
                   <Ionicons name="refresh-outline" size={13} color="#EF4444" />
-                  <AppText style={styles.clearBtnText}>Xóa vẽ lại</AppText>
+                  <AppText style={styles.clearBtnText}>{t("contracts.clearSignature")}</AppText>
                 </Pressable>
               </View>
 
@@ -325,7 +333,7 @@ export default function SignContractWizard({ visible, contract, onClose, onSign 
                 {agreed && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
               </View>
               <AppText style={styles.checkboxLabel}>
-                Tôi đã đọc kỹ, hiểu rõ và cam kết tuân thủ toàn bộ các điều khoản trong hợp đồng thuê phòng.
+                {t("contracts.signatureAgreement")}
               </AppText>
             </Pressable>
           </ScrollView>
@@ -336,14 +344,15 @@ export default function SignContractWizard({ visible, contract, onClose, onSign 
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={submitting ? () => undefined : onClose}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.wizardContent} accessibilityViewIsModal>
+    <>
+      <Modal
+        visible={visible}
+        transparent
+        animationType="slide"
+        onRequestClose={submitting ? () => undefined : onClose}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.wizardContent} accessibilityViewIsModal>
           <View style={styles.wizardHeader}>
             <View>
               <AppText
@@ -377,13 +386,13 @@ export default function SignContractWizard({ visible, contract, onClose, onSign 
 
           <View style={styles.wizardFooter}>
             {currentStep > 1 && (
-              <AppButton
-                title={t("common.back")}
-                variant="outline"
-                onPress={() => setCurrentStep((prev) => prev - 1)}
-                style={styles.footerBtn}
-                disabled={submitting}
-              />
+                <AppButton
+                  title={t("common.back")}
+                  variant="outline"
+                  onPress={() => setCurrentStep((prev) => prev - 1)}
+                  style={styles.footerBtn}
+                  disabled={submitting}
+                />
             )}
             {currentStep < 4 ? (
               <AppButton
@@ -397,14 +406,20 @@ export default function SignContractWizard({ visible, contract, onClose, onSign 
                 title={submitting ? t("contracts.publishingContract") : t("contracts.confirmSignAndPublish")}
                 variant="primary"
                 onPress={handleSignSubmit}
-                disabled={!agreed || submitting}
+                disabled={!agreed || !hasDrawn || submitting}
                 style={styles.footerBtn}
               />
             )}
           </View>
+          </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
+      <ContractViewerModal
+        visible={previewVisible}
+        contractId={contract.id}
+        onClose={() => setPreviewVisible(false)}
+      />
+    </>
   );
 }
 
@@ -482,6 +497,23 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) =>
       fontSize: 13,
       color: theme.text,
       lineHeight: 22,
+    },
+    previewPdfBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginTop: 18,
+      padding: 13,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: "#059669",
+      backgroundColor: "#ECFDF5",
+    },
+    previewPdfText: {
+      flex: 1,
+      fontSize: 13,
+      fontWeight: "800",
+      color: "#047857",
     },
     confirmText: {
       fontSize: 13,
