@@ -15,10 +15,9 @@ import GradientHero from "../components/ui/GradientHero";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
 import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
 import { ContentSkeleton } from "../components/ui/content-skeleton";
-import * as Linking from "expo-linking";
-import { API_BASE_URL } from "../constants/api";
 import { useTranslation } from "../contexts/LanguageContext";
 import { formatCurrency, formatMeterReading, unformatNumber } from "../utils/formatters";
+import ContractViewerModal from "../components/ContractViewerModal";
 
 
 
@@ -77,6 +76,7 @@ export default function ContractScreen({ onNavigate, params }: Props) {
   // Thêm state cho Wizard
   const [wizardVisible, setWizardVisible] = useState(false);
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
+  const [viewerContractId, setViewerContractId] = useState<string | null>(null);
 
   useEffect(() => {
     loadContracts();
@@ -427,30 +427,16 @@ export default function ContractScreen({ onNavigate, params }: Props) {
               </View>
             )}
 
-            {/* Thanh tải tài liệu Hợp đồng PDF & DOCX */}
+            {/* Xem PDF trực tiếp; không phát hành file Word */}
             <View style={styles.downloadRow}>
               <Pressable
                 accessibilityRole="button"
-                style={[styles.downloadBtn, { backgroundColor: "rgba(225, 29, 72, 0.1)", borderColor: "rgba(225, 29, 72, 0.3)" }]}
-                onPress={() => {
-                  const url = `${API_BASE_URL}/contracts/${contract.id}/download-pdf`;
-                  Linking.openURL(url);
-                }}
+                accessibilityLabel="Xem hợp đồng điện tử"
+                style={[styles.downloadBtn, { backgroundColor: theme.primarySoft, borderColor: theme.primary }]}
+                onPress={() => setViewerContractId(contract.id)}
               >
-                <Ionicons name="document-text" size={15} color="#E11D48" />
-                <AppText style={[styles.downloadBtnText, { color: "#E11D48" }]}>Tải PDF</AppText>
-              </Pressable>
-
-              <Pressable
-                accessibilityRole="button"
-                style={[styles.downloadBtn, { backgroundColor: "rgba(37, 99, 235, 0.1)", borderColor: "rgba(37, 99, 235, 0.3)" }]}
-                onPress={() => {
-                  const url = `${API_BASE_URL}/contracts/${contract.id}/download-docx`;
-                  Linking.openURL(url);
-                }}
-              >
-                <Ionicons name="document" size={15} color="#2563EB" />
-                <AppText style={[styles.downloadBtnText, { color: "#2563EB" }]}>Tải Word (.docx)</AppText>
+                <Ionicons name="eye-outline" size={17} color={theme.primary} />
+                <AppText style={[styles.downloadBtnText, { color: theme.primary }]}>Xem Hợp đồng điện tử</AppText>
               </Pressable>
             </View>
           </Card>
@@ -470,6 +456,11 @@ export default function ContractScreen({ onNavigate, params }: Props) {
         invoice={paymentInvoice}
         onClose={() => setPaymentInvoice(null)}
         onConfirm={handleDepositPaymentConfirmed}
+      />
+      <ContractViewerModal
+        visible={Boolean(viewerContractId)}
+        contractId={viewerContractId}
+        onClose={() => setViewerContractId(null)}
       />
     </>
   );

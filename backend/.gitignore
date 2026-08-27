@@ -3,3 +3,5 @@ node_modules/
 !.env.example
 *.log
 .DS_Store
+storage/contracts/*
+!storage/contracts/.gitkeep

@@ -32,7 +32,9 @@ const app = express();
 // 2. Middleware
 app.use(cors({ origin: '*', credentials: true }));
 app.use(express.json({ limit: '50mb' })); // Giúp API đọc được dữ liệu JSON gửi lên, tăng giới hạn lên 50mb
+app.use('/public/contracts', (_req, res) => res.status(404).json({ success: false, message: 'Tài liệu hợp đồng không được phát hành công khai.' }));
 app.use('/public', express.static(path.join(__dirname, 'public')));
+app.use('/api/contracts/assets/pdfjs', express.static(path.join(path.dirname(require.resolve('pdfjs-dist/package.json')), 'build')));
 
 
 app.use((req, res, next) => {

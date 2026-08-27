@@ -294,7 +294,13 @@
     "selectRoomAndTenant": "Chọn phòng & người thuê",
     "selectTenant": "Chọn người thuê",
     "signContract": "Ký hợp đồng",
-    "utilitiesAndServices": "Điện nước & dịch vụ"
+    "utilitiesAndServices": "Điện nước & dịch vụ",
+    "viewContract": "Xem hợp đồng",
+    "draft": "Bản nháp",
+    "saveDraft": "Lưu bản nháp",
+    "resumeDraft": "Tiếp tục tạo",
+    "deleteDraft": "Xóa nháp",
+    "draftSavedSuccess": "Đã lưu bản nháp hợp đồng thành công!"
   },
   "invoices": {
     "title": "Quản lý Hóa đơn",

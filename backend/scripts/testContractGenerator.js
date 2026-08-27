@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const PizZip = require('pizzip');
 const Docxtemplater = require('docxtemplater');
 const ImageModule = require('docxtemplater-image-module-free');
@@ -14,10 +15,7 @@ async function testGeneration() {
         process.exit(1);
     }
 
-    const contractsDir = path.join(__dirname, '../public/contracts');
-    if (!fs.existsSync(contractsDir)) {
-        fs.mkdirSync(contractsDir, { recursive: true });
-    }
+    const contractsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'trohub-contract-generator-'));
 
     // Sample signature buffer (1x1 red PNG or transparent PNG)
     const sampleSignature = Buffer.from(
@@ -161,6 +159,7 @@ async function testGeneration() {
     });
 
     console.log('✅ Generated test PDF:', pdfOutputPath, `(${fs.statSync(pdfOutputPath).size} bytes)`);
+    fs.rmSync(contractsDir, { recursive: true, force: true });
 }
 
 testGeneration().catch(console.error);

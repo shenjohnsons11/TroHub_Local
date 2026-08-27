@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
 import { AppText, AppTextInput } from "@/components/ui/typography";
 import { Ionicons } from "@expo/vector-icons";
@@ -24,6 +24,7 @@ import { ContentSkeleton } from "../components/ui/content-skeleton";
 import ProgressStepper from "../components/ui/ProgressStepper";
 import { draftContractService, DraftContract } from "../services/draftContractService";
 import CheckoutModal from "../components/modals/CheckoutModal";
+import ContractViewerModal from "../components/ContractViewerModal";
 import {
   formatCurrency,
   formatMeterReading,
@@ -53,6 +54,10 @@ export default function AdminContractsScreen({ params }: Props) {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutPreviewLoading, setCheckoutPreviewLoading] = useState(false);
   const [checkoutPreview, setCheckoutPreview] = useState<CheckoutPreview | null>(null);
+  const [viewerContractId, setViewerContractId] = useState<string | null>(null);
+  const [editingDraftId, setEditingDraftId] = useState<string | undefined>();
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const draftSession = useRef(0);
   const [modalVisible, setModalVisible] = useState(params?.action === "create");
   const [selectedRoomId, setSelectedRoomId] = useState("");
   const [selectedTenantId, setSelectedTenantId] = useState("");
@@ -85,6 +90,7 @@ export default function AdminContractsScreen({ params }: Props) {
       setContracts(contractsData);
       setRooms(roomsData);
       setTenants(tenantsData);
+      setDrafts(await draftContractService.getDrafts());
     } catch (error) {
       console.log("Lỗi tải dữ liệu hợp đồng:", error);
       notification.error(t("contractsMobile.loadFailed"));
@@ -116,8 +122,20 @@ export default function AdminContractsScreen({ params }: Props) {
   }, [params?.aiAction, rooms, tenants]);
 
   const closeWizard = async () => {
+    const hasDraft = Boolean(selectedRoomId || selectedTenantId || fixedRent || fixedDeposit);
+    if (hasDraft) {
+      const save = await notification.confirm({
+        title: t("contractsMobile.saveDraftPromptTitle"),
+        message: t("contractsMobile.saveDraftPrompt"),
+        confirmText: t("contracts.saveDraft"),
+        cancelText: t("common.cancel"),
+      });
+      if (!save) return;
+    }
+    draftSession.current += 1;
     if (selectedRoomId || selectedTenantId) {
-      await draftContractService.saveDraft({
+      const savedId = await draftContractService.saveDraft({
+        id: editingDraftId,
         roomId: selectedRoomId,
         tenantId: selectedTenantId,
         startDate,
@@ -126,13 +144,18 @@ export default function AdminContractsScreen({ params }: Props) {
         fixedDeposit,
         initialElectricity,
         initialWater,
+        electricityPrice: services.electricity.price,
+        waterPrice: services.water.price,
+        services,
         step: currentStep,
       });
-      loadData();
+      setEditingDraftId(savedId || editingDraftId);
+      setDrafts(await draftContractService.getDrafts());
     }
     setModalVisible(false);
     setSelectedRoomId("");
     setSelectedTenantId("");
+    setEditingDraftId(undefined);
     setCurrentStep(1);
     setConfirmed(false);
   };
@@ -190,10 +213,13 @@ export default function AdminContractsScreen({ params }: Props) {
         ...meterTerms,
       });
       notification.success(t("contractsMobile.created"));
+      if (editingDraftId) await draftContractService.deleteDraft(editingDraftId);
+      setDrafts(await draftContractService.getDrafts());
       
       setModalVisible(false);
       setSelectedRoomId("");
       setSelectedTenantId("");
+      setEditingDraftId(undefined);
       setInitialElectricity("");
       setInitialWater("");
       setCurrentStep(1);
@@ -268,6 +294,33 @@ export default function AdminContractsScreen({ params }: Props) {
       void openCheckoutModal(params.contractId);
     }
   }, [loading, params?.contractId, params?.action]);
+
+  useEffect(() => {
+    if (!modalVisible || submitting || (!selectedRoomId && !selectedTenantId && !fixedRent && !fixedDeposit)) return;
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    const session = draftSession.current;
+    autoSaveTimer.current = setTimeout(() => {
+      void draftContractService.saveDraft({
+        id: editingDraftId,
+        roomId: selectedRoomId,
+        tenantId: selectedTenantId,
+        startDate,
+        endDate,
+        fixedRentPrice: fixedRent,
+        fixedDeposit,
+        initialElectricity,
+        initialWater,
+        electricityPrice: services.electricity.price,
+        waterPrice: services.water.price,
+        services,
+        step: currentStep,
+      }).then(async (savedId) => {
+        if (savedId && session === draftSession.current) setEditingDraftId(savedId);
+        setDrafts(await draftContractService.getDrafts());
+      });
+    }, 500);
+    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); };
+  }, [modalVisible, submitting, selectedRoomId, selectedTenantId, startDate, endDate, fixedRent, fixedDeposit, initialElectricity, initialWater, services, currentStep, editingDraftId]);
 
   const getStatusText = (contract: AdminContract) => {
     if (contract.status === 1 && new Date(contract.startDate).getTime() > Date.now()) {
@@ -346,13 +399,13 @@ export default function AdminContractsScreen({ params }: Props) {
             </View>
             <View style={styles.filterContainer}>
               {filterButton("all", t("common.all"))}
+              {filterButton("draft", t("contractsMobile.draft"))}
               {filterButton("pending", t("contractsMobile.pending"))}
               {filterButton("active", t("contractsMobile.activeFilter"))}
             </View>
           </View>
         }
-        ListEmptyComponent={
-          contracts.length === 0 ? (
+        ListEmptyComponent={filter === "draft" ? null : contracts.length === 0 ? (
             <IllustratedEmptyState
               kind="contract"
               title={t("contractsMobile.empty")}
@@ -406,10 +459,18 @@ export default function AdminContractsScreen({ params }: Props) {
                 <AppText style={styles.moneyCaption}>{t("contractsMobile.rentDeposit", { deposit: formatCurrency(item.fixedDeposit) })}</AppText>
                 <View style={styles.metaRow}>
                   <Ionicons name="calendar-outline" size={16} color={theme.muted} />
-                  <AppText style={styles.contractDates}>
+                <AppText style={styles.contractDates}>
                     {item.startDate ? new Date(item.startDate).toLocaleDateString(language === "en" ? "en-US" : "vi-VN") : ""} – {item.endDate ? new Date(item.endDate).toLocaleDateString(language === "en" ? "en-US" : "vi-VN") : ""}
                   </AppText>
                 </View>
+                <AppButton
+                  variant="outline"
+                  icon="eye-outline"
+                  onPress={() => setViewerContractId(item._id)}
+                  style={styles.approveButton}
+                >
+                  {t("contractsMobile.viewContract")}
+                </AppButton>
                 {item.status === 4 ? (
                   <AppButton
                     icon="shield-checkmark-outline"
@@ -456,8 +517,10 @@ export default function AdminContractsScreen({ params }: Props) {
                     </View>
                   </View>
                   <AppButton
+                    variant="outline"
                     icon="clipboard-outline"
                     onPress={() => {
+                      setEditingDraftId(draft.id);
                       setSelectedRoomId(draft.roomId);
                       setSelectedTenantId(draft.tenantId);
                       setStartDate(draft.startDate);
@@ -466,12 +529,19 @@ export default function AdminContractsScreen({ params }: Props) {
                       setFixedDeposit(draft.fixedDeposit);
                       setInitialElectricity(draft.initialElectricity);
                       setInitialWater(draft.initialWater);
+                      if (draft.services) setServices(draft.services);
                       setCurrentStep(draft.step);
                       setModalVisible(true);
-                      draftContractService.deleteDraft(draft.id).then(loadData);
                     }}
                   >
                     {t("contractsMobile.resume")}
+                  </AppButton>
+                  <AppButton
+                    variant="ghost"
+                    icon="trash-outline"
+                    onPress={() => void draftContractService.deleteDraft(draft.id).then(async () => setDrafts(await draftContractService.getDrafts()))}
+                  >
+                    {t("contractsMobile.deleteDraft")}
                   </AppButton>
                 </View>
               </AnimatedEntry>
@@ -512,6 +582,12 @@ export default function AdminContractsScreen({ params }: Props) {
             setCheckoutLoading(false);
           }
         }}
+      />
+
+      <ContractViewerModal
+        visible={Boolean(viewerContractId)}
+        contractId={viewerContractId}
+        onClose={() => setViewerContractId(null)}
       />
 
       <Modal

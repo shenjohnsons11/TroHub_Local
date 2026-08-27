@@ -294,7 +294,13 @@
     "selectRoomAndTenant": "Select Room & Tenant",
     "selectTenant": "Select a Tenant",
     "signContract": "Sign Contract",
-    "utilitiesAndServices": "Utilities & Services"
+    "utilitiesAndServices": "Utilities & Services",
+    "viewContract": "View contract",
+    "draft": "Draft",
+    "saveDraft": "Save draft",
+    "resumeDraft": "Resume draft",
+    "deleteDraft": "Delete draft",
+    "draftSavedSuccess": "Contract draft saved successfully!"
   },
   "invoices": {
     "title": "Invoice Management",

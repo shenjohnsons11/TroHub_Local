@@ -55,3 +55,21 @@ export const fetchAPI = async (endpoint: string, options: RequestInit = {}) => {
   }
   return data;
 };
+
+export const fetchBlob = async (endpoint: string): Promise<Blob> => {
+  const token = typeof window !== "undefined"
+    ? safeStorageString(localStorage.getItem("trohub_token"))
+    : null;
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!response.ok) {
+    let message = "Không thể tải tài liệu hợp đồng.";
+    try {
+      const data = await response.json();
+      if (typeof data?.message === "string") message = data.message;
+    } catch { /* binary/error response */ }
+    throw new Error(message);
+  }
+  return response.blob();
+};

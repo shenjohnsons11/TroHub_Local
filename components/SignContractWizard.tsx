@@ -394,7 +394,7 @@ export default function SignContractWizard({ visible, contract, onClose, onSign 
               />
             ) : (
               <AppButton
-                title={submitting ? "Đang xuất bản hợp đồng..." : "Xác nhận Ký & Xuất Hợp Đồng"}
+                title={submitting ? t("contracts.publishingContract") : t("contracts.confirmSignAndPublish")}
                 variant="primary"
                 onPress={handleSignSubmit}
                 disabled={!agreed || submitting}

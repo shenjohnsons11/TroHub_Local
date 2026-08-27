@@ -76,8 +76,8 @@ async function signContractAndEnsureDeposit({
       contract.signedAt = new Date();
       await contract.save();
       try {
-        const { generateContractDocuments } = require("./contractGeneratorService");
-        await generateContractDocuments(contract._id, signature);
+        const { generateContractPdf } = require("./contractGeneratorService");
+        await generateContractPdf(contract._id, signature);
       } catch (genErr) {
         console.log("[Contract Document Generation]", genErr.message);
       }
@@ -130,8 +130,8 @@ async function signContractAndEnsureDeposit({
   try {
     await contract.save();
     try {
-      const { generateContractDocuments } = require("./contractGeneratorService");
-      await generateContractDocuments(contract._id, signature);
+      const { generateContractPdf } = require("./contractGeneratorService");
+      await generateContractPdf(contract._id, signature);
     } catch (genErr) {
       console.log("[Contract Document Generation]", genErr.message);
     }

@@ -13,8 +13,12 @@ router.post('/:id/send', requireAdmin, contractController.sendContract);
 // Lịch sử hợp đồng (Phải đặt TRƯỚC /:id)
 router.get('/history', requireAdmin, contractController.getContractHistory);
 
+// PDF riêng tư: chỉ render/xem qua phiên đăng nhập hợp lệ
+router.get('/:id/pdf', requireAuth, contractController.viewPdf);
+router.get('/:id/viewer', requireAuth, contractController.viewPdfHtml);
+
 // Xem chi tiết hợp đồng
-router.get('/:id', contractController.getContractById);
+router.get('/:id', requireAuth, contractController.getContractById);
 
 // Cập nhật & Xóa hợp đồng (Admin)
 router.put('/:id', requireAdmin, contractController.updateContract);
@@ -26,8 +30,8 @@ router.put('/:id/sign', requireTenant, contractController.signContract);
 router.patch('/:id/sign', requireTenant, contractController.signContract);
 
 // Tải file hợp đồng PDF / DOCX
-router.get('/:id/download-pdf', contractController.downloadPdf);
-router.get('/:id/download-docx', contractController.downloadDocx);
+router.get('/:id/download-pdf', requireAuth, contractController.downloadPdf);
+router.get('/:id/download-docx', requireAuth, contractController.downloadDocx);
 
 // Chủ trọ duyệt xác nhận hợp đồng (Chuyển status thành 1)
 

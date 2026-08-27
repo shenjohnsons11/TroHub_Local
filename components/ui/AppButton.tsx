@@ -5,10 +5,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "../../contexts/ThemeContext";
 
 type IconName = React.ComponentProps<typeof Ionicons>["name"];
-type Variant = "primary" | "secondary" | "ghost" | "danger";
+type Variant = "primary" | "secondary" | "outline" | "ghost" | "danger";
 
 type Props = Omit<PressableProps, "children"> & {
-  children: string;
+  children?: React.ReactNode;
+  title?: string;
   variant?: Variant;
   icon?: IconName;
   iconPosition?: "left" | "right";
@@ -17,6 +18,7 @@ type Props = Omit<PressableProps, "children"> & {
 
 export default function AppButton({
   children,
+  title,
   variant = "primary",
   icon,
   iconPosition = "left",
@@ -28,12 +30,15 @@ export default function AppButton({
 }: Props) {
   const { theme } = useAppTheme();
   const blocked = disabled || loading;
-  const palette = {
+  const palettes: Record<Variant, { background: string; foreground: string; border: string }> = {
     primary: { background: theme.primary, foreground: theme.background, border: theme.primary },
     secondary: { background: theme.surfaceElevated, foreground: theme.primary, border: theme.border },
+    outline: { background: "transparent", foreground: theme.text, border: theme.border },
     ghost: { background: "transparent", foreground: theme.primary, border: "transparent" },
     danger: { background: theme.danger, foreground: theme.dangerForeground, border: theme.danger },
-  }[variant];
+  };
+  const palette = palettes[variant] || palettes.primary;
+  const labelText = children || title || "";
   const glyph = icon ? <Ionicons name={icon} size={19} color={palette.foreground} /> : null;
 
   return (
@@ -63,7 +68,7 @@ export default function AppButton({
       ) : (
         <View style={styles.content}>
           {iconPosition === "left" ? glyph : null}
-          <AppText style={[styles.label, { color: palette.foreground }]}>{children}</AppText>
+          <AppText style={[styles.label, { color: palette.foreground }]}>{labelText}</AppText>
           {iconPosition === "right" ? glyph : null}
         </View>
       )}
