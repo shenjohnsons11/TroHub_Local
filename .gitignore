@@ -109,6 +109,7 @@ check-db.js
 check_db.js
 fix_transactions.js
 patch_contracts.js
+copy_local_to_atlas.js
 audit_*.js
 check_*.js
 *.html
