@@ -87,3 +87,36 @@ coverage/
 # Keep documentation tracked
 !README.md
 !CHANGELOG.md
+
+# Repository sanitation: secrets, agent internals, builds, and scratch files
+.env
+.env.*
+!.env.example
+.agents/
+.codex/
+.gemini/
+.superpowers/
+.worktrees/
+skills/
+scratch/
+node_modules/
+.expo/
+.next/
+dist/
+build/
+*.log
+check-db.js
+check_db.js
+fix_transactions.js
+patch_contracts.js
+audit_*.js
+check_*.js
+*.html
+!webadmin/**/*.html
+
+# Generated contract artifacts (keep the runtime template only)
+backend/storage/
+backend/public/contracts/
+*.pdf
+*.docx
+!backend/templates/hop-dong-thue-nha-tro.docx
