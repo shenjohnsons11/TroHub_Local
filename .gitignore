@@ -37,9 +37,19 @@ yarn-error.*
 # Secrets & Môi trường
 .env
 .env.*
-!.env.example
 *.key
 *.pem
+
+# AI Agents & Internal Skills (Tối mật)
+.agents/
+.codex/
+.gemini/
+.superpowers/
+skills/
+.worktrees/
+scratch/
+design-demos/
+design-references/
 
 # typescript
 *.tsbuildinfo
@@ -52,18 +62,9 @@ app-example
 /ios
 /android
 
-# Agent, AI and Skills
+# Agent metadata
 GEMINI.md
-.agents/
-.codex/
-.gemini/
-.superpowers/
-skills/
-.worktrees/
 docs/superpowers/
-scratch/
-design-demos/
-design-references/
 
 # Personal IDE configuration
 .vscode/
@@ -88,17 +89,7 @@ coverage/
 !README.md
 !CHANGELOG.md
 
-# Repository sanitation: secrets, agent internals, builds, and scratch files
-.env
-.env.*
-!.env.example
-.agents/
-.codex/
-.gemini/
-.superpowers/
-.worktrees/
-skills/
-scratch/
+# Repository sanitation: builds and scratch files
 node_modules/
 .expo/
 .next/
