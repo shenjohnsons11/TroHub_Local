@@ -86,6 +86,19 @@
     "account": "Account",
     "services": "Add-on Services"
   },
+  "settings": {
+    "autoInvoice": "Automatic invoice issuance",
+    "autoInvoiceDescription": "Close rent, utilities, and services on a monthly schedule.",
+    "invoiceDay": "Monthly invoice day",
+    "dueDay": "Payment due day next month",
+    "autoRemind": "Automatic resident reminders",
+    "autoRemindDescription": "Notify residents before and on the payment due date.",
+    "remindDaysBeforeDue": "Days to remind before due",
+    "invoiceScheduleHint": "Issue on day {invoiceDay}; payment is due on day {dueDay} of the next month. Short months use their final day.",
+    "reminderScheduleHint": "Unpaid residents are reminded {days} days before and again on the due date.",
+    "saveAutomation": "Save automation policy",
+    "automationSaved": "Automation policy saved."
+  },
   "tenantTimeline": {
     "title": "My Key Milestones",
     "dueInvoice": "Invoice payment due for {period}",

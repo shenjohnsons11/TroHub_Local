@@ -74,7 +74,7 @@
   --destructive-foreground: #ffffff;
   --coral: #d0604c;
   --warning: #b95643;
-  --warning-foreground: #ffffff;
+  --warning-foreground: #b95643;
   --warning-soft: #fde9e4;
   --border: #d7e5dc;
   --input: #d7e5dc;
@@ -124,7 +124,7 @@
   --destructive-foreground: #04100e;
   --coral: #ff9a87;
   --warning: #ff9a87;
-  --warning-foreground: #04100e;
+  --warning-foreground: #ff9a87;
   --warning-soft: #3a2a1d;
   --border: rgb(255 255 255 / 8%);
   --input: rgb(255 255 255 / 8%);

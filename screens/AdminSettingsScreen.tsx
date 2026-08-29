@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, Switch, StyleSheet, View, Pressable } from "react-native";
+import { ActivityIndicator, Modal, ScrollView, Switch, StyleSheet, View, Pressable } from "react-native";
 import { AppText, AppTextInput } from "@/components/ui/typography";
 import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "../contexts/ThemeContext";
@@ -13,12 +13,22 @@ import {
   getExpoPushToken,
   isPushEnabled,
   notificationPlatform,
-  openNotificationSettings,
   requestNotificationPermission,
   setPushEnabled,
 } from "../services/pushNotificationService";
 import { notificationService } from "../services/notificationService";
 import { useTranslation, useLanguage } from "../contexts/LanguageContext";
+import { adminService, BillingAutomationPolicy } from "../services/adminService";
+
+const AUTOMATION_DEFAULTS: BillingAutomationPolicy = {
+  autoInvoiceEnabled: true,
+  invoiceDay: 25,
+  dueDay: 5,
+  autoRemindEnabled: true,
+  remindDaysBeforeDue: 2,
+};
+const AUTOMATION_DAYS = Array.from({ length: 31 }, (_, index) => index + 1);
+type AutomationDayField = "invoiceDay" | "dueDay" | "remindDaysBeforeDue";
 
 type Props = {
   profile: UserProfile;
@@ -35,7 +45,8 @@ export default function AdminSettingsScreen({
   onLogout,
   onPushTokenChange,
 }: Props) {
-  const { theme, isDark, toggleTheme } = useAppTheme();
+  const { theme, resolvedTheme, toggleTheme } = useAppTheme();
+  const isDark = resolvedTheme === "dark";
   const { t } = useTranslation();
   const { language, setLanguage } = useLanguage();
   const notification = useNotification();
@@ -51,10 +62,27 @@ export default function AdminSettingsScreen({
   const [pushEnabled, setPushPreference] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
   const [pushError, setPushError] = useState("");
+  const [automationPolicy, setAutomationPolicy] = useState(AUTOMATION_DEFAULTS);
+  const [automationLoading, setAutomationLoading] = useState(true);
+  const [automationSaving, setAutomationSaving] = useState(false);
+  const [dayPicker, setDayPicker] = useState<{ field: AutomationDayField; title: string } | null>(null);
 
   useEffect(() => {
     void isPushEnabled(profile.id).then(setPushPreference);
   }, [profile.id]);
+
+  useEffect(() => {
+    let active = true;
+    void adminService.getBillingAutomationPolicy()
+      .then((policy) => {
+        if (active) setAutomationPolicy({ ...AUTOMATION_DEFAULTS, ...policy });
+      })
+      .catch(() => notification.error(t("common.error")))
+      .finally(() => {
+        if (active) setAutomationLoading(false);
+      });
+    return () => { active = false; };
+  }, [notification, t]);
 
   const handlePushChange = async (next: boolean) => {
     const previous = pushEnabled;
@@ -107,6 +135,25 @@ export default function AdminSettingsScreen({
       bankAccountName: bankAccountName.trim().toUpperCase(),
     });
     notification.success(t("common.success"));
+  };
+
+  const handleSaveAutomation = async () => {
+    try {
+      setAutomationSaving(true);
+      const saved = await adminService.updateBillingAutomationPolicy(automationPolicy);
+      setAutomationPolicy({ ...AUTOMATION_DEFAULTS, ...saved });
+      notification.success(t("settings.automationSaved"));
+    } catch {
+      notification.error(t("common.error"));
+    } finally {
+      setAutomationSaving(false);
+    }
+  };
+
+  const selectAutomationDay = (day: number) => {
+    if (!dayPicker) return;
+    setAutomationPolicy((current) => ({ ...current, [dayPicker.field]: day }));
+    setDayPicker(null);
   };
 
   const inputStyle = [styles.input, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border }];
@@ -181,8 +228,50 @@ export default function AdminSettingsScreen({
           </View>
         </AnimatedEntry>
 
-        {/* Tùy chọn hệ thống */}
+        {/* Tự động hóa hóa đơn */}
         <AnimatedEntry delay={200}>
+          {automationLoading ? (
+            <View style={[styles.bentoSection, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]} accessibilityLabel={t("common.loading")}>
+              <View style={[styles.skeletonLine, { backgroundColor: theme.border, width: "48%" }]} />
+              <View style={[styles.skeletonLine, { backgroundColor: theme.border, width: "100%" }]} />
+              <View style={[styles.skeletonLine, { backgroundColor: theme.border, width: "74%" }]} />
+            </View>
+          ) : (
+            <>
+              <View style={[styles.bentoSection, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+                <View style={styles.sectionHeading}>
+                  <View style={[styles.sectionIcon, { backgroundColor: theme.primarySoft }]}><Ionicons name="receipt-outline" size={18} color={theme.primary} /></View>
+                  <View style={styles.automationHeadingCopy}>
+                    <AppText style={[styles.cardTitle, { color: theme.text }]}>{t("settings.autoInvoice")}</AppText>
+                    <AppText style={[styles.pushDescription, { color: theme.muted }]}>{t("settings.autoInvoiceDescription")}</AppText>
+                  </View>
+                  <Switch value={automationPolicy.autoInvoiceEnabled} onValueChange={(value) => setAutomationPolicy((current) => ({ ...current, autoInvoiceEnabled: value }))} trackColor={{ false: isDark ? "#374151" : "#D1D5DB", true: theme.primary }} thumbColor="#FFFFFF" />
+                </View>
+                <DaySettingField label={t("settings.invoiceDay")} value={automationPolicy.invoiceDay} disabled={!automationPolicy.autoInvoiceEnabled} theme={theme} onPress={() => setDayPicker({ field: "invoiceDay", title: t("settings.invoiceDay") })} />
+                <DaySettingField label={t("settings.dueDay")} value={automationPolicy.dueDay} disabled={!automationPolicy.autoInvoiceEnabled} theme={theme} onPress={() => setDayPicker({ field: "dueDay", title: t("settings.dueDay") })} />
+                <View style={[styles.note, { backgroundColor: theme.primarySoft }]}><Ionicons name="calendar-outline" size={18} color={theme.primary} /><AppText style={[styles.noteText, { color: theme.text }]}>{t("settings.invoiceScheduleHint", { invoiceDay: automationPolicy.invoiceDay, dueDay: automationPolicy.dueDay })}</AppText></View>
+              </View>
+
+              <View style={[styles.bentoSection, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+                <View style={styles.sectionHeading}>
+                  <View style={[styles.sectionIcon, { backgroundColor: theme.primarySoft }]}><Ionicons name="notifications-outline" size={18} color={theme.primary} /></View>
+                  <View style={styles.automationHeadingCopy}>
+                    <AppText style={[styles.cardTitle, { color: theme.text }]}>{t("settings.autoRemind")}</AppText>
+                    <AppText style={[styles.pushDescription, { color: theme.muted }]}>{t("settings.autoRemindDescription")}</AppText>
+                  </View>
+                  <Switch value={automationPolicy.autoRemindEnabled} onValueChange={(value) => setAutomationPolicy((current) => ({ ...current, autoRemindEnabled: value }))} trackColor={{ false: isDark ? "#374151" : "#D1D5DB", true: theme.primary }} thumbColor="#FFFFFF" />
+                </View>
+                <DaySettingField label={t("settings.remindDaysBeforeDue")} value={automationPolicy.remindDaysBeforeDue} disabled={!automationPolicy.autoRemindEnabled} theme={theme} onPress={() => setDayPicker({ field: "remindDaysBeforeDue", title: t("settings.remindDaysBeforeDue") })} />
+                <View style={[styles.note, { backgroundColor: theme.primarySoft }]}><Ionicons name="shield-checkmark-outline" size={18} color={theme.primary} /><AppText style={[styles.noteText, { color: theme.text }]}>{t("settings.reminderScheduleHint", { days: automationPolicy.remindDaysBeforeDue })}</AppText></View>
+              </View>
+
+              <AppButton icon="flash-outline" loading={automationSaving} onPress={() => void handleSaveAutomation()} style={styles.automationSave}>{t("settings.saveAutomation")}</AppButton>
+            </>
+          )}
+        </AnimatedEntry>
+
+        {/* Tùy chọn hệ thống */}
+        <AnimatedEntry delay={250}>
           <View style={[styles.bentoSection, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
             <View style={styles.sectionHeading}>
               <View style={[styles.sectionIcon, { backgroundColor: "rgba(245, 158, 11, 0.15)" }]}>
@@ -244,11 +333,16 @@ export default function AdminSettingsScreen({
                 />
               )}
             </View>
+            {pushError ? (
+              <AppText accessibilityRole="alert" style={[styles.pushError, { color: theme.danger }]}>
+                {pushError}
+              </AppText>
+            ) : null}
           </View>
         </AnimatedEntry>
 
         {/* Nút lưu */}
-        <AnimatedEntry delay={250}>
+        <AnimatedEntry delay={300}>
           <AppButton icon="save-outline" onPress={handleSave}>
             {t("common.save")}
           </AppButton>
@@ -276,7 +370,36 @@ export default function AdminSettingsScreen({
       </ScrollView>
 
       <ChangePasswordModal visible={passwordVisible} onClose={() => setPasswordVisible(false)} />
+      <DayPickerModal visible={dayPicker !== null} title={dayPicker?.title || ""} closeLabel={t("common.close")} selected={dayPicker ? automationPolicy[dayPicker.field] : 1} theme={theme} onSelect={selectAutomationDay} onClose={() => setDayPicker(null)} />
     </>
+  );
+}
+
+function DaySettingField({ label, value, disabled, theme, onPress }: any) {
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={`${label}: ${value}`} accessibilityState={{ disabled }} disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.dayField, { borderColor: theme.border, backgroundColor: theme.background }, disabled && styles.controlDisabled, pressed && !disabled && styles.controlPressed]}>
+      <View><AppText style={[styles.dayFieldLabel, { color: theme.muted }]}>{label}</AppText><AppText style={[styles.dayFieldValue, { color: theme.text }]}>{value}</AppText></View>
+      <Ionicons name="chevron-down" size={18} color={theme.primary} />
+    </Pressable>
+  );
+}
+
+function DayPickerModal({ visible, title, closeLabel, selected, theme, onSelect, onClose }: any) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.modalBackdrop}>
+        <Pressable accessibilityRole="button" accessibilityLabel={closeLabel} onPress={onClose} style={StyleSheet.absoluteFill} />
+        <View style={[styles.dayPickerSheet, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+          <View style={styles.dayPickerHeader}><AppText style={[styles.dayPickerTitle, { color: theme.text }]}>{title}</AppText><Pressable accessibilityRole="button" accessibilityLabel={closeLabel} onPress={onClose} style={styles.modalClose}><Ionicons name="close" size={20} color={theme.text} /></Pressable></View>
+          <ScrollView style={styles.dayPickerList} showsVerticalScrollIndicator={false}>
+            {AUTOMATION_DAYS.map((day) => {
+              const active = day === selected;
+              return <Pressable key={day} accessibilityRole="radio" accessibilityState={{ checked: active }} onPress={() => onSelect(day)} style={[styles.dayOption, { borderBottomColor: theme.border }, active && { backgroundColor: theme.primarySoft }]}><AppText style={[styles.dayOptionText, { color: active ? theme.primary : theme.text }]}>{day}</AppText>{active ? <Ionicons name="checkmark-circle" size={20} color={theme.primary} /> : null}</Pressable>;
+            })}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -345,7 +468,24 @@ const styles = StyleSheet.create({
   pushCopy: { flex: 1 },
   pushTitle: { fontSize: 14, fontWeight: "800" },
   pushDescription: { fontSize: 11, fontWeight: "600", marginTop: 2 },
+  pushError: { fontSize: 12, fontWeight: "700", marginTop: 6 },
   langSegmented: { flexDirection: "row", borderWidth: 1, borderRadius: 12, padding: 3 },
   langPill: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 9 },
   langPillText: { fontSize: 11, fontWeight: "900" },
+  automationHeadingCopy: { flex: 1 },
+  automationSave: { marginBottom: 16 },
+  skeletonLine: { height: 14, borderRadius: 7, marginVertical: 7, opacity: 0.7 },
+  dayField: { minHeight: 58, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 9, marginTop: 10 },
+  dayFieldLabel: { fontSize: 11, fontWeight: "700" },
+  dayFieldValue: { fontSize: 16, fontWeight: "900", marginTop: 2 },
+  controlDisabled: { opacity: 0.45 },
+  controlPressed: { opacity: 0.82, transform: [{ scale: 0.985 }] },
+  modalBackdrop: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(4, 16, 14, 0.52)" },
+  dayPickerSheet: { maxHeight: "72%", borderTopLeftRadius: 22, borderTopRightRadius: 22, borderWidth: 1, paddingHorizontal: 18, paddingTop: 12, paddingBottom: 28 },
+  dayPickerHeader: { minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  dayPickerTitle: { flex: 1, fontSize: 17, fontWeight: "900" },
+  modalClose: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+  dayPickerList: { maxHeight: 430 },
+  dayOption: { minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: StyleSheet.hairlineWidth, paddingHorizontal: 12 },
+  dayOptionText: { fontSize: 15, fontWeight: "800" },
 });

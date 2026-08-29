@@ -396,6 +396,16 @@
   "settings": {
     "title": "System Settings",
     "subtitle": "Configure VietQR banking, late fee policies, and landlord profile",
+    "autoInvoice": "Automatic invoice issuance",
+    "autoInvoiceDescription": "Close rent, utilities, and services on a monthly schedule.",
+    "invoiceDay": "Monthly invoice day",
+    "dueDay": "Payment due day next month",
+    "autoRemind": "Automatic resident reminders",
+    "autoRemindDescription": "Notify residents before and on the payment due date.",
+    "remindDaysBeforeDue": "Days to remind before due",
+    "invoiceScheduleHint": "Issue on day {invoiceDay}; payment is due on day {dueDay} of the next month. Short months use their final day.",
+    "reminderScheduleHint": "Unpaid residents are reminded {days} days before and again on the due date.",
+    "saveAutomation": "Save automation policy",
     "banking": {
       "title": "Banking & VietQR Gateway",
       "subtitle": "Configure bank account for automatic QR code payments",
@@ -406,10 +416,12 @@
       "saved": "Bank settings saved successfully!"
     },
     "billing": {
-      "title": "Billing & Overdue Penalty Policy",
-      "subtitle": "Automatically apply late fee penalty when tenants pay past the due date",
+      "title": "Billing & Automation Policy",
+      "subtitle": "Schedule invoice issuance, payment reminders, and overdue handling",
       "graceDays": "Grace Period Days (before penalty)",
       "penaltyRate": "Late Fee Rate (%)",
+      "penaltyDescription": "Configure the grace period and penalty applied to overdue invoices.",
+      "penaltyPreview": "For a 3,000,000 VND invoice: add {amount} after {days} grace days.",
       "saved": "Billing policy updated successfully!"
     },
     "account": {

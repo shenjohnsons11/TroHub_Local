@@ -8,8 +8,8 @@ class BillingPolicyValidationError extends Error {
 }
 
 function normalizeBillingPolicy(input = {}) {
-    const lateFeeGraceDays = Number(input.lateFeeGraceDays);
-    const lateFeeRate = Number(input.lateFeeRate);
+    const lateFeeGraceDays = Number(input.lateFeeGraceDays ?? 3);
+    const lateFeeRate = Number(input.lateFeeRate ?? 5);
 
     if (!Number.isInteger(lateFeeGraceDays) || lateFeeGraceDays < 0 || lateFeeGraceDays > 90) {
         throw new BillingPolicyValidationError(
@@ -24,6 +24,15 @@ function normalizeBillingPolicy(input = {}) {
         );
     }
 
+    const invoiceDay = normalizeInteger(input.invoiceDay ?? 25, 'invoiceDay', 1, 31);
+    const dueDay = normalizeInteger(input.dueDay ?? 5, 'dueDay', 1, 31);
+    const remindDaysBeforeDue = normalizeInteger(
+        input.remindDaysBeforeDue ?? 2,
+        'remindDaysBeforeDue',
+        1,
+        31,
+    );
+
     return {
         lateFeeGraceDays,
         lateFeeRate: Math.round(lateFeeRate * 100) / 100,
@@ -31,7 +40,23 @@ function normalizeBillingPolicy(input = {}) {
         remindBeforeDueDays: normalizeReminderDays(input.remindBeforeDueDays ?? [3], 'remindBeforeDueDays'),
         remindOnDueDate: input.remindOnDueDate !== false,
         remindAfterOverdueDays: normalizeReminderDays(input.remindAfterOverdueDays ?? [1], 'remindAfterOverdueDays'),
+        autoInvoiceEnabled: input.autoInvoiceEnabled !== false,
+        invoiceDay,
+        dueDay,
+        autoRemindEnabled: input.autoRemindEnabled !== false,
+        remindDaysBeforeDue,
     };
+}
+
+function normalizeInteger(value, field, min, max) {
+    const number = Number(value);
+    if (!Number.isInteger(number) || number < min || number > max) {
+        throw new BillingPolicyValidationError(
+            `${field} phải là số nguyên từ ${min} đến ${max}.`,
+            field,
+        );
+    }
+    return number;
 }
 
 function normalizeReminderDays(value, field) {

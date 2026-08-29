@@ -24,6 +24,7 @@ const utilityRoutes = require('./src/routes/utilityRoutes');
 const ocrRoutes = require('./src/routes/ocrRoutes');
 const paymentController = require('./src/controllers/paymentController');
 const { applyAllOverduePenalties } = require('./src/services/overdueInvoice');
+const { startBillingScheduler } = require('./src/services/billingScheduler');
 
 const path = require('path');
 
@@ -104,6 +105,7 @@ const { initSocket } = require('./src/services/socketService');
 
 const server = http.createServer(app);
 initSocket(server);
+startBillingScheduler();
 
 // 6. Khởi động Server
 const PORT = process.env.PORT || 5000;

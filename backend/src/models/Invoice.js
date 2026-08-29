@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const invoiceSchema = new mongoose.Schema({
     invoiceCode: { type: String, trim: true },
+    automationKey: { type: String, trim: true },
     contractId: { type: mongoose.Schema.Types.ObjectId, ref: 'Contract', required: false },
     period: { type: String, required: true }, // ky_hoa_don (VD: '05/2026')
     dueDate: { type: Date },                  // han_thanh_toan
@@ -69,6 +70,13 @@ invoiceSchema.index(
     {
         unique: true,
         partialFilterExpression: { invoiceCode: { $type: 'string' } }
+    }
+);
+invoiceSchema.index(
+    { automationKey: 1 },
+    {
+        unique: true,
+        partialFilterExpression: { automationKey: { $type: 'string' } }
     }
 );
 

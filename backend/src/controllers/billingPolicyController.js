@@ -11,6 +11,11 @@ const DEFAULT_POLICY = {
     remindBeforeDueDays: [3],
     remindOnDueDate: true,
     remindAfterOverdueDays: [1],
+    autoInvoiceEnabled: true,
+    invoiceDay: 25,
+    dueDay: 5,
+    autoRemindEnabled: true,
+    remindDaysBeforeDue: 2,
 };
 
 exports.getBillingPolicy = async (req, res) => {
@@ -30,7 +35,8 @@ exports.getBillingPolicy = async (req, res) => {
 
 exports.updateBillingPolicy = async (req, res) => {
     try {
-        const payload = normalizeBillingPolicy(req.body);
+        const current = await BillingPolicy.findOne({ landlordId: req.auth.id }).lean();
+        const payload = normalizeBillingPolicy({ ...DEFAULT_POLICY, ...current, ...req.body });
         const policy = await BillingPolicy.findOneAndUpdate(
             { landlordId: req.auth.id },
             { ...payload, landlordId: req.auth.id },

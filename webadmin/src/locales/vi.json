@@ -396,6 +396,16 @@
   "settings": {
     "title": "Cài đặt Hệ thống",
     "subtitle": "Thiết lập tài khoản ngân hàng VietQR, chính sách phạt và thông tin chủ trọ",
+    "autoInvoice": "Tự động phát hành hóa đơn",
+    "autoInvoiceDescription": "Chốt tiền phòng, điện nước và dịch vụ theo lịch hàng tháng.",
+    "invoiceDay": "Ngày chốt hóa đơn trong tháng",
+    "dueDay": "Hạn thanh toán tháng kế tiếp",
+    "autoRemind": "Tự động nhắc nợ cư dân",
+    "autoRemindDescription": "Gửi thông báo trước hạn và đúng ngày đến hạn.",
+    "remindDaysBeforeDue": "Số ngày nhắc trước hạn",
+    "invoiceScheduleHint": "Chốt ngày {invoiceDay}; hạn thanh toán ngày {dueDay} của tháng sau. Tháng ngắn sẽ dùng ngày cuối tháng.",
+    "reminderScheduleHint": "Cư dân chưa thanh toán sẽ được nhắc trước {days} ngày và vào đúng ngày đến hạn.",
+    "saveAutomation": "Lưu chính sách tự động",
     "banking": {
       "title": "Tài khoản Ngân hàng & VietQR",
       "subtitle": "Cấu hình tài khoản nhận tiền thanh toán tự động qua mã QR",
@@ -406,10 +416,12 @@
       "saved": "Lưu cấu hình ngân hàng thành công!"
     },
     "billing": {
-      "title": "Chính sách Hóa đơn & Phạt quá hạn",
-      "subtitle": "Tự động áp dụng phí phạt khi khách đóng tiền trễ hạn",
+      "title": "Chính sách Hóa đơn & Tự động hóa",
+      "subtitle": "Lập lịch phát hành, nhắc thanh toán và xử lý hóa đơn quá hạn",
       "graceDays": "Số ngày ân hạn (trước khi tính phạt)",
       "penaltyRate": "Tỷ lệ phạt quá hạn (%)",
+      "penaltyDescription": "Thiết lập thời gian ân hạn và mức phạt cho hóa đơn quá hạn.",
+      "penaltyPreview": "Với hóa đơn 3.000.000đ: cộng {amount} sau {days} ngày ân hạn.",
       "saved": "Cập nhật chính sách thành công!"
     },
     "account": {

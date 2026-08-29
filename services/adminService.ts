@@ -157,7 +157,34 @@ export type AdminDashboardStats = {
   utilityReadingProgress?: string;
 };
 
+export type BillingAutomationPolicy = {
+  autoInvoiceEnabled: boolean;
+  invoiceDay: number;
+  dueDay: number;
+  autoRemindEnabled: boolean;
+  remindDaysBeforeDue: number;
+};
+
 export const adminService = {
+  async getBillingAutomationPolicy(): Promise<BillingAutomationPolicy> {
+    const token = await authService.getToken();
+    const response = await apiClient.get<{ success: boolean; data: BillingAutomationPolicy }>(
+      "/settings/billing-policy",
+      token,
+    );
+    return response.data;
+  },
+
+  async updateBillingAutomationPolicy(policy: BillingAutomationPolicy): Promise<BillingAutomationPolicy> {
+    const token = await authService.getToken();
+    const response = await apiClient.put<{ success: boolean; data: BillingAutomationPolicy }>(
+      "/settings/billing-policy",
+      policy,
+      token,
+    );
+    return response.data;
+  },
+
   async getRooms(): Promise<AdminRoom[]> {
     const token = await authService.getToken();
     const response = await apiClient.get<{ success: boolean; data: AdminRoom[] }>("/rooms", token);

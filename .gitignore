@@ -65,6 +65,7 @@ app-example
 # Agent metadata
 GEMINI.md
 docs/superpowers/
+docs/plans/
 
 # Personal IDE configuration
 .vscode/
@@ -85,9 +86,10 @@ __tests__/
 *.spec.*
 coverage/
 
-# Keep documentation tracked
-!README.md
-!CHANGELOG.md
+# Keep only the runtime README at repository root
+/*.md
+!/README.md
+/*.doc
 
 # Repository sanitation: builds and scratch files
 node_modules/
@@ -112,3 +114,8 @@ backend/public/contracts/
 *.pdf
 *.docx
 !backend/templates/hop-dong-thue-nha-tro.docx
+
+# Keep billing automation acceptance tests in the production repository
+!backend/test/
+!backend/test/billingAutomationModels.test.js
+!backend/test/billingScheduler.test.js

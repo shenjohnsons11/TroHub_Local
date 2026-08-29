@@ -86,6 +86,19 @@
     "account": "Tài khoản",
     "services": "Dịch vụ đi kèm"
   },
+  "settings": {
+    "autoInvoice": "Tự động phát hành hóa đơn",
+    "autoInvoiceDescription": "Chốt tiền phòng, điện nước và dịch vụ theo lịch hàng tháng.",
+    "invoiceDay": "Ngày chốt hóa đơn trong tháng",
+    "dueDay": "Hạn thanh toán tháng kế tiếp",
+    "autoRemind": "Tự động nhắc nợ cư dân",
+    "autoRemindDescription": "Gửi thông báo trước hạn và đúng ngày đến hạn.",
+    "remindDaysBeforeDue": "Số ngày nhắc trước hạn",
+    "invoiceScheduleHint": "Chốt ngày {invoiceDay}; hạn thanh toán ngày {dueDay} của tháng sau. Tháng ngắn sẽ dùng ngày cuối tháng.",
+    "reminderScheduleHint": "Cư dân chưa thanh toán sẽ được nhắc trước {days} ngày và vào đúng ngày đến hạn.",
+    "saveAutomation": "Lưu chính sách tự động",
+    "automationSaved": "Đã lưu chính sách tự động."
+  },
   "tenantTimeline": {
     "title": "Mốc sự kiện quan trọng",
     "dueInvoice": "Hạn thanh toán hóa đơn kỳ {period}",

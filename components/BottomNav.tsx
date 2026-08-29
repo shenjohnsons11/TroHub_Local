@@ -21,7 +21,9 @@ type Tab =
   | "notifications"
   | "scan_meter"
   | "cccd_scan"
-  | "ai_chat";
+  | "ai_chat"
+  | "admin_settings"
+  | "change_password";
 
 
 type Props = {
