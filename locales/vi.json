@@ -16,6 +16,10 @@
     "error": "Lỗi hệ thống",
     "back": "Quay lại",
     "close": "Đóng",
+<<<<<<< HEAD
+=======
+    "retry": "Thử lại",
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     "details": "Xem chi tiết",
     "floor": "Tầng {number}",
     "unitVnd": "đ",
@@ -23,8 +27,19 @@
     "unitM3": "m³",
     "language": "Ngôn ngữ",
     "room": "Phòng",
+<<<<<<< HEAD
     "active": "Đang hoạt động",
     "inactive": "Ngừng hoạt động"
+=======
+    "tenant": "Người thuê",
+    "active": "Đang hoạt động",
+    "inactive": "Ngừng hoạt động",
+    "next": "Tiếp theo",
+    "noData": "Không có dữ liệu",
+    "openMaps": "Mở bản đồ",
+    "send": "Gửi",
+    "unspecified": "Chưa xác định"
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
   },
   "auth": {
     "brandTagline": "Hệ Thống Quản Lý Nhà Trọ Thông Minh",
@@ -55,7 +70,15 @@
     "tenantRegister": "Đăng ký tài khoản Người thuê",
     "tenantMobileOnly": "Tài khoản Người thuê vui lòng đăng nhập trên ứng dụng di động TroHub.",
     "logout": "Đăng xuất",
+<<<<<<< HEAD
     "backToLogin": "Quay lại đăng nhập"
+=======
+    "backToLogin": "Quay lại đăng nhập",
+    "account": "Tài khoản",
+    "enterPhone": "Vui lòng nhập số điện thoại.",
+    "passwordMinLength": "Mật khẩu phải có ít nhất 6 ký tự.",
+    "passwordMismatch": "Mật khẩu xác nhận không khớp."
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
   },
   "nav": {
     "overview": "Tổng quan",
@@ -75,6 +98,32 @@
     "account": "Tài khoản",
     "services": "Dịch vụ đi kèm"
   },
+<<<<<<< HEAD
+=======
+  "settings": {
+    "autoInvoice": "Tự động phát hành hóa đơn",
+    "autoInvoiceDescription": "Chốt tiền phòng, điện nước và dịch vụ theo lịch hàng tháng.",
+    "invoiceDay": "Ngày chốt hóa đơn trong tháng",
+    "dueDay": "Hạn thanh toán tháng kế tiếp",
+    "autoRemind": "Tự động nhắc nợ cư dân",
+    "autoRemindDescription": "Gửi thông báo trước hạn và đúng ngày đến hạn.",
+    "remindDaysBeforeDue": "Số ngày nhắc trước hạn",
+    "invoiceScheduleHint": "Chốt ngày {invoiceDay}; hạn thanh toán ngày {dueDay} của tháng sau. Tháng ngắn sẽ dùng ngày cuối tháng.",
+    "reminderScheduleHint": "Cư dân chưa thanh toán sẽ được nhắc trước {days} ngày và vào đúng ngày đến hạn.",
+    "saveAutomation": "Lưu chính sách tự động",
+    "automationSaved": "Đã lưu chính sách tự động."
+  },
+  "tenantTimeline": {
+    "title": "Mốc sự kiện quan trọng",
+    "dueInvoice": "Hạn thanh toán hóa đơn kỳ {period}",
+    "daysLeft": "Còn {days} ngày",
+    "today": "Hôm nay là hạn chót",
+    "overdue": "Đã quá hạn {days} ngày",
+    "contractEnd": "Hết hạn hợp đồng phòng {room}",
+    "repairSchedule": "Lịch hẹn sửa: {title}",
+    "allDone": "Bạn không có mốc sự kiện nào cần xử lý lúc này!"
+  },
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
   "dashboard": {
     "eyebrow": "TỔNG QUAN VẬN HÀNH",
     "greetingFallback": "Chủ trọ",
@@ -163,9 +212,29 @@
     "roomInfo": "Thông tin phòng",
     "terms": "Điều khoản hợp đồng",
     "signContract": "Ký xác nhận hợp đồng",
+<<<<<<< HEAD
     "rentFee": "Tiền thuê hàng tháng",
     "deposit": "Tiền cọc",
     "parking": "Phí gửi xe",
+=======
+    "publishingContract": "Đang xuất bản hợp đồng...",
+    "confirmSignAndPublish": "Xác nhận ký & xuất hợp đồng",
+    "draft": "Bản nháp",
+    "saveDraft": "Lưu bản nháp",
+    "resumeDraft": "Tiếp tục tạo",
+    "deleteDraft": "Xóa nháp",
+    "draftSavedSuccess": "Đã lưu bản nháp hợp đồng thành công!",
+    "previewPdf": "📄 Xem trước toàn văn Hợp đồng (PDF)",
+    "drawSignature": "Vẽ chữ ký tay của bạn",
+    "clearSignature": "Xóa vẽ lại",
+    "signatureAgreement": "Tôi đã đọc kỹ, hiểu rõ và cam kết tuân thủ toàn bộ các điều khoản trong hợp đồng thuê phòng.",
+    "rentFee": "Tiền thuê hàng tháng",
+    "deposit": "Tiền cọc",
+    "parking": "Phí gửi xe",
+    "selectRoom": "Chọn phòng",
+    "empty": "Chưa có hợp đồng nào",
+    "emptyDescription": "Hợp đồng thuê phòng của bạn sẽ xuất hiện tại đây khi được kích hoạt.",
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     "status": {
       "active": "Đang hiệu lực",
       "expired": "Đã hết hạn",
@@ -180,6 +249,21 @@
     "printInvoice": "In hóa đơn PDF",
     "electricIndex": "Chỉ số điện (cũ -> mới)",
     "waterIndex": "Chỉ số nước (cũ -> mới)",
+<<<<<<< HEAD
+=======
+    "code": "Mã HĐ: {code}",
+    "period": "Kỳ hóa đơn",
+    "roomFee": "Tiền phòng",
+    "serviceFee": "Phí dịch vụ",
+    "ocrError": "Không đọc được chỉ số từ ảnh. Vui lòng nhập thủ công.",
+    "empty": "Chưa có hóa đơn nào",
+    "emptyDescription": "Các hóa đơn hàng tháng sẽ hiển thị tại đây khi được Chủ trọ phát hành.",
+    "noMatch": "Không có hóa đơn phù hợp",
+    "all": "Tất cả",
+    "unpaid": "Chưa thanh toán",
+    "paid": "Đã thanh toán",
+    "overdue": "Quá hạn",
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     "totalAmount": "Tổng tiền cần thanh toán",
     "dueDate": "Hạn thanh toán",
     "status": {
@@ -198,6 +282,11 @@
     "description": "Mô tả chi tiết",
     "priority": "Mức độ ưu tiên",
     "progress": "Tiến độ xử lý",
+<<<<<<< HEAD
+=======
+    "empty": "Không có sự cố nào",
+    "emptyDescription": "Bấm nút bên dưới để gửi yêu cầu sửa chữa nếu phòng có hư hỏng.",
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     "status": {
       "pending": "Chờ tiếp nhận",
       "processing": "Đang xử lý",
@@ -210,6 +299,16 @@
     "bell": "Thông báo 🔔",
     "markAllRead": "Đánh dấu đã đọc tất cả",
     "noNotifications": "Không có thông báo mới.",
+<<<<<<< HEAD
+=======
+    "empty": "Không có thông báo mới",
+    "emptyDescription": "Bạn sẽ nhận được thông báo về hóa đơn và hợp đồng tại đây.",
+    "today": "Hôm nay",
+    "yesterday": "Hôm qua",
+    "older": "Trước đó",
+    "read": "Đã đọc",
+    "unread": "Chưa đọc",
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     "categories": {
       "invoice": "Hóa đơn & Thanh toán",
       "contract": "Hợp đồng",
@@ -217,6 +316,18 @@
       "system": "Hệ thống"
     }
   },
+<<<<<<< HEAD
+=======
+  "payments": {
+    "title": "Thanh toán"
+  },
+  "utilities": {
+    "oldElec": "Số điện cũ",
+    "newElec": "Số điện mới",
+    "oldWater": "Số nước cũ",
+    "newWater": "Số nước mới"
+  },
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
   "ai": {
     "title": "Trợ lý AI TroHub Co-pilot",
     "assistantTitle": "TroHub AI Co-pilot",
@@ -438,6 +549,12 @@
       "created": "Tạo hóa đơn thành công!",
       "createFailed": "Tạo hóa đơn thất bại!",
       "draft": "Nháp",
+<<<<<<< HEAD
+=======
+      "deleteDraft": "Xóa nháp",
+      "saveDraftPromptTitle": "Lưu bản nháp?",
+      "saveDraftPrompt": "Bạn có muốn lưu tạm để tiếp tục tạo sau không?",
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
       "unpaid": "Chưa thanh toán",
       "paid": "Đã thanh toán",
       "overdue": "Quá hạn",
@@ -530,6 +647,10 @@
       "noMatch": "Không có hợp đồng phù hợp bộ lọc.",
       "approveContract": "Duyệt hợp đồng",
       "approveCheckout": "Duyệt trả phòng",
+<<<<<<< HEAD
+=======
+      "viewContract": "Xem Hợp đồng",
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
       "drafts": "Hợp đồng đang soạn dở",
       "noDrafts": "Không có bản nháp nào.",
       "draftLabel": "Bản nháp #{id}",
@@ -613,6 +734,12 @@
       "awaitingHint": "⏳ Bạn đã ký xác nhận. Đang chờ chủ trọ duyệt để hợp đồng có hiệu lực.",
       "depositUnpaid": "Tiền cọc chưa thanh toán",
       "depositHint": "Hoàn tất tiền cọc để Chủ trọ có thể duyệt hợp đồng.",
+<<<<<<< HEAD
+=======
+      "viewerTitle": "Hợp đồng điện tử",
+      "closeViewer": "Đóng trình xem hợp đồng",
+      "viewerError": "Không thể mở hợp đồng.",
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
       "pay": "Thanh toán ngay",
       "terminationHint": "⏳ Bạn đã gửi yêu cầu trả phòng. Đang chờ chủ trọ kiểm tra và chốt hợp đồng."
     },
@@ -761,12 +888,22 @@
     "pendingOwner": "Chờ chủ duyệt",
     "pendingCheckout": "Chờ duyệt trả phòng",
     "draft": "Nháp",
+<<<<<<< HEAD
+=======
+    "deleteDraft": "Xóa nháp",
+    "saveDraftPromptTitle": "Lưu bản nháp?",
+    "saveDraftPrompt": "Bạn có muốn lưu tạm để tiếp tục tạo sau không?",
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     "loading": "Đang chuẩn bị hợp đồng...",
     "empty": "Chưa có hợp đồng",
     "emptyDescription": "Tạo hợp đồng đầu tiên để bắt đầu quản lý phòng và người thuê.",
     "noMatch": "Không có hợp đồng phù hợp bộ lọc.",
     "approveContract": "Duyệt hợp đồng",
     "approveCheckout": "Duyệt trả phòng",
+<<<<<<< HEAD
+=======
+    "viewContract": "Xem Hợp đồng",
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     "drafts": "Hợp đồng đang soạn dở",
     "noDrafts": "Không có bản nháp nào.",
     "draftLabel": "Bản nháp #{id}",
@@ -850,6 +987,12 @@
     "awaitingHint": "⏳ Bạn đã ký xác nhận. Đang chờ chủ trọ duyệt để hợp đồng có hiệu lực.",
     "depositUnpaid": "Tiền cọc chưa thanh toán",
     "depositHint": "Hoàn tất tiền cọc để Chủ trọ có thể duyệt hợp đồng.",
+<<<<<<< HEAD
+=======
+    "viewerTitle": "Hợp đồng điện tử",
+    "closeViewer": "Đóng trình xem hợp đồng",
+    "viewerError": "Không thể mở hợp đồng.",
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     "pay": "Thanh toán ngay",
     "terminationHint": "⏳ Bạn đã gửi yêu cầu trả phòng. Đang chờ chủ trọ kiểm tra và chốt hợp đồng."
   },

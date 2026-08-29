@@ -12,6 +12,10 @@ export const CONTRACT_STEPS = [
 ] as const;
 
 export type ContractDraft = {
+<<<<<<< HEAD
+=======
+  step?: number;
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
   roomId: string;
   tenantId: string;
   startDate: string;
@@ -76,4 +80,7 @@ export function validateContractStep(step: number, draft: ContractDraft) {
   }
   return errors;
 }
+<<<<<<< HEAD
 
+=======
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e

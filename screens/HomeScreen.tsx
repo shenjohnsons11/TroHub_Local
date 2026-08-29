@@ -15,6 +15,10 @@ import GradientHero from "../components/ui/GradientHero";
 import { getRealtimeGreeting } from "../utils/dateHelpers";
 import MiniCalendarPopover from "../components/MiniCalendarPopover";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
+<<<<<<< HEAD
+=======
+import TenantPersonalTimeline from "../components/TenantPersonalTimeline";
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
 import { formatCurrency, formatPhone, unformatNumber } from "../utils/formatters";
 import { useLanguage } from "../contexts/LanguageContext";
 
@@ -153,6 +157,7 @@ export default function HomeScreen({ profile, refreshKey, onNavigate, onLogout }
         <MiniCalendarPopover />
       </View>
 
+<<<<<<< HEAD
       {homeData.propertyAddress ? (
         <Card style={styles.propertyCard}>
           <AppText style={[styles.propertyTitle, { color: theme.text }]}>{t("property")}</AppText>
@@ -160,6 +165,22 @@ export default function HomeScreen({ profile, refreshKey, onNavigate, onLogout }
           <Pressable accessibilityRole="button" onPress={openPropertyMap} style={[styles.mapButton, { backgroundColor: theme.primarySoft }]}>
             <Ionicons name="map-outline" size={18} color={theme.primary} />
             <AppText style={[styles.mapButtonText, { color: theme.primary }]}>{t("openMaps")}</AppText>
+=======
+      <TenantPersonalTimeline
+        myInvoices={homeData.myInvoices}
+        activeContract={homeData.activeContract}
+        activeRepairs={homeData.activeRepairs}
+        onNavigate={onNavigate}
+      />
+
+      {homeData.propertyAddress ? (
+        <Card style={styles.propertyCard}>
+          <AppText style={[styles.propertyTitle, { color: theme.text }]}>{t("dashboard.property")}</AppText>
+          <AppText style={[styles.propertyAddress, { color: theme.muted }]}>{homeData.propertyAddress}</AppText>
+          <Pressable accessibilityRole="button" onPress={openPropertyMap} style={[styles.mapButton, { backgroundColor: theme.primarySoft }]}>
+            <Ionicons name="map-outline" size={18} color={theme.primary} />
+            <AppText style={[styles.mapButtonText, { color: theme.primary }]}>{t("common.openMaps")}</AppText>
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
           </Pressable>
         </Card>
       ) : null}

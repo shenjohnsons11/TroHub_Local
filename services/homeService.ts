@@ -29,6 +29,7 @@ const getProperty = async () => {
 export const homeService = {
   async getHomeData(): Promise<HomeData> {
     try {
+<<<<<<< HEAD
       const [profile, invoices, repairs, contract, property] = await Promise.all([
         userService.getProfile(),
         invoiceService.getInvoices(),
@@ -39,6 +40,18 @@ export const homeService = {
 
       const activeContracts = await contractService.getMyContracts();
       const currentContracts = activeContracts.filter(c => ["active", "awaiting_approval", "requesting_termination"].includes(c.status));
+=======
+      const [profile, invoices, repairs, contracts, property] = await Promise.all([
+        userService.getProfile(),
+        invoiceService.getInvoices(),
+        repairService.getRequests(),
+        contractService.getMyContracts(),
+        getProperty(),
+      ]);
+
+      const currentContracts = contracts.filter(c => ["active", "awaiting_approval", "requesting_termination"].includes(c.status));
+      const activeContract = contracts.find((contract) => contract.status === "active") || currentContracts[0] || contracts.find((contract) => contract.status === "pending") || null;
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
       const roomNames = currentContracts.map(c => c.room).filter(Boolean);
       const isSigned = currentContracts.length > 0;
 
@@ -56,7 +69,14 @@ export const homeService = {
         paymentStatusText: unpaidInvoices.length > 0 ? "Chưa thanh toán" : "Đã thanh toán",
         dueDate: unpaidInvoices.length > 0 ? unpaidInvoices[0].dueDate : "Không có",
 
+<<<<<<< HEAD
         contractEndDate: contract?.endDate || "Không có",
+=======
+        contractEndDate: activeContract?.endDate || "Không có",
+        myInvoices: unpaidInvoices,
+        activeContract,
+        activeRepairs: repairs.filter((repair) => repair.status !== "done"),
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
         propertyAddress: property?.propertyAddress,
         propertyLatitude: property?.propertyLatitude,
         propertyLongitude: property?.propertyLongitude,
@@ -77,6 +97,9 @@ export const homeService = {
         paymentStatusText: "Đã thanh toán",
         dueDate: "Không có",
         contractEndDate: "Không có",
+        myInvoices: [],
+        activeContract: null,
+        activeRepairs: [],
         recentRepair: {
           title: "Không có yêu cầu sửa chữa",
           status: "Không có",

@@ -29,6 +29,11 @@ type ApiRepairRequest = {
   createdAt?: string;
   updatedAt?: string;
   date?: string;
+<<<<<<< HEAD
+=======
+  scheduledAt?: string;
+  appointmentDate?: string;
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
   images?: Array<string | { fileUrl?: string; url?: string }>;
 };
 
@@ -101,6 +106,10 @@ const mapApiRepairToRepair = (item: ApiRepairRequest): RepairRequest => {
     description: item.content || item.description || "",
     status: mapStatusFromApi(item.status),
     createdAt: item.date || formatDate(item.createdAt),
+<<<<<<< HEAD
+=======
+    appointmentDate: item.scheduledAt || item.appointmentDate ? formatDate(item.scheduledAt || item.appointmentDate) : undefined,
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     images,
   };
 };

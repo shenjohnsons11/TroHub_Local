@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import React, { useEffect, useState } from "react";
+=======
+import React, { useEffect, useRef, useState } from "react";
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
 import { FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
 import { AppText, AppTextInput } from "@/components/ui/typography";
 import { Ionicons } from "@expo/vector-icons";
@@ -24,6 +28,10 @@ import { ContentSkeleton } from "../components/ui/content-skeleton";
 import ProgressStepper from "../components/ui/ProgressStepper";
 import { draftContractService, DraftContract } from "../services/draftContractService";
 import CheckoutModal from "../components/modals/CheckoutModal";
+<<<<<<< HEAD
+=======
+import ContractViewerModal from "../components/ContractViewerModal";
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
 import {
   formatCurrency,
   formatMeterReading,
@@ -53,6 +61,13 @@ export default function AdminContractsScreen({ params }: Props) {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutPreviewLoading, setCheckoutPreviewLoading] = useState(false);
   const [checkoutPreview, setCheckoutPreview] = useState<CheckoutPreview | null>(null);
+<<<<<<< HEAD
+=======
+  const [viewerContractId, setViewerContractId] = useState<string | null>(null);
+  const [editingDraftId, setEditingDraftId] = useState<string | undefined>();
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const draftSession = useRef(0);
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
   const [modalVisible, setModalVisible] = useState(params?.action === "create");
   const [selectedRoomId, setSelectedRoomId] = useState("");
   const [selectedTenantId, setSelectedTenantId] = useState("");
@@ -85,6 +100,7 @@ export default function AdminContractsScreen({ params }: Props) {
       setContracts(contractsData);
       setRooms(roomsData);
       setTenants(tenantsData);
+      setDrafts(await draftContractService.getDrafts());
     } catch (error) {
       console.log("Lỗi tải dữ liệu hợp đồng:", error);
       notification.error(t("contractsMobile.loadFailed"));
@@ -116,8 +132,25 @@ export default function AdminContractsScreen({ params }: Props) {
   }, [params?.aiAction, rooms, tenants]);
 
   const closeWizard = async () => {
+<<<<<<< HEAD
     if (selectedRoomId || selectedTenantId) {
       await draftContractService.saveDraft({
+=======
+    const hasDraft = Boolean(selectedRoomId || selectedTenantId || fixedRent || fixedDeposit);
+    if (hasDraft) {
+      const save = await notification.confirm({
+        title: t("contractsMobile.saveDraftPromptTitle"),
+        message: t("contractsMobile.saveDraftPrompt"),
+        confirmText: t("contracts.saveDraft"),
+        cancelText: t("common.cancel"),
+      });
+      if (!save) return;
+    }
+    draftSession.current += 1;
+    if (selectedRoomId || selectedTenantId) {
+      const savedId = await draftContractService.saveDraft({
+        id: editingDraftId,
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
         roomId: selectedRoomId,
         tenantId: selectedTenantId,
         startDate,
@@ -126,13 +159,27 @@ export default function AdminContractsScreen({ params }: Props) {
         fixedDeposit,
         initialElectricity,
         initialWater,
+<<<<<<< HEAD
         step: currentStep,
       });
       loadData();
+=======
+        electricityPrice: services.electricity.price,
+        waterPrice: services.water.price,
+        services,
+        step: currentStep,
+      });
+      setEditingDraftId(savedId || editingDraftId);
+      setDrafts(await draftContractService.getDrafts());
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     }
     setModalVisible(false);
     setSelectedRoomId("");
     setSelectedTenantId("");
+<<<<<<< HEAD
+=======
+    setEditingDraftId(undefined);
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     setCurrentStep(1);
     setConfirmed(false);
   };
@@ -190,10 +237,19 @@ export default function AdminContractsScreen({ params }: Props) {
         ...meterTerms,
       });
       notification.success(t("contractsMobile.created"));
+<<<<<<< HEAD
+=======
+      if (editingDraftId) await draftContractService.deleteDraft(editingDraftId);
+      setDrafts(await draftContractService.getDrafts());
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
       
       setModalVisible(false);
       setSelectedRoomId("");
       setSelectedTenantId("");
+<<<<<<< HEAD
+=======
+      setEditingDraftId(undefined);
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
       setInitialElectricity("");
       setInitialWater("");
       setCurrentStep(1);
@@ -269,6 +325,36 @@ export default function AdminContractsScreen({ params }: Props) {
     }
   }, [loading, params?.contractId, params?.action]);
 
+<<<<<<< HEAD
+=======
+  useEffect(() => {
+    if (!modalVisible || submitting || (!selectedRoomId && !selectedTenantId && !fixedRent && !fixedDeposit)) return;
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    const session = draftSession.current;
+    autoSaveTimer.current = setTimeout(() => {
+      void draftContractService.saveDraft({
+        id: editingDraftId,
+        roomId: selectedRoomId,
+        tenantId: selectedTenantId,
+        startDate,
+        endDate,
+        fixedRentPrice: fixedRent,
+        fixedDeposit,
+        initialElectricity,
+        initialWater,
+        electricityPrice: services.electricity.price,
+        waterPrice: services.water.price,
+        services,
+        step: currentStep,
+      }).then(async (savedId) => {
+        if (savedId && session === draftSession.current) setEditingDraftId(savedId);
+        setDrafts(await draftContractService.getDrafts());
+      });
+    }, 500);
+    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); };
+  }, [modalVisible, submitting, selectedRoomId, selectedTenantId, startDate, endDate, fixedRent, fixedDeposit, initialElectricity, initialWater, services, currentStep, editingDraftId]);
+
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
   const getStatusText = (contract: AdminContract) => {
     if (contract.status === 1 && new Date(contract.startDate).getTime() > Date.now()) {
       return t("contractsMobile.preMoveIn");
@@ -281,13 +367,23 @@ export default function AdminContractsScreen({ params }: Props) {
     if (contract.status === 1 && new Date(contract.startDate).getTime() > Date.now()) return theme.primary; // Xanh dương
     if (contract.status === 1) return theme.positive; // Xanh lá
     if (contract.status === 3) return theme.danger;
+<<<<<<< HEAD
     if (contract.status === 0 || contract.status === 4 || contract.status === 5) return theme.warningForeground;
+=======
+    if (contract.status === 0 || contract.status === 4) return "#dc2626";
+    if (contract.status === 5) return theme.warningForeground;
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     return theme.muted;
   };
   const getStatusBg = (contract: AdminContract) => {
     if (contract.status === 1 && new Date(contract.startDate).getTime() > Date.now()) return theme.primarySoft;
     if (contract.status === 1) return theme.positiveSoft;
+<<<<<<< HEAD
     if (contract.status === 0 || contract.status === 3 || contract.status === 4 || contract.status === 5) return theme.warningSoft;
+=======
+    if (contract.status === 0 || contract.status === 4) return "#fef2f2";
+    if (contract.status === 3 || contract.status === 5) return theme.warningSoft;
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     return theme.surfaceElevated;
   };
 
@@ -344,13 +440,21 @@ export default function AdminContractsScreen({ params }: Props) {
             </View>
             <View style={styles.filterContainer}>
               {filterButton("all", t("common.all"))}
+<<<<<<< HEAD
+=======
+              {filterButton("draft", t("contractsMobile.draft"))}
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
               {filterButton("pending", t("contractsMobile.pending"))}
               {filterButton("active", t("contractsMobile.activeFilter"))}
             </View>
           </View>
         }
+<<<<<<< HEAD
         ListEmptyComponent={
           contracts.length === 0 ? (
+=======
+        ListEmptyComponent={filter === "draft" ? null : contracts.length === 0 ? (
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
             <IllustratedEmptyState
               kind="contract"
               title={t("contractsMobile.empty")}
@@ -382,8 +486,25 @@ export default function AdminContractsScreen({ params }: Props) {
                       <AppText style={styles.tenantName}>{tenantName} · {formattedPhone}</AppText>
                     </View>
                   </View>
+<<<<<<< HEAD
                   <View style={[styles.statusBadge, { backgroundColor: getStatusBg(item) }]}>
                     <AppText style={[styles.statusText, { color: getStatusColor(item) }]}>
+=======
+                  <View
+                    style={[
+                      styles.statusBadge,
+                      (item.status === 0 || item.status === 4) && styles.pendingBadge,
+                      { backgroundColor: getStatusBg(item) },
+                    ]}
+                  >
+                    <AppText
+                      style={[
+                        styles.statusText,
+                        (item.status === 0 || item.status === 4) && styles.pendingText,
+                        { color: getStatusColor(item) },
+                      ]}
+                    >
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
                       {getStatusText(item)}
                     </AppText>
                   </View>
@@ -392,10 +513,25 @@ export default function AdminContractsScreen({ params }: Props) {
                 <AppText style={styles.moneyCaption}>{t("contractsMobile.rentDeposit", { deposit: formatCurrency(item.fixedDeposit) })}</AppText>
                 <View style={styles.metaRow}>
                   <Ionicons name="calendar-outline" size={16} color={theme.muted} />
+<<<<<<< HEAD
                   <AppText style={styles.contractDates}>
                     {item.startDate ? new Date(item.startDate).toLocaleDateString(language === "en" ? "en-US" : "vi-VN") : ""} – {item.endDate ? new Date(item.endDate).toLocaleDateString(language === "en" ? "en-US" : "vi-VN") : ""}
                   </AppText>
                 </View>
+=======
+                <AppText style={styles.contractDates}>
+                    {item.startDate ? new Date(item.startDate).toLocaleDateString(language === "en" ? "en-US" : "vi-VN") : ""} – {item.endDate ? new Date(item.endDate).toLocaleDateString(language === "en" ? "en-US" : "vi-VN") : ""}
+                  </AppText>
+                </View>
+                <AppButton
+                  variant="outline"
+                  icon="eye-outline"
+                  onPress={() => setViewerContractId(item._id)}
+                  style={styles.approveButton}
+                >
+                  {t("contractsMobile.viewContract")}
+                </AppButton>
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
                 {item.status === 4 ? (
                   <AppButton
                     icon="shield-checkmark-outline"
@@ -442,8 +578,15 @@ export default function AdminContractsScreen({ params }: Props) {
                     </View>
                   </View>
                   <AppButton
+<<<<<<< HEAD
                     icon="clipboard-outline"
                     onPress={() => {
+=======
+                    variant="outline"
+                    icon="clipboard-outline"
+                    onPress={() => {
+                      setEditingDraftId(draft.id);
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
                       setSelectedRoomId(draft.roomId);
                       setSelectedTenantId(draft.tenantId);
                       setStartDate(draft.startDate);
@@ -452,13 +595,29 @@ export default function AdminContractsScreen({ params }: Props) {
                       setFixedDeposit(draft.fixedDeposit);
                       setInitialElectricity(draft.initialElectricity);
                       setInitialWater(draft.initialWater);
+<<<<<<< HEAD
                       setCurrentStep(draft.step);
                       setModalVisible(true);
                       draftContractService.deleteDraft(draft.id).then(loadData);
+=======
+                      if (draft.services) setServices(draft.services);
+                      setCurrentStep(draft.step);
+                      setModalVisible(true);
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
                     }}
                   >
                     {t("contractsMobile.resume")}
                   </AppButton>
+<<<<<<< HEAD
+=======
+                  <AppButton
+                    variant="ghost"
+                    icon="trash-outline"
+                    onPress={() => void draftContractService.deleteDraft(draft.id).then(async () => setDrafts(await draftContractService.getDrafts()))}
+                  >
+                    {t("contractsMobile.deleteDraft")}
+                  </AppButton>
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
                 </View>
               </AnimatedEntry>
             ))
@@ -500,6 +659,15 @@ export default function AdminContractsScreen({ params }: Props) {
         }}
       />
 
+<<<<<<< HEAD
+=======
+      <ContractViewerModal
+        visible={Boolean(viewerContractId)}
+        contractId={viewerContractId}
+        onClose={() => setViewerContractId(null)}
+      />
+
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
       <Modal
         visible={modalVisible}
         transparent
@@ -845,7 +1013,13 @@ function createStyles(theme: any) {
     roomCode: { color: theme.text, fontSize: 16, fontWeight: "900" },
     tenantName: { color: theme.muted, fontSize: 12, marginTop: 3 },
     statusBadge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
+<<<<<<< HEAD
     statusText: { fontSize: 10, fontWeight: "900" },
+=======
+    pendingBadge: { backgroundColor: "#fef2f2", borderColor: "#fca5a5", borderWidth: 1, paddingVertical: 4 },
+    statusText: { fontSize: 10, fontWeight: "900" },
+    pendingText: { color: "#dc2626", fontSize: 12, fontWeight: "800" },
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     money: { color: theme.text, fontSize: 28, fontWeight: "900", letterSpacing: -0.8, marginTop: 18 },
     moneyCaption: { color: theme.muted, fontSize: 13 },
     draftContainer: { padding: 20 },

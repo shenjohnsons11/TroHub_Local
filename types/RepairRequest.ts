@@ -10,5 +10,6 @@ export type RepairRequest = {
   description: string;
   status: RepairStatus;
   createdAt: string;
+  appointmentDate?: string;
   images?: string[];
 };

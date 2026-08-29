@@ -36,7 +36,11 @@ export const TROHUB_THEMES = {
     dangerForeground: "#ffffff",
     coral: "#d0604c",
     warning: "#b95643",
+<<<<<<< HEAD
     warningForeground: "#ffffff",
+=======
+    warningForeground: "#b95643",
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     warningSoft: "#fde9e4",
     overlay: "rgba(4, 16, 14, .38)",
   },
@@ -55,7 +59,11 @@ export const TROHUB_THEMES = {
     dangerForeground: "#04100e",
     coral: "#ff9a87",
     warning: "#ff9a87",
+<<<<<<< HEAD
     warningForeground: "#04100e",
+=======
+    warningForeground: "#ff9a87",
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     warningSoft: "#3a2a1d",
     overlay: "rgba(0, 6, 5, .72)",
   },

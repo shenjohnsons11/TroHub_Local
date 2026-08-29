@@ -10,6 +10,18 @@ export interface DraftContract {
   fixedDeposit: string;
   initialElectricity: string;
   initialWater: string;
+<<<<<<< HEAD
+=======
+  electricityPrice?: string;
+  waterPrice?: string;
+  services?: {
+    electricity: { enabled: boolean; price: string };
+    water: { enabled: boolean; price: string };
+    trash: { enabled: boolean; price: string };
+    internet: { enabled: boolean; price: string };
+    management: { enabled: boolean; price: string };
+  };
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
   step: number;
   lastSaved: string;
 }
@@ -27,6 +39,7 @@ export const draftContractService = {
     }
   },
 
+<<<<<<< HEAD
   saveDraft: async (draft: Omit<DraftContract, "id" | "lastSaved"> & { id?: string }): Promise<void> => {
     try {
       const drafts = await draftContractService.getDrafts();
@@ -44,6 +57,24 @@ export const draftContractService = {
       await AsyncStorage.setItem(DRAFT_KEY, JSON.stringify(drafts));
     } catch (e) {
       console.error("Lỗi lưu nháp:", e);
+=======
+  saveDraft: async (draft: Omit<DraftContract, "id" | "lastSaved"> & { id?: string }): Promise<string> => {
+    try {
+      const drafts = await draftContractService.getDrafts();
+      const now = new Date().toISOString();
+      const existingIndex = drafts.findIndex((item) => draft.id ? item.id === draft.id : item.roomId === draft.roomId);
+      const id = existingIndex > -1 ? drafts[existingIndex].id : (draft.id || Math.random().toString(36).substring(2, 9));
+      if (existingIndex > -1) {
+        drafts[existingIndex] = { ...drafts[existingIndex], ...draft, id, lastSaved: now };
+      } else {
+        drafts.push({ ...draft, id, lastSaved: now } as DraftContract);
+      }
+      await AsyncStorage.setItem(DRAFT_KEY, JSON.stringify(drafts));
+      return id;
+    } catch (e) {
+      console.error("Lỗi lưu nháp:", e);
+      return draft.id || "";
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     }
   },
 

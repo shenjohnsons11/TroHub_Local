@@ -1,6 +1,10 @@
 import vi from "../locales/vi.json";
 import en from "../locales/en.json";
 import type { Language } from "./language";
+<<<<<<< HEAD
+=======
+import { humanizeTranslationKey } from "./i18nFallback";
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
 
 export const translations = {
   vi,
@@ -30,7 +34,11 @@ export function translate(
   params?: Record<string, string | number>
 ): string {
   const currentDict = translations[lang] || translations.vi;
+<<<<<<< HEAD
   let val = getNestedValue(currentDict, key) || getNestedValue(translations.vi, key) || key;
+=======
+  let val = getNestedValue(currentDict, key) || getNestedValue(translations.vi, key) || humanizeTranslationKey(key);
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
   if (params) {
     for (const [name, replacement] of Object.entries(params)) {
       val = val.replaceAll(`{${name}}`, String(replacement));

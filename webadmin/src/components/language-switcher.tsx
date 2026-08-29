@@ -16,7 +16,11 @@ export function LanguageSwitcher({ className = "" }: { className?: string }) {
             ? "bg-white dark:bg-slate-800 text-teal-700 dark:text-teal-400 shadow-xs font-bold"
             : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
         }`}
+<<<<<<< HEAD
         aria-label={t("language.switchVietnamese")}
+=======
+        aria-label={t("i18n.language.switchVietnamese")}
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
       >
         <span className="text-sm">🇻🇳</span>
         <span>VIE</span>
@@ -29,7 +33,11 @@ export function LanguageSwitcher({ className = "" }: { className?: string }) {
             ? "bg-white dark:bg-slate-800 text-teal-700 dark:text-teal-400 shadow-xs font-bold"
             : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
         }`}
+<<<<<<< HEAD
         aria-label={t("language.switchEnglish")}
+=======
+        aria-label={t("i18n.language.switchEnglish")}
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
       >
         <span className="text-sm">🇬🇧</span>
         <span>ENG</span>

@@ -16,6 +16,10 @@
     "error": "System Error",
     "back": "Back",
     "close": "Close",
+<<<<<<< HEAD
+=======
+    "retry": "Try again",
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     "details": "View Details",
     "floor": "Floor {number}",
     "unitVnd": "VND",
@@ -23,8 +27,19 @@
     "unitM3": "m³",
     "language": "Language",
     "room": "Room",
+<<<<<<< HEAD
     "active": "Active",
     "inactive": "Inactive"
+=======
+    "tenant": "Tenant",
+    "active": "Active",
+    "inactive": "Inactive",
+    "next": "Next",
+    "noData": "No data available",
+    "openMaps": "Open Maps",
+    "send": "Send",
+    "unspecified": "Unspecified"
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
   },
   "auth": {
     "brandTagline": "Smart Property Management System",
@@ -55,7 +70,15 @@
     "tenantRegister": "Create Tenant Account",
     "tenantMobileOnly": "Tenant accounts must sign in using the TroHub Mobile App.",
     "logout": "Sign Out",
+<<<<<<< HEAD
     "backToLogin": "Back to sign in"
+=======
+    "backToLogin": "Back to sign in",
+    "account": "Account",
+    "enterPhone": "Enter your phone number.",
+    "passwordMinLength": "Password must be at least 6 characters.",
+    "passwordMismatch": "Password confirmation does not match."
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
   },
   "nav": {
     "overview": "Overview",
@@ -75,6 +98,32 @@
     "account": "Account",
     "services": "Add-on Services"
   },
+<<<<<<< HEAD
+=======
+  "settings": {
+    "autoInvoice": "Automatic invoice issuance",
+    "autoInvoiceDescription": "Close rent, utilities, and services on a monthly schedule.",
+    "invoiceDay": "Monthly invoice day",
+    "dueDay": "Payment due day next month",
+    "autoRemind": "Automatic resident reminders",
+    "autoRemindDescription": "Notify residents before and on the payment due date.",
+    "remindDaysBeforeDue": "Days to remind before due",
+    "invoiceScheduleHint": "Issue on day {invoiceDay}; payment is due on day {dueDay} of the next month. Short months use their final day.",
+    "reminderScheduleHint": "Unpaid residents are reminded {days} days before and again on the due date.",
+    "saveAutomation": "Save automation policy",
+    "automationSaved": "Automation policy saved."
+  },
+  "tenantTimeline": {
+    "title": "My Key Milestones",
+    "dueInvoice": "Invoice payment due for {period}",
+    "daysLeft": "{days} days left",
+    "today": "Due today",
+    "overdue": "{days} days overdue",
+    "contractEnd": "Lease ends for room {room}",
+    "repairSchedule": "Repair appointment: {title}",
+    "allDone": "You have no milestones that need attention right now!"
+  },
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
   "dashboard": {
     "eyebrow": "OPERATIONS OVERVIEW",
     "greetingFallback": "Landlord",
@@ -163,9 +212,29 @@
     "roomInfo": "Room Information",
     "terms": "Lease Terms",
     "signContract": "Sign & Confirm Contract",
+<<<<<<< HEAD
     "rentFee": "Monthly Rent",
     "deposit": "Deposit",
     "parking": "Parking Fee",
+=======
+    "publishingContract": "Publishing contract...",
+    "confirmSignAndPublish": "Confirm, Sign & Publish Contract",
+    "draft": "Draft",
+    "saveDraft": "Save draft",
+    "resumeDraft": "Resume draft",
+    "deleteDraft": "Delete draft",
+    "draftSavedSuccess": "Contract draft saved successfully!",
+    "previewPdf": "📄 Preview full contract (PDF)",
+    "drawSignature": "Draw your signature",
+    "clearSignature": "Clear and redraw",
+    "signatureAgreement": "I have carefully read, understood, and agree to comply with all terms of this rental contract.",
+    "rentFee": "Monthly Rent",
+    "deposit": "Deposit",
+    "parking": "Parking Fee",
+    "selectRoom": "Select a Room",
+    "empty": "No Contracts Yet",
+    "emptyDescription": "Your rental contract will appear here once activated.",
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     "status": {
       "active": "Active",
       "expired": "Expired",
@@ -180,6 +249,21 @@
     "printInvoice": "Print Invoice PDF",
     "electricIndex": "Electricity Meter (old -> new)",
     "waterIndex": "Water Meter (old -> new)",
+<<<<<<< HEAD
+=======
+    "code": "Invoice ID: {code}",
+    "period": "Billing Period",
+    "roomFee": "Room Rent",
+    "serviceFee": "Service Fees",
+    "ocrError": "Could not read the meter from the image. Please enter it manually.",
+    "empty": "No Invoices Yet",
+    "emptyDescription": "Monthly invoices will appear here once issued by your landlord.",
+    "noMatch": "No matching invoices",
+    "all": "All",
+    "unpaid": "Unpaid",
+    "paid": "Paid",
+    "overdue": "Overdue",
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     "totalAmount": "Total Amount Due",
     "dueDate": "Payment Due Date",
     "status": {
@@ -198,6 +282,11 @@
     "description": "Detailed Description",
     "priority": "Priority Level",
     "progress": "Resolution Progress",
+<<<<<<< HEAD
+=======
+    "empty": "No Issues Reported",
+    "emptyDescription": "Tap the button below to submit a repair request if anything in your room needs fixing.",
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     "status": {
       "pending": "Pending",
       "processing": "Processing",
@@ -210,6 +299,16 @@
     "bell": "Notifications 🔔",
     "markAllRead": "Mark All as Read",
     "noNotifications": "No new notifications.",
+<<<<<<< HEAD
+=======
+    "empty": "No New Notifications",
+    "emptyDescription": "You will receive invoice and contract notifications here.",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "older": "Earlier",
+    "read": "Read",
+    "unread": "Unread",
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     "categories": {
       "invoice": "Invoices & Payments",
       "contract": "Contracts",
@@ -217,6 +316,18 @@
       "system": "System"
     }
   },
+<<<<<<< HEAD
+=======
+  "payments": {
+    "title": "Payments"
+  },
+  "utilities": {
+    "oldElec": "Previous Electricity",
+    "newElec": "New Electricity",
+    "oldWater": "Previous Water",
+    "newWater": "New Water"
+  },
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
   "ai": {
     "title": "TroHub Co-pilot AI Assistant",
     "assistantTitle": "TroHub AI Co-pilot",
@@ -438,6 +549,12 @@
       "created": "Invoice created.",
       "createFailed": "Could not create invoice.",
       "draft": "Draft",
+<<<<<<< HEAD
+=======
+      "deleteDraft": "Delete draft",
+      "saveDraftPromptTitle": "Save draft?",
+      "saveDraftPrompt": "Would you like to save this draft and continue later?",
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
       "unpaid": "Unpaid",
       "paid": "Paid",
       "overdue": "Overdue",
@@ -530,6 +647,10 @@
       "noMatch": "No contracts match this filter.",
       "approveContract": "Approve Contract",
       "approveCheckout": "Approve Checkout",
+<<<<<<< HEAD
+=======
+      "viewContract": "View Contract",
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
       "drafts": "Draft Contracts",
       "noDrafts": "No drafts found.",
       "draftLabel": "Draft #{id}",
@@ -613,6 +734,12 @@
       "awaitingHint": "⏳ You signed the contract. Awaiting landlord approval for activation.",
       "depositUnpaid": "Deposit Unpaid",
       "depositHint": "Complete the deposit payment so your landlord can approve the contract.",
+<<<<<<< HEAD
+=======
+      "viewerTitle": "Electronic contract",
+      "closeViewer": "Close contract viewer",
+      "viewerError": "Could not open the contract.",
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
       "pay": "Pay Now",
       "terminationHint": "⏳ Checkout request sent. Your landlord will inspect the room and close the contract."
     },
@@ -761,12 +888,22 @@
     "pendingOwner": "Awaiting landlord approval",
     "pendingCheckout": "Awaiting checkout approval",
     "draft": "Draft",
+<<<<<<< HEAD
+=======
+    "deleteDraft": "Delete draft",
+    "saveDraftPromptTitle": "Save draft?",
+    "saveDraftPrompt": "Would you like to save this draft and continue later?",
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     "loading": "Preparing contracts...",
     "empty": "No contracts yet",
     "emptyDescription": "Create the first contract to manage rooms and tenants.",
     "noMatch": "No contracts match this filter.",
     "approveContract": "Approve Contract",
     "approveCheckout": "Approve Checkout",
+<<<<<<< HEAD
+=======
+    "viewContract": "View Contract",
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     "drafts": "Draft Contracts",
     "noDrafts": "No drafts found.",
     "draftLabel": "Draft #{id}",
@@ -850,6 +987,12 @@
     "awaitingHint": "⏳ You signed the contract. Awaiting landlord approval for activation.",
     "depositUnpaid": "Deposit Unpaid",
     "depositHint": "Complete the deposit payment so your landlord can approve the contract.",
+<<<<<<< HEAD
+=======
+    "viewerTitle": "Electronic contract",
+    "closeViewer": "Close contract viewer",
+    "viewerError": "Could not open the contract.",
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     "pay": "Pay Now",
     "terminationHint": "⏳ Checkout request sent. Your landlord will inspect the room and close the contract."
   },

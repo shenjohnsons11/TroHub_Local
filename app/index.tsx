@@ -63,7 +63,12 @@ type Tab =
   | "notifications"
   | "scan_meter"
   | "cccd_scan"
+<<<<<<< HEAD
   | "ai_chat";
+=======
+  | "ai_chat"
+  | "admin_settings";
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
 
 export default function App() {
   const { theme } = useAppTheme();

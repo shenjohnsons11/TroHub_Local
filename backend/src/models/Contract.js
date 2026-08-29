@@ -49,8 +49,14 @@ const contractSchema = new mongoose.Schema({
 
     // Chữ ký điện tử & File xuất bản hợp đồng
     tenantSignature: { type: String }, // Base64 PNG chữ ký tay
+<<<<<<< HEAD
     docxUrl: { type: String },         // Đường dẫn file Word (/public/contracts/hop-dong-[id].docx)
     pdfUrl: { type: String },          // Đường dẫn file PDF (/public/contracts/hop-dong-[id].pdf)
+=======
+    docxUrl: { type: String, select: false }, // Chỉ dùng nội bộ cho bản nháp; không phát hành qua API
+    pdfUrl: { type: String },          // Endpoint PDF có xác thực
+    pdfVersion: { type: Number, default: 0 },
+>>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     signedAt: { type: Date }
 }, { timestamps: true });
 
