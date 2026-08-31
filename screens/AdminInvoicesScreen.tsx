@@ -9,8 +9,10 @@ import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
 import GradientHero from "../components/ui/GradientHero";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
 import AppButton from "../components/ui/AppButton";
-import { adminService, AdminInvoice, AdminRoom, AdminContract } from "../services/adminService";
+import { adminService, AdminInvoice, AdminRoom, AdminContract, BillingAutomationPolicy } from "../services/adminService";
 import InvoiceDetailModal from "../components/InvoiceDetailModal";
+import AutomationStatusCard from "../components/AutomationStatusCard";
+import QuickAutoBillingModal from "../components/QuickAutoBillingModal";
 import { Invoice } from "../types/Invoice";
 import { formatCurrency, formatMeterReading, formatNumberInput, parseMeterReading, unformatNumber } from "../utils/formatters";
 import { useTranslation } from "../contexts/LanguageContext";
@@ -31,6 +33,8 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
   const [filter, setFilter] = useState<"all" | "unpaid" | "paid">("all");
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [remindingId, setRemindingId] = useState<string | null>(null);
+  const [automationPolicy, setAutomationPolicy] = useState<BillingAutomationPolicy>({ autoInvoiceEnabled: false, invoiceDay: 25, dueDay: 5, autoRemindEnabled: true, remindDaysBeforeDue: 2 });
+  const [automationVisible, setAutomationVisible] = useState(false);
 
   // Modal states for creating invoice
   const [modalVisible, setModalVisible] = useState(params?.action === "create");
@@ -68,14 +72,16 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
 
   const loadData = async () => {
     try {
-      const [invoicesData, roomsData, contractsData] = await Promise.all([
+      const [invoicesData, roomsData, contractsData, policy] = await Promise.all([
         adminService.getInvoices(),
         adminService.getRooms(),
         adminService.getContracts(),
+        adminService.getBillingAutomationPolicy(),
       ]);
       setInvoices(invoicesData);
       setRooms(roomsData);
       setContracts(contractsData);
+      setAutomationPolicy(policy);
     } catch (error) {
       console.log("Lỗi tải dữ liệu hóa đơn:", error);
     } finally {
@@ -388,6 +394,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <>
+            <AutomationStatusCard policy={automationPolicy} onConfigure={() => setAutomationVisible(true)} />
             <GradientHero icon="receipt-outline" label={t("mobile.invoices.heroLabel")} value={formatCurrency(invoices.reduce((sum, invoice) => sum + (invoice.totalAmount || 0), 0))} detail={t("mobile.invoices.heroDetail", { count: invoices.length })} />
 
 <<<<<<< HEAD
@@ -499,6 +506,8 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
           </Pressable></AnimatedEntry>
         )}
       />
+
+      <QuickAutoBillingModal visible={automationVisible} policy={automationPolicy} onClose={() => setAutomationVisible(false)} onSaved={setAutomationPolicy} />
 
       {/* Modal Tạo hóa đơn mới */}
       <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => { if (!submitting) setModalVisible(false); }}>

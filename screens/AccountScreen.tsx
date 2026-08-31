@@ -267,6 +267,18 @@ export default function AccountScreen({
                 <AppText style={[styles.tileSubtitle, { color: theme.muted }]}>Xem điều khoản & cọc</AppText>
               </Pressable>
             )}
+            {isLandlord ? (
+              <Pressable
+                style={[styles.bentoTile, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
+                onPress={() => onNavigate?.("services")}
+              >
+                <View style={[styles.tileIconCircle, { backgroundColor: "rgba(16, 185, 129, 0.15)" }]}>
+                  <Ionicons name="construct-outline" size={20} color="#10B981" />
+                </View>
+                <AppText style={[styles.tileTitle, { color: theme.text }]}>{t("servicesMobile.title")}</AppText>
+                <AppText style={[styles.tileSubtitle, { color: theme.muted }]}>{t("servicesMobile.shortcutDescription")}</AppText>
+              </Pressable>
+            ) : null}
           </View>
         </AnimatedEntry>
 

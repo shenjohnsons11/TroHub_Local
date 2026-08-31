@@ -12,39 +12,49 @@ import { PriorityPanel } from "@/components/calm-ops/priority-panel";
 import { StatCard } from "@/components/calm-ops/stat-card";
 import { StatusBadge } from "@/components/calm-ops/status-badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/components/language-provider";
 import { VisualAnalyticsDashboard } from "@/components/VisualAnalyticsDashboard";
 import { BentoGridDashboard } from "@/components/BentoGridDashboard";
+import { AutomationStatusCard } from "@/components/AutomationStatusCard";
+import { StandardOperationsDashboard } from "@/components/StandardOperationsDashboard";
+import type { DashboardStats } from "@/lib/dashboard";
 
-type Stats = { totalRooms: number; occupiedRooms: number; vacantRooms: number; maintenanceRooms: number; totalTenants: number; pendingRepairs: number; pendingContracts: number; totalRevenue: number; outstandingDebt: number };
-const EMPTY_STATS: Stats = { totalRooms: 0, occupiedRooms: 0, vacantRooms: 0, maintenanceRooms: 0, totalTenants: 0, pendingRepairs: 0, pendingContracts: 0, totalRevenue: 0, outstandingDebt: 0 };
+const EMPTY_STATS: DashboardStats = { totalRooms: 0, occupiedRooms: 0, vacantRooms: 0, maintenanceRooms: 0, totalTenants: 0, pendingRepairs: 0, pendingContracts: 0, totalRevenue: 0, outstandingDebt: 0, overdueDebt: 0, revenueSeries: [], utilitySeries: [], revenueComposition: { rent: 0, utilities: 0, services: 0 }, paymentPerformance: { paid: 0, unpaid: 0, overdue: 0, onTimeRate: 0 }, utilityReading: { readyRooms: 0, missingRooms: 0, totalOccupiedRooms: 0, missingRoomCodes: [] }, automation: { autoInvoiceEnabled: false, invoiceDay: 25, dueDay: 5, autoRemindEnabled: true, remindDaysBeforeDue: 2 }, floorGroups: [] };
 
 export default function DashboardPage() {
   const notification = useNotification();
   const { t } = useLanguage();
-  const [stats, setStats] = useState<Stats | null>(null);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [propertyAddress, setPropertyAddress] = useState<string>("");
   const [viewMode, setViewMode] = useState<"bento" | "analytics" | "standard">("bento");
+  const [months, setMonths] = useState<6 | 12>(6);
+  const [loadError, setLoadError] = useState(false);
   const load = useCallback(async () => {
     try {
+      setLoadError(false);
       const [statsRes, userRes] = await Promise.allSettled([
-        fetchAPI("/dashboard/stats"),
+        fetchAPI(`/dashboard/stats?months=${months}`),
         fetchAPI("/auth/me"),
       ]);
       if (statsRes.status === "fulfilled") {
         setStats({ ...EMPTY_STATS, ...(statsRes.value.data || {}) });
+      } else {
+        setLoadError(true);
+        notification.error(getNotificationMessage(statsRes.reason, t("common.error")));
       }
       if (userRes.status === "fulfilled" && userRes.value?.user?.propertyAddress) {
         setPropertyAddress(userRes.value.user.propertyAddress);
       }
     } catch (error) {
       notification.error(getNotificationMessage(error, t("common.error")));
-      setStats(EMPTY_STATS);
+      setLoadError(true);
     }
-  }, [notification, t]);
+  }, [notification, t, months]);
 
   useEffect(() => { void load(); }, [load]);
 
+  if (loadError) return <div className="rounded-[24px] border border-dashed bg-card p-12 text-center"><p className="text-lg font-black">Không thể tải Dashboard</p><Button className="mt-4" onClick={() => void load()}>Thử lại</Button></div>;
   if (!stats) return <div className="space-y-6" aria-label={t("common.loading")}><Skeleton className="h-28 w-full" /><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{Array.from({ length: 8 }, (_, index) => <Skeleton key={index} className="h-36 w-full" />)}</div></div>;
 
   const vacantRooms = stats.vacantRooms || Math.max(0, stats.totalRooms - stats.occupiedRooms);
@@ -100,11 +110,15 @@ export default function DashboardPage() {
         </div>
       ) : null}
 
+      <AutomationStatusCard initialPolicy={stats.automation} compact />
+
 
       {viewMode === "bento" ? (
         <BentoGridDashboard stats={stats} />
       ) : viewMode === "analytics" ? (
-        <VisualAnalyticsDashboard stats={stats} />
+        <VisualAnalyticsDashboard stats={stats} months={months} onMonthsChange={setMonths} />
+      ) : viewMode === "standard" ? (
+        <StandardOperationsDashboard stats={stats} />
       ) : (
 
         <>

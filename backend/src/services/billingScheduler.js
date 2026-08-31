@@ -59,6 +59,36 @@ function buildAutomationKey(landlordId, roomId, period) {
     return `${String(landlordId)}:${String(roomId)}:${period}`;
 }
 
+function hasDraftValue(value) {
+    return value !== undefined && value !== null && value !== '';
+}
+
+function readDraftValue(value) {
+    const number = Number(value);
+    return Number.isFinite(number) && number >= 0 ? number : undefined;
+}
+
+function hasFixedUtilityService(contract) {
+    return (contract.services || []).some(({ serviceId }) => {
+        if (!serviceId || Number(serviceId.type) === 1 || serviceId.billingMode === 'METER') return false;
+        const label = `${serviceId.code || ''} ${serviceId.name || ''}`.toLowerCase();
+        return ['điện', 'dien', 'electric', 'nước', 'nuoc', 'water'].some((term) => label.includes(term));
+    });
+}
+
+function roomHasNewMeterDrafts(contract, room, electricityOld, waterOld) {
+    if (hasFixedUtilityService(contract)) {
+        const electricityDraft = readDraftValue(room.draftElectricity);
+        const waterDraft = readDraftValue(room.draftWater);
+        return (!hasDraftValue(room.draftElectricity) || (electricityDraft !== undefined && electricityDraft >= electricityOld))
+            && (!hasDraftValue(room.draftWater) || (waterDraft !== undefined && waterDraft >= waterOld));
+    }
+    return readDraftValue(room.draftElectricity) !== undefined
+        && readDraftValue(room.draftWater) !== undefined
+        && readDraftValue(room.draftElectricity) >= electricityOld
+        && readDraftValue(room.draftWater) >= waterOld;
+}
+
 function fixedServiceTotals(contract) {
     const totals = { services: 0, parking: 0, internet: 0, garbage: 0, details: [] };
     for (const item of contract.services || []) {
@@ -85,7 +115,8 @@ function fixedServiceTotals(contract) {
 }
 
 async function finalizeInvoice(invoice, contract, dependencies) {
-    await dependencies.syncRoomReadings(contract.roomId._id, invoice);
+    const roomId = contract.roomId?._id || contract.roomId;
+    await dependencies.syncRoomReadings(roomId, invoice);
     const tenantId = contract.tenantId?._id || contract.tenantId;
     if (!tenantId) return;
     await dependencies.notifyTenant({
@@ -103,7 +134,7 @@ async function finalizeInvoice(invoice, contract, dependencies) {
         content: `Điện ${invoice.electricityOld} → ${invoice.electricityNew} kWh, nước ${invoice.waterOld} → ${invoice.waterNew} m³.`,
         category: 'utility',
         deepLink: 'utility',
-        metadata: { roomId: contract.roomId._id, period: invoice.period },
+        metadata: { roomId, period: invoice.period },
         eventKey: `utility:${invoice._id}:confirmed`,
     });
 }
@@ -148,13 +179,22 @@ const defaultDependencies = {
             invoice: await Invoice.findOne({ automationKey }),
         };
     },
-    syncRoomReadings: (roomId, invoice) => Room.findByIdAndUpdate(roomId, {
-        $set: {
-            lastElectricityReading: invoice.electricityNew,
-            lastWaterReading: invoice.waterNew,
+    syncRoomReadings: (roomId, invoice) => Room.findOneAndUpdate(
+        {
+            _id: roomId,
+            $and: [
+                { $or: [{ draftElectricity: { $exists: false } }, { draftElectricity: { $lte: invoice.electricityNew } }] },
+                { $or: [{ draftWater: { $exists: false } }, { draftWater: { $lte: invoice.waterNew } }] },
+            ],
         },
-        $unset: { draftElectricity: '', draftWater: '' },
-    }),
+        {
+            $set: {
+                lastElectricityReading: invoice.electricityNew,
+                lastWaterReading: invoice.waterNew,
+            },
+            $unset: { draftElectricity: '', draftWater: '' },
+        },
+    ),
     notifyTenant: sendNotification,
     notifyLandlord: sendNotification,
 };
@@ -179,6 +219,7 @@ async function runAutomaticInvoiceIssuance(
         ]);
         const utilityDefaults = resolveUtilityPriceDefaults(utilityServices);
         const incompleteRooms = [];
+        let issuedCount = 0;
 
         for (const contract of contracts) {
             const room = contract.roomId;
@@ -188,25 +229,23 @@ async function runAutomaticInvoiceIssuance(
                 const existing = await dependencies.findInvoiceByAutomationKey(automationKey);
                 if (existing) {
                     summary.duplicates += 1;
+                    issuedCount += 1;
                     await finalizeInvoice(existing, contract, dependencies);
                     continue;
                 }
 
                 const previousInvoice = await dependencies.findPreviousInvoice(contract._id);
                 const meter = resolveContractMeterSnapshot(contract, previousInvoice, room, utilityDefaults);
-                const electricityNew = room.draftElectricity;
-                const waterNew = room.draftWater;
-                const hasBothReadings = electricityNew !== undefined
-                    && electricityNew !== null
-                    && electricityNew !== ''
-                    && waterNew !== undefined
-                    && waterNew !== null
-                    && waterNew !== '';
-                const validReadings = hasBothReadings
-                    && Number.isFinite(Number(electricityNew))
-                    && Number.isFinite(Number(waterNew))
-                    && Number(electricityNew) >= meter.electricityOld
-                    && Number(waterNew) >= meter.waterOld;
+                const electricityDraft = readDraftValue(room.draftElectricity);
+                const waterDraft = readDraftValue(room.draftWater);
+                const electricityNew = electricityDraft ?? meter.electricityOld;
+                const waterNew = waterDraft ?? meter.waterOld;
+                const draftsValid = (!hasDraftValue(room.draftElectricity) || electricityDraft !== undefined)
+                    && (!hasDraftValue(room.draftWater) || waterDraft !== undefined);
+                const validReadings = draftsValid
+                    && roomHasNewMeterDrafts(contract, room, meter.electricityOld, meter.waterOld)
+                    && electricityNew >= meter.electricityOld
+                    && waterNew >= meter.waterOld;
                 if (!validReadings) {
                     incompleteRooms.push(room.roomCode || String(room._id));
                     summary.missing += 1;
@@ -261,6 +300,7 @@ async function runAutomaticInvoiceIssuance(
                     details: serviceTotals.details,
                 };
                 const result = await dependencies.upsertInvoice(automationKey, invoiceDocument);
+                issuedCount += 1;
                 if (result.created) summary.created += 1;
                 else summary.duplicates += 1;
                 if (result.invoice) await finalizeInvoice(result.invoice, contract, dependencies);
@@ -269,17 +309,17 @@ async function runAutomaticInvoiceIssuance(
             }
         }
 
-        if (incompleteRooms.length) {
-            await dependencies.notifyLandlord({
-                userId: landlordId,
-                title: `Thiếu chỉ số điện nước kỳ ${period}`,
-                content: `Đã bỏ qua ${incompleteRooms.length} phòng chưa đủ chỉ số: ${incompleteRooms.join(', ')}. Vui lòng cập nhật để phát hành bổ sung.`,
-                category: 'utility',
-                deepLink: 'utility',
-                metadata: { period, rooms: incompleteRooms },
-                eventKey: `billing:${landlordId}:${period}:missing-readings`,
-            });
-        }
+        await dependencies.notifyLandlord({
+            userId: landlordId,
+            title: `✅ Đã tự động phát hành ${issuedCount} hóa đơn`,
+            content: incompleteRooms.length
+                ? `Còn ${incompleteRooms.length} phòng thiếu số đang chờ bổ sung: ${incompleteRooms.join(', ')}.`
+                : 'Tất cả các phòng đã hoàn tất!',
+            category: 'invoice',
+            deepLink: 'invoice',
+            metadata: { period, successCount: issuedCount, skipCount: incompleteRooms.length, rooms: incompleteRooms },
+            eventKey: `billing:${landlordId}:${period}:summary`,
+        });
     }
     return summary;
 }
@@ -297,13 +337,24 @@ async function runMeterReadingReminders(
         if (policy.autoInvoiceEnabled === false) continue;
         if (parts.day !== effectiveInvoiceDay(parts.year, parts.month, policy.invoiceDay ?? 25)) continue;
         const landlordId = policy.landlordId?._id || policy.landlordId;
+        const contracts = await dependencies.findContracts(landlordId);
+        const missingRooms = contracts
+            .filter((contract) => contract.roomId && Number(contract.roomId.status) === 1)
+            .filter((contract) => {
+                const room = contract.roomId;
+                const electricityOld = readDraftValue(room.lastElectricityReading) ?? 0;
+                const waterOld = readDraftValue(room.lastWaterReading) ?? 0;
+                return !roomHasNewMeterDrafts(contract, room, electricityOld, waterOld);
+            })
+            .map((contract) => contract.roomId.roomCode || String(contract.roomId._id));
+        if (!missingRooms.length) continue;
         await dependencies.notifyLandlord({
             userId: landlordId,
-            title: `Ngày mai chốt hóa đơn kỳ ${period}`,
-            content: `Hãy cập nhật chỉ số điện nước cho toàn bộ phòng đang thuê trước khi hệ thống phát hành hóa đơn tự động.`,
+            title: `⏰ Nhắc nhở chốt điện nước kỳ ${period}`,
+            content: `Ngày mai là ngày phát hành hóa đơn. Còn ${missingRooms.length} phòng (${missingRooms.join(', ')}) chưa có số mới. Bấm vào để quét ngay!`,
             category: 'utility',
-            deepLink: 'utility',
-            metadata: { period },
+            deepLink: 'scan_meter',
+            metadata: { period, rooms: missingRooms, action: 'scan' },
             eventKey: `billing:${landlordId}:${period}:meter-reminder`,
         });
         sent += 1;

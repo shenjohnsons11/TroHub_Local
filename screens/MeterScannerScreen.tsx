@@ -44,6 +44,7 @@ export default function MeterScannerScreen({ onBack, onSuccess }: Props) {
   const [statusMessage, setStatusMessage] = useState("");
   const [rooms, setRooms] = useState<AdminRoom[]>([]);
   const [selectedRoomId, setSelectedRoomId] = useState("");
+  const [invoiceDay, setInvoiceDay] = useState(25);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [scannedDigits, setScannedDigits] = useState("");
@@ -81,10 +82,13 @@ export default function MeterScannerScreen({ onBack, onSuccess }: Props) {
     );
     animation.start();
 
-    adminService.getRooms().then((res) => {
+    void adminService.getRooms().then((res) => {
       setRooms(res);
       if (res.length > 0) setSelectedRoomId(res[0]._id);
     }).catch(() => undefined);
+    void adminService.getBillingAutomationPolicy()
+      .then((policy) => setInvoiceDay(policy.invoiceDay || 25))
+      .catch(() => undefined);
 
     return () => animation.stop();
   }, []);
@@ -200,7 +204,7 @@ export default function MeterScannerScreen({ onBack, onSuccess }: Props) {
         water: meterType === "water" ? digitsNumber : undefined,
       });
 
-      notification.success(t("common.success"));
+      notification.success(t("settings.meterDraftSaved", { invoiceDay }));
       setModalVisible(false);
       onSuccess?.();
       onBack?.();

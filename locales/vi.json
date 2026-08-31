@@ -109,9 +109,12 @@
     "autoRemindDescription": "Gửi thông báo trước hạn và đúng ngày đến hạn.",
     "remindDaysBeforeDue": "Số ngày nhắc trước hạn",
     "invoiceScheduleHint": "Chốt ngày {invoiceDay}; hạn thanh toán ngày {dueDay} của tháng sau. Tháng ngắn sẽ dùng ngày cuối tháng.",
+    "invoiceAutomationFlow": "Hệ thống sẽ nhắc bạn quét số vào ngày {reminderDay} và tự động gom số để phát hành hóa đơn vào 07:00 ngày {invoiceDay}.",
+    "previousMonthEnd": "cuối tháng trước",
     "reminderScheduleHint": "Cư dân chưa thanh toán sẽ được nhắc trước {days} ngày và vào đúng ngày đến hạn.",
     "saveAutomation": "Lưu chính sách tự động",
-    "automationSaved": "Đã lưu chính sách tự động."
+    "automationSaved": "Đã lưu chính sách tự động.",
+    "meterDraftSaved": "✓ Đã lưu chỉ số nháp. Hệ thống sẽ tự động lên hóa đơn vào ngày {invoiceDay}."
   },
   "tenantTimeline": {
     "title": "Mốc sự kiện quan trọng",
@@ -1104,6 +1107,41 @@
     "billingMeter": "Theo đồng hồ (điện/nước)",
     "defaultPrice": "Giá mặc định",
     "defaultQuantity": "Số lượng mặc định"
+  },
+  "servicesMobile": {
+    "title": "Dịch vụ đi kèm",
+    "subtitle": "Điện, nước và các khoản phí áp dụng cho hợp đồng",
+    "shortcutDescription": "Quản lý danh mục và đơn giá",
+    "add": "Thêm dịch vụ",
+    "edit": "Sửa dịch vụ",
+    "name": "Tên dịch vụ",
+    "code": "Mã dịch vụ",
+    "unit": "Đơn vị",
+    "billingMode": "Cách tính phí",
+    "defaultPrice": "Đơn giá mặc định",
+    "defaultQuantity": "Số lượng mặc định",
+    "activeDescription": "Cho phép chọn dịch vụ này trong hợp đồng mới",
+    "required": "Vui lòng nhập đủ tên, mã và đơn vị.",
+    "invalidPrice": "Đơn giá hoặc số lượng không hợp lệ.",
+    "saved": "Đã lưu dịch vụ.",
+    "priceApplied": "Đã cập nhật đơn giá.",
+    "deleteTitle": "Xóa dịch vụ?",
+    "deleteMessage": "Dịch vụ {name} sẽ bị xóa hoặc ngừng hoạt động nếu đang được dùng.",
+    "deleted": "Đã xóa dịch vụ.",
+    "archived": "Dịch vụ đang được dùng nên đã chuyển sang ngừng hoạt động.",
+    "empty": "Chưa có dịch vụ",
+    "emptyDescription": "Tạo dịch vụ đầu tiên để gắn vào hợp đồng và hóa đơn.",
+    "count": "{count} dịch vụ",
+    "priceImpactTitle": "Đơn giá đang được dùng",
+    "priceImpactDescription": "Có {count} hợp đồng đang áp dụng dịch vụ này.",
+    "filter": { "all": "Tất cả", "active": "Đang bật", "inactive": "Đã tắt" },
+    "mode": { "fixed": "Cố định", "quantity": "Số lượng", "meter": "Đồng hồ" },
+    "scope": {
+      "new": "Chỉ hợp đồng mới",
+      "newDescription": "Giữ nguyên giá trên các hợp đồng đang hiệu lực.",
+      "active": "Cập nhật hợp đồng đang thuê",
+      "activeDescription": "Áp dụng giá mới cho toàn bộ hợp đồng đang dùng dịch vụ."
+    }
   },
   "account": {
     "profileAndSecurity": "Hồ sơ & Bảo mật",

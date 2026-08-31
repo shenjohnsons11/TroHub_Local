@@ -62,6 +62,7 @@ export default function BillingPolicyPage() {
   const [remindDaysBeforeDue, setRemindDaysBeforeDue] = useState(2);
 >>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
   const [saving, setSaving] = useState(false);
+  const reminderDay = invoiceDay === 1 ? t("settings.previousMonthEnd") : invoiceDay - 1;
 
   useEffect(() => {
     void fetchAPI("/settings/billing-policy").then(({ data }) => {
@@ -172,7 +173,7 @@ export default function BillingPolicyPage() {
         <div className="grid gap-5 lg:grid-cols-2">
           <Card>
             <CardHeader className="grid grid-cols-[auto_1fr_auto] items-center gap-3"><span className="grid size-11 place-items-center rounded-[14px] bg-primary/10 text-primary"><ReceiptText className="size-5" /></span><div><CardTitle>{t("settings.autoInvoice")}</CardTitle><CardDescription>{t("settings.autoInvoiceDescription")}</CardDescription></div><PolicySwitch checked={autoInvoiceEnabled} onChange={setAutoInvoiceEnabled} label={t("settings.autoInvoice")} /></CardHeader>
-            <CardContent className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="invoice-day">{t("settings.invoiceDay")}</Label><DaySelect id="invoice-day" value={invoiceDay} onChange={setInvoiceDay} disabled={!autoInvoiceEnabled} label={t("settings.invoiceDay")} /></div><div className="space-y-2"><Label htmlFor="due-day">{t("settings.dueDay")}</Label><DaySelect id="due-day" value={dueDay} onChange={setDueDay} disabled={!autoInvoiceEnabled} label={t("settings.dueDay")} /></div><div className="col-span-full flex gap-3 rounded-[14px] bg-primary/8 p-4 text-sm"><CalendarClock className="mt-0.5 size-4 shrink-0 text-primary" /><p className="text-muted-foreground">{t("settings.invoiceScheduleHint", { invoiceDay, dueDay })}</p></div></CardContent>
+            <CardContent className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="invoice-day">{t("settings.invoiceDay")}</Label><DaySelect id="invoice-day" value={invoiceDay} onChange={setInvoiceDay} disabled={!autoInvoiceEnabled} label={t("settings.invoiceDay")} /></div><div className="space-y-2"><Label htmlFor="due-day">{t("settings.dueDay")}</Label><DaySelect id="due-day" value={dueDay} onChange={setDueDay} disabled={!autoInvoiceEnabled} label={t("settings.dueDay")} /></div><div className="col-span-full flex gap-3 rounded-[14px] bg-primary/8 p-4 text-sm"><CalendarClock className="mt-0.5 size-4 shrink-0 text-primary" /><p className="font-semibold text-foreground">{t("settings.invoiceAutomationFlow", { reminderDay, invoiceDay })}</p></div><p className="col-span-full text-sm text-muted-foreground">{t("settings.invoiceScheduleHint", { invoiceDay, dueDay })}</p></CardContent>
           </Card>
           <Card>
             <CardHeader className="grid grid-cols-[auto_1fr_auto] items-center gap-3"><span className="grid size-11 place-items-center rounded-[14px] bg-primary/10 text-primary"><BellRing className="size-5" /></span><div><CardTitle>{t("settings.autoRemind")}</CardTitle><CardDescription>{t("settings.autoRemindDescription")}</CardDescription></div><PolicySwitch checked={autoRemindEnabled} onChange={setAutoRemindEnabled} label={t("settings.autoRemind")} /></CardHeader>

@@ -1,9 +1,8 @@
 import React from "react";
-import { View, StyleSheet, Pressable, Dimensions } from "react-native";
+import { View, StyleSheet, Pressable } from "react-native";
 import { AppText } from "./ui/typography";
 import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "../contexts/ThemeContext";
-import { useTranslation } from "../contexts/LanguageContext";
 import AnimatedEntry from "./ui/AnimatedEntry";
 import { formatCurrency } from "../utils/formatters";
 import { LinearGradient } from "expo-linear-gradient";
@@ -15,7 +14,6 @@ type Props = {
 
 export default function BentoGridDashboard({ stats, onNavigate }: Props) {
   const { theme } = useAppTheme();
-  const { t } = useTranslation();
   const styles = createStyles(theme);
 
   const totalRooms = Number(stats?.totalRooms ?? 0);
@@ -25,9 +23,8 @@ export default function BentoGridDashboard({ stats, onNavigate }: Props) {
   const totalRevenue = Number(stats?.totalRevenue ?? 0);
   const outstandingDebt = Number(stats?.outstandingDebt ?? 0);
   const pendingRepairs = Number(stats?.pendingRepairs ?? 0);
-  const pendingContracts = Number(stats?.pendingContracts ?? 0);
-
-  const waveHeights = totalRevenue > 0 ? [35, 50, 40, 70, 60, 90, 75, 85] : [20, 20, 20, 20, 20, 20, 20, 20];
+  const revenueSeries = Array.isArray(stats?.revenueSeries) ? stats.revenueSeries : [];
+  const maxRevenue = Math.max(1, ...revenueSeries.map((item: any) => Number(item.value || 0)));
 
   return (
     <View style={styles.bentoContainer}>
@@ -59,14 +56,14 @@ export default function BentoGridDashboard({ stats, onNavigate }: Props) {
 
               {/* Decorative Wave Bars */}
               <View style={styles.waveContainer}>
-                {waveHeights.map((val, idx) => (
+                {revenueSeries.map((item: any) => (
                   <View
-                    key={idx}
+                    key={item.period}
                     style={[
                       styles.waveBar,
                       {
-                        height: `${val}%`,
-                        backgroundColor: idx === 5 && totalRevenue > 0 ? "#10B981" : "rgba(16, 185, 129, 0.3)",
+                        height: `${Math.max(3, Number(item.value || 0) / maxRevenue * 100)}%`,
+                        backgroundColor: "rgba(16, 185, 129, 0.65)",
                       },
                     ]}
                   />

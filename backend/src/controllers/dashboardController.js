@@ -1,96 +1,61 @@
-const Room = require('../models/Room');
 const Account = require('../models/Account');
+const BillingPolicy = require('../models/BillingPolicy');
 const Contract = require('../models/Contract');
 const Invoice = require('../models/Invoice');
 const RepairRequest = require('../models/RepairRequest');
-const Transaction = require('../models/Transaction');
+const Room = require('../models/Room');
+const { buildDashboardStats } = require('../services/dashboardStats');
+
+function createDashboardDependencies() {
+    return {
+        listRooms: (landlordId) => Room.find({ landlordId }).lean(),
+        listContracts: async (landlordId) => {
+            const roomIds = await Room.find({ landlordId }).distinct('_id');
+            return Contract.find({ roomId: { $in: roomIds } })
+                .populate('tenantId', 'fullName')
+                .populate('services.serviceId', 'name code type billingMode')
+                .lean();
+        },
+        listInvoices: async (landlordId) => {
+            const roomIds = await Room.find({ landlordId }).distinct('_id');
+            const contractIds = await Contract.find({ roomId: { $in: roomIds } }).distinct('_id');
+            return Invoice.find({ contractId: { $in: contractIds }, status: { $in: [1, 2, 3] } })
+                .select([
+                    'contractId', 'period', 'status', 'totalAmount', 'roomAmount',
+                    'electricity', 'water', 'services', 'parking', 'internet', 'garbage',
+                    'electricityOld', 'electricityNew', 'waterOld', 'waterNew',
+                    'details', 'dueDate', 'updatedAt',
+                ].join(' '))
+                .lean();
+        },
+        countTenants: (landlordId) => Account.countDocuments({
+            role: 2,
+            status: 1,
+            linkedLandlords: landlordId,
+        }),
+        countPendingRepairs: async (landlordId) => {
+            const roomIds = await Room.find({ landlordId }).distinct('_id');
+            const tenantIds = await Contract.find({ roomId: { $in: roomIds } }).distinct('tenantId');
+            return RepairRequest.countDocuments({
+                tenantId: { $in: tenantIds },
+                status: { $in: [0, 1] },
+            });
+        },
+        getBillingPolicy: (landlordId) => BillingPolicy.findOne({ landlordId }).lean(),
+    };
+}
 
 exports.getStats = async (req, res) => {
     try {
-        let landlordId = null;
-        const authHeader = req.headers['authorization'];
-        if (authHeader && authHeader.startsWith('Bearer ')) {
-            const token = authHeader.split(' ')[1];
-            try {
-                const decoded = require('jsonwebtoken').verify(token, process.env.JWT_SECRET);
-                if (decoded.role === 1) landlordId = decoded.id;
-            } catch (e) { }
-        }
-
-        let roomQuery = {};
-        if (landlordId) {
-            roomQuery.landlordId = landlordId;
-        }
-
-        const totalRooms = await Room.countDocuments(roomQuery);
-        const occupiedRooms = await Room.countDocuments({ ...roomQuery, status: 1 });
-        const vacantRooms = await Room.countDocuments({ ...roomQuery, status: 0 });
-        const maintenanceRooms = await Room.countDocuments({ ...roomQuery, status: 2 });
-
-        let tenantQuery = { role: 2 };
-        if (landlordId) {
-            tenantQuery.landlordId = landlordId;
-        }
-        const totalTenants = await Account.countDocuments(tenantQuery);
-
-        let repairQuery = {};
-        if (landlordId) {
-            const rooms = await Room.find({ landlordId }).select('_id');
-            const contracts = await Contract.find({
-                roomId: { $in: rooms.map((room) => room._id) },
-            }).select('tenantId');
-            repairQuery.tenantId = {
-                $in: contracts.map((contract) => contract.tenantId),
-            };
-        }
-        const pendingRepairs = await RepairRequest.countDocuments({ ...repairQuery, status: { $in: [0, 1] } }); // 0: Mới, 1: Đang xử lý
-        const pendingContracts = await Contract.countDocuments({
-            ...(landlordId ? { roomId: { $in: (await Room.find({ landlordId }).select('_id')).map((room) => room._id) } } : {}),
-            status: { $in: [0, 4, 5] },
-        });
-
-        // Tính doanh thu tháng hiện tại
-        const currentMonth = new Date().getMonth() + 1;
-        const currentYear = new Date().getFullYear();
-        const currentPeriod = `${currentMonth.toString().padStart(2, '0')}/${currentYear}`;
-
-        let invoiceQuery = { status: 2, period: currentPeriod }; // 2: Đã thanh toán
-        if (landlordId) {
-            // Lọc hóa đơn theo phòng của chủ trọ
-            const rooms = await Room.find({ landlordId }).select('roomCode');
-            invoiceQuery.room = { $in: rooms.map(r => r.roomCode) };
-        }
-
-        const invoices = await Invoice.find(invoiceQuery);
-        const totalRevenue = invoices.reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
-
-        const landlordRoomIds = landlordId
-            ? (await Room.find({ landlordId }).select('_id')).map((room) => room._id)
-            : [];
-        const landlordContracts = landlordId
-            ? await Contract.find({ roomId: { $in: landlordRoomIds }, status: { $in: [1, 5] } }).select('_id')
-            : [];
-        const unpaidInvoices = landlordId
-            ? await Invoice.find({ contractId: { $in: landlordContracts.map((contract) => contract._id) }, status: { $in: [1, 3] } }).select('totalAmount')
-            : [];
-        const outstandingDebt = unpaidInvoices.reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
-
-        res.status(200).json({
-            success: true,
-            data: {
-                totalRooms,
-                occupiedRooms,
-                vacantRooms,
-                maintenanceRooms,
-                totalTenants,
-                pendingRepairs,
-                pendingContracts,
-                totalRevenue,
-                outstandingDebt,
-                utilityReadingProgress: null
-            }
-        });
+        const data = await buildDashboardStats({
+            landlordId: req.auth.id,
+            months: req.query.months,
+        }, createDashboardDependencies());
+        return res.status(200).json({ success: true, data });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Lỗi Server: ' + error.message });
+        return res.status(500).json({
+            success: false,
+            message: `Không thể tải dữ liệu dashboard: ${error.message}`,
+        });
     }
 };

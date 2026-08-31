@@ -1,9 +1,5 @@
 import React, { useEffect, useState } from "react";
-<<<<<<< HEAD
-import { ActivityIndicator, ScrollView, Switch, StyleSheet, View, Pressable } from "react-native";
-=======
 import { ActivityIndicator, Modal, ScrollView, Switch, StyleSheet, View, Pressable } from "react-native";
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
 import { AppText, AppTextInput } from "@/components/ui/typography";
 import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "../contexts/ThemeContext";
@@ -17,17 +13,11 @@ import {
   getExpoPushToken,
   isPushEnabled,
   notificationPlatform,
-<<<<<<< HEAD
-  openNotificationSettings,
-=======
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
   requestNotificationPermission,
   setPushEnabled,
 } from "../services/pushNotificationService";
 import { notificationService } from "../services/notificationService";
 import { useTranslation, useLanguage } from "../contexts/LanguageContext";
-<<<<<<< HEAD
-=======
 import { adminService, BillingAutomationPolicy } from "../services/adminService";
 
 const AUTOMATION_DEFAULTS: BillingAutomationPolicy = {
@@ -39,7 +29,6 @@ const AUTOMATION_DEFAULTS: BillingAutomationPolicy = {
 };
 const AUTOMATION_DAYS = Array.from({ length: 31 }, (_, index) => index + 1);
 type AutomationDayField = "invoiceDay" | "dueDay" | "remindDaysBeforeDue";
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
 
 type Props = {
   profile: UserProfile;
@@ -47,6 +36,7 @@ type Props = {
   onBack: () => void;
   onLogout: () => void;
   onPushTokenChange?: (token: string | null) => void;
+  onNavigate?: (tab: any) => void;
 };
 
 export default function AdminSettingsScreen({
@@ -55,13 +45,10 @@ export default function AdminSettingsScreen({
   onBack,
   onLogout,
   onPushTokenChange,
+  onNavigate,
 }: Props) {
-<<<<<<< HEAD
-  const { theme, isDark, toggleTheme } = useAppTheme();
-=======
   const { theme, resolvedTheme, toggleTheme } = useAppTheme();
   const isDark = resolvedTheme === "dark";
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
   const { t } = useTranslation();
   const { language, setLanguage } = useLanguage();
   const notification = useNotification();
@@ -77,20 +64,15 @@ export default function AdminSettingsScreen({
   const [pushEnabled, setPushPreference] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
   const [pushError, setPushError] = useState("");
-<<<<<<< HEAD
-=======
   const [automationPolicy, setAutomationPolicy] = useState(AUTOMATION_DEFAULTS);
   const [automationLoading, setAutomationLoading] = useState(true);
   const [automationSaving, setAutomationSaving] = useState(false);
   const [dayPicker, setDayPicker] = useState<{ field: AutomationDayField; title: string } | null>(null);
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
 
   useEffect(() => {
     void isPushEnabled(profile.id).then(setPushPreference);
   }, [profile.id]);
 
-<<<<<<< HEAD
-=======
   useEffect(() => {
     let active = true;
     void adminService.getBillingAutomationPolicy()
@@ -104,7 +86,6 @@ export default function AdminSettingsScreen({
     return () => { active = false; };
   }, [notification, t]);
 
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
   const handlePushChange = async (next: boolean) => {
     const previous = pushEnabled;
     setPushLoading(true);
@@ -158,8 +139,6 @@ export default function AdminSettingsScreen({
     notification.success(t("common.success"));
   };
 
-<<<<<<< HEAD
-=======
   const handleSaveAutomation = async () => {
     try {
       setAutomationSaving(true);
@@ -179,7 +158,10 @@ export default function AdminSettingsScreen({
     setDayPicker(null);
   };
 
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
+  const reminderDay = automationPolicy.invoiceDay === 1
+    ? t("settings.previousMonthEnd")
+    : automationPolicy.invoiceDay - 1;
+
   const inputStyle = [styles.input, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border }];
 
   return (
@@ -214,6 +196,21 @@ export default function AdminSettingsScreen({
             </View>
           </View>
         </AnimatedEntry>
+
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => onNavigate?.("services")}
+          style={[styles.bentoSection, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, flexDirection: "row", alignItems: "center", gap: 12 }]}
+        >
+          <View style={[styles.sectionIcon, { backgroundColor: theme.primarySoft }]}>
+            <Ionicons name="construct-outline" size={18} color={theme.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <AppText style={[styles.cardTitle, { color: theme.text }]}>{t("servicesMobile.title")}</AppText>
+            <AppText style={[styles.pushDescription, { color: theme.muted }]}>{t("servicesMobile.shortcutDescription")}</AppText>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={theme.muted} />
+        </Pressable>
 
         {/* Thông tin cá nhân */}
         <AnimatedEntry delay={100}>
@@ -252,10 +249,6 @@ export default function AdminSettingsScreen({
           </View>
         </AnimatedEntry>
 
-<<<<<<< HEAD
-        {/* Tùy chọn hệ thống */}
-        <AnimatedEntry delay={200}>
-=======
         {/* Tự động hóa hóa đơn */}
         <AnimatedEntry delay={200}>
           {automationLoading ? (
@@ -277,7 +270,7 @@ export default function AdminSettingsScreen({
                 </View>
                 <DaySettingField label={t("settings.invoiceDay")} value={automationPolicy.invoiceDay} disabled={!automationPolicy.autoInvoiceEnabled} theme={theme} onPress={() => setDayPicker({ field: "invoiceDay", title: t("settings.invoiceDay") })} />
                 <DaySettingField label={t("settings.dueDay")} value={automationPolicy.dueDay} disabled={!automationPolicy.autoInvoiceEnabled} theme={theme} onPress={() => setDayPicker({ field: "dueDay", title: t("settings.dueDay") })} />
-                <View style={[styles.note, { backgroundColor: theme.primarySoft }]}><Ionicons name="calendar-outline" size={18} color={theme.primary} /><AppText style={[styles.noteText, { color: theme.text }]}>{t("settings.invoiceScheduleHint", { invoiceDay: automationPolicy.invoiceDay, dueDay: automationPolicy.dueDay })}</AppText></View>
+                <View style={[styles.note, { backgroundColor: theme.primarySoft }]}><Ionicons name="calendar-outline" size={18} color={theme.primary} /><AppText style={[styles.noteText, { color: theme.text }]}>{t("settings.invoiceAutomationFlow", { reminderDay, invoiceDay: automationPolicy.invoiceDay })}</AppText></View>
               </View>
 
               <View style={[styles.bentoSection, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
@@ -300,7 +293,6 @@ export default function AdminSettingsScreen({
 
         {/* Tùy chọn hệ thống */}
         <AnimatedEntry delay={250}>
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
           <View style={[styles.bentoSection, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
             <View style={styles.sectionHeading}>
               <View style={[styles.sectionIcon, { backgroundColor: "rgba(245, 158, 11, 0.15)" }]}>
@@ -362,23 +354,16 @@ export default function AdminSettingsScreen({
                 />
               )}
             </View>
-<<<<<<< HEAD
-=======
             {pushError ? (
               <AppText accessibilityRole="alert" style={[styles.pushError, { color: theme.danger }]}>
                 {pushError}
               </AppText>
             ) : null}
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
           </View>
         </AnimatedEntry>
 
         {/* Nút lưu */}
-<<<<<<< HEAD
-        <AnimatedEntry delay={250}>
-=======
         <AnimatedEntry delay={300}>
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
           <AppButton icon="save-outline" onPress={handleSave}>
             {t("common.save")}
           </AppButton>
@@ -406,16 +391,11 @@ export default function AdminSettingsScreen({
       </ScrollView>
 
       <ChangePasswordModal visible={passwordVisible} onClose={() => setPasswordVisible(false)} />
-<<<<<<< HEAD
-=======
       <DayPickerModal visible={dayPicker !== null} title={dayPicker?.title || ""} closeLabel={t("common.close")} selected={dayPicker ? automationPolicy[dayPicker.field] : 1} theme={theme} onSelect={selectAutomationDay} onClose={() => setDayPicker(null)} />
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     </>
   );
 }
 
-<<<<<<< HEAD
-=======
 function DaySettingField({ label, value, disabled, theme, onPress }: any) {
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={`${label}: ${value}`} accessibilityState={{ disabled }} disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.dayField, { borderColor: theme.border, backgroundColor: theme.background }, disabled && styles.controlDisabled, pressed && !disabled && styles.controlPressed]}>
@@ -444,7 +424,6 @@ function DayPickerModal({ visible, title, closeLabel, selected, theme, onSelect,
   );
 }
 
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
 function Field({ label, value, setValue, placeholder, keyboardType, style, muted, autoCapitalize }: any) {
   return (
     <View style={styles.field}>
@@ -510,11 +489,6 @@ const styles = StyleSheet.create({
   pushCopy: { flex: 1 },
   pushTitle: { fontSize: 14, fontWeight: "800" },
   pushDescription: { fontSize: 11, fontWeight: "600", marginTop: 2 },
-<<<<<<< HEAD
-  langSegmented: { flexDirection: "row", borderWidth: 1, borderRadius: 12, padding: 3 },
-  langPill: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 9 },
-  langPillText: { fontSize: 11, fontWeight: "900" },
-=======
   pushError: { fontSize: 12, fontWeight: "700", marginTop: 6 },
   langSegmented: { flexDirection: "row", borderWidth: 1, borderRadius: 12, padding: 3 },
   langPill: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 9 },
@@ -535,5 +509,4 @@ const styles = StyleSheet.create({
   dayPickerList: { maxHeight: 430 },
   dayOption: { minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: StyleSheet.hairlineWidth, paddingHorizontal: 12 },
   dayOptionText: { fontSize: 15, fontWeight: "800" },
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
 });

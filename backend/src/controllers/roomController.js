@@ -177,15 +177,27 @@ exports.deleteRoom = async (req, res) => {
     }
 };
 
-// 6. Người thuê báo cáo số điện nước
+// 6. Chủ trọ lưu chỉ số điện nước từ AI scanner
 exports.reportUtility = async (req, res) => {
     try {
         const { draftElectricity, draftWater } = req.body;
-        
-        const updatedRoom = await Room.findByIdAndUpdate(
-            req.params.id,
-            { draftElectricity, draftWater },
-            { new: true }
+        const updateData = {};
+        for (const [field, value] of Object.entries({ draftElectricity, draftWater })) {
+            if (value === undefined || value === null || value === '') continue;
+            const number = Number(value);
+            if (!Number.isFinite(number) || number < 0) {
+                return res.status(400).json({ success: false, message: 'Chỉ số điện nước phải là số hữu hạn không âm.' });
+            }
+            updateData[field] = number;
+        }
+        if (!Object.keys(updateData).length) {
+            return res.status(400).json({ success: false, message: 'Vui lòng nhập ít nhất một chỉ số điện hoặc nước.' });
+        }
+
+        const updatedRoom = await Room.findOneAndUpdate(
+            { _id: req.params.id, landlordId: req.auth.id },
+            { $set: updateData },
+            { new: true, runValidators: true }
         );
 
         if (!updatedRoom) {
@@ -210,15 +222,30 @@ exports.reportBulkUtilities = async (req, res) => {
         }
 
         const Room = require('../models/Room');
-        const updatePromises = utilities.map(async (item) => {
-            if (!item.roomId) return;
+        const normalizedUtilities = [];
+        for (const item of utilities) {
+            if (!item.roomId) continue;
             const updateData = {};
-            if (item.draftElectricity !== undefined && item.draftElectricity !== "") updateData.draftElectricity = Number(item.draftElectricity);
-            if (item.draftWater !== undefined && item.draftWater !== "") updateData.draftWater = Number(item.draftWater);
-            
-            if (Object.keys(updateData).length > 0) {
-                await Room.findByIdAndUpdate(item.roomId, updateData);
+            for (const [field, value] of Object.entries({
+                draftElectricity: item.draftElectricity,
+                draftWater: item.draftWater,
+            })) {
+                if (value === undefined || value === null || value === '') continue;
+                const number = Number(value);
+                if (!Number.isFinite(number) || number < 0) {
+                    return res.status(400).json({ success: false, message: 'Chỉ số điện nước phải là số hữu hạn không âm.' });
+                }
+                updateData[field] = number;
             }
+            if (Object.keys(updateData).length > 0) normalizedUtilities.push({ roomId: item.roomId, updateData });
+        }
+
+        const updatePromises = normalizedUtilities.map(async ({ roomId, updateData }) => {
+            await Room.findOneAndUpdate(
+                { _id: roomId, landlordId: req.auth.id },
+                { $set: updateData },
+                { runValidators: true },
+            );
         });
 
         await Promise.all(updatePromises);

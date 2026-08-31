@@ -109,9 +109,12 @@
     "autoRemindDescription": "Notify residents before and on the payment due date.",
     "remindDaysBeforeDue": "Days to remind before due",
     "invoiceScheduleHint": "Issue on day {invoiceDay}; payment is due on day {dueDay} of the next month. Short months use their final day.",
+    "invoiceAutomationFlow": "The system will remind you to scan readings on {reminderDay} and automatically collect them to issue invoices at 07:00 on day {invoiceDay}.",
+    "previousMonthEnd": "the end of the previous month",
     "reminderScheduleHint": "Unpaid residents are reminded {days} days before and again on the due date.",
     "saveAutomation": "Save automation policy",
-    "automationSaved": "Automation policy saved."
+    "automationSaved": "Automation policy saved.",
+    "meterDraftSaved": "✓ Draft reading saved. The system will automatically issue the invoice on day {invoiceDay}."
   },
   "tenantTimeline": {
     "title": "My Key Milestones",
@@ -1104,6 +1107,41 @@
     "billingMeter": "By Meter (electric/water)",
     "defaultPrice": "Default Price",
     "defaultQuantity": "Default Quantity"
+  },
+  "servicesMobile": {
+    "title": "Add-on Services",
+    "subtitle": "Electricity, water and recurring contract charges",
+    "shortcutDescription": "Manage catalog and pricing",
+    "add": "Add service",
+    "edit": "Edit service",
+    "name": "Service name",
+    "code": "Service code",
+    "unit": "Unit",
+    "billingMode": "Billing mode",
+    "defaultPrice": "Default price",
+    "defaultQuantity": "Default quantity",
+    "activeDescription": "Allow this service on new contracts",
+    "required": "Enter a name, code and unit.",
+    "invalidPrice": "Price or quantity is invalid.",
+    "saved": "Service saved.",
+    "priceApplied": "Price updated.",
+    "deleteTitle": "Delete service?",
+    "deleteMessage": "{name} will be deleted, or archived if currently in use.",
+    "deleted": "Service deleted.",
+    "archived": "This service is in use, so it was archived.",
+    "empty": "No services yet",
+    "emptyDescription": "Create the first service to use it in contracts and invoices.",
+    "count": "{count} services",
+    "priceImpactTitle": "Price currently in use",
+    "priceImpactDescription": "{count} active contracts use this service.",
+    "filter": { "all": "All", "active": "Active", "inactive": "Inactive" },
+    "mode": { "fixed": "Fixed", "quantity": "Quantity", "meter": "Meter" },
+    "scope": {
+      "new": "New contracts only",
+      "newDescription": "Keep existing active contract prices unchanged.",
+      "active": "Update active contracts",
+      "activeDescription": "Apply the new price to every active contract using this service."
+    }
   },
   "account": {
     "profileAndSecurity": "Profile & Security",

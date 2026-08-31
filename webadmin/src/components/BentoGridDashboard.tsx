@@ -2,7 +2,7 @@
 
 import React from "react";
 import { formatCurrency } from "@/lib/formatters";
-import { ArrowUpRight, Camera, CircleDollarSign, FileSignature, ReceiptText, Sparkles, TrendingUp, WalletCards, Wrench } from "lucide-react";
+import { ArrowUpRight, Camera, FileSignature, ReceiptText, TrendingUp, WalletCards, Wrench } from "lucide-react";
 import Link from "next/link";
 
 type Props = {
@@ -17,7 +17,8 @@ export function BentoGridDashboard({ stats }: Props) {
   const totalRevenue = Number(stats?.totalRevenue ?? 0);
   const outstandingDebt = Number(stats?.outstandingDebt ?? 0);
   const pendingRepairs = Number(stats?.pendingRepairs ?? 0);
-  const pendingContracts = Number(stats?.pendingContracts ?? 0);
+  const revenueSeries = Array.isArray(stats?.revenueSeries) ? stats.revenueSeries : [];
+  const maxRevenue = Math.max(1, ...revenueSeries.map((item: any) => Number(item.value || 0)));
 
   return (
     <div className="space-y-6">
@@ -43,13 +44,11 @@ export function BentoGridDashboard({ stats }: Props) {
 
           {/* 3D Wave Bar Chart Animation */}
           <div className="mt-8 flex h-24 items-end justify-between gap-3 border-b border-border/40 pb-4">
-            {[40, 60, 45, 80, 65, 95, 75, 90, 70, 85, 100].map((val, idx) => (
-              <div key={idx} className="group flex flex-1 flex-col items-center gap-1">
+            {revenueSeries.map((item: any) => (
+              <div key={item.period} className="group flex flex-1 flex-col items-center gap-1">
                 <div
-                  className={`w-full rounded-t-md transition-all duration-300 ${
-                    idx === 10 ? "bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.5)]" : "bg-emerald-500/30 group-hover:bg-emerald-500/60"
-                  }`}
-                  style={{ height: `${val}%` }}
+                  className="w-full rounded-t-md bg-emerald-500/60 transition-all duration-300 group-hover:bg-emerald-500"
+                  style={{ height: `${Math.max(3, Number(item.value || 0) / maxRevenue * 100)}%` }}
                 />
               </div>
             ))}
@@ -57,7 +56,7 @@ export function BentoGridDashboard({ stats }: Props) {
 
           <div className="mt-4 flex items-center justify-between">
             <span className="inline-flex items-center gap-2 rounded-full bg-muted/60 px-3.5 py-1.5 text-xs font-bold text-muted-foreground">
-              <Sparkles className="size-3.5 text-emerald-400" /> AI Dự báo tháng tới: +15%
+              {stats?.utilityReading?.readyRooms || 0}/{stats?.utilityReading?.totalOccupiedRooms || 0} phòng đủ chỉ số
             </span>
             <Link href="/dashboard/payments" className="inline-flex items-center text-xs font-black text-primary hover:underline">
               Chi tiết giao dịch <ArrowUpRight className="ml-1 size-3.5" />

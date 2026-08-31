@@ -25,6 +25,7 @@ type Tab =
   | "ai_chat";
 =======
   | "ai_chat"
+  | "services"
   | "admin_settings"
   | "change_password";
 >>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e

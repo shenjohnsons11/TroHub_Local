@@ -418,6 +418,8 @@
     "autoRemindDescription": "Notify residents before and on the payment due date.",
     "remindDaysBeforeDue": "Days to remind before due",
     "invoiceScheduleHint": "Issue on day {invoiceDay}; payment is due on day {dueDay} of the next month. Short months use their final day.",
+    "invoiceAutomationFlow": "The system will remind you to scan readings on {reminderDay} and automatically collect them to issue invoices at 07:00 on day {invoiceDay}.",
+    "previousMonthEnd": "the end of the previous month",
     "reminderScheduleHint": "Unpaid residents are reminded {days} days before and again on the due date.",
     "saveAutomation": "Save automation policy",
 >>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e

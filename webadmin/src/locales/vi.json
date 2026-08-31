@@ -418,6 +418,8 @@
     "autoRemindDescription": "Gửi thông báo trước hạn và đúng ngày đến hạn.",
     "remindDaysBeforeDue": "Số ngày nhắc trước hạn",
     "invoiceScheduleHint": "Chốt ngày {invoiceDay}; hạn thanh toán ngày {dueDay} của tháng sau. Tháng ngắn sẽ dùng ngày cuối tháng.",
+    "invoiceAutomationFlow": "Hệ thống sẽ nhắc bạn quét số vào ngày {reminderDay} và tự động gom số để phát hành hóa đơn vào 07:00 ngày {invoiceDay}.",
+    "previousMonthEnd": "cuối tháng trước",
     "reminderScheduleHint": "Cư dân chưa thanh toán sẽ được nhắc trước {days} ngày và vào đúng ngày đến hạn.",
     "saveAutomation": "Lưu chính sách tự động",
 >>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e

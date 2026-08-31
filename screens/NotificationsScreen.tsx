@@ -81,7 +81,7 @@ export default function NotificationsScreen({ onBack, onNavigate, refreshKey = 0
 
   const handleItemPress = async (item: AppNotification) => {
     await handleMarkAsRead(item);
-    const target = resolveNotificationTarget(item, mode);
+    const target = resolveNotificationTarget(item);
     if (!target) return;
     onNavigate?.(target.tab, target.params);
   };

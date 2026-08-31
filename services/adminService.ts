@@ -147,16 +147,41 @@ export type AdminRepair = {
 export type AdminDashboardStats = {
   totalRooms: number;
   occupiedRooms: number;
-  vacantRooms?: number;
-  maintenanceRooms?: number;
+  vacantRooms: number;
+  maintenanceRooms: number;
   totalTenants: number;
   pendingRepairs: number;
-  pendingContracts?: number;
+  pendingContracts: number;
   totalRevenue: number;
-  outstandingDebt?: number;
-  utilityReadingProgress?: string;
-<<<<<<< HEAD
-=======
+  outstandingDebt: number;
+  overdueDebt: number;
+  revenueSeries: { period: string; label: string; value: number }[];
+  utilitySeries: { period: string; label: string; electricity: number; water: number }[];
+  revenueComposition: { rent: number; utilities: number; services: number };
+  paymentPerformance: { paid: number; unpaid: number; overdue: number; onTimeRate: number };
+  utilityReading: {
+    readyRooms: number;
+    missingRooms: number;
+    totalOccupiedRooms: number;
+    missingRoomCodes: string[];
+  };
+  utilityReadingProgress: string;
+  automation: BillingAutomationPolicy & { issueTime: string };
+  floorGroups: {
+    floor: number;
+    rooms: {
+      id: string;
+      roomCode: string;
+      floor: number;
+      status: number;
+      contractId: string;
+      tenantId: string;
+      tenantName: string;
+      hasActiveContract: boolean;
+      meterReady: boolean;
+      missingMeters: ("electricity" | "water")[];
+    }[];
+  }[];
 };
 
 export type BillingAutomationPolicy = {
@@ -165,7 +190,42 @@ export type BillingAutomationPolicy = {
   dueDay: number;
   autoRemindEnabled: boolean;
   remindDaysBeforeDue: number;
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
+};
+
+export type AdminServiceBillingMode = "FIXED" | "QUANTITY" | "METER";
+
+export type AdminServiceItem = {
+  _id: string;
+  name: string;
+  code: string;
+  type: 1 | 2;
+  billingMode: AdminServiceBillingMode;
+  unit: string;
+  defaultPrice: number;
+  defaultQuantity: number;
+  isActive: boolean;
+};
+
+export type AdminServiceInput = {
+  name: string;
+  code: string;
+  billingMode: AdminServiceBillingMode;
+  unit: string;
+  defaultPrice: number;
+  defaultQuantity?: number;
+  isActive: boolean;
+};
+
+export type AdminServicePriceImpact = {
+  serviceId: string;
+  currentPrice: number;
+  newPrice: number;
+  contracts: {
+    contractId: string;
+    roomCode: string;
+    currentPrice: number;
+    newPrice: number;
+  }[];
 };
 
 export const adminService = {
@@ -185,6 +245,58 @@ export const adminService = {
       policy,
       token,
     );
+    return response.data;
+  },
+
+  async getServices(isActive?: boolean): Promise<AdminServiceItem[]> {
+    const token = await authService.getToken();
+    const query = typeof isActive === "boolean" ? `?isActive=${isActive}` : "";
+    const response = await apiClient.get<{ success: boolean; data: AdminServiceItem[] }>(`/services${query}`, token);
+    return response.data || [];
+  },
+
+  async createService(input: AdminServiceInput): Promise<AdminServiceItem> {
+    const token = await authService.getToken();
+    const response = await apiClient.post<{ success: boolean; data: AdminServiceItem }>("/services", input, token);
+    return response.data;
+  },
+
+  async updateService(id: string, input: AdminServiceInput): Promise<AdminServiceItem> {
+    const token = await authService.getToken();
+    const response = await apiClient.put<{ success: boolean; data: AdminServiceItem }>(`/services/${id}`, input, token);
+    return response.data;
+  },
+
+  async previewServicePriceImpact(id: string, newPrice: number): Promise<AdminServicePriceImpact> {
+    const token = await authService.getToken();
+    const response = await apiClient.post<{ success: boolean; data: AdminServicePriceImpact }>(
+      `/services/${id}/price-impact`,
+      { newPrice },
+      token,
+    );
+    return response.data;
+  },
+
+  async applyServicePrice(id: string, input: {
+    newPrice: number;
+    scope: "NEW_CONTRACTS_ONLY" | "SELECTED_ACTIVE_CONTRACTS";
+    contractIds: string[];
+  }): Promise<{ contractsUpdated: number }> {
+    const token = await authService.getToken();
+    const response = await apiClient.put<{ success: boolean; data: { contractsUpdated: number } }>(
+      `/services/${id}/price`,
+      input,
+      token,
+    );
+    return response.data;
+  },
+
+  async deleteService(id: string): Promise<{ id: string; removalMode: "archived" | "deleted" }> {
+    const token = await authService.getToken();
+    const response = await apiClient.delete<{
+      success: boolean;
+      data: { id: string; removalMode: "archived" | "deleted" };
+    }>(`/services/${id}`, token);
     return response.data;
   },
 
@@ -373,37 +485,12 @@ export const adminService = {
     return response.success;
   },
 
-  async getDashboardStats(): Promise<AdminDashboardStats> {
-
-    try {
-      const response = await apiClient.get<{ success: boolean; data: AdminDashboardStats }>("/landlord/stats");
-      const data = response.data || (response as unknown as AdminDashboardStats);
-      return {
-        totalRooms: data.totalRooms || 0,
-        occupiedRooms: data.occupiedRooms || 0,
-        vacantRooms: data.vacantRooms || 0,
-        maintenanceRooms: data.maintenanceRooms || 0,
-        totalTenants: data.totalTenants || 0,
-        pendingRepairs: data.pendingRepairs || 0,
-        pendingContracts: data.pendingContracts || 0,
-        totalRevenue: data.totalRevenue || 0,
-        outstandingDebt: data.outstandingDebt || 0,
-        utilityReadingProgress: data.utilityReadingProgress || "0/0",
-      };
-    } catch (error) {
-      console.log("Lỗi tải thống kê admin:", error);
-      return {
-        totalRooms: 0,
-        occupiedRooms: 0,
-        vacantRooms: 0,
-        maintenanceRooms: 0,
-        totalTenants: 0,
-        pendingRepairs: 0,
-        pendingContracts: 0,
-        totalRevenue: 0,
-        outstandingDebt: 0,
-        utilityReadingProgress: "0/0",
-      };
-    }
+  async getDashboardStats(months = 6): Promise<AdminDashboardStats> {
+    const token = await authService.getToken();
+    const response = await apiClient.get<{ success: boolean; data: AdminDashboardStats }>(
+      `/dashboard/stats?months=${months}`,
+      token,
+    );
+    return response.data;
   }
 };

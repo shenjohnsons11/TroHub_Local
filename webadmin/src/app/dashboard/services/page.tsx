@@ -143,15 +143,15 @@ export default function ServicesPage() {
     try {
       setSubmitting(true);
       if (editingId) {
-        const response = await fetchAPI(`/services/${editingId}`, {
-          method: "PUT",
-          body: JSON.stringify(payload),
-        });
-        if (response.data?.priceImpact) {
-          setPriceImpact(response.data.priceImpact);
-          setSelectedContractIds(response.data.priceImpact.contracts.map((c: any) => c.contractId));
-          return;
+        if (editingService && payload.defaultPrice !== editingService.defaultPrice) {
+          const preview = await fetchAPI(`/services/${editingId}/price-impact`, { method: "POST", body: JSON.stringify({ newPrice: payload.defaultPrice }) });
+          if (preview.data?.contracts?.length) {
+            setPriceImpact(preview.data);
+            setSelectedContractIds(preview.data.contracts.map((contract: PriceImpact["contracts"][number]) => contract.contractId));
+            return;
+          }
         }
+        await fetchAPI(`/services/${editingId}`, { method: "PUT", body: JSON.stringify(payload) });
         notification.success(t("common.success"));
       } else {
         await fetchAPI("/services", { method: "POST", body: JSON.stringify(payload) });
@@ -170,8 +170,10 @@ export default function ServicesPage() {
     if (!priceImpact || !editingId) return;
     try {
       setSubmitting(true);
-      await fetchAPI(`/services/${editingId}/apply-price`, {
-        method: "POST",
+      const metadataPayload = { name: form.name.trim(), code: form.code.trim().toUpperCase(), billingMode: form.billingMode, unit: form.unit.trim(), defaultPrice: editingService?.defaultPrice ?? priceImpact.currentPrice, defaultQuantity: form.billingMode === "QUANTITY" ? Number(form.defaultQuantity || 1) : undefined, isActive: form.isActive };
+      await fetchAPI(`/services/${editingId}`, { method: "PUT", body: JSON.stringify(metadataPayload) });
+      await fetchAPI(`/services/${editingId}/price`, {
+        method: "PUT",
         body: JSON.stringify({
           newPrice: priceImpact.newPrice,
           scope: priceScope,

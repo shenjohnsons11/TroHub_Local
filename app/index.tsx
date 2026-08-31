@@ -22,6 +22,7 @@ import AdminTenantsScreen from "../screens/AdminTenantsScreen";
 import BulkInvoiceScreen from "../screens/BulkInvoiceScreen";
 import ChangePasswordScreen from "../screens/ChangePasswordScreen";
 import AdminSettingsScreen from "../screens/AdminSettingsScreen";
+import AdminServicesScreen from "../screens/AdminServicesScreen";
 import NotificationsScreen from "../screens/NotificationsScreen";
 import AdminNotificationsScreen from "../screens/AdminNotificationsScreen";
 import MeterScannerScreen from "../screens/MeterScannerScreen";
@@ -67,6 +68,7 @@ type Tab =
   | "ai_chat";
 =======
   | "ai_chat"
+  | "services"
   | "admin_settings";
 >>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
 
@@ -270,7 +272,12 @@ export default function App() {
                   onBack={() => setActiveTab("settings")}
                   onLogout={handleLogout}
                   onPushTokenChange={(token) => { pushTokenRef.current = token; }}
+                  onNavigate={handleChangeTab}
                 />
+              )}
+
+              {activeTab === "services" && (
+                <AdminServicesScreen onBack={() => setActiveTab("settings")} />
               )}
 
 

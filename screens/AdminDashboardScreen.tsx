@@ -16,6 +16,9 @@ import { useLanguage } from "../contexts/LanguageContext";
 import TroHubLogo from "../components/TroHubLogo";
 import VisualAnalyticsDashboard from "../components/VisualAnalyticsDashboard";
 import BentoGridDashboard from "../components/BentoGridDashboard";
+import StandardOperationsDashboard from "../components/StandardOperationsDashboard";
+import AutomationStatusCard from "../components/AutomationStatusCard";
+import QuickAutoBillingModal from "../components/QuickAutoBillingModal";
 
 type Props = { profile?: UserProfile; refreshKey?: number; onNavigate: (tab: any, params?: any) => void; onLogout: () => void };
 
@@ -27,19 +30,24 @@ export default function AdminDashboardScreen({ profile, refreshKey = 0, onNaviga
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [viewMode, setViewMode] = useState<"standard" | "analytics" | "bento">("bento");
+  const [months, setMonths] = useState<6 | 12>(6);
+  const [error, setError] = useState(false);
+  const [automationVisible, setAutomationVisible] = useState(false);
 
 
   const loadStats = async () => {
     try {
-      setStats(await adminService.getDashboardStats());
+      setError(false);
+      setStats(await adminService.getDashboardStats(months));
       const count = await notificationService.getUnreadCount();
       setUnreadCount(count);
     }
-    catch (error) { console.log("Lỗi tải thống kê:", error); }
+    catch (error) { console.log("Lỗi tải thống kê:", error); setError(true); }
     finally { setLoading(false); setRefreshing(false); }
   };
-  useEffect(() => { void loadStats(); }, [refreshKey]);
+  useEffect(() => { void loadStats(); }, [refreshKey, months]);
   if (loading) return <AppLoadingScreen />;
+  if (error || !stats) return <View style={[styles.errorState, { backgroundColor: theme.background }]}><Ionicons name="cloud-offline-outline" size={34} color={theme.primary} /><AppText style={[styles.errorTitle, { color: theme.text }]}>Không thể tải Dashboard</AppText><Pressable onPress={() => { setLoading(true); void loadStats(); }} style={[styles.retry, { backgroundColor: theme.primary }]}><AppText style={[styles.retryText, { color: theme.background }]}>Thử lại</AppText></Pressable></View>;
 
   const name = profile?.fullName || (profile as any)?.name || t("dashboard.greetingFallback");
   const hour = new Date().getHours();
@@ -154,39 +162,18 @@ export default function AdminDashboardScreen({ profile, refreshKey = 0, onNaviga
         </Pressable>
       </View>
 
+      <AutomationStatusCard policy={stats.automation} onConfigure={() => setAutomationVisible(true)} compact />
 
       {viewMode === "bento" ? (
         <BentoGridDashboard stats={stats} onNavigate={onNavigate} />
       ) : viewMode === "analytics" ? (
-        <VisualAnalyticsDashboard stats={stats} onNavigate={onNavigate} />
+        <VisualAnalyticsDashboard stats={stats} months={months} onMonthsChange={setMonths} onNavigate={onNavigate} />
       ) : (
-        <>
-          <AnimatedEntry>
-            <GradientHero icon="wallet-outline" label={t("dashboard.revenue")} value={formatCurrency(stats?.totalRevenue)} detail={`${occupiedRooms}/${totalRooms} ${t("dashboard.occupied").toLowerCase()} · ${occupancyRate}%`} />
-          </AnimatedEntry>
-
-          <View style={styles.kpiGrid}>
-            <Metric theme={theme} label={t("dashboard.debt")} value={formatCurrency(stats?.outstandingDebt)} detail={t("dashboard.today")} icon="wallet-outline" urgent danger onPress={() => onNavigate("invoice")} />
-            <Metric theme={theme} label={t("dashboard.contracts")} value={stats?.pendingContracts || 0} detail={t("dashboard.today")} icon="document-text-outline" urgent={Boolean(stats?.pendingContracts)} onPress={() => onNavigate("contract")} />
-            <Metric theme={theme} label={t("dashboard.vacant")} value={vacantRooms} detail={t("dashboard.rooms")} icon="home-outline" onPress={() => onNavigate("rooms")} />
-            <Metric theme={theme} label={t("dashboard.maintenance")} value={maintenanceRooms} detail={t("dashboard.rooms")} icon="construct-outline" urgent={Boolean(maintenanceRooms)} onPress={() => onNavigate("rooms")} />
-          </View>
-        </>
+        <StandardOperationsDashboard stats={stats} onNavigate={onNavigate} />
       )}
 
-
-      <AppText style={[styles.sectionTitle, { color: theme.text }]}>{t("dashboard.today")}</AppText>
-      <PriorityCard title={t("dashboard.repairs")} count={stats?.pendingRepairs || 0} description={t("dashboard.repairHint")} urgent={Boolean(stats?.pendingRepairs)} onPress={() => onNavigate("repair")} />
-
-      <AppText style={[styles.sectionTitle, { color: theme.text }]}>{t("dashboard.quickActions")}</AppText>
-      <View style={styles.quickRow}>{quickActions.map(([label, icon, onPress], index) => <AnimatedEntry key={label} delay={index * 45} style={styles.quickWrap}><Pressable accessibilityRole="button" onPress={onPress} style={[styles.quick, { backgroundColor: theme.surfaceElevated, shadowColor: theme.text }]}><View style={[styles.quickIcon, { backgroundColor: theme.primarySoft }]}><Ionicons name={icon} size={22} color={theme.primary} /></View><AppText style={[styles.quickText, { color: theme.text }]}>{label}</AppText></Pressable></AnimatedEntry>)}</View>
-
-      <AppText style={[styles.sectionTitle, { color: theme.text }]}>{t("dashboard.rooms")}</AppText>
-      <View style={styles.grid}>
-        <Metric theme={theme} label={t("dashboard.occupied")} value={occupiedRooms} detail={`${occupancyRate}%`} icon="home-outline" onPress={() => onNavigate("rooms")} />
-        <Metric theme={theme} label={t("dashboard.tenants")} value={stats?.totalTenants || 0} detail={t("dashboard.active")} icon="people-outline" onPress={() => onNavigate("tenants")} />
-        <Metric theme={theme} label={t("dashboard.repairs")} value={stats?.pendingRepairs || 0} detail={t("dashboard.today")} icon="construct-outline" urgent onPress={() => onNavigate("repair")} />
-      </View>
+      {viewMode === "bento" ? <><AppText style={[styles.sectionTitle, { color: theme.text }]}>{t("dashboard.today")}</AppText><PriorityCard title={t("dashboard.repairs")} count={stats.pendingRepairs} description={t("dashboard.repairHint")} urgent={Boolean(stats.pendingRepairs)} onPress={() => onNavigate("repair")} /><AppText style={[styles.sectionTitle, { color: theme.text }]}>{t("dashboard.quickActions")}</AppText><View style={styles.quickRow}>{quickActions.map(([label, icon, onPress], index) => <AnimatedEntry key={label} delay={index * 45} style={styles.quickWrap}><Pressable accessibilityRole="button" onPress={onPress} style={[styles.quick, { backgroundColor: theme.surfaceElevated, shadowColor: theme.text }]}><View style={[styles.quickIcon, { backgroundColor: theme.primarySoft }]}><Ionicons name={icon} size={22} color={theme.primary} /></View><AppText style={[styles.quickText, { color: theme.text }]}>{label}</AppText></Pressable></AnimatedEntry>)}</View></> : null}
+      <QuickAutoBillingModal visible={automationVisible} policy={stats.automation} onClose={() => setAutomationVisible(false)} onSaved={(automation) => setStats((current) => current ? { ...current, automation: { ...automation, issueTime: current.automation.issueTime } } : current)} />
     </ScrollView>
   );
 }
@@ -243,4 +230,5 @@ const styles = StyleSheet.create({
   metricValue: { marginTop: 16, fontSize: 22, lineHeight: 27, fontWeight: "900" },
   metricLabel: { marginTop: 3, fontSize: 12, fontWeight: "800" },
   metricDetail: { marginTop: 5, fontSize: 11, lineHeight: 16 },
+  errorState: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 }, errorTitle: { fontSize: 18, fontWeight: "900", marginTop: 12 }, retry: { borderRadius: 13, paddingHorizontal: 18, paddingVertical: 12, marginTop: 16 }, retryText: { fontSize: 12, fontWeight: "900" },
 });

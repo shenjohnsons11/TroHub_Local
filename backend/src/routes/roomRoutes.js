@@ -15,7 +15,7 @@ router.delete('/:id', requireAdmin, roomController.deleteRoom);
 // Cập nhật sổ điện nước hàng loạt
 router.post('/bulk-report-utility', requireAdmin, roomController.reportBulkUtilities);
 
-// Khách báo cáo điện nước
-router.post('/:id/report-utility', roomController.reportUtility);
+// Chủ trọ lưu chỉ số điện nước từ AI scanner
+router.post('/:id/report-utility', requireAdmin, roomController.reportUtility);
 
 module.exports = router;
