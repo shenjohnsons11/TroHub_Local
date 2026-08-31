@@ -10,16 +10,8 @@ function getGeminiVisionClient() {
 }
 
 const VISION_MODELS = [
-<<<<<<< HEAD
-    'gemini-2.5-flash',
-    'gemini-2.0-flash',
-    'gemini-2.5-pro',
-    'gemini-1.5-flash',
-    'gemini-1.5-flash-8b',
-=======
     'gemini-3.6-flash',
     'gemini-3.5-flash',
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     'gemini-flash-latest'
 ];
 

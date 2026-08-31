@@ -235,11 +235,7 @@ export const contractService = {
         throw new Error("Không tìm thấy token đăng nhập");
       }
 
-<<<<<<< HEAD
-      const response = await apiClient.put<ContractActionResponse>(
-=======
       const response = await apiClient.patch<ContractActionResponse>(
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
         `/contracts/${contractId}/sign`,
         { signature: signatureBase64 },
         token

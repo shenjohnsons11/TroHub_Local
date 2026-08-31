@@ -22,8 +22,6 @@ const { CalculationError } = require('../services/invoiceCalculator');
 const { sendNotification } = require('../services/notificationService');
 const { notifyLandlord } = require('../services/landlordNotificationService');
 const { sendContractToNguoiThue } = require('../services/contractNotificationService');
-<<<<<<< HEAD
-=======
 const { canViewContract, canDownloadDocx } = require('../services/contractDocumentPolicy');
 const {
     generateContractPdf,
@@ -62,7 +60,6 @@ async function ensurePdf(contract) {
     }
     return pdfFilePath;
 }
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
 
 function sendContractError(res, error, fallbackMessage) {
     if (error instanceof ContractTermsError) {
@@ -277,19 +274,8 @@ exports.createContract = async (req, res) => {
 // 3. Xem chi tiết hợp đồng (Cả Web và Mobile App đều dùng)
 exports.getContractById = async (req, res) => {
     try {
-<<<<<<< HEAD
-        const contract = await Contract.findById(req.params.id)
-            .populate('roomId')
-            .populate('tenantId', 'fullName phone idCard email')
-            .populate('services.serviceId', 'name unit type defaultPrice'); // Kéo chi tiết dịch vụ ra
-
-        if (!contract) {
-            return res.status(404).json({ success: false, message: "Không tìm thấy hợp đồng!" });
-        }
-=======
         const contract = await loadAuthorizedContract(req, res);
         if (!contract) return;
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
         res.status(200).json({ success: true, data: contract });
     } catch (error) {
         res.status(500).json({ success: false, message: "Lỗi Server: " + error.message });
@@ -349,58 +335,16 @@ exports.signContract = async (req, res) => {
 // 4.01 Tải file PDF Hợp đồng
 exports.downloadPdf = async (req, res) => {
     try {
-<<<<<<< HEAD
-        const path = require('path');
-        const fs = require('fs');
-        const { generateContractDocuments } = require('../services/contractGeneratorService');
-
-        const contract = await Contract.findById(req.params.id);
-        if (!contract) {
-            return res.status(404).json({ success: false, message: "Không tìm thấy hợp đồng!" });
-        }
-
-        const contractsDir = path.join(__dirname, '../../public/contracts');
-        const pdfFilePath = path.join(contractsDir, `hop-dong-${contract._id}.pdf`);
-
-        if (!fs.existsSync(pdfFilePath)) {
-            await generateContractDocuments(contract._id, contract.tenantSignature);
-        }
-
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="hop-dong-${contract._id}.pdf"`);
-=======
         const contract = await loadAuthorizedContract(req, res);
         if (!contract) return;
         const pdfFilePath = await ensurePdf(contract);
         res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': 'inline', 'Cache-Control': 'private, no-store' });
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
         return res.sendFile(pdfFilePath);
     } catch (error) {
         res.status(500).json({ success: false, message: "Lỗi tải file PDF: " + error.message });
     }
 };
 
-<<<<<<< HEAD
-// 4.02 Tải file Word DOCX Hợp đồng
-exports.downloadDocx = async (req, res) => {
-    try {
-        const path = require('path');
-        const fs = require('fs');
-        const { generateContractDocuments } = require('../services/contractGeneratorService');
-
-        const contract = await Contract.findById(req.params.id);
-        if (!contract) {
-            return res.status(404).json({ success: false, message: "Không tìm thấy hợp đồng!" });
-        }
-
-        const contractsDir = path.join(__dirname, '../../public/contracts');
-        const docxFilePath = path.join(contractsDir, `hop-dong-${contract._id}.docx`);
-
-        if (!fs.existsSync(docxFilePath)) {
-            await generateContractDocuments(contract._id, contract.tenantSignature);
-        }
-
-=======
 exports.viewPdf = exports.downloadPdf;
 
 exports.viewPdfHtml = async (req, res) => {
@@ -426,7 +370,6 @@ exports.downloadDocx = async (req, res) => {
         }
         const docxFilePath = contractFilePath(contract._id, 'docx');
         if (!fs.existsSync(docxFilePath)) await generateContractDocx(contract._id);
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
         res.setHeader('Content-Disposition', `attachment; filename="hop-dong-${contract._id}.docx"`);
         return res.sendFile(docxFilePath);
@@ -656,7 +599,3 @@ exports.deleteContract = async (req, res) => {
         return sendContractError(res, error, 'Lỗi khi xóa hợp đồng');
     }
 };
-<<<<<<< HEAD
-
-=======
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e

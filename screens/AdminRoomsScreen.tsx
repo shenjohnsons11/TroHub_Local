@@ -117,11 +117,7 @@ export default function AdminRoomsScreen({ params }: Props) {
               <AppText style={[styles.sectionTitle, { color: theme.text }]}>{t("mobile.rooms.listTitle")}</AppText>
               <AppText style={[styles.sectionSub, { color: theme.muted }]}>{t("mobile.rooms.listSubtitle")}</AppText>
             </View>
-<<<<<<< HEAD
-            <Pressable accessibilityRole="button" style={[styles.sectionBtn, { backgroundColor: theme.warningForeground }]} onPress={() => { setMeterReadings({}); setMeterModalVisible(true); }}>
-=======
             <Pressable accessibilityRole="button" style={[styles.sectionBtn, { backgroundColor: theme.warning }]} onPress={() => { setMeterReadings({}); setMeterModalVisible(true); }}>
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
               <Ionicons name="flash" size={16} color="#fff" />
               <AppText style={styles.sectionBtnText}>{t("mobile.rooms.recordMeter")}</AppText>
             </Pressable>

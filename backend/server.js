@@ -24,10 +24,7 @@ const utilityRoutes = require('./src/routes/utilityRoutes');
 const ocrRoutes = require('./src/routes/ocrRoutes');
 const paymentController = require('./src/controllers/paymentController');
 const { applyAllOverduePenalties } = require('./src/services/overdueInvoice');
-<<<<<<< HEAD
-=======
 const { startBillingScheduler } = require('./src/services/billingScheduler');
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
 
 const path = require('path');
 
@@ -36,13 +33,9 @@ const app = express();
 // 2. Middleware
 app.use(cors({ origin: '*', credentials: true }));
 app.use(express.json({ limit: '50mb' })); // Giúp API đọc được dữ liệu JSON gửi lên, tăng giới hạn lên 50mb
-<<<<<<< HEAD
-app.use('/public', express.static(path.join(__dirname, 'public')));
-=======
 app.use('/public/contracts', (_req, res) => res.status(404).json({ success: false, message: 'Tài liệu hợp đồng không được phát hành công khai.' }));
 app.use('/public', express.static(path.join(__dirname, 'public')));
 app.use('/api/contracts/assets/pdfjs', express.static(path.join(path.dirname(require.resolve('pdfjs-dist/package.json')), 'build')));
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
 
 
 app.use((req, res, next) => {
@@ -112,10 +105,7 @@ const { initSocket } = require('./src/services/socketService');
 
 const server = http.createServer(app);
 initSocket(server);
-<<<<<<< HEAD
-=======
 startBillingScheduler();
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
 
 // 6. Khởi động Server
 const PORT = process.env.PORT || 5000;

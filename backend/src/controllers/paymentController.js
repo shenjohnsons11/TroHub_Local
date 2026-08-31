@@ -440,14 +440,10 @@ exports.createVNPayUrl = async (req, res) => {
         }
 
         const tmnCode = process.env.VNPAY_TMN_CODE || 'TD3422D1';
-<<<<<<< HEAD
-        const secretKey = process.env.VNPAY_SECRET_KEY || 'SMKTJ11T9JQDIZQPCF7E8ZIJ6DXV969Z';
-=======
         const secretKey = process.env.VNPAY_SECRET_KEY;
         if (!secretKey) {
             return res.status(503).json({ success: false, message: "VNPay chưa được cấu hình" });
         }
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
         const vnpUrl = 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html';
         const returnUrl = process.env.VNPAY_RETURN_URL || 'https://yourdomain.com/vnpay_return';
 
@@ -524,14 +520,10 @@ exports.vnpayIpn = async (req, res) => {
 
         vnp_Params = sortObject(vnp_Params);
 
-<<<<<<< HEAD
-        const secretKey = process.env.VNPAY_SECRET_KEY || 'SMKTJ11T9JQDIZQPCF7E8ZIJ6DXV969Z';
-=======
         const secretKey = process.env.VNPAY_SECRET_KEY;
         if (!secretKey) {
             return res.status(503).json({ RspCode: '99', Message: 'VNPay chưa được cấu hình' });
         }
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
         let signData = querystring.stringify(vnp_Params, { encode: false });
         let hmac = crypto.createHmac("sha512", secretKey);
         let signed = hmac.update(Buffer.from(signData, 'utf-8')).digest("hex");

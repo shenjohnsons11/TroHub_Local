@@ -10,8 +10,6 @@ export interface DraftContract {
   fixedDeposit: string;
   initialElectricity: string;
   initialWater: string;
-<<<<<<< HEAD
-=======
   electricityPrice?: string;
   waterPrice?: string;
   services?: {
@@ -21,7 +19,6 @@ export interface DraftContract {
     internet: { enabled: boolean; price: string };
     management: { enabled: boolean; price: string };
   };
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
   step: number;
   lastSaved: string;
 }
@@ -39,25 +36,6 @@ export const draftContractService = {
     }
   },
 
-<<<<<<< HEAD
-  saveDraft: async (draft: Omit<DraftContract, "id" | "lastSaved"> & { id?: string }): Promise<void> => {
-    try {
-      const drafts = await draftContractService.getDrafts();
-      const now = new Date().toISOString();
-      if (draft.id) {
-        const index = drafts.findIndex((d) => d.id === draft.id);
-        if (index > -1) {
-          drafts[index] = { ...drafts[index], ...draft, lastSaved: now };
-        } else {
-          drafts.push({ ...draft, id: draft.id, lastSaved: now } as DraftContract);
-        }
-      } else {
-        drafts.push({ ...draft, id: Math.random().toString(36).substring(2, 9), lastSaved: now } as DraftContract);
-      }
-      await AsyncStorage.setItem(DRAFT_KEY, JSON.stringify(drafts));
-    } catch (e) {
-      console.error("Lỗi lưu nháp:", e);
-=======
   saveDraft: async (draft: Omit<DraftContract, "id" | "lastSaved"> & { id?: string }): Promise<string> => {
     try {
       const drafts = await draftContractService.getDrafts();
@@ -74,7 +52,6 @@ export const draftContractService = {
     } catch (e) {
       console.error("Lỗi lưu nháp:", e);
       return draft.id || "";
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     }
   },
 

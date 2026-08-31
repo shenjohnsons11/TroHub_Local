@@ -1,11 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-<<<<<<< HEAD
-import { Building2, CalendarDays, Check, ChevronLeft, ChevronRight, Gauge, PenLine, UserRound } from "lucide-react";
-=======
 import { Building2, CalendarDays, Check, ChevronLeft, ChevronRight, Gauge, PenLine, Save, UserRound } from "lucide-react";
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,10 +59,7 @@ export default function NewContractPage() {
   const [services, setServices] = useState<Option[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
-<<<<<<< HEAD
-=======
   const draftHydrated = useRef(false);
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
 
   const stepsList = [
     { id: 1, label: t("contracts.selectRoomAndTenant") },
@@ -95,10 +88,7 @@ export default function NewContractPage() {
       const savedDraft = safeJsonParse<Partial<ContractDraft> | null>(saved, null);
       if (savedDraft) {
         try {
-<<<<<<< HEAD
-=======
           setStep(savedDraft.step || 1);
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
           const defaults = defaultContractDates();
           setDraft({
             ...createContractDraft(),
@@ -127,14 +117,6 @@ export default function NewContractPage() {
         }
       }
     }
-<<<<<<< HEAD
-  }, [draftKey, notification, t]);
-
-  const update = (key: keyof ContractDraft, value: never) => {
-    setDraft((prev) => {
-      const updated = { ...prev, [key]: value };
-      localStorage.setItem(draftKey, JSON.stringify(updated));
-=======
     draftHydrated.current = true;
   }, [draftKey, notification, t]);
 
@@ -147,7 +129,6 @@ export default function NewContractPage() {
   const update = (key: keyof ContractDraft, value: never) => {
     setDraft((prev) => {
       const updated = { ...prev, [key]: value };
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
       return updated;
     });
     setErrors((prev) => ({ ...prev, [key]: "" }));
@@ -215,15 +196,12 @@ export default function NewContractPage() {
     }
   };
 
-<<<<<<< HEAD
-=======
   const saveDraftNow = () => {
     localStorage.setItem(draftKey, JSON.stringify({ ...draft, step }));
     notification.success(t("contracts.draftSavedSuccess"));
     router.push("/dashboard/contracts");
   };
 
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
   const selectedRoom = rooms.find((r) => (r._id || r.id) === draft.roomId);
   const selectedNguoiThue = nguoiThueList.find((t) => (t._id || t.id) === draft.tenantId);
 
@@ -449,12 +427,6 @@ export default function NewContractPage() {
             <ChevronRight className="size-4" />
           </Button>
         ) : (
-<<<<<<< HEAD
-          <Button disabled={submitting} onClick={() => void submit()}>
-            <PenLine className="size-4" />
-            {submitting ? t("common.saving") : t("contracts.signContract")}
-          </Button>
-=======
           <div className="flex gap-2">
             <Button type="button" variant="outline" onClick={saveDraftNow}>
               <Save className="size-4" /> {t("contracts.saveDraft")}
@@ -464,7 +436,6 @@ export default function NewContractPage() {
               {submitting ? t("common.saving") : t("contracts.signContract")}
             </Button>
           </div>
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
         )}
       </footer>
     </div>

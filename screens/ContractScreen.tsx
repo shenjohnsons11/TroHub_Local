@@ -15,16 +15,9 @@ import GradientHero from "../components/ui/GradientHero";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
 import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
 import { ContentSkeleton } from "../components/ui/content-skeleton";
-<<<<<<< HEAD
-import * as Linking from "expo-linking";
-import { API_BASE_URL } from "../constants/api";
-import { useTranslation } from "../contexts/LanguageContext";
-import { formatCurrency, formatMeterReading, unformatNumber } from "../utils/formatters";
-=======
 import { useTranslation } from "../contexts/LanguageContext";
 import { formatCurrency, formatMeterReading, unformatNumber } from "../utils/formatters";
 import ContractViewerModal from "../components/ContractViewerModal";
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
 
 
 
@@ -41,11 +34,7 @@ const getStatusLabel = (status: ContractStatus, t: (key: string) => string): str
 
 const getStatusColor = (status: ContractStatus, theme: ReturnType<typeof useAppTheme>["theme"]): string => {
   switch (status) {
-<<<<<<< HEAD
-    case "pending": return theme.warningForeground;
-=======
     case "pending": return "#dc2626";
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     case "active": return theme.positive;
     case "expired": return theme.muted;
     case "cancelled": return theme.danger;
@@ -56,11 +45,7 @@ const getStatusColor = (status: ContractStatus, theme: ReturnType<typeof useAppT
 
 const getStatusBg = (status: ContractStatus, theme: ReturnType<typeof useAppTheme>["theme"]): string => {
   switch (status) {
-<<<<<<< HEAD
-    case "pending": return theme.warningSoft;
-=======
     case "pending": return "#fef2f2";
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     case "active": return theme.positiveSoft;
     case "expired": return theme.surfaceElevated;
     case "cancelled": return theme.warningSoft;
@@ -91,10 +76,7 @@ export default function ContractScreen({ onNavigate, params }: Props) {
   // Thêm state cho Wizard
   const [wizardVisible, setWizardVisible] = useState(false);
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
-<<<<<<< HEAD
-=======
   const [viewerContractId, setViewerContractId] = useState<string | null>(null);
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
 
   useEffect(() => {
     loadContracts();
@@ -261,10 +243,6 @@ export default function ContractScreen({ onNavigate, params }: Props) {
                 <AppText style={styles.tenantText}>{contract.tenantName}</AppText>
               </View>
 
-<<<<<<< HEAD
-              <View style={[styles.statusBadge, { backgroundColor: getStatusBg(contract.status, theme) }]}>
-                <AppText style={[styles.statusText, { color: getStatusColor(contract.status, theme) }]}>
-=======
               <View
                 style={[
                   styles.statusBadge,
@@ -279,7 +257,6 @@ export default function ContractScreen({ onNavigate, params }: Props) {
                     { color: getStatusColor(contract.status, theme) },
                   ]}
                 >
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
                   {getStatusLabel(contract.status, t)}
                 </AppText>
               </View>
@@ -450,32 +427,6 @@ export default function ContractScreen({ onNavigate, params }: Props) {
               </View>
             )}
 
-<<<<<<< HEAD
-            {/* Thanh tải tài liệu Hợp đồng PDF & DOCX */}
-            <View style={styles.downloadRow}>
-              <Pressable
-                accessibilityRole="button"
-                style={[styles.downloadBtn, { backgroundColor: "rgba(225, 29, 72, 0.1)", borderColor: "rgba(225, 29, 72, 0.3)" }]}
-                onPress={() => {
-                  const url = `${API_BASE_URL}/contracts/${contract.id}/download-pdf`;
-                  Linking.openURL(url);
-                }}
-              >
-                <Ionicons name="document-text" size={15} color="#E11D48" />
-                <AppText style={[styles.downloadBtnText, { color: "#E11D48" }]}>Tải PDF</AppText>
-              </Pressable>
-
-              <Pressable
-                accessibilityRole="button"
-                style={[styles.downloadBtn, { backgroundColor: "rgba(37, 99, 235, 0.1)", borderColor: "rgba(37, 99, 235, 0.3)" }]}
-                onPress={() => {
-                  const url = `${API_BASE_URL}/contracts/${contract.id}/download-docx`;
-                  Linking.openURL(url);
-                }}
-              >
-                <Ionicons name="document" size={15} color="#2563EB" />
-                <AppText style={[styles.downloadBtnText, { color: "#2563EB" }]}>Tải Word (.docx)</AppText>
-=======
             {/* Xem PDF trực tiếp; không phát hành file Word */}
             <View style={styles.downloadRow}>
               <Pressable
@@ -486,7 +437,6 @@ export default function ContractScreen({ onNavigate, params }: Props) {
               >
                 <Ionicons name="eye-outline" size={17} color={theme.primary} />
                 <AppText style={[styles.downloadBtnText, { color: theme.primary }]}>Xem Hợp đồng điện tử</AppText>
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
               </Pressable>
             </View>
           </Card>
@@ -507,14 +457,11 @@ export default function ContractScreen({ onNavigate, params }: Props) {
         onClose={() => setPaymentInvoice(null)}
         onConfirm={handleDepositPaymentConfirmed}
       />
-<<<<<<< HEAD
-=======
       <ContractViewerModal
         visible={Boolean(viewerContractId)}
         contractId={viewerContractId}
         onClose={() => setViewerContractId(null)}
       />
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     </>
   );
 }
@@ -592,15 +539,12 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSh
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
-<<<<<<< HEAD
-=======
   },
   pendingBadge: {
     backgroundColor: "#fef2f2",
     borderColor: "#fca5a5",
     borderWidth: 1,
     paddingVertical: 4,
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
   },
   statusText: {
     fontSize: 11,
@@ -794,7 +738,3 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSh
     fontWeight: "800",
   },
 });
-<<<<<<< HEAD
-
-=======
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e

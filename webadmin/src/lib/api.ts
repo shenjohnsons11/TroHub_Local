@@ -55,8 +55,6 @@ export const fetchAPI = async (endpoint: string, options: RequestInit = {}) => {
   }
   return data;
 };
-<<<<<<< HEAD
-=======
 
 export const fetchBlob = async (endpoint: string): Promise<Blob> => {
   const token = typeof window !== "undefined"
@@ -75,4 +73,3 @@ export const fetchBlob = async (endpoint: string): Promise<Blob> => {
   }
   return response.blob();
 };
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e

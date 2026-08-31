@@ -14,14 +14,11 @@ const billingPolicySchema = new mongoose.Schema({
     remindBeforeDueDays: { type: [Number], default: [3] },
     remindOnDueDate: { type: Boolean, default: true },
     remindAfterOverdueDays: { type: [Number], default: [1] },
-<<<<<<< HEAD
-=======
     autoInvoiceEnabled: { type: Boolean, default: true },
     invoiceDay: { type: Number, min: 1, max: 31, default: 25 },
     dueDay: { type: Number, min: 1, max: 31, default: 5 },
     autoRemindEnabled: { type: Boolean, default: true },
     remindDaysBeforeDue: { type: Number, min: 1, max: 31, default: 2 },
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
 }, { timestamps: true });
 
 module.exports = mongoose.model('BillingPolicy', billingPolicySchema);

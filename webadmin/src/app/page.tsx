@@ -70,11 +70,7 @@ export default function LoginPage() {
         throw new Error("Phản hồi đăng nhập không hợp lệ. Vui lòng thử lại.");
       }
       if (session.user.role !== 1) {
-<<<<<<< HEAD
-        const message = t("tenantMobileOnly");
-=======
         const message = t("auth.tenantMobileOnly");
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
         setError(message);
         notification.info(message);
         return;
@@ -82,26 +78,15 @@ export default function LoginPage() {
 
       localStorage.setItem("trohub_token", session.token);
       localStorage.setItem("trohub_user", JSON.stringify(session.user));
-<<<<<<< HEAD
-      notification.success(t("loginSuccess"));
-=======
       notification.success(t("auth.loginSuccess"));
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
       router.replace("/dashboard");
     } catch (caughtError: unknown) {
       const message = getNotificationMessage(
         caughtError,
-<<<<<<< HEAD
-        t("loginFailed"),
-      );
-      setError(message);
-      notification.error(message, { title: t("loginFailed") });
-=======
         t("auth.loginFailed"),
       );
       setError(message);
       notification.error(message, { title: t("auth.loginFailed") });
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     } finally {
       setLoading(false);
     }
@@ -115,15 +100,6 @@ export default function LoginPage() {
     try {
       const phoneClean = unformatDigits(identifier);
       const idCardClean = unformatDigits(idCard);
-<<<<<<< HEAD
-      if (!fullName.trim()) throw new Error(t("requiredFullName"));
-      if (phoneClean.length !== 10) throw new Error(t("invalidPhone"));
-      if (!/^\S+@\S+\.\S+$/.test(email.trim())) throw new Error(t("invalidEmail"));
-      if (idCardClean.length !== 12) throw new Error("CCCD phải gồm đúng 12 chữ số.");
-      if (password.length < 6) throw new Error(t("invalidPassword"));
-      if (!propertyAddress.trim()) throw new Error(t("propertyAddress"));
-      if (!inviteCode.trim()) throw new Error(t("invalidInvite"));
-=======
       if (!fullName.trim()) throw new Error(t("auth.requiredFullName"));
       if (phoneClean.length !== 10) throw new Error(t("auth.invalidPhone"));
       if (!/^\S+@\S+\.\S+$/.test(email.trim())) throw new Error(t("auth.invalidEmail"));
@@ -131,7 +107,6 @@ export default function LoginPage() {
       if (password.length < 6) throw new Error(t("auth.invalidPassword"));
       if (!propertyAddress.trim()) throw new Error(t("auth.propertyAddress"));
       if (!inviteCode.trim()) throw new Error(t("auth.invalidInvite"));
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
 
       await fetchAPI("/auth/register", {
         method: "POST",
@@ -148,21 +123,13 @@ export default function LoginPage() {
           propertyLongitude,
         }),
       });
-<<<<<<< HEAD
-      notification.success(t("registerSuccess"));
-=======
       notification.success(t("auth.registerSuccess"));
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
       setMode("login");
       setIdentifier(phoneClean);
       setPassword("");
       setInviteCode("");
     } catch (err) {
-<<<<<<< HEAD
-      setError(err instanceof Error ? err.message : t("registerFailed"));
-=======
       setError(err instanceof Error ? err.message : t("auth.registerFailed"));
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     } finally {
       setLoading(false);
     }
@@ -170,11 +137,7 @@ export default function LoginPage() {
 
   const handleLocate = () => {
     if (!navigator.geolocation) {
-<<<<<<< HEAD
-      setError(t("locationUnavailable"));
-=======
       setError(t("auth.locationUnavailable"));
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
       return;
     }
     setIsLocating(true);
@@ -188,11 +151,7 @@ export default function LoginPage() {
         setPropertyLongitude(longitude);
         setPropertyAddress(response.data.address);
       } catch (error) {
-<<<<<<< HEAD
-        const message = getNotificationMessage(error, t("locationUnavailable"));
-=======
         const message = getNotificationMessage(error, t("auth.locationUnavailable"));
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
         setError(message);
         notification.error(message);
       } finally {
@@ -200,11 +159,7 @@ export default function LoginPage() {
       }
     }, () => {
       setIsLocating(false);
-<<<<<<< HEAD
-      setError(t("locationUnavailable"));
-=======
       setError(t("auth.locationUnavailable"));
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     }, { enableHighAccuracy: true, timeout: 10000 });
   };
 

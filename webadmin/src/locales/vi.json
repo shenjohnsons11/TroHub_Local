@@ -41,12 +41,8 @@
     "note": "Ghi chú",
     "unspecified": "Chưa xác định",
     "active": "Đang hoạt động",
-<<<<<<< HEAD
-    "inactive": "Ngừng hoạt động"
-=======
     "inactive": "Ngừng hoạt động",
     "new": "Mới"
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
   },
   "statusMap": {
     "invoice": {
@@ -141,9 +137,6 @@
     "getLocation": "Lấy vị trí GPS hiện tại",
     "propertyAddressHint": "Địa chỉ được dùng để xác định nhà trọ của bạn.",
     "propertyLocationAttribution": "Bạn có thể chỉnh sửa địa chỉ sau khi GPS hoàn tất.",
-<<<<<<< HEAD
-    "backToLogin": "Quay lại đăng nhập"
-=======
     "backToLogin": "Quay lại đăng nhập",
     "enterPhone": "Vui lòng nhập số điện thoại.",
     "passwordMinLength": "Mật khẩu phải có ít nhất 6 ký tự.",
@@ -158,7 +151,6 @@
     "registerSuccess": "Đăng ký thành công. Bạn có thể đăng nhập.",
     "registerFailed": "Không thể đăng ký. Vui lòng thử lại.",
     "locationUnavailable": "Không thể lấy vị trí hiện tại. Vui lòng nhập địa chỉ thủ công."
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
   },
   "nav": {
     "overview": "Tổng quan",
@@ -292,9 +284,6 @@
     "createdSuccess": "Tạo hợp đồng thành công!",
     "approvedSuccess": "Duyệt hợp đồng thành công!",
     "checkoutSuccess": "Duyệt trả phòng và quyết toán thành công!",
-<<<<<<< HEAD
-    "deleteConfirm": "Bạn có chắc muốn xóa hợp đồng này?"
-=======
     "deleteConfirm": "Bạn có chắc muốn xóa hợp đồng này?",
     "activeContracts": "Hợp đồng đang hoạt động",
     "newContract": "Hợp đồng mới",
@@ -312,7 +301,6 @@
     "resumeDraft": "Tiếp tục tạo",
     "deleteDraft": "Xóa nháp",
     "draftSavedSuccess": "Đã lưu bản nháp hợp đồng thành công!"
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
   },
   "invoices": {
     "title": "Quản lý Hóa đơn",
@@ -408,8 +396,6 @@
   "settings": {
     "title": "Cài đặt Hệ thống",
     "subtitle": "Thiết lập tài khoản ngân hàng VietQR, chính sách phạt và thông tin chủ trọ",
-<<<<<<< HEAD
-=======
     "autoInvoice": "Tự động phát hành hóa đơn",
     "autoInvoiceDescription": "Chốt tiền phòng, điện nước và dịch vụ theo lịch hàng tháng.",
     "invoiceDay": "Ngày chốt hóa đơn trong tháng",
@@ -422,7 +408,6 @@
     "previousMonthEnd": "cuối tháng trước",
     "reminderScheduleHint": "Cư dân chưa thanh toán sẽ được nhắc trước {days} ngày và vào đúng ngày đến hạn.",
     "saveAutomation": "Lưu chính sách tự động",
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     "banking": {
       "title": "Tài khoản Ngân hàng & VietQR",
       "subtitle": "Cấu hình tài khoản nhận tiền thanh toán tự động qua mã QR",
@@ -433,19 +418,12 @@
       "saved": "Lưu cấu hình ngân hàng thành công!"
     },
     "billing": {
-<<<<<<< HEAD
-      "title": "Chính sách Hóa đơn & Phạt quá hạn",
-      "subtitle": "Tự động áp dụng phí phạt khi khách đóng tiền trễ hạn",
-      "graceDays": "Số ngày ân hạn (trước khi tính phạt)",
-      "penaltyRate": "Tỷ lệ phạt quá hạn (%)",
-=======
       "title": "Chính sách Hóa đơn & Tự động hóa",
       "subtitle": "Lập lịch phát hành, nhắc thanh toán và xử lý hóa đơn quá hạn",
       "graceDays": "Số ngày ân hạn (trước khi tính phạt)",
       "penaltyRate": "Tỷ lệ phạt quá hạn (%)",
       "penaltyDescription": "Thiết lập thời gian ân hạn và mức phạt cho hóa đơn quá hạn.",
       "penaltyPreview": "Với hóa đơn 3.000.000đ: cộng {amount} sau {days} ngày ân hạn.",
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
       "saved": "Cập nhật chính sách thành công!"
     },
     "account": {

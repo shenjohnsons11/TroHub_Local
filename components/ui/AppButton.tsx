@@ -5,18 +5,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "../../contexts/ThemeContext";
 
 type IconName = React.ComponentProps<typeof Ionicons>["name"];
-<<<<<<< HEAD
-type Variant = "primary" | "secondary" | "ghost" | "danger";
-
-type Props = Omit<PressableProps, "children"> & {
-  children: string;
-=======
 type Variant = "primary" | "secondary" | "outline" | "ghost" | "danger";
 
 type Props = Omit<PressableProps, "children"> & {
   children?: React.ReactNode;
   title?: string;
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
   variant?: Variant;
   icon?: IconName;
   iconPosition?: "left" | "right";
@@ -25,10 +18,7 @@ type Props = Omit<PressableProps, "children"> & {
 
 export default function AppButton({
   children,
-<<<<<<< HEAD
-=======
   title,
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
   variant = "primary",
   icon,
   iconPosition = "left",
@@ -40,14 +30,6 @@ export default function AppButton({
 }: Props) {
   const { theme } = useAppTheme();
   const blocked = disabled || loading;
-<<<<<<< HEAD
-  const palette = {
-    primary: { background: theme.primary, foreground: theme.background, border: theme.primary },
-    secondary: { background: theme.surfaceElevated, foreground: theme.primary, border: theme.border },
-    ghost: { background: "transparent", foreground: theme.primary, border: "transparent" },
-    danger: { background: theme.danger, foreground: theme.dangerForeground, border: theme.danger },
-  }[variant];
-=======
   const palettes: Record<Variant, { background: string; foreground: string; border: string }> = {
     primary: { background: theme.primary, foreground: theme.background, border: theme.primary },
     secondary: { background: theme.surfaceElevated, foreground: theme.primary, border: theme.border },
@@ -57,7 +39,6 @@ export default function AppButton({
   };
   const palette = palettes[variant] || palettes.primary;
   const labelText = children || title || "";
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
   const glyph = icon ? <Ionicons name={icon} size={19} color={palette.foreground} /> : null;
 
   return (
@@ -87,11 +68,7 @@ export default function AppButton({
       ) : (
         <View style={styles.content}>
           {iconPosition === "left" ? glyph : null}
-<<<<<<< HEAD
-          <AppText style={[styles.label, { color: palette.foreground }]}>{children}</AppText>
-=======
           <AppText style={[styles.label, { color: palette.foreground }]}>{labelText}</AppText>
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
           {iconPosition === "right" ? glyph : null}
         </View>
       )}

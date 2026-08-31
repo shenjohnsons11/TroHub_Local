@@ -41,12 +41,8 @@
     "note": "Note",
     "unspecified": "Unspecified",
     "active": "Active",
-<<<<<<< HEAD
-    "inactive": "Inactive"
-=======
     "inactive": "Inactive",
     "new": "New"
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
   },
   "statusMap": {
     "invoice": {
@@ -141,9 +137,6 @@
     "getLocation": "Use current GPS location",
     "propertyAddressHint": "This address identifies your rental property.",
     "propertyLocationAttribution": "You can edit the address after GPS lookup completes.",
-<<<<<<< HEAD
-    "backToLogin": "Back to sign in"
-=======
     "backToLogin": "Back to sign in",
     "enterPhone": "Enter your phone number.",
     "passwordMinLength": "Password must be at least 6 characters.",
@@ -158,7 +151,6 @@
     "registerSuccess": "Registration successful. You can now sign in.",
     "registerFailed": "Registration failed. Please try again.",
     "locationUnavailable": "Your current location is unavailable. Enter the address manually."
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
   },
   "nav": {
     "overview": "Overview",
@@ -292,9 +284,6 @@
     "createdSuccess": "Contract created successfully!",
     "approvedSuccess": "Contract approved successfully!",
     "checkoutSuccess": "Checkout and settlement completed successfully!",
-<<<<<<< HEAD
-    "deleteConfirm": "Are you sure you want to delete this contract?"
-=======
     "deleteConfirm": "Are you sure you want to delete this contract?",
     "activeContracts": "Active Contracts",
     "newContract": "New Contract",
@@ -312,7 +301,6 @@
     "resumeDraft": "Resume draft",
     "deleteDraft": "Delete draft",
     "draftSavedSuccess": "Contract draft saved successfully!"
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
   },
   "invoices": {
     "title": "Invoice Management",
@@ -408,8 +396,6 @@
   "settings": {
     "title": "System Settings",
     "subtitle": "Configure VietQR banking, late fee policies, and landlord profile",
-<<<<<<< HEAD
-=======
     "autoInvoice": "Automatic invoice issuance",
     "autoInvoiceDescription": "Close rent, utilities, and services on a monthly schedule.",
     "invoiceDay": "Monthly invoice day",
@@ -422,7 +408,6 @@
     "previousMonthEnd": "the end of the previous month",
     "reminderScheduleHint": "Unpaid residents are reminded {days} days before and again on the due date.",
     "saveAutomation": "Save automation policy",
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     "banking": {
       "title": "Banking & VietQR Gateway",
       "subtitle": "Configure bank account for automatic QR code payments",
@@ -433,19 +418,12 @@
       "saved": "Bank settings saved successfully!"
     },
     "billing": {
-<<<<<<< HEAD
-      "title": "Billing & Overdue Penalty Policy",
-      "subtitle": "Automatically apply late fee penalty when tenants pay past the due date",
-      "graceDays": "Grace Period Days (before penalty)",
-      "penaltyRate": "Late Fee Rate (%)",
-=======
       "title": "Billing & Automation Policy",
       "subtitle": "Schedule invoice issuance, payment reminders, and overdue handling",
       "graceDays": "Grace Period Days (before penalty)",
       "penaltyRate": "Late Fee Rate (%)",
       "penaltyDescription": "Configure the grace period and penalty applied to overdue invoices.",
       "penaltyPreview": "For a 3,000,000 VND invoice: add {amount} after {days} grace days.",
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
       "saved": "Billing policy updated successfully!"
     },
     "account": {

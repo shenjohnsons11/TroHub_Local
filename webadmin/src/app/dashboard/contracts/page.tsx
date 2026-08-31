@@ -3,20 +3,12 @@
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-<<<<<<< HEAD
-import { fetchAPI } from "@/lib/api";
-=======
 import { fetchAPI, fetchBlob } from "@/lib/api";
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-<<<<<<< HEAD
-import { CheckCircle2, Edit, FileDown, FileSignature, FileText, Plus, Search, Send, Trash2 } from "lucide-react";
-=======
 import { CheckCircle2, Edit, Eye, FileSignature, Plus, Search, Send, Trash2 } from "lucide-react";
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -60,13 +52,10 @@ export default function ContractsPage() {
   const [checkoutSubmitting, setCheckoutSubmitting] = useState(false);
   const [checkoutPreviewLoading, setCheckoutPreviewLoading] = useState(false);
   const [checkoutPreview, setCheckoutPreview] = useState<CheckoutPreview | null>(null);
-<<<<<<< HEAD
-=======
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerUrl, setViewerUrl] = useState<string | null>(null);
   const [viewerLoading, setViewerLoading] = useState(false);
   const [viewerError, setViewerError] = useState<string | null>(null);
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
   
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editContractId, setEditContractId] = useState("");
@@ -115,16 +104,12 @@ export default function ContractsPage() {
     loadData();
     try {
       const drafts = safeJsonParse<unknown>(localStorage.getItem("@trohub_draft_contracts"), []);
-<<<<<<< HEAD
-      setDraftContracts(Array.isArray(drafts) ? drafts : []);
-=======
       const user = safeJsonParse<{ id?: string; _id?: string }>(localStorage.getItem("trohub_user"), {});
       const adminId = user.id || user._id;
       const localDraft = adminId
         ? safeJsonParse<Record<string, unknown> | null>(localStorage.getItem(`trohub:contract-draft:${adminId}`), null)
         : null;
       setDraftContracts(localDraft ? [{ ...localDraft, id: "local" }] : (Array.isArray(drafts) ? drafts : []));
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
     } catch (e) {
       console.error("Failed to load drafts", e);
     }
@@ -134,12 +119,9 @@ export default function ContractsPage() {
     const newDrafts = draftContracts.filter(d => d.id !== id);
     setDraftContracts(newDrafts);
     localStorage.setItem("@trohub_draft_contracts", JSON.stringify(newDrafts));
-<<<<<<< HEAD
-=======
     const user = safeJsonParse<{ id?: string; _id?: string }>(localStorage.getItem("trohub_user"), {});
     const adminId = user.id || user._id;
     if (id === "local" && adminId) localStorage.removeItem(`trohub:contract-draft:${adminId}`);
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
   };
 
   const openCheckoutModal = async (id: string) => {
@@ -164,8 +146,6 @@ export default function ContractsPage() {
     }
   };
 
-<<<<<<< HEAD
-=======
   const closeViewer = () => {
     setViewerOpen(false);
     setViewerUrl((current) => {
@@ -191,7 +171,6 @@ export default function ContractsPage() {
     }
   };
 
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
     const electricity = parseMeterReading(finalElectricity);
@@ -372,11 +351,7 @@ export default function ContractsPage() {
             { id: "pending", label: t("statusMap.contract.pendingTenant") },
             { id: "active", label: t("contracts.status.active") },
             { id: "checkout", label: t("contracts.checkout") },
-<<<<<<< HEAD
-            { id: "draft", label: t("statusMap.contract.draft") },
-=======
             { id: "draft", label: t("contracts.draft") },
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
           ].map(tab => (
             <Button 
               key={tab.id}
@@ -562,8 +537,6 @@ export default function ContractsPage() {
           </DialogContent>
         </Dialog>
 
-<<<<<<< HEAD
-=======
         <Dialog open={viewerOpen} onOpenChange={(open) => open ? setViewerOpen(true) : closeViewer()}>
           <DialogContent className="w-[min(96vw,1100px)] max-w-none h-[90vh] flex flex-col">
             <DialogHeader>
@@ -581,7 +554,6 @@ export default function ContractsPage() {
           </DialogContent>
         </Dialog>
 
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
         <Dialog open={checkoutModalOpen} onOpenChange={setCheckoutModalOpen}>
           <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[425px]">
             <DialogHeader>
@@ -646,29 +618,17 @@ export default function ContractsPage() {
               <div key={draft.id || i} className="calm-surface p-4 rounded-[20px] border border-border shadow-[var(--calm-shadow)] flex flex-col gap-3">
                 <div className="flex justify-between items-start">
                   <div>
-<<<<<<< HEAD
-                    <h3 className="font-bold text-foreground">{t("statusMap.contract.draft")} #{draft.id || i+1}</h3>
-                    <p className="text-sm text-muted-foreground mt-1">Step {draft.step || 1}</p>
-                  </div>
-                  <Button onClick={() => handleDeleteDraft(draft.id)} variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0">
-                    <Trash2 className="size-4" />
-=======
                     <h3 className="font-bold text-foreground">{t("contracts.draft")} #{draft.id || i+1}</h3>
                     <p className="text-sm text-muted-foreground mt-1">Step {draft.step || 1}</p>
                   </div>
                   <Button aria-label={t("contracts.deleteDraft")} onClick={() => handleDeleteDraft(draft.id)} variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0">
                     <Trash2 className="size-4" /> {t("contracts.deleteDraft")}
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
                   </Button>
                 </div>
                 <div className="mt-auto pt-4 border-t border-border">
                   <Link href={`/dashboard/contracts/new`} className="w-full flex items-center justify-center">
                     <Button className="w-full font-bold shadow-[var(--calm-shadow)]" variant="secondary">
-<<<<<<< HEAD
-                      📋 {t("common.edit")}
-=======
                       ✏️ {t("contracts.resumeDraft")}
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
                     </Button>
                   </Link>
                 </div>
@@ -719,30 +679,9 @@ export default function ContractsPage() {
                     })()}
                   </TableCell>
                   <TableCell className="text-right">
-<<<<<<< HEAD
-                    <a
-                      href={`http://localhost:5000/api/contracts/${contract._id || contract.id}/download-pdf`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 mr-2 font-bold transition-colors"
-                      title="Tải Hợp đồng PDF"
-                    >
-                      <FileDown className="size-3.5" /> PDF
-                    </a>
-                    <a
-                      href={`http://localhost:5000/api/contracts/${contract._id || contract.id}/download-docx`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 mr-2 font-bold transition-colors"
-                      title="Tải File Word (.docx)"
-                    >
-                      <FileText className="size-3.5" /> Word
-                    </a>
-=======
                     <Button onClick={() => void openViewer(contract._id || contract.id)} variant="outline" size="sm" className="mr-2">
                       <Eye className="size-4" /> {t("contracts.viewContract")}
                     </Button>
->>>>>>> 4f72ce23515f29b0ae0f0ee497972d42eabbb95e
                     {contract.status === 0 && (
                       <Button onClick={() => void handleSendContract(contract._id || contract.id)} variant="outline" size="sm" className="mr-2">
                         <Send className="size-4" />{t("common.send")}
