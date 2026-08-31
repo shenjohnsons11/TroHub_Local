@@ -218,7 +218,10 @@ export default function AdminServicesScreen({ onBack }: Props) {
     }
   };
 
-  const billingModeLabel = (mode: AdminServiceBillingMode) => t(`servicesMobile.mode.${mode.toLowerCase()}`);
+  const billingModeLabel = (mode?: AdminServiceBillingMode | string) => {
+    const key = mode ? String(mode).toLowerCase() : "fixed";
+    return t(`servicesMobile.mode.${key}`);
+  };
 
   if (loading) return <ContentSkeleton rows={5} />;
 

@@ -125,9 +125,13 @@ exports.getTenantPortal = async (req, res) => {
         }
 
         const rawRepairs = await RepairRequest.find({ tenantId })
+            .populate({ path: 'contractId', select: 'roomId', populate: { path: 'roomId', select: 'roomCode' } })
             .sort({ updatedAt: -1 });
         const repairs = rawRepairs.map(r => ({
             id: r._id.toString(),
+            contractId: r.contractId ? r.contractId.toString() : '',
+            roomId: r.contractId?.roomId ? String(r.contractId.roomId._id || r.contractId.roomId) : '',
+            room: r.contractId?.roomId?.roomCode || '',
             category: r.title || '',
             description: r.content || '',
             date: r.createdAt ? new Date(r.createdAt).toLocaleDateString('vi-VN') : '',
@@ -153,8 +157,11 @@ exports.getTenantPortal = async (req, res) => {
             endDate: c.endDate ? new Date(c.endDate).toLocaleDateString('vi-VN') : '',
             rent: c.fixedRentPrice || 0,
             deposit: c.fixedDeposit || 0,
-            status: ['Chờ ký', 'Đang hiệu lực', 'Đã kết thúc', 'Đã hủy', 'Chờ chủ duyệt', 'Yêu cầu trả phòng'][c.status] || 'Chờ ký',
-            tenantAccepted: c.status > 0
+            status: ['Bản nháp', 'Đang hiệu lực', 'Hết hạn', 'Đã thanh lý', 'Đã cọc / Chờ bàn giao', 'Chờ khách ký'][c.status] || 'Chờ khách ký',
+            tenantAccepted: [1, 4].includes(c.status),
+            isAdvanceBooking: Boolean(c.isAdvanceBooking),
+            handoverDate: c.handoverDate || null,
+            checkoutRequestedAt: c.checkoutRequestedAt || null,
         }));
 
         res.status(200).json({
@@ -258,7 +265,14 @@ exports.createRepair = async (req, res) => {
         const tenantId = getTenantIdFromToken(req);
         if (!tenantId) return res.status(401).json({ success: false, message: 'Chưa đăng nhập' });
 
-        const activeContract = await Contract.findOne({ tenantId, status: 1 });
+        const activeContracts = await Contract.find({ tenantId, status: 1 }).sort({ createdAt: -1 });
+        const requestedRoomId = req.body.roomId ? String(req.body.roomId) : '';
+        const activeContract = requestedRoomId
+            ? activeContracts.find((item) => String(item.roomId) === requestedRoomId)
+            : activeContracts[0];
+        if (requestedRoomId && !activeContract) {
+            return res.status(400).json({ success: false, message: 'Phòng đã chọn không có hợp đồng đang hiệu lực của bạn.' });
+        }
         if (!activeContract) {
             // Thử tìm hợp đồng bất kỳ
             const anyContract = await Contract.findOne({ tenantId }).sort({ createdAt: -1 });
@@ -323,10 +337,9 @@ exports.requestTerminateContract = async (req, res) => {
         const room = await Room.findById(contract.roomId).select('roomCode landlordId');
         if (!room) return res.status(404).json({ success: false, message: 'Không tìm thấy phòng của hợp đồng!' });
 
-        // Đổi trạng thái sang Chờ duyệt trả phòng (5)
+        // Giữ hợp đồng ACTIVE và dùng cờ riêng cho yêu cầu trả phòng.
         contract.unpaidAmount = debt.totalAmount;
         contract.checkoutRequestedAt = new Date();
-        contract.status = 5;
         await contract.save();
 
         await notifyLandlord({
@@ -359,7 +372,11 @@ exports.reportUtility = async (req, res) => {
         const tenantId = getTenantIdFromToken(req);
         if (!tenantId) return res.status(401).json({ success: false, message: 'Chưa đăng nhập' });
 
-        const activeContract = await Contract.findOne({ tenantId, status: 1 });
+        const activeContract = await Contract.findOne({
+            tenantId,
+            status: 1,
+            ...(req.body.roomId ? { roomId: req.body.roomId } : {}),
+        });
         if (!activeContract || !activeContract.roomId) {
             return res.status(400).json({ success: false, message: 'Bạn không có hợp đồng đang thuê' });
         }

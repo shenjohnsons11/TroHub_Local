@@ -13,7 +13,7 @@ const { createOrLinkTenant, lookupTenantAccount } = require('../services/tenantL
 // 1. Lấy danh sách toàn bộ người thuê (role = 2) thuộc danh bạ của Chủ trọ
 exports.getAllTenants = async (req, res) => {
     try {
-        let landlordId = null;
+        let landlordId = req.auth?.id || null;
         const authHeader = req.headers['authorization'];
         if (authHeader && authHeader.startsWith('Bearer ')) {
             const token = authHeader.split(' ')[1];
@@ -31,8 +31,12 @@ exports.getAllTenants = async (req, res) => {
             $or: [{ linkedLandlords: landlordId }, { pendingLandlords: landlordId }]
         }).lean().sort({ createdAt: -1 });
 
-        // Populate room from active contracts (1: Hiệu lực, 5: Yêu cầu trả phòng) để hiển thị thông tin phòng nếu có
-        const activeContracts = await Contract.find({ status: { $in: [1, 5] } }).populate('roomId');
+        // Một Tenant có thể có nhiều phòng; chỉ lấy hợp đồng thuộc dãy của Landlord này.
+        const landlordRooms = await Room.find({ landlordId }).select('_id').lean();
+        const activeContracts = await Contract.find({
+            roomId: { $in: landlordRooms.map((room) => room._id) },
+            status: { $in: [1, 4, 5] },
+        }).populate('roomId');
 
         for (let t of tenants) {
             // Đánh dấu nếu Người thuê đang chờ xác nhận
@@ -40,9 +44,11 @@ exports.getAllTenants = async (req, res) => {
                 t.pending = true;
             }
 
-            const contract = activeContracts.find(c => c.tenantId && c.tenantId.toString() === t._id.toString());
+            const tenantContracts = activeContracts.filter(c => c.tenantId && c.tenantId.toString() === t._id.toString());
+            const contract = tenantContracts[0];
             if (contract && contract.roomId) {
-                t.room = contract.roomId.roomCode || contract.roomId.name;
+                t.rooms = tenantContracts.map((item) => item.roomId?.roomCode || item.roomId?.name).filter(Boolean);
+                t.room = t.rooms.join(', ');
                 t.contractStatus = contract.status;
             } else {
                 t.room = "Chưa xếp phòng";
@@ -62,7 +68,7 @@ exports.getAllTenants = async (req, res) => {
 // 1.5. Real-time Duplicate Check
 exports.checkDuplicate = async (req, res) => {
     try {
-        let landlordId = null;
+        let landlordId = req.auth?.id || null;
         const authHeader = req.headers['authorization'];
         if (authHeader && authHeader.startsWith('Bearer ')) {
             const token = authHeader.split(' ')[1];
@@ -184,10 +190,18 @@ exports.terminateTenant = async (req, res) => {
     try {
         const tenantId = req.params.id;
 
-        // Tìm hợp đồng đang hiệu lực của khách này (bao gồm cả trạng thái 5: Chờ duyệt trả phòng)
-        const activeContract = await Contract.findOne({ tenantId: tenantId, status: { $in: [1, 5] } });
+        // Chọn đúng hợp đồng của phòng; status 5 hiện là Chờ khách ký, không phải checkout.
+        const contractId = req.body?.contractId || req.query?.contractId;
+        const activeContract = await Contract.findOne(contractId
+            ? { _id: contractId, tenantId, status: 1 }
+            : { tenantId, status: 1 });
         if (!activeContract) {
             return res.status(404).json({ success: false, message: "Người thuê không có hợp đồng nào đang hiệu lực!" });
+        }
+
+        const activeRoom = await Room.findById(activeContract.roomId).select('landlordId');
+        if (!activeRoom || String(activeRoom.landlordId) !== String(req.auth.id)) {
+            return res.status(403).json({ success: false, message: "Bạn không có quyền xử lý hợp đồng này." });
         }
 
         // --- NEW LOGIC: Kiểm tra hóa đơn chưa thanh toán ---

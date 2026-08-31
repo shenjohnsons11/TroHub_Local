@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { KeyboardAvoidingView, ImageBackground, Platform, SafeAreaView, ScrollView, StyleSheet, View, Pressable } from "react-native";
+import { KeyboardAvoidingView, ImageBackground, Platform, ScrollView, StyleSheet, View, Pressable } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText, AppTextInput } from "@/components/ui/typography";
 import ForgotPasswordModal from "../components/ForgotPasswordModal";
 import TroHubLogo from "../components/TroHubLogo";

@@ -165,7 +165,12 @@
     "filterStatus": "Room Status",
     "filterFloor": "Filter by Floor",
     "searchPlaceholder": "Search by room code...",
-    "emptyRooms": "No rooms created yet."
+    "emptyRooms": "No rooms created yet.",
+    "reservedFrom": "Reserved from"
+  },
+  "roomSwitcher": {
+    "label": "Your rooms",
+    "select": "Switch to Room {room}"
   },
   "tenants": {
     "title": "Tenant Management",
@@ -215,6 +220,15 @@
     "deposit": "Deposit",
     "parking": "Parking Fee",
     "selectRoom": "Select a Room",
+    "reserved": "Reserved / Awaiting handover",
+    "handover": "Hand over room",
+    "advanceBooking": "Advance booking",
+    "handoverDate": "Handover date",
+    "confirmHandover": "Confirm handover",
+    "handoverHint": "Enter actual electricity and water readings at handover to activate the contract.",
+    "handoverRequired": "Enter the handover date and both meter readings.",
+    "handoverSuccess": "Room handed over. The contract is now active.",
+    "handoverFailed": "Could not hand over the room.",
     "empty": "No Contracts Yet",
     "emptyDescription": "Your rental contract will appear here once activated.",
     "status": {
@@ -812,6 +826,10 @@
     "subtitle": "List of rental contracts",
     "create": "Create Contract",
     "pending": "Pending Signature",
+    "handoverRequired": "Enter the handover date and both meter readings.",
+    "handoverSuccess": "Room handed over. The contract is now active.",
+    "handoverFailed": "Could not hand over the room.",
+    "handoverHint": "Enter the actual starting readings at handover.",
     "activeFilter": "Active",
     "room": "Room {roomCode}",
     "active": "Active",
@@ -908,6 +926,7 @@
     "pending": "Awaiting Signature",
     "active": "Active",
     "expired": "Expired",
+    "terminated": "Terminated",
     "cancelled": "Cancelled",
     "awaiting": "Awaiting Landlord Approval",
     "unknown": "Unknown",

@@ -99,8 +99,8 @@ async function getCheckoutPreview({
     if (!contract) {
         throw new CheckoutError(404, 'CONTRACT_NOT_FOUND', 'Không tìm thấy hợp đồng.');
     }
-    if (contract.status !== 5) {
-        throw new CheckoutError(400, 'CHECKOUT_NOT_REQUESTED', 'Hợp đồng không ở trạng thái chờ duyệt trả phòng.');
+    if (!contract.checkoutRequestedAt) {
+        throw new CheckoutError(400, 'CHECKOUT_NOT_REQUESTED', 'Hợp đồng chưa có yêu cầu trả phòng.');
     }
 
     const room = await RoomModel.findOne({ _id: contract.roomId, landlordId: adminId }).session(null);
@@ -145,11 +145,11 @@ async function checkoutContract({
             if (!contract) {
                 throw new CheckoutError(404, 'CONTRACT_NOT_FOUND', 'Không tìm thấy hợp đồng.');
             }
-            if (contract.status !== 5) {
+            if (!contract.checkoutRequestedAt) {
                 throw new CheckoutError(
                     400,
                     'CHECKOUT_NOT_REQUESTED',
-                    'Hợp đồng không ở trạng thái chờ duyệt trả phòng.'
+                    'Hợp đồng chưa có yêu cầu trả phòng.'
                 );
             }
 
@@ -198,7 +198,8 @@ async function checkoutContract({
             }
             settlement.finalInvoiceId = finalInvoice?._id || null;
 
-            contract.status = 2;
+            contract.status = 3;
+            contract.checkoutRequestedAt = undefined;
             contract.checkoutSettlement = {
                 ...settlement,
                 approvedBy: adminId,

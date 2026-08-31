@@ -7,7 +7,7 @@ function maskKey(key) {
   return `${key.slice(0, 4)}...${key.slice(-4)}`;
 }
 
-const candidateModels = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-flash-latest', 'gemini-2.0-flash'];
+const candidateModels = ['gemini-3.6-flash', 'gemini-3.5-flash'];
 
 async function testRoleKey(role, roleName) {
   const { primaryClient, fallbackClient, primaryKey, fallbackKey } = getGenAIClient(role);

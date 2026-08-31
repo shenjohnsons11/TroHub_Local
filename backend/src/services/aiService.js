@@ -138,7 +138,10 @@ async function getUserContext(userId, role) {
             };
         }
         if (normalizedRole === 'landlord') { // Landlord / Admin
-            const rooms = await Room.find({ landlordId: userId }).lean().catch(() => []);
+            const [rooms, landlord] = await Promise.all([
+                Room.find({ landlordId: userId }).select('_id status').lean().catch(() => []),
+                Account.findById(userId).select('fullName bankId bankAccountNo bankAccountName').lean().catch(() => null)
+            ]);
             const safeRooms = Array.isArray(rooms) ? rooms : [];
             const roomIds = safeRooms.map(r => r._id);
             
@@ -147,23 +150,34 @@ async function getUserContext(userId, role) {
             const occupiedRooms = safeRooms.filter(r => r.status === 1).length;
             const maintenanceRooms = safeRooms.filter(r => r.status === 2).length;
 
-            const contracts = roomIds.length > 0
-                ? await Contract.find({ roomId: { $in: roomIds } }).populate('roomId tenantId').lean().catch(() => [])
-                : [];
-            const safeContracts = Array.isArray(contracts) ? contracts : [];
-            const activeContracts = safeContracts.filter(c => c.status === 1).length;
-            const pendingContracts = safeContracts.filter(c => c.status === 0).length;
+            let safeContracts = [];
+            let safeInvoices = [];
 
-            const contractIds = safeContracts.map(c => c._id);
-            const invoices = contractIds.length > 0
-                ? await Invoice.find({ contractId: { $in: contractIds } }).lean().catch(() => [])
-                : [];
-            const safeInvoices = Array.isArray(invoices) ? invoices : [];
+            if (roomIds.length > 0) {
+                safeContracts = await Contract.find({ roomId: { $in: roomIds } })
+                    .select('_id status roomId tenantId')
+                    .populate('roomId', 'roomCode')
+                    .populate('tenantId', 'fullName')
+                    .lean()
+                    .catch(() => []);
 
-            const unpaidInvoices = safeInvoices.filter(i => i.status === 1 || i.status === 3);
+                const contractIds = (Array.isArray(safeContracts) ? safeContracts : []).map(c => c._id);
+                if (contractIds.length > 0) {
+                    safeInvoices = await Invoice.find({ contractId: { $in: contractIds } })
+                        .select('status totalAmount room tenant period dueDate')
+                        .lean()
+                        .catch(() => []);
+                }
+            }
+
+            const safeInvoicesList = Array.isArray(safeInvoices) ? safeInvoices : [];
+            const activeContracts = (Array.isArray(safeContracts) ? safeContracts : []).filter(c => c.status === 1).length;
+            const pendingContracts = (Array.isArray(safeContracts) ? safeContracts : []).filter(c => c.status === 0).length;
+
+            const unpaidInvoices = safeInvoicesList.filter(i => i.status === 1 || i.status === 3);
             const totalDebt = unpaidInvoices.reduce((sum, i) => sum + (Number(i.totalAmount) || 0), 0);
             
-            const paidInvoices = safeInvoices.filter(i => i.status === 2);
+            const paidInvoices = safeInvoicesList.filter(i => i.status === 2);
             const totalPaidAmount = paidInvoices.reduce((sum, i) => sum + (Number(i.totalAmount) || 0), 0);
 
             // Chi tiết hóa đơn chưa thanh toán cho tin nhắn nhắc nợ
@@ -175,8 +189,6 @@ async function getUserContext(userId, role) {
                 dueDate: i.dueDate ? new Date(i.dueDate).toLocaleDateString('vi-VN') : 'N/A',
                 status: i.status === 3 ? 'Quá hạn' : 'Chưa thanh toán'
             }));
-
-            const landlord = await Account.findById(userId).lean().catch(() => null);
 
             return {
                 role: 'Chủ trọ',
@@ -200,16 +212,26 @@ async function getUserContext(userId, role) {
                 debtDetails
             };
         } else { // Tenant (role = 2)
-            const tenant = await Account.findById(userId).lean().catch(() => null);
-            const contracts = await Contract.find({ tenantId: userId, status: 1 }).populate('roomId').lean().catch(() => []);
+            const [tenant, contracts] = await Promise.all([
+                Account.findById(userId).select('fullName').lean().catch(() => null),
+                Contract.find({ tenantId: userId, status: 1 })
+                    .select('_id fixedRentPrice startDate endDate roomId')
+                    .populate('roomId', 'roomCode')
+                    .lean()
+                    .catch(() => [])
+            ]);
             const safeContracts = Array.isArray(contracts) ? contracts : [];
             const contractIds = safeContracts.map(c => c._id);
 
-            const invoices = contractIds.length > 0
-                ? await Invoice.find({ contractId: { $in: contractIds } }).lean().catch(() => [])
-                : [];
-            const safeInvoices = Array.isArray(invoices) ? invoices : [];
-            const unpaidInvoices = safeInvoices.filter(i => i.status === 1 || i.status === 3);
+            let safeInvoices = [];
+            if (contractIds.length > 0) {
+                safeInvoices = await Invoice.find({ contractId: { $in: contractIds } })
+                    .select('status totalAmount period dueDate')
+                    .lean()
+                    .catch(() => []);
+            }
+            const safeInvoicesList = Array.isArray(safeInvoices) ? safeInvoices : [];
+            const unpaidInvoices = safeInvoicesList.filter(i => i.status === 1 || i.status === 3);
 
             return {
                 role: 'Người thuê',
@@ -290,7 +312,7 @@ HƯỚNG DẪN TRẢ LỜI:
 ${roleGuidance}
 `;
 
-    const candidateModels = ['gemini-flash-latest', 'gemini-3.5-flash', 'gemini-3.6-flash'];
+    const candidateModels = ['gemini-3.6-flash', 'gemini-3.5-flash'];
     const { primaryClient, fallbackClient, primaryKey, fallbackKey } = getGenAIClient(role);
 
     if (!primaryClient && !fallbackClient) {
@@ -326,6 +348,8 @@ ${roleGuidance}
                     contents: message.trim(),
                     config: {
                         systemInstruction: systemInstruction,
+                        temperature: 0.2,
+                        maxOutputTokens: 1024,
                     }
                 });
                 if (response && response.text) {
@@ -369,5 +393,4 @@ module.exports = {
     getGeminiApiKey,
     isRateLimitOrQuotaError,
 };
-
 

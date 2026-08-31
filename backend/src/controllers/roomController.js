@@ -13,15 +13,7 @@ function normalizeFloor(value) {
 // 1. Lấy danh sách toàn bộ phòng (Có thể lọc theo mã chủ trọ)
 exports.getAllRooms = async (req, res) => {
     try {
-        let landlordId = req.query.landlordId;
-        const authHeader = req.headers['authorization'];
-        if (!landlordId && authHeader && authHeader.startsWith('Bearer ')) {
-            const token = authHeader.split(' ')[1];
-            try {
-                const decoded = require('jsonwebtoken').verify(token, process.env.JWT_SECRET);
-                if (decoded.role === 1) landlordId = decoded.id;
-            } catch(e) {}
-        }
+        const landlordId = req.auth?.id || req.query.landlordId;
         
         let query = {};
         if (landlordId) query.landlordId = landlordId;
@@ -30,13 +22,25 @@ exports.getAllRooms = async (req, res) => {
         
         // Populate tenant from active contracts
         const Contract = require('../models/Contract');
-        const activeContracts = await Contract.find({ status: 1 }).populate('tenantId', 'fullName');
+        const roomIds = rooms.map((room) => room._id);
+        const [activeContracts, reservedContracts] = await Promise.all([
+            Contract.find({ roomId: { $in: roomIds }, status: 1 }).populate('tenantId', 'fullName'),
+            Contract.find({ roomId: { $in: roomIds }, status: 4 })
+                .populate('tenantId', 'fullName')
+                .sort({ startDate: 1 }),
+        ]);
         
         for (let room of rooms) {
             room.floor = room.floor || 1;
             const contract = activeContracts.find(c => c.roomId && c.roomId.toString() === room._id.toString());
             if (contract && contract.tenantId) {
                 room.tenant = contract.tenantId.fullName;
+            }
+            const reservation = reservedContracts.find((contract) => contract.roomId?.toString() === room._id.toString());
+            if (reservation) {
+                room.reservedFrom = reservation.startDate;
+                room.reservedContractId = reservation._id;
+                room.reservedTenant = reservation.tenantId?.fullName || '';
             }
         }
 

@@ -27,7 +27,7 @@ const getProperty = async () => {
 };
 
 export const homeService = {
-  async getHomeData(): Promise<HomeData> {
+  async getHomeData(selectedRoomId?: string): Promise<HomeData> {
     try {
       const [profile, invoices, repairs, contracts, property] = await Promise.all([
         userService.getProfile(),
@@ -37,29 +37,44 @@ export const homeService = {
         getProperty(),
       ]);
 
-      const currentContracts = contracts.filter(c => ["active", "awaiting_approval", "requesting_termination"].includes(c.status));
-      const activeContract = contracts.find((contract) => contract.status === "active") || currentContracts[0] || contracts.find((contract) => contract.status === "pending") || null;
-      const roomNames = currentContracts.map(c => c.room).filter(Boolean);
-      const isSigned = currentContracts.length > 0;
+      const currentContracts = contracts.filter(c => ["active", "reserved", "awaiting_approval", "requesting_termination"].includes(c.status));
+      const selectedContract = (selectedRoomId && currentContracts.find((contract) => contract.roomId === selectedRoomId))
+        || currentContracts.find((contract) => contract.status === "active")
+        || currentContracts[0]
+        || contracts.find((contract) => contract.status === "pending")
+        || null;
+      const selectedRoom = selectedContract?.room;
+      const selectedRoomCode = selectedContract?.room;
+      const visibleInvoices = selectedRoomId
+        ? invoices.filter((invoice) => invoice.roomId === selectedRoomId)
+        : selectedRoomCode
+          ? invoices.filter((invoice) => invoice.room === selectedRoomCode)
+          : invoices;
+      const visibleRepairs = selectedRoomId
+        ? repairs.filter((repair) => repair.roomId === selectedRoomId)
+        : selectedRoomCode
+          ? repairs.filter((repair) => repair.room === selectedRoomCode)
+          : repairs;
 
-      const unpaidInvoices = invoices.filter((item) => item.status === "unpaid");
+      const unpaidInvoices = visibleInvoices.filter((item) => item.status === "unpaid");
       const totalAmountNum = unpaidInvoices.reduce((sum, inv) => sum + (inv.numericAmount || 0), 0);
       
-      const latestRepair = repairs[0];
+      const latestRepair = visibleRepairs[0];
 
       return {
         tenantName: profile.fullName || "Người thuê",
-        room: isSigned ? roomNames.join(", ") : "Chưa có phòng",
+        room: selectedRoom || "Chưa có phòng",
 
         totalAmount: formatCurrency(totalAmountNum),
         paymentStatus: unpaidInvoices.length > 0 ? "unpaid" : "paid",
         paymentStatusText: unpaidInvoices.length > 0 ? "Chưa thanh toán" : "Đã thanh toán",
         dueDate: unpaidInvoices.length > 0 ? unpaidInvoices[0].dueDate : "Không có",
 
-        contractEndDate: activeContract?.endDate || "Không có",
+        contractEndDate: selectedContract?.endDate || "Không có",
+        contracts,
         myInvoices: unpaidInvoices,
-        activeContract,
-        activeRepairs: repairs.filter((repair) => repair.status !== "done"),
+        activeContract: selectedContract,
+        activeRepairs: visibleRepairs.filter((repair) => repair.status !== "done"),
         propertyAddress: property?.propertyAddress,
         propertyLatitude: property?.propertyLatitude,
         propertyLongitude: property?.propertyLongitude,
@@ -81,6 +96,7 @@ export const homeService = {
         dueDate: "Không có",
         contractEndDate: "Không có",
         myInvoices: [],
+        contracts: [],
         activeContract: null,
         activeRepairs: [],
         recentRepair: {

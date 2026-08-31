@@ -11,6 +11,7 @@ export type HomeData = {
   dueDate: string;
   contractEndDate: string;
   myInvoices: Invoice[];
+  contracts: Contract[];
   activeContract: Contract | null;
   activeRepairs: RepairRequest[];
   propertyAddress?: string;

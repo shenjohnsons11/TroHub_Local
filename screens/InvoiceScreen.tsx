@@ -17,14 +17,19 @@ import { calculateUnpaidTotal } from "../utils/invoicePresentation";
 import { formatCurrency, unformatNumber } from "../utils/formatters";
 import { useLanguage } from "../contexts/LanguageContext";
 import { getStatusText } from "../utils/statusHelpers";
+import { contractService } from "../services/contractService";
+import { Contract } from "../types/Contract";
+import TenantRoomSwitcher from "../components/TenantRoomSwitcher";
 
 type FilterType = "all" | "unpaid" | "paid";
 
 type Props = {
   params?: any;
+  selectedRoomId?: string;
+  onRoomSelect: (roomId: string) => void;
 };
 
-export default function InvoiceScreen({ params }: Props) {
+export default function InvoiceScreen({ params, selectedRoomId, onRoomSelect }: Props) {
   const { theme } = useAppTheme();
   const { t } = useLanguage();
   const notification = useNotification();
@@ -34,11 +39,17 @@ export default function InvoiceScreen({ params }: Props) {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [paymentInvoice, setPaymentInvoice] = useState<Invoice | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [contracts, setContracts] = useState<Contract[]>([]);
 
   const loadInvoices = useCallback(async () => {
     try {
       setIsLoading(true);
-      const data = await invoiceService.getInvoices();
+      const tenantContracts = await contractService.getMyContracts();
+      setContracts(tenantContracts);
+      const firstRoomId = tenantContracts.find((contract) => ["active", "reserved", "requesting_termination"].includes(contract.status))?.roomId;
+      const roomId = selectedRoomId || firstRoomId;
+      if (!selectedRoomId && firstRoomId) onRoomSelect(firstRoomId);
+      const data = await invoiceService.getInvoices(roomId);
       setInvoiceList(data);
       if (params?.paymentInvoiceId) {
         const inv = data.find(i => i.id === params.paymentInvoiceId);
@@ -49,7 +60,7 @@ export default function InvoiceScreen({ params }: Props) {
     } finally {
       setIsLoading(false);
     }
-  }, [params?.paymentInvoiceId]);
+  }, [params?.paymentInvoiceId, selectedRoomId]);
 
   useEffect(() => {
     void loadInvoices();
@@ -101,6 +112,7 @@ export default function InvoiceScreen({ params }: Props) {
         ListHeaderComponent={
           <>
             <AppText style={styles.title}>{t("invoices.title")}</AppText>
+            <TenantRoomSwitcher contracts={contracts} selectedRoomId={selectedRoomId} onSelect={onRoomSelect} />
             {unpaidInvoices.length > 0 ? (
               <AnimatedEntry>
                 <GradientHero

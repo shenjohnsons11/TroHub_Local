@@ -53,10 +53,10 @@ async function signContractAndEnsureDeposit({
     );
   }
 
-  if (![0, 4].includes(Number(contract.status))) {
+  if (![0, 4, 5].includes(Number(contract.status))) {
     throw createContractSigningError(
       "CONTRACT_NOT_SIGNABLE",
-      "Hợp đồng không ở trạng thái có thể ký.",
+      "Hợp đồng không ở trạng thái chờ ký hoặc chờ bàn giao.",
       409,
     );
   }
@@ -121,6 +121,8 @@ async function signContractAndEnsureDeposit({
 
   const previousStatus = contract.status;
   const previousConfirmedAt = contract.tenantConfirmedAt;
+  // Sau khi Tenant ký, mọi hợp đồng chờ kích hoạt đi qua RESERVED để
+  // Landlord xác nhận tiền cọc và bàn giao cùng số điện nước đầu vào.
   contract.status = 4;
   contract.tenantConfirmedAt = new Date();
   if (signature) {

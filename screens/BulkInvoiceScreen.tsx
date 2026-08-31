@@ -80,7 +80,7 @@ export default function BulkInvoiceScreen({ onNavigate }: Props) {
       setPeriod(`${currentMonth.toString().padStart(2, "0")}/${currentYear}`);
       setDueDate(`${currentYear}-${currentMonth.toString().padStart(2, "0")}-10`);
 
-      const initialData: BulkInvoiceItem[] = (res.previews || []).map((item: any) => ({
+      const initialData: BulkInvoiceItem[] = (res.previews || res.data || []).map((item: any) => ({
         contractId: item.contractId,
         roomId: item.roomId,
         room: item.room,

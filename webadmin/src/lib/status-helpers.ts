@@ -24,11 +24,12 @@ export function getStatusText(
     if (str === "1" || str === "active" || str === "đang hiệu lực") return t("statusMap.contract.active");
     if (str === "2" || str === "expired" || str === "đã hết hạn") return t("statusMap.contract.expired");
     if (str === "3" || str === "terminated" || str === "đã thanh lý") return t("statusMap.contract.terminated");
-    if (str === "4" || str === "pending_tenant" || str === "chờ khách ký") return t("statusMap.contract.pendingTenant");
-    if (str === "5" || str === "pending_owner" || str === "chờ chủ duyệt") return t("statusMap.contract.pendingOwner");
-    if (str === "6" || str === "pending_checkout" || str === "chờ duyệt trả phòng") return t("statusMap.contract.pendingCheckout");
-    if (str === "7" || str === "checked_out" || str === "đã trả phòng") return t("statusMap.contract.checkedOut");
-    if (str === "8" || str === "cancelled" || str === "đã hủy") return t("statusMap.contract.cancelled");
+    if (str === "4" || str === "reserved" || str === "đã cọc / chờ bàn giao") return t("statusMap.contract.reserved");
+    if (str === "5" || str === "pending" || str === "pending_tenant" || str === "chờ khách ký") return t("statusMap.contract.pendingTenant");
+    if (str === "pending_owner" || str === "chờ chủ duyệt") return t("statusMap.contract.pendingOwner");
+    if (str === "pending_checkout" || str === "chờ duyệt trả phòng") return t("statusMap.contract.pendingCheckout");
+    if (str === "checked_out" || str === "đã trả phòng") return t("statusMap.contract.checkedOut");
+    if (str === "cancelled" || str === "đã hủy") return t("statusMap.contract.cancelled");
     return status;
   }
 

@@ -165,7 +165,12 @@
     "filterStatus": "Trạng thái phòng",
     "filterFloor": "Lọc theo tầng",
     "searchPlaceholder": "Tìm theo mã phòng...",
-    "emptyRooms": "Chưa có phòng nào được tạo."
+    "emptyRooms": "Chưa có phòng nào được tạo.",
+    "reservedFrom": "Đã có người cọc từ"
+  },
+  "roomSwitcher": {
+    "label": "Phòng đang thuê",
+    "select": "Chuyển sang Phòng {room}"
   },
   "tenants": {
     "title": "Quản lý Người thuê",
@@ -215,6 +220,15 @@
     "deposit": "Tiền cọc",
     "parking": "Phí gửi xe",
     "selectRoom": "Chọn phòng",
+    "reserved": "Đã cọc / Chờ bàn giao",
+    "handover": "Bàn giao phòng",
+    "advanceBooking": "Đặt cọc trước",
+    "handoverDate": "Ngày bàn giao",
+    "confirmHandover": "Xác nhận bàn giao",
+    "handoverHint": "Nhập chỉ số điện nước thực tế tại thời điểm bàn giao để kích hoạt hợp đồng.",
+    "handoverRequired": "Vui lòng nhập ngày bàn giao và đủ chỉ số điện nước.",
+    "handoverSuccess": "Bàn giao phòng thành công. Hợp đồng đã có hiệu lực.",
+    "handoverFailed": "Không thể bàn giao phòng.",
     "empty": "Chưa có hợp đồng nào",
     "emptyDescription": "Hợp đồng thuê phòng của bạn sẽ xuất hiện tại đây khi được kích hoạt.",
     "status": {
@@ -812,6 +826,10 @@
     "subtitle": "Danh sách hợp đồng thuê phòng",
     "create": "Tạo hợp đồng",
     "pending": "Chờ ký",
+    "handoverRequired": "Vui lòng nhập ngày bàn giao và đủ chỉ số điện nước.",
+    "handoverSuccess": "Bàn giao phòng thành công. Hợp đồng đã có hiệu lực.",
+    "handoverFailed": "Không thể bàn giao phòng.",
+    "handoverHint": "Nhập số điện nước đầu vào thực tế tại thời điểm bàn giao.",
     "activeFilter": "Hiệu lực",
     "room": "Phòng {roomCode}",
     "active": "Đang thuê",
@@ -908,6 +926,7 @@
     "pending": "Chờ ký xác nhận",
     "active": "Có hiệu lực",
     "expired": "Hết hạn",
+    "terminated": "Đã thanh lý",
     "cancelled": "Đã hủy",
     "awaiting": "Chờ chủ trọ duyệt",
     "unknown": "Không xác định",

@@ -52,6 +52,12 @@ export default function ContractsPage() {
   const [checkoutSubmitting, setCheckoutSubmitting] = useState(false);
   const [checkoutPreviewLoading, setCheckoutPreviewLoading] = useState(false);
   const [checkoutPreview, setCheckoutPreview] = useState<CheckoutPreview | null>(null);
+  const [handoverModalOpen, setHandoverModalOpen] = useState(false);
+  const [handoverContractId, setHandoverContractId] = useState("");
+  const [handoverDate, setHandoverDate] = useState(new Date().toISOString().slice(0, 10));
+  const [handoverElectricity, setHandoverElectricity] = useState("");
+  const [handoverWater, setHandoverWater] = useState("");
+  const [handoverSubmitting, setHandoverSubmitting] = useState(false);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerUrl, setViewerUrl] = useState<string | null>(null);
   const [viewerLoading, setViewerLoading] = useState(false);
@@ -271,21 +277,35 @@ export default function ContractsPage() {
     }
   };
 
-  const handleConfirmContract = async (id: string) => {
-    const confirmed = await notification.confirm({ title: t("contracts.createContract"), message: t("contracts.deleteConfirm"), confirmText: t("common.confirm") });
-    if (!confirmed) return;
+  const openHandoverModal = (contract: any) => {
+    setHandoverContractId(contract._id || contract.id);
+    setHandoverDate(new Date().toISOString().slice(0, 10));
+    setHandoverElectricity(formatMeterReading(contract.initialElectricity ?? contract.roomId?.lastElectricityReading));
+    setHandoverWater(formatMeterReading(contract.initialWater ?? contract.roomId?.lastWaterReading));
+    setHandoverModalOpen(true);
+  };
+
+  const handleHandover = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const electricity = parseMeterReading(handoverElectricity);
+    const water = parseMeterReading(handoverWater);
+    if (electricity === null || water === null || !handoverDate) {
+      notification.error(t("contracts.handoverRequired"));
+      return;
+    }
     try {
-      const res = await fetchAPI(`/contracts/${id}/confirm`, {
-        method: "PUT"
+      setHandoverSubmitting(true);
+      await fetchAPI(`/contracts/${handoverContractId}/handover`, {
+        method: "PUT",
+        body: JSON.stringify({ initialElectricity: electricity, initialWater: water, handoverDate }),
       });
-      if (res.success) {
-        notification.success(t("contracts.approvedSuccess"));
-        await loadData();
-      } else {
-        notification.error(res.message || t("common.error"));
-      }
-    } catch (err: unknown) {
-      notification.error(getNotificationMessage(err, t("common.error")));
+      notification.success(t("contracts.handoverSuccess"));
+      setHandoverModalOpen(false);
+      await loadData();
+    } catch (error) {
+      notification.error(getNotificationMessage(error, t("contracts.handoverFailed")));
+    } finally {
+      setHandoverSubmitting(false);
     }
   };
 
@@ -318,9 +338,10 @@ export default function ContractsPage() {
     if (!matchSearch) return false;
 
     if (activeFilter === "all") return true;
-    if (activeFilter === "pending") return contract.status === 0 || contract.status === 4 || contract.status === 5;
+    if (activeFilter === "pending") return contract.status === 0 || contract.status === 5;
+    if (activeFilter === "reserved") return contract.status === 4;
     if (activeFilter === "active") return contract.status === 1;
-    if (activeFilter === "checkout") return contract.status === 2 || contract.status === 5;
+    if (activeFilter === "checkout") return Boolean(contract.checkoutRequestedAt) || contract.status === 2;
     return true;
   });
 
@@ -349,6 +370,7 @@ export default function ContractsPage() {
           {[
             { id: "all", label: t("common.all") },
             { id: "pending", label: t("statusMap.contract.pendingTenant") },
+            { id: "reserved", label: t("statusMap.contract.reserved") },
             { id: "active", label: t("contracts.status.active") },
             { id: "checkout", label: t("contracts.checkout") },
             { id: "draft", label: t("contracts.draft") },
@@ -554,6 +576,19 @@ export default function ContractsPage() {
           </DialogContent>
         </Dialog>
 
+        <Dialog open={handoverModalOpen} onOpenChange={setHandoverModalOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader><DialogTitle>{t("contracts.handover")}</DialogTitle></DialogHeader>
+            <form onSubmit={handleHandover} className="space-y-4 mt-4">
+              <p className="rounded-2xl bg-primary/10 p-3 text-sm text-muted-foreground">{t("contracts.handoverHint")}</p>
+              <div className="space-y-2"><Label htmlFor="handoverDate">{t("contracts.handoverDate")}</Label><Input id="handoverDate" type="date" value={handoverDate} onChange={e => setHandoverDate(e.target.value)} required /></div>
+              <div className="space-y-2"><Label htmlFor="handoverElectricity">{t("contracts.initialElec")}</Label><Input id="handoverElectricity" inputMode="decimal" value={handoverElectricity} onChange={e => setHandoverElectricity(e.target.value)} required /></div>
+              <div className="space-y-2"><Label htmlFor="handoverWater">{t("contracts.initialWater")}</Label><Input id="handoverWater" inputMode="decimal" value={handoverWater} onChange={e => setHandoverWater(e.target.value)} required /></div>
+              <Button type="submit" disabled={handoverSubmitting} className="w-full">{handoverSubmitting ? t("common.loading") : t("contracts.confirmHandover")}</Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+
         <Dialog open={checkoutModalOpen} onOpenChange={setCheckoutModalOpen}>
           <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[425px]">
             <DialogHeader>
@@ -688,11 +723,11 @@ export default function ContractsPage() {
                       </Button>
                     )}
                     {contract.status === 4 && (
-                      <Button onClick={() => handleConfirmContract(contract._id || contract.id)} variant="secondary" size="sm" className="mr-2 text-primary">
-                        <CheckCircle2 className="size-4" />{t("common.confirm")}
+                      <Button onClick={() => openHandoverModal(contract)} variant="secondary" size="sm" className="mr-2 text-primary">
+                        <CheckCircle2 className="size-4" />{t("contracts.handover")}
                       </Button>
                     )}
-                    {contract.status === 5 && (
+                    {(contract.checkoutRequestedAt || contract.status === 2) && (
                       <Button onClick={() => void openCheckoutModal(contract._id || contract.id)} variant="outline" size="sm" className="mr-2 border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive">
                         {t("contracts.checkout")}
                       </Button>

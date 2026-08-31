@@ -56,6 +56,7 @@
       "draft": "Draft",
       "pendingTenant": "Awaiting Tenant Signature",
       "pendingOwner": "Awaiting Landlord Approval",
+      "reserved": "Reserved / Awaiting handover",
       "active": "Active",
       "expired": "Expired",
       "terminated": "Terminated",
@@ -224,6 +225,7 @@
     "filterFloor": "Filter by Floor",
     "searchPlaceholder": "Search by room code...",
     "emptyRooms": "No rooms created yet.",
+    "reservedFrom": "Reserved from",
     "createdSuccess": "Room created successfully!",
     "updatedSuccess": "Room updated successfully!",
     "deletedSuccess": "Room deleted!",
@@ -279,7 +281,8 @@
       "expired": "Expired",
       "terminated": "Terminated",
       "pendingTenant": "Awaiting Tenant Signature",
-      "pendingOwner": "Awaiting Landlord Approval"
+      "pendingOwner": "Awaiting Landlord Approval",
+      "reserved": "Reserved / Awaiting handover"
     },
     "createdSuccess": "Contract created successfully!",
     "approvedSuccess": "Contract approved successfully!",
@@ -300,7 +303,14 @@
     "saveDraft": "Save draft",
     "resumeDraft": "Resume draft",
     "deleteDraft": "Delete draft",
-    "draftSavedSuccess": "Contract draft saved successfully!"
+    "draftSavedSuccess": "Contract draft saved successfully!",
+    "handover": "Hand over room",
+    "handoverDate": "Handover date",
+    "confirmHandover": "Confirm handover",
+    "handoverHint": "Enter actual electricity and water readings at handover to activate the contract.",
+    "handoverRequired": "Enter the handover date and both meter readings.",
+    "handoverSuccess": "Room handed over. The contract is now active.",
+    "handoverFailed": "Could not hand over the room."
   },
   "invoices": {
     "title": "Invoice Management",

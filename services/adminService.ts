@@ -14,6 +14,9 @@ export type AdminRoom = {
   lastWaterReading?: number;
   draftElectricity?: number;
   draftWater?: number;
+  reservedFrom?: string;
+  reservedContractId?: string;
+  reservedTenant?: string;
   createdAt?: string;
 };
 
@@ -21,6 +24,7 @@ export type AdminTenant = {
   _id: string;
   username: string;
   fullName: string;
+  rooms?: string[];
   phone: string;
   email?: string;
   idCard?: string;
@@ -47,7 +51,10 @@ export type AdminContract = {
   waterPrice?: number;
   initialElectricity?: number;
   initialWater?: number;
-  status: number; // 0: Chờ ký, 1: Hiệu lực, 2: Đã kết thúc, 3: Hủy, 4: Chờ chủ duyệt, 5: Chờ trả phòng
+  isAdvanceBooking?: boolean;
+  handoverDate?: string;
+  checkoutRequestedAt?: string;
+  status: number; // 0: Nháp, 1: Hiệu lực, 2: Hết hạn, 3: Thanh lý, 4: Đã cọc/chờ bàn giao, 5: Chờ khách ký
   services?: { serviceId: string; fixedPrice: number }[];
   createdAt?: string;
 };
@@ -352,6 +359,22 @@ export const adminService = {
     };
   },
 
+  async getBulkInvoicePreview(): Promise<{ success: boolean; data: any[]; previews?: any[] }> {
+    const token = await authService.getToken();
+    const response = await apiClient.get<{ success: boolean; data: any[] }>("/invoices/bulk-preview", token);
+    return {
+      success: response.success,
+      data: response.data || [],
+      previews: response.data || [],
+    };
+  },
+
+  async createBulkInvoices(payload: { invoices: any[]; period?: string; issuedAt?: string }): Promise<{ success: boolean; data?: any; message?: string }> {
+    const token = await authService.getToken();
+    const response = await apiClient.post<{ success: boolean; data?: any; message?: string }>("/invoices/bulk", payload, token);
+    return response;
+  },
+
   async createInvoice(invoiceData: any): Promise<AdminInvoice> {
     const token = await authService.getToken();
     const response = await apiClient.post<{ success: boolean; data: AdminInvoice }>("/invoices", invoiceData, token);
@@ -418,6 +441,12 @@ export const adminService = {
     const token = await authService.getToken();
     const response = await apiClient.put<{ success: boolean }>((`/contracts/${contractId}/confirm`), {}, token);
     return response.success;
+  },
+
+  async handoverContract(contractId: string, data: { initialElectricity: number; initialWater: number; handoverDate: string }): Promise<AdminContract> {
+    const token = await authService.getToken();
+    const response = await apiClient.put<{ success: boolean; data: AdminContract }>(`/contracts/${contractId}/handover`, data, token);
+    return response.data;
   },
 
   async checkoutContract(contractId: string, data: {

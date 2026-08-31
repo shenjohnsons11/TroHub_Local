@@ -219,6 +219,7 @@ export default function RoomsPage() {
                 <div><p className="text-xs font-bold uppercase tracking-[.16em] text-muted-foreground">{t("common.room")}</p><h2 className="mt-1 text-2xl font-black">{room.roomCode}</h2></div>
                 {statusBadge(room)}
               </div>
+              {room.reservedFrom ? <div className="mt-3 inline-flex rounded-full bg-sky-500/10 px-3 py-1 text-xs font-bold text-sky-700 dark:text-sky-300">🔵 {t("rooms.reservedFrom")} {new Date(room.reservedFrom).toLocaleDateString()}</div> : null}
               <div className="mt-6 rounded-[20px] bg-primary/8 p-4">
                 <p className="text-sm text-muted-foreground">{t("rooms.price")}</p>
                 <p className="mt-1 text-2xl font-black tracking-[-.04em] text-primary">{formatCurrency(room.defaultRentPrice)}</p>

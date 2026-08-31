@@ -1,5 +1,6 @@
 import { Link } from "expo-router";
-import { SafeAreaView, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText } from "@/components/ui/typography";
 import TroHubLogo from "../components/TroHubLogo";
 import AppButton from "../components/ui/AppButton";

@@ -4,6 +4,8 @@ export type RepairStatus = "pending" | "processing" | "done";
 
 export type RepairRequest = {
   id: string;
+  contractId?: string;
+  roomId?: string;
   room: string;
   type: string;
   priority?: Priority;

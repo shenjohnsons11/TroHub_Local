@@ -50,16 +50,16 @@ export default function AdminRoomsScreen({ params }: Props) {
   const handleBulkMeterReport = async () => {
     try {
       setSubmitting(true);
-      const payload = Object.entries(meterReadings)
+      const utilities = Object.entries(meterReadings)
         .filter(([, data]) => data.electricity.trim() !== "" || data.water.trim() !== "")
         .map(([roomId, data]) => ({
           roomId,
-          electricity: data.electricity ? parseMeterReading(data.electricity) ?? undefined : undefined,
-          water: data.water ? parseMeterReading(data.water) ?? undefined : undefined,
+          draftElectricity: data.electricity ? parseMeterReading(data.electricity) ?? undefined : undefined,
+          draftWater: data.water ? parseMeterReading(data.water) ?? undefined : undefined,
         }));
-      if (payload.length === 0) { notification.error(t("mobile.rooms.requiredMeter")); return; }
+      if (utilities.length === 0) { notification.error(t("mobile.rooms.requiredMeter")); return; }
       const token = await authService.getToken();
-      const response = await apiClient.post<{ success: boolean }>("/rooms/bulk-report-utility", { readings: payload }, token);
+      const response = await apiClient.post<{ success: boolean }>("/rooms/bulk-report-utility", { utilities }, token);
       if (response.success) {
         notification.success(t("mobile.rooms.meterSaved"));
         setMeterModalVisible(false);
@@ -142,7 +142,7 @@ export default function AdminRoomsScreen({ params }: Props) {
                       <View style={[styles.iconTile, { backgroundColor: theme.primarySoft }]}><Ionicons name="business-outline" size={22} color={theme.primary} /></View>
                       <View style={[styles.badge, { backgroundColor: background as string }]}><AppText style={[styles.badgeText, { color: color as string }]}>{label}</AppText></View>
                     </View>
-                    <View style={styles.info}><AppText style={[styles.roomCode, { color: theme.text }]}>{item.roomCode}</AppText><AppText style={[styles.sub, { color: theme.muted }]}>{item.area}</AppText><AppText style={[styles.sub, { color: theme.primary }]}>{formatCurrency(item.defaultRentPrice)}/{t("mobile.rooms.month")}</AppText></View>
+                    <View style={styles.info}><AppText style={[styles.roomCode, { color: theme.text }]}>{item.roomCode}</AppText><AppText style={[styles.sub, { color: theme.muted }]}>{item.area}</AppText><AppText style={[styles.sub, { color: theme.primary }]}>{formatCurrency(item.defaultRentPrice)}/{t("mobile.rooms.month")}</AppText>{item.reservedFrom ? <AppText style={[styles.reservedText, { color: theme.primary }]}>{t("rooms.reservedFrom")} {new Date(item.reservedFrom).toLocaleDateString()}</AppText> : null}</View>
                   </Pressable>
                 </AnimatedEntry>;
               })}
@@ -154,7 +154,7 @@ export default function AdminRoomsScreen({ params }: Props) {
       <Modal visible={detailVisible} transparent animationType="slide" onRequestClose={() => { if (!submitting) setDetailVisible(false); }}>
         <View style={[styles.overlay, { backgroundColor: theme.overlay }]}><View accessibilityViewIsModal style={[styles.sheet, { backgroundColor: theme.surfaceElevated }]}>
           <View style={styles.modalHeader}><AppText accessibilityRole="header" style={[styles.modalTitle, { color: theme.text }]}>{t("mobile.rooms.detailTitle", { roomCode: selectedRoom?.roomCode || "" })}</AppText><Pressable accessibilityRole="button" accessibilityLabel={t("mobile.rooms.closeDetail")} onPress={() => setDetailVisible(false)}><Ionicons name="close" size={26} color={theme.text} /></Pressable></View>
-          {selectedRoom ? <View style={styles.detailBody}>{[[t("common.floor", { number: selectedRoom.floor || 1 }), selectedRoom.floor || 1], [t("mobile.rooms.area"), selectedRoom.area], [t("mobile.rooms.defaultRent"), `${formatCurrency(selectedRoom.defaultRentPrice)}/${t("mobile.rooms.month")}`], [t("mobile.rooms.defaultDeposit"), formatCurrency(selectedRoom.defaultDeposit)], [t("mobile.rooms.status"), statusMeta(selectedRoom.status)[0]]].map(([label, value]) => <View key={String(label)} style={[styles.detailRow, { backgroundColor: theme.background }]}><AppText style={[styles.detailLabel, { color: theme.muted }]}>{label}</AppText><AppText style={[styles.detailValue, { color: theme.text }]}>{value}</AppText></View>)}</View> : null}
+          {selectedRoom ? <View style={styles.detailBody}>{[[t("common.floor", { number: selectedRoom.floor || 1 }), selectedRoom.floor || 1], [t("mobile.rooms.area"), selectedRoom.area], [t("mobile.rooms.defaultRent"), `${formatCurrency(selectedRoom.defaultRentPrice)}/${t("mobile.rooms.month")}`], [t("mobile.rooms.defaultDeposit"), formatCurrency(selectedRoom.defaultDeposit)], [t("mobile.rooms.status"), statusMeta(selectedRoom.status)[0]]].map(([label, value]) => <View key={String(label)} style={[styles.detailRow, { backgroundColor: theme.background }]}><AppText style={[styles.detailLabel, { color: theme.muted }]}>{label}</AppText><AppText style={[styles.detailValue, { color: theme.text }]}>{value}</AppText></View>)}{selectedRoom.reservedFrom ? <AppText style={[styles.reservedText, { color: theme.primary }]}>{t("rooms.reservedFrom")} {new Date(selectedRoom.reservedFrom).toLocaleDateString()}</AppText> : null}</View> : null}
         </View></View>
       </Modal>
 
@@ -239,6 +239,7 @@ const styles = StyleSheet.create({
   info: { flex: 1, marginTop: 12 },
   roomCode: { fontSize: 17, fontWeight: "900" },
   sub: { fontSize: 12, fontWeight: "600", marginTop: 4 },
+  reservedText: { fontSize: 11, fontWeight: "800", marginTop: 6 },
   badge: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4, alignSelf: "flex-start" },
   badgeText: { fontSize: 10, fontWeight: "900" },
   overlay: { flex: 1, justifyContent: "flex-end" },

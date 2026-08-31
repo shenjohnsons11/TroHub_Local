@@ -47,13 +47,18 @@ export default function AdminContractsScreen({ params }: Props) {
   const [rooms, setRooms] = useState<AdminRoom[]>([]);
   const [tenants, setTenants] = useState<AdminTenant[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "pending" | "active" | "checkout" | "draft">("all");
+  const [filter, setFilter] = useState<"all" | "pending" | "reserved" | "active" | "checkout" | "draft">("all");
   const [drafts, setDrafts] = useState<DraftContract[]>([]);
   const [checkoutModalVisible, setCheckoutModalVisible] = useState(false);
   const [checkoutContractId, setCheckoutContractId] = useState("");
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutPreviewLoading, setCheckoutPreviewLoading] = useState(false);
   const [checkoutPreview, setCheckoutPreview] = useState<CheckoutPreview | null>(null);
+  const [handoverModalVisible, setHandoverModalVisible] = useState(false);
+  const [handoverContractId, setHandoverContractId] = useState("");
+  const [handoverElectricity, setHandoverElectricity] = useState("");
+  const [handoverWater, setHandoverWater] = useState("");
+  const [handoverDate, setHandoverDate] = useState(new Date().toISOString().slice(0, 10));
   const [viewerContractId, setViewerContractId] = useState<string | null>(null);
   const [editingDraftId, setEditingDraftId] = useState<string | undefined>();
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -121,20 +126,9 @@ export default function AdminContractsScreen({ params }: Props) {
     else notification.info(t("contractsMobile.missingTenant", { name: action.tenantName }));
   }, [params?.aiAction, rooms, tenants]);
 
-  const closeWizard = async () => {
-    const hasDraft = Boolean(selectedRoomId || selectedTenantId || fixedRent || fixedDeposit);
-    if (hasDraft) {
-      const save = await notification.confirm({
-        title: t("contractsMobile.saveDraftPromptTitle"),
-        message: t("contractsMobile.saveDraftPrompt"),
-        confirmText: t("contracts.saveDraft"),
-        cancelText: t("common.cancel"),
-      });
-      if (!save) return;
-    }
-    draftSession.current += 1;
+  const closeWizard = () => {
     if (selectedRoomId || selectedTenantId) {
-      const savedId = await draftContractService.saveDraft({
+      void draftContractService.saveDraft({
         id: editingDraftId,
         roomId: selectedRoomId,
         tenantId: selectedTenantId,
@@ -148,9 +142,10 @@ export default function AdminContractsScreen({ params }: Props) {
         waterPrice: services.water.price,
         services,
         step: currentStep,
+      }).then(async (savedId) => {
+        setEditingDraftId(savedId || editingDraftId);
+        setDrafts(await draftContractService.getDrafts());
       });
-      setEditingDraftId(savedId || editingDraftId);
-      setDrafts(await draftContractService.getDrafts());
     }
     setModalVisible(false);
     setSelectedRoomId("");
@@ -160,7 +155,29 @@ export default function AdminContractsScreen({ params }: Props) {
     setConfirmed(false);
   };
 
+  const getPendingContractForRoom = (roomId: string) => {
+    return contracts.find((c) => {
+      const cRoomId = typeof c.roomId === "object" ? c.roomId?._id : c.roomId;
+      return cRoomId === roomId && (c.status === 0 || c.status === 4 || c.status === 5);
+    });
+  };
+
+  const getPendingContractForTenant = (tenantId: string) => {
+    return contracts.find((c) => {
+      const cTenantId = typeof c.tenantId === "object" ? c.tenantId?._id : c.tenantId;
+      return cTenantId === tenantId && (c.status === 0 || c.status === 4 || c.status === 5);
+    });
+  };
+
   const handleSelectRoom = (roomId: string) => {
+    const pendingContract = getPendingContractForRoom(roomId);
+    if (pendingContract) {
+      const statusText = pendingContract.status === 0 || pendingContract.status === 5 ? "đang chờ ký" : "đang chờ bàn giao";
+      notification.warning(
+        `Phòng này đang có hợp đồng ${statusText}. Vui lòng kiểm tra lại trước khi tạo mới.`,
+        { title: "Phòng đang có hợp đồng xử lý" }
+      );
+    }
     setSelectedRoomId(roomId);
     const room = rooms.find((item) => item._id === roomId);
     if (room) {
@@ -169,6 +186,18 @@ export default function AdminContractsScreen({ params }: Props) {
       setInitialElectricity(formatMeterReading(room.lastElectricityReading ?? room.draftElectricity));
       setInitialWater(formatMeterReading(room.lastWaterReading ?? room.draftWater));
     }
+  };
+
+  const handleSelectTenant = (tenantId: string) => {
+    const pendingContract = getPendingContractForTenant(tenantId);
+    if (pendingContract) {
+      const statusText = pendingContract.status === 0 || pendingContract.status === 5 ? "đang chờ ký" : "đang chờ bàn giao";
+      notification.warning(
+        `Khách thuê này đang có hợp đồng ${statusText}. Vui lòng kiểm tra lại.`,
+        { title: "Khách đang có hợp đồng xử lý" }
+      );
+    }
+    setSelectedTenantId(tenantId);
   };
 
   const handleCreateContract = async () => {
@@ -253,24 +282,37 @@ export default function AdminContractsScreen({ params }: Props) {
     setEndDateWasEdited(true);
   };
 
-  const handleApproveContract = async (contractId: string) => {
-    const approved = await notification.confirm({
-      title: t("contractsMobile.confirmTitle"), message: t("contractsMobile.confirmMessage"), confirmText: t("contractsMobile.approve"), cancelText: t("common.cancel"),
-    });
-    if (!approved) return;
+  const openHandoverModal = (contract: AdminContract) => {
+    const roomId = typeof contract.roomId === "object" ? contract.roomId._id : contract.roomId;
+    const room = rooms.find((item) => item._id === roomId);
+    setHandoverContractId(contract._id);
+    setHandoverElectricity(formatMeterReading(contract.initialElectricity ?? room?.lastElectricityReading));
+    setHandoverWater(formatMeterReading(contract.initialWater ?? room?.lastWaterReading));
+    setHandoverDate(new Date().toISOString().slice(0, 10));
+    setHandoverModalVisible(true);
+  };
 
-    setLoading(true);
-    const closeLoading = notification.loading(t("contractsMobile.approving"));
+  const handleHandover = async () => {
+    const electricity = parseMeterReading(handoverElectricity);
+    const water = parseMeterReading(handoverWater);
+    if (electricity === null || water === null || !handoverDate) {
+      notification.error(t("contractsMobile.handoverRequired"));
+      return;
+    }
     try {
-      const success = await adminService.confirmContract(contractId);
-      if (!success) throw new Error(t("contractsMobile.approveFailed"));
-      notification.success(t("contractsMobile.approved"));
-      void loadData();
+      setLoading(true);
+      await adminService.handoverContract(handoverContractId, {
+        initialElectricity: electricity,
+        initialWater: water,
+        handoverDate,
+      });
+      setHandoverModalVisible(false);
+      notification.success(t("contractsMobile.handoverSuccess"));
+      await loadData();
     } catch (error) {
-      notification.error(error instanceof Error ? error.message : t("contractsMobile.approveFailed"));
-      setLoading(false);
+      notification.error(error instanceof Error ? error.message : t("contractsMobile.handoverFailed"));
     } finally {
-      closeLoading();
+      setLoading(false);
     }
   };
 
@@ -327,30 +369,31 @@ export default function AdminContractsScreen({ params }: Props) {
       return t("contractsMobile.preMoveIn");
     }
     switch (contract.status) {
-      case 0: return t("contractsMobile.pendingTenant"); case 1: return t("contractsMobile.active"); case 2: return t("contractsMobile.checkedOut"); case 3: return t("contractsMobile.cancelled"); case 4: return t("contractsMobile.pendingOwner"); case 5: return t("contractsMobile.pendingCheckout"); default: return t("contractsMobile.draft");
+      case 0: return t("contractsMobile.draft"); case 1: return t("contractsMobile.active"); case 2: return t("contracts.status.expired"); case 3: return t("contracts.status.terminated"); case 4: return t("contracts.reserved"); case 5: return t("contractsMobile.pendingTenant"); default: return t("contractsMobile.draft");
     }
   };
   const getStatusColor = (contract: AdminContract) => {
     if (contract.status === 1 && new Date(contract.startDate).getTime() > Date.now()) return theme.primary; // Xanh dương
     if (contract.status === 1) return theme.positive; // Xanh lá
     if (contract.status === 3) return theme.danger;
-    if (contract.status === 0 || contract.status === 4) return "#dc2626";
-    if (contract.status === 5) return theme.warningForeground;
+    if (contract.status === 4) return theme.primary;
+    if (contract.status === 0 || contract.status === 5) return theme.warningForeground;
     return theme.muted;
   };
   const getStatusBg = (contract: AdminContract) => {
     if (contract.status === 1 && new Date(contract.startDate).getTime() > Date.now()) return theme.primarySoft;
     if (contract.status === 1) return theme.positiveSoft;
-    if (contract.status === 0 || contract.status === 4) return "#fef2f2";
-    if (contract.status === 3 || contract.status === 5) return theme.warningSoft;
+    if (contract.status === 4) return theme.primarySoft;
+    if (contract.status === 0 || contract.status === 5) return theme.warningSoft;
     return theme.surfaceElevated;
   };
 
   const filteredContracts = contracts.filter((contract) => {
     if (params?.contractId) return contract._id === params.contractId;
-    if (filter === "pending") return contract.status === 0 || contract.status === 4;
+    if (filter === "pending") return contract.status === 0 || contract.status === 5;
+    if (filter === "reserved") return contract.status === 4;
     if (filter === "active") return contract.status === 1;
-    if (filter === "checkout") return contract.status === 5 || contract.status === 2; // Include expired/checkout
+    if (filter === "checkout") return Boolean(contract.checkoutRequestedAt) || contract.status === 2;
     return filter === "all";
   });
   const selectableRooms = rooms.filter((room) => room.status === 0 || room.status === 1);
@@ -401,6 +444,7 @@ export default function AdminContractsScreen({ params }: Props) {
               {filterButton("all", t("common.all"))}
               {filterButton("draft", t("contractsMobile.draft"))}
               {filterButton("pending", t("contractsMobile.pending"))}
+              {filterButton("reserved", t("contracts.reserved"))}
               {filterButton("active", t("contractsMobile.activeFilter"))}
             </View>
           </View>
@@ -440,14 +484,14 @@ export default function AdminContractsScreen({ params }: Props) {
                   <View
                     style={[
                       styles.statusBadge,
-                      (item.status === 0 || item.status === 4) && styles.pendingBadge,
+                      (item.status === 0 || item.status === 5) && styles.pendingBadge,
                       { backgroundColor: getStatusBg(item) },
                     ]}
                   >
                     <AppText
                       style={[
                         styles.statusText,
-                        (item.status === 0 || item.status === 4) && styles.pendingText,
+                        (item.status === 0 || item.status === 5) && styles.pendingText,
                         { color: getStatusColor(item) },
                       ]}
                     >
@@ -473,14 +517,14 @@ export default function AdminContractsScreen({ params }: Props) {
                 </AppButton>
                 {item.status === 4 ? (
                   <AppButton
-                    icon="shield-checkmark-outline"
-                    onPress={() => void handleApproveContract(item._id)}
+                    icon="key-outline"
+                    onPress={() => openHandoverModal(item)}
                     style={styles.approveButton}
                   >
-                    {t("contractsMobile.approveContract")}
+                    {t("contracts.handover")}
                   </AppButton>
                 ) : null}
-                {item.status === 5 ? (
+                {item.checkoutRequestedAt ? (
                   <AppButton
                     variant="danger"
                     icon="log-out-outline"
@@ -590,6 +634,22 @@ export default function AdminContractsScreen({ params }: Props) {
         onClose={() => setViewerContractId(null)}
       />
 
+      <Modal visible={handoverModalVisible} transparent animationType="slide" onRequestClose={() => setHandoverModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View accessibilityViewIsModal style={styles.handoverContent}>
+            <AppText accessibilityRole="header" style={styles.wizardTitle}>{t("contracts.handover")}</AppText>
+            <AppText style={styles.wizardSubtitle}>{t("contractsMobile.handoverHint")}</AppText>
+            <AppTextInput value={handoverDate} onChangeText={setHandoverDate} placeholder="YYYY-MM-DD" placeholderTextColor={theme.muted} style={styles.input} />
+            <AppTextInput value={handoverElectricity} onChangeText={setHandoverElectricity} keyboardType="decimal-pad" placeholder={t("contractsMobile.initialElectricity")} placeholderTextColor={theme.muted} style={styles.input} />
+            <AppTextInput value={handoverWater} onChangeText={setHandoverWater} keyboardType="decimal-pad" placeholder={t("contractsMobile.initialWater")} placeholderTextColor={theme.muted} style={styles.input} />
+            <View style={styles.handoverActions}>
+              <AppButton variant="ghost" onPress={() => setHandoverModalVisible(false)}>{t("common.cancel")}</AppButton>
+              <AppButton icon="checkmark-circle-outline" onPress={() => void handleHandover()}>{t("common.confirm")}</AppButton>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <Modal
         visible={modalVisible}
         transparent
@@ -635,16 +695,28 @@ export default function AdminContractsScreen({ params }: Props) {
                     <View style={styles.selectionGrid}>
                       {selectableRooms.map((room) => {
                         const selected = selectedRoomId === room._id;
+                        const roomPending = getPendingContractForRoom(room._id);
                         return (
                           <Pressable
                             key={room._id}
                             accessibilityRole="radio"
                             accessibilityState={{ checked: selected }}
                             onPress={() => handleSelectRoom(room._id)}
-                            style={[styles.selectionItem, selected && styles.selectionActive]}
+                            style={[
+                              styles.selectionItem,
+                              selected && styles.selectionActive,
+                              Boolean(roomPending) && { borderColor: theme.warning, borderWidth: 1 }
+                            ]}
                           >
-                            <Ionicons name={selected ? "checkmark-circle" : "home-outline"} size={19} color={selected ? theme.primary : theme.muted} />
-                            <AppText style={[styles.selectionText, selected && styles.selectionTextActive]}>{room.roomCode}</AppText>
+                            <Ionicons name={selected ? "checkmark-circle" : (roomPending ? "alert-circle-outline" : "home-outline")} size={19} color={selected ? theme.primary : (roomPending ? theme.warning : theme.muted)} />
+                            <View>
+                              <AppText style={[styles.selectionText, selected && styles.selectionTextActive]}>{room.roomCode}</AppText>
+                              {roomPending ? (
+                                <AppText style={{ fontSize: 10, color: theme.warning, fontWeight: "600" }}>
+                                  {roomPending.status === 0 || roomPending.status === 5 ? "Chờ ký" : "Chờ bàn giao"}
+                                </AppText>
+                              ) : null}
+                            </View>
                           </Pressable>
                         );
                       })}
@@ -663,18 +735,28 @@ export default function AdminContractsScreen({ params }: Props) {
                       <View style={styles.selectionGrid}>
                         {tenants.map((tenant) => {
                           const selected = selectedTenantId === tenant._id;
+                          const tenantPending = getPendingContractForTenant(tenant._id);
                           return (
                             <Pressable
                               key={tenant._id}
                               accessibilityRole="radio"
                               accessibilityState={{ checked: selected }}
-                              onPress={() => setSelectedTenantId(tenant._id)}
-                              style={[styles.tenantItem, selected && styles.selectionActive]}
+                              onPress={() => handleSelectTenant(tenant._id)}
+                              style={[
+                                styles.tenantItem,
+                                selected && styles.selectionActive,
+                                Boolean(tenantPending) && { borderColor: theme.warning, borderWidth: 1 }
+                              ]}
                             >
-                              <Ionicons name={selected ? "checkmark-circle" : "person-circle-outline"} size={20} color={selected ? theme.primary : theme.muted} />
+                              <Ionicons name={selected ? "checkmark-circle" : (tenantPending ? "alert-circle-outline" : "person-circle-outline")} size={20} color={selected ? theme.primary : (tenantPending ? theme.warning : theme.muted)} />
                               <View>
                                 <AppText style={[styles.selectionText, selected && styles.selectionTextActive]}>{tenant.fullName}</AppText>
                                 <AppText style={styles.tenantPhone}>{formatPhone(tenant.phone)}</AppText>
+                                {tenantPending ? (
+                                  <AppText style={{ fontSize: 10, color: theme.warning, fontWeight: "600" }}>
+                                    {tenantPending.status === 0 || tenantPending.status === 5 ? "Đang có HĐ chờ ký" : "Đang có HĐ chờ bàn giao"}
+                                  </AppText>
+                                ) : null}
                               </View>
                             </Pressable>
                           );
@@ -847,6 +929,14 @@ export default function AdminContractsScreen({ params }: Props) {
                 loading={submitting}
                 disabled={submitting || (currentStep === 4 && !confirmed)}
                 onPress={() => {
+                  if (currentStep === 1 && !selectedRoomId) {
+                    notification.warning("Vui lòng chọn phòng trước khi tiếp tục.");
+                    return;
+                  }
+                  if (currentStep === 2 && !selectedTenantId) {
+                    notification.warning("Vui lòng chọn khách thuê trước khi tiếp tục.");
+                    return;
+                  }
                   if (currentStep < 4) setCurrentStep((step) => step + 1);
                   else void handleCreateContract();
                 }}
@@ -912,7 +1002,7 @@ function createStyles(theme: any) {
     title: { color: theme.text, fontSize: 23, fontWeight: "900", letterSpacing: -0.5 },
     subtitle: { color: theme.muted, fontSize: 12, marginTop: 3 },
     addButton: { minHeight: 46, paddingHorizontal: 14 },
-    filterContainer: { flexDirection: "row", gap: 8, marginVertical: 16 },
+    filterContainer: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginVertical: 16 },
     filterButton: { minHeight: 38, paddingHorizontal: 13, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: theme.surface },
     filterActive: { backgroundColor: theme.primarySoft },
     filterText: { color: theme.muted, fontSize: 12, fontWeight: "800" },
@@ -947,6 +1037,8 @@ function createStyles(theme: any) {
     approveButton: { marginTop: 16 },
     modalOverlay: { flex: 1, paddingTop: Platform.OS === "ios" ? 45 : 18, backgroundColor: theme.overlay },
     wizardContent: { flex: 1, backgroundColor: theme.background, borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: "hidden" },
+    handoverContent: { marginTop: "auto", backgroundColor: theme.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, gap: 12 },
+    handoverActions: { flexDirection: "row", justifyContent: "flex-end", gap: 10, marginTop: 6 },
     wizardHeader: { flexDirection: "row", alignItems: "flex-start", padding: 20, backgroundColor: theme.surface },
     wizardHeading: { flex: 1, paddingRight: 12 },
     wizardTitle: { color: theme.text, fontSize: 21, fontWeight: "900" },

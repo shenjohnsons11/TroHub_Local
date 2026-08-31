@@ -11,11 +11,13 @@ const contractSchema = new mongoose.Schema({
     waterPrice: { type: Number, min: 0 },
     initialElectricity: { type: Number, min: 0 },
     initialWater: { type: Number, min: 0 },
+    isAdvanceBooking: { type: Boolean, default: false },
+    handoverDate: { type: Date },
     tenantConfirmedAt: { type: Date },                // thoi_gian_nguoi_thue_xac_nhan
     lastSentAt: { type: Date },
     unpaidAmount: { type: Number, min: 0, default: 0 },
     checkoutRequestedAt: Date,
-    status: { type: Number, enum: [0, 1, 2, 3, 4, 5], default: 0 }, // 0: Chờ ký, 1: Hiệu lực, 2: Đã kết thúc, 3: Hủy, 4: Chờ chủ duyệt, 5: Chờ duyệt trả phòng
+    status: { type: Number, enum: [0, 1, 2, 3, 4, 5], default: 5 }, // 0: Bản nháp, 1: Hiệu lực, 2: Hết hạn, 3: Đã thanh lý, 4: Đã cọc/Chờ bàn giao, 5: Chờ khách ký
     checkoutSettlement: {
         electricityOld: Number,
         electricityNew: Number,

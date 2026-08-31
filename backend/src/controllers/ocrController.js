@@ -9,11 +9,7 @@ function getGeminiVisionClient() {
     return { primaryClient, fallbackClient };
 }
 
-const VISION_MODELS = [
-    'gemini-3.6-flash',
-    'gemini-3.5-flash',
-    'gemini-flash-latest'
-];
+const VISION_MODELS = ['gemini-3.6-flash', 'gemini-3.5-flash'];
 
 async function callGeminiVision(base64Data, prompt) {
     const { primaryClient, fallbackClient } = getGeminiVisionClient();
@@ -37,7 +33,11 @@ async function callGeminiVision(base64Data, prompt) {
             try {
                 const response = await client.models.generateContent({
                     model,
-                    contents
+                    contents,
+                    config: {
+                        temperature: 0.1,
+                        maxOutputTokens: 256,
+                    }
                 });
                 const text = response?.text || '';
                 if (text && text.trim()) {

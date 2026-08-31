@@ -56,6 +56,7 @@
       "draft": "Bản nháp",
       "pendingTenant": "Chờ khách ký",
       "pendingOwner": "Chờ chủ duyệt",
+      "reserved": "Đã cọc / Chờ bàn giao",
       "active": "Đang hiệu lực",
       "expired": "Đã hết hạn",
       "terminated": "Đã thanh lý",
@@ -224,6 +225,7 @@
     "filterFloor": "Lọc theo tầng",
     "searchPlaceholder": "Tìm theo mã phòng...",
     "emptyRooms": "Chưa có phòng nào được tạo.",
+    "reservedFrom": "Đã có người cọc từ",
     "createdSuccess": "Thêm phòng mới thành công!",
     "updatedSuccess": "Cập nhật phòng thành công!",
     "deletedSuccess": "Đã xóa phòng!",
@@ -279,7 +281,8 @@
       "expired": "Đã hết hạn",
       "terminated": "Đã thanh lý",
       "pendingTenant": "Chờ khách ký",
-      "pendingOwner": "Chờ chủ duyệt"
+      "pendingOwner": "Chờ chủ duyệt",
+      "reserved": "Đã cọc / Chờ bàn giao"
     },
     "createdSuccess": "Tạo hợp đồng thành công!",
     "approvedSuccess": "Duyệt hợp đồng thành công!",
@@ -300,7 +303,14 @@
     "saveDraft": "Lưu bản nháp",
     "resumeDraft": "Tiếp tục tạo",
     "deleteDraft": "Xóa nháp",
-    "draftSavedSuccess": "Đã lưu bản nháp hợp đồng thành công!"
+    "draftSavedSuccess": "Đã lưu bản nháp hợp đồng thành công!",
+    "handover": "Bàn giao phòng",
+    "handoverDate": "Ngày bàn giao",
+    "confirmHandover": "Xác nhận bàn giao",
+    "handoverHint": "Nhập chỉ số điện nước thực tế tại thời điểm bàn giao để kích hoạt hợp đồng.",
+    "handoverRequired": "Vui lòng nhập ngày bàn giao và đủ chỉ số điện nước.",
+    "handoverSuccess": "Bàn giao phòng thành công. Hợp đồng đã có hiệu lực.",
+    "handoverFailed": "Không thể bàn giao phòng."
   },
   "invoices": {
     "title": "Quản lý Hóa đơn",

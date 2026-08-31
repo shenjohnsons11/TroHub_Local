@@ -97,6 +97,8 @@ const mapApiRepairToRepair = (item: ApiRepairRequest): RepairRequest => {
     : [];
   return {
     id: item._id || item.id || "",
+    contractId: typeof item.contractId === "object" ? item.contractId?._id : item.contractId,
+    roomId: item.contractId?.roomId?._id,
     room: roomCode,
     type: item.title || item.category || "",
     priority: mapPriorityFromApi(item.priority),
@@ -109,7 +111,7 @@ const mapApiRepairToRepair = (item: ApiRepairRequest): RepairRequest => {
 };
 
 export const repairService = {
-  async getRequests(): Promise<RepairRequest[]> {
+  async getRequests(roomId?: string): Promise<RepairRequest[]> {
     try {
       const token = await authService.getToken();
       const authUser = await authService.getAuthUser();
@@ -133,7 +135,8 @@ export const repairService = {
 
       const requests = response.data?.repairs || [];
 
-      return requests.map(mapApiRepairToRepair);
+      const mapped = requests.map(mapApiRepairToRepair);
+      return roomId ? mapped.filter((request) => request.roomId === roomId) : mapped;
     } catch (error) {
       console.log("Lỗi lấy danh sách sửa chữa từ API:", error);
       throw error;
@@ -158,6 +161,7 @@ export const repairService = {
       const response = await apiClient.post<CreateRepairResponse>(
         "/me/repairs",
         {
+          roomId: request.roomId,
           room: request.room,
           title: request.type,
           content: request.description,

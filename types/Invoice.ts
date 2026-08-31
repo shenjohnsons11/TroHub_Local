@@ -2,6 +2,8 @@ export type InvoiceStatus = "unpaid" | "paid" | "settled";
 
 export type Invoice = {
   id: string;
+  contractId?: string;
+  roomId?: string;
   month: string;
   room: string;
   amount: string;

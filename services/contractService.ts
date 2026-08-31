@@ -44,6 +44,9 @@ type ApiContract = {
   docxUrl?: string;
   pdfUrl?: string;
   tenantSignature?: string;
+  isAdvanceBooking?: boolean;
+  handoverDate?: string;
+  checkoutRequestedAt?: string;
   depositPayment?: {
     required: boolean;
     invoiceId: string | null;
@@ -98,12 +101,12 @@ const getServicePrice = (services: ApiServiceItem[], keywords: string[]) => {
 
 const mapNumericStatus = (status: number): ContractStatus => {
   switch (status) {
-    case 0: return "pending";          // Chờ khách ký
+    case 0: return "pending";          // Bản nháp legacy
     case 1: return "active";           // Có hiệu lực
     case 2: return "expired";          // Hết hạn
-    case 3: return "cancelled";        // Đã hủy
-    case 4: return "awaiting_approval"; // Chờ chủ duyệt
-    case 5: return "requesting_termination"; // Yêu cầu trả phòng
+    case 3: return "terminated";       // Đã thanh lý
+    case 4: return "reserved";         // Đã cọc / chờ bàn giao
+    case 5: return "pending";          // Chờ khách ký
     default: return "pending";
   }
 };
@@ -140,6 +143,7 @@ const mapApiContractToContract = (apiContract: ApiContract): Contract => {
 
   return {
     id: apiContract._id,
+    roomId: apiContract.roomId?._id,
     room: apiContract.roomId?.roomCode || "N/A",
     tenantName: apiContract.tenantId?.fullName || "Người thuê",
     startDate: formatDate(apiContract.startDate),
@@ -147,7 +151,7 @@ const mapApiContractToContract = (apiContract: ApiContract): Contract => {
     rentFee: `${formatCurrency(apiContract.fixedRentPrice)} / tháng`,
     deposit: formatCurrency(apiContract.fixedDeposit),
     depositPayment: apiContract.depositPayment,
-    status: mapNumericStatus(apiContract.status),
+    status: apiContract.checkoutRequestedAt ? "requesting_termination" : mapNumericStatus(apiContract.status),
     rawStatus: apiContract.status,
     usedMonths,
     remainingMonths,
@@ -169,6 +173,9 @@ const mapApiContractToContract = (apiContract: ApiContract): Contract => {
     docxUrl: apiContract.docxUrl,
     pdfUrl: apiContract.pdfUrl,
     tenantSignature: apiContract.tenantSignature,
+    isAdvanceBooking: apiContract.isAdvanceBooking,
+    handoverDate: apiContract.handoverDate,
+    checkoutRequestedAt: apiContract.checkoutRequestedAt,
   };
 };
 
@@ -195,10 +202,8 @@ export const contractService = {
         throw new Error("Không tìm thấy thông tin đăng nhập");
       }
 
-      // SỬ DỤNG ENDPOINT ME PORTAL HOẶC CONTRACTS TÙY THEO BACKEND
-      // Gọi qua me portal là tốt nhất nhưng hiện tại đang gọi /contracts
       const response = await apiClient.get<ContractListResponse>(
-        "/contracts",
+        "/contracts/my-contracts",
         token
       );
 
@@ -208,12 +213,7 @@ export const contractService = {
 
       const contracts = response.data || [];
 
-      // Lọc hợp đồng thuộc về người thuê đang đăng nhập
-      const myContracts = contracts.filter((item) => {
-        return item.tenantId?._id === authUser.id;
-      });
-
-      return myContracts.map(mapApiContractToContract);
+      return contracts.map(mapApiContractToContract);
     } catch (error) {
       console.log("Lỗi lấy danh sách hợp đồng:", error);
       return [];

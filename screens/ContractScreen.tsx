@@ -18,6 +18,7 @@ import { ContentSkeleton } from "../components/ui/content-skeleton";
 import { useTranslation } from "../contexts/LanguageContext";
 import { formatCurrency, formatMeterReading, unformatNumber } from "../utils/formatters";
 import ContractViewerModal from "../components/ContractViewerModal";
+import TenantRoomSwitcher from "../components/TenantRoomSwitcher";
 
 
 
@@ -26,7 +27,10 @@ const getStatusLabel = (status: ContractStatus, t: (key: string) => string): str
     case "pending": return t("tenantContract.pending");
     case "active": return t("tenantContract.active");
     case "expired": return t("tenantContract.expired");
+    case "terminated": return t("tenantContract.terminated");
     case "cancelled": return t("tenantContract.cancelled");
+    case "reserved": return t("contracts.reserved");
+    case "requesting_termination": return t("tenantContract.terminateSent");
     case "awaiting_approval": return t("tenantContract.awaiting");
     default: return t("tenantContract.unknown");
   }
@@ -37,7 +41,10 @@ const getStatusColor = (status: ContractStatus, theme: ReturnType<typeof useAppT
     case "pending": return "#dc2626";
     case "active": return theme.positive;
     case "expired": return theme.muted;
+    case "terminated": return theme.danger;
     case "cancelled": return theme.danger;
+    case "reserved": return theme.primary;
+    case "requesting_termination": return theme.danger;
     case "awaiting_approval": return theme.primary;
     default: return theme.muted;
   }
@@ -48,7 +55,10 @@ const getStatusBg = (status: ContractStatus, theme: ReturnType<typeof useAppThem
     case "pending": return "#fef2f2";
     case "active": return theme.positiveSoft;
     case "expired": return theme.surfaceElevated;
+    case "terminated": return theme.warningSoft;
     case "cancelled": return theme.warningSoft;
+    case "reserved": return theme.primarySoft;
+    case "requesting_termination": return theme.warningSoft;
     case "awaiting_approval": return theme.primarySoft;
     default: return theme.surfaceElevated;
   }
@@ -57,9 +67,11 @@ const getStatusBg = (status: ContractStatus, theme: ReturnType<typeof useAppThem
 type Props = {
   onNavigate?: (screen: "invoice", params?: any) => void;
   params?: { contractId?: string };
+  selectedRoomId?: string;
+  onRoomSelect: (roomId: string) => void;
 };
 
-export default function ContractScreen({ onNavigate, params }: Props) {
+export default function ContractScreen({ onNavigate, params, selectedRoomId, onRoomSelect }: Props) {
   const notification = useNotification();
   const { theme } = useAppTheme();
   const { t } = useTranslation();
@@ -212,6 +224,7 @@ export default function ContractScreen({ onNavigate, params }: Props) {
         <>
           <AppText style={styles.title}>{t("tenantContract.title")}</AppText>
           <AppText style={styles.subtitle}>{t("tenantContract.subtitle")}</AppText>
+          <TenantRoomSwitcher contracts={contracts} selectedRoomId={selectedRoomId} onSelect={onRoomSelect} />
         </>
       }
       ListEmptyComponent={
@@ -305,7 +318,7 @@ export default function ContractScreen({ onNavigate, params }: Props) {
             )}
 
             {/* Phí dịch vụ */}
-            {(contract.status === "active" || contract.status === "pending") && (
+            {["active", "pending", "reserved"].includes(contract.status) && (
               <View style={styles.servicesBox}>
                 <AppText style={styles.servicesTitle}>{t("tenantContract.services")}</AppText>
                 <View style={styles.servicesGrid}>
@@ -346,11 +359,11 @@ export default function ContractScreen({ onNavigate, params }: Props) {
             )}
 
             {/* Thông báo chờ duyệt */}
-            {contract.status === "awaiting_approval" && (
+            {["reserved", "awaiting_approval"].includes(contract.status) && (
               <>
                 <View style={styles.awaitingBox}>
                   <AppText style={styles.awaitingText}>
-                    {t("tenantContract.awaitingHint")}
+                    {contract.status === "reserved" ? t("contracts.reserved") : t("tenantContract.awaitingHint")}
                   </AppText>
                 </View>
                 {contract.depositPayment?.required &&

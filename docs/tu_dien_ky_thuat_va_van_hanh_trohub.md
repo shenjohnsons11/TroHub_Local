@@ -1,7 +1,7 @@
 # Từ điển kỹ thuật và vận hành TroHub
 
 **Tên tiếng Anh:** TroHub Developer Dictionary & Upgrade Guide  
-**Phiên bản nguồn đã rà soát:** workspace `main` tại `/Users/nguyen/TroHub_Local`, ngày 07-08-2026.  
+**Phiên bản nguồn đã rà soát:** workspace `main` tại `/Users/nguyen/TroHub_Local`, commit `dbc1637`, ngày 31-08-2026.
 **Quy ước số dòng:** `Lx` là dòng bắt đầu route, export controller, field schema hoặc hàm trong phiên bản trên. Prefix API được ghép tại `backend/server.js:L56-L76`.  
 **Phạm vi:** Backend Node.js/Express/Mongoose, WebAdmin Next.js và Mobile React Native/Expo. Nhánh worktree `feature/property-membership-dashboard` được giữ độc lập theo quyết định trước đó, nên không thuộc chỉ mục mã nguồn `main` này.
 
@@ -12,6 +12,116 @@
 3. Dùng Mục 3 khi cần tái sử dụng helper hoặc đi theo một luồng tích hợp.
 4. Dùng Mục 4 để xác định màn hình trước khi sửa UI.
 5. Làm đúng danh sách Mục 5 khi mở rộng schema, Mobile, JWT hoặc MongoDB.
+
+## Bản cập nhật 31-08-2026 — Tính năng mới và luồng vận hành
+
+Phần này là hướng dẫn nhanh cho các tính năng đã hoàn thiện sau lần rà soát trước. Tên file bên dưới là source of truth; các mô tả UI không thay thế validation và quyền ở Backend.
+
+### 0.1. Tự động hóa hóa đơn hai nhịp
+
+Billing automation chạy theo múi giờ `Asia/Ho_Chi_Minh`, được khởi động cùng Backend tại `backend/server.js` qua `startBillingScheduler()`. Cron `0 7 * * *` chạy lúc 07:00 mỗi ngày và thực hiện ba việc: nhắc quét số N-1, phát hành hóa đơn N và nhắc công nợ theo scheduler hiện hữu.
+
+| Thời điểm | Hệ thống thực hiện | Người dùng nhìn thấy |
+|---|---|---|
+| Ngày `invoiceDay - 1`, 07:00 | Tìm các phòng đang thuê có hợp đồng active nhưng chưa đủ số nháp hợp lệ. Với `invoiceDay = 1`, ngày nhắc là ngày cuối tháng trước. | Thông báo `⏰ Nhắc nhở chốt điện nước kỳ {period}`, liệt kê mã phòng thiếu số và deep link `scan_meter`. |
+| Bất kỳ ngày nào trước ngày chốt | Admin dùng Camera AI hoặc màn Utilities để nhập số. Backend chỉ ghi vào `Room.draftElectricity`/`Room.draftWater`; chưa phát hành hóa đơn và chưa đổi số đã chốt. | Scanner báo: `✓ Đã lưu chỉ số nháp. Hệ thống sẽ tự động lên hóa đơn vào ngày {invoiceDay}.` |
+| Ngày `invoiceDay`, 07:00 | Lấy phòng đang thuê và hợp đồng active; dùng số nháp hợp lệ, hoặc số cũ cho khoản điện/nước cố định. Tính và upsert hóa đơn theo `automationKey`. | Tenant nhận thông báo hóa đơn mới và thông báo chốt chỉ số; Landlord nhận thông báo tổng kết. |
+| Sau khi phát hành thành công | Ghi `lastElectricityReading`/`lastWaterReading` bằng số dùng trong hóa đơn và `$unset` hai field draft. Phòng thiếu số bị bỏ qua, không tạo hóa đơn thiếu dữ liệu. | Tổng kết nêu số hóa đơn đã phát hành và danh sách phòng còn thiếu số nếu có. |
+
+#### Điều kiện số đọc
+
+- Hợp đồng dùng điện/nước theo đồng hồ cần số nháp là số hữu hạn, không âm và không thấp hơn số cũ. Dashboard đánh dấu “sẵn sàng” khi số nháp mới lớn hơn số cũ.
+- Hợp đồng dùng dịch vụ điện/nước cố định không bắt buộc draft meter; hệ thống dùng số cũ để giữ snapshot và tính phí cố định theo dịch vụ trong hợp đồng.
+- Nếu chỉ có một trong hai số điện/nước cho hợp đồng đo đồng hồ, phòng chưa đủ điều kiện phát hành.
+- Nhập lại số qua scanner sẽ cập nhật draft hiện tại của phòng. Chỉ lần phát hành thành công mới chuyển draft thành `last*Reading`.
+
+#### Chống phát hành trùng
+
+Mỗi hóa đơn tự động mang khóa `automationKey = <landlordId>:<roomId>:<MM/YYYY>`. Invoice có partial unique index trên field này; thao tác upsert dùng `$setOnInsert`. Vì vậy restart Backend hoặc cron chạy lại không tạo thêm hóa đơn cùng phòng/cùng kỳ. Notification cũng có `eventKey` để chống lặp event.
+
+### 0.2. Cách sử dụng cho Chủ trọ
+
+#### Mobile App
+
+1. Vào **Cài đặt → Tự động hóa hóa đơn** hoặc mở thẻ tự động hóa trong **Dashboard/Hóa đơn**.
+2. Bật **Tự động phát hành**, chọn **Ngày chốt**, **Hạn nộp** và **Nhắc trước**; bấm lưu. Các ngày hợp lệ là số nguyên từ 1 đến 31. Tháng ngắn tự dùng ngày cuối tháng khi cần.
+3. Vào **Quản lý dịch vụ** để tạo/cập nhật catalog dịch vụ. Chọn `FIXED` cho phí cố định, `QUANTITY` cho phí theo số lượng hoặc `METER` cho phí theo chỉ số; nhập mã, đơn vị, giá mặc định và trạng thái hoạt động.
+4. Vào **Quét điện nước AI**, chọn phòng và loại đồng hồ, chụp ảnh, kiểm tra/chỉnh số rồi bấm lưu. Số được lưu an toàn vào draft của đúng Room thuộc Landlord.
+5. Ngày N-1, mở thông báo nhắc quét để đi thẳng đến scanner. Ngày N không cần bấm phát hành; kiểm tra thẻ tổng kết trong Inbox hoặc màn Hóa đơn.
+
+#### WebAdmin
+
+- **Dashboard:** thẻ automation hiển thị bật/tắt, ngày nhắc và mốc phát hành; mở modal cấu hình nhanh ngay trên màn hình.
+- **Hóa đơn:** thẻ automation nằm dưới header, dẫn tới cấu hình nhanh hoặc kích hoạt tự động hóa; bulk invoice thủ công vẫn dùng được như luồng dự phòng.
+- **Cài đặt → Billing:** cấu hình đầy đủ policy và xem mô tả “nhắc ngày N-1, gom số/phát hành 07:00 ngày N”.
+- **Utilities:** nhập số từng phòng hoặc nhiều phòng; nút lưu gọi bulk endpoint và ghi draft, không chốt trực tiếp.
+- **Services:** CRUD catalog, xem trước các hợp đồng bị ảnh hưởng khi đổi giá, sau đó áp giá cho hợp đồng mới hoặc các hợp đồng active được chọn.
+
+### 0.3. Ba trải nghiệm Dashboard
+
+Dashboard Admin dùng `GET /api/dashboard/stats?months=6` hoặc `months=12`; không dựng số liệu biểu đồ từ mảng tĩnh.
+
+| Tab | Mục đích | Dữ liệu chính và thao tác |
+|---|---|---|
+| `📊 Tổng quan` | Trung tâm vận hành nhanh | Doanh thu đã thu trong kỳ hiện tại, phòng thuê/trống, tỷ lệ lấp đầy, công nợ, phòng thiếu số và Quick Actions: tự động hóa, quét AI, tạo hóa đơn. |
+| `📈 Báo cáo` | Phân tích tài chính | Chuỗi doanh thu 6 hoặc 12 tháng, cơ cấu tiền phòng/điện nước/dịch vụ, điện nước tiêu thụ, số đã trả/chưa trả/quá hạn và tỷ lệ thanh toán đúng hạn. |
+| `📋 Tiêu chuẩn` | Quản lý theo tầng | Nhóm phòng theo `floor`, hiển thị mã phòng, trạng thái, người thuê, hợp đồng active và tình trạng meter; từ đây mở thao tác chi tiết từng phòng. |
+
+Nguồn dữ liệu được giới hạn theo `landlordId`: Room thuộc Landlord, Contract theo các Room đó, Invoice theo Contract và Tenant/Repair liên quan. Khi tài khoản mới chưa có dữ liệu, API trả số 0, mảng rỗng và Dashboard hiển thị empty state; không dùng doanh thu hoặc biểu đồ giả.
+
+### 0.4. Luồng quản lý dịch vụ đi kèm
+
+`AdminServicesScreen.tsx` trên Mobile và `/dashboard/services` trên WebAdmin dùng chung API `/api/services`:
+
+1. `GET /api/services` tải catalog của Landlord.
+2. `POST /api/services` tạo dịch vụ với `name`, `code`, `billingMode`, `unit`, `defaultPrice`, tùy chọn `defaultQuantity`, `isActive`.
+3. `PUT /api/services/:id` sửa thông tin catalog hoặc bật/tắt dịch vụ.
+4. Khi đổi giá, gọi `POST /api/services/:id/price-impact` để xem hợp đồng active bị ảnh hưởng; gọi `PUT /api/services/:id/price` với scope phù hợp để áp giá và ghi audit.
+5. `DELETE /api/services/:id` xóa khi không bị ràng buộc; nếu đã được hợp đồng tham chiếu, Backend trả luồng archive thay vì làm hỏng lịch sử hóa đơn.
+
+Trong hóa đơn, giá dịch vụ là snapshot ở Contract/Invoice. Đổi giá catalog không tự ý sửa các hóa đơn đã phát hành.
+
+### 0.5. Sơ đồ dữ liệu và điểm kiểm tra nhanh
+
+```text
+Camera AI / Utilities
+        │ POST /api/rooms/:id/report-utility
+        │ POST /api/rooms/bulk-report-utility
+        ▼
+Room.draftElectricity / Room.draftWater
+        │
+        ├─ 07:00 ngày N-1 → Notification Landlord → deepLink: scan_meter
+        │
+        └─ 07:00 ngày N → validate meter + calculateInvoiceAmounts
+                              │
+                              ▼
+          Invoice(automationKey, status=1) + Notification Tenant
+                              │
+                              ▼
+          Room.last*Reading cập nhật + xóa draft + summary Landlord
+```
+
+Khi chẩn đoán một kỳ, kiểm tra theo thứ tự: BillingPolicy của Landlord → Room `status: 1` → Contract `status: 1` → draft/last readings → Invoice có `automationKey` → Notification summary. Không sửa trực tiếp `last*Reading` để “ép” scheduler chạy; hãy lưu draft qua API rồi chạy đúng lịch hoặc dùng bulk invoice thủ công có kiểm soát.
+
+### 0.6. Checklist nghiệm thu một kỳ tự động
+
+- [ ] BillingPolicy có `autoInvoiceEnabled: true`, ngày chốt và hạn nộp đúng mong muốn.
+- [ ] Room cần lập hóa đơn có `status: 1` và Contract tương ứng có `status: 1`.
+- [ ] Scanner/Utilities trả HTTP 200 và Room xuất hiện `draftElectricity`/`draftWater` đúng số.
+
+### 0.7. Nhiều phòng trên một tài khoản và đặt cọc trước
+
+- Một Tenant có thể có nhiều Contract active ở các Room khác nhau. Mobile gọi `GET /api/contracts/my-contracts`; `TenantRoomSwitcher` dùng `roomId` để chuyển đồng bộ Home, Invoice, Repair và Contract.
+- Trạng thái Contract thống nhất: `0 DRAFT`, `1 ACTIVE`, `2 EXPIRED`, `3 TERMINATED`, `4 RESERVED`, `5 PENDING`. Yêu cầu trả phòng dùng `checkoutRequestedAt`, không tái sử dụng status `5`.
+- Khi tạo hợp đồng cho Room đang thuê, Backend chỉ cho phép nếu `startDate_mới >= endDate_cũ`. Hợp đồng được tạo ở `PENDING`; sau khi Tenant ký và thanh toán cọc, chuyển `RESERVED`.
+- Chủ trọ mở **Hợp đồng → Chờ bàn giao → Bàn giao phòng**, nhập `handoverDate`, `initialElectricity`, `initialWater`. API `PUT /api/contracts/:id/handover` kiểm tra quyền, tiền cọc và không cho số đầu kỳ thấp hơn số hiện tại; sau đó chuyển Contract `ACTIVE`, cập nhật Room và gửi thông báo Tenant.
+- Room API trả thêm `reservedFrom`, `reservedContractId`, `reservedTenant` để Mobile/Web hiển thị huy hiệu `Đã có người cọc từ ...`. Không dùng huy hiệu này để coi phòng đã bàn giao; chỉ Contract `ACTIVE` mới là phòng đang thuê.
+- [ ] Sau mốc 07:00 ngày chốt, Invoice có `period`, `status: 1`, `automationKey` đúng kỳ và tổng tiền đúng snapshot Contract.
+- [ ] Room đã phát hành có `lastElectricityReading`/`lastWaterReading` mới và không còn hai field draft.
+- [ ] Tenant nhận event invoice/utility; Landlord nhận một summary có `successCount`, `skipCount` và danh sách phòng thiếu số.
+- [ ] Chạy lại scheduler không tạo Invoice thứ hai cho cùng `automationKey`; phòng thiếu số vẫn được liệt kê để bổ sung.
+
+Test hồi quy chính: `backend/test/billingScheduler.test.js` cho hai nhịp scheduler/idempotency và `backend/test/dashboardStats.test.js` cho dữ liệu Dashboard live/empty state. Khi kiểm tra thời gian, nhớ dùng múi giờ `Asia/Ho_Chi_Minh`; cron production chỉ kích hoạt tại mốc 07:00 mỗi ngày.
 
 ## Mục 1 — Từ điển tất cả API và Controllers
 
@@ -67,8 +177,8 @@ Mọi endpoint thành công trả JSON; controller dùng các dạng `message`, 
 | API-ROOM-03 | GET | `/api/rooms/:id` | `routes/roomRoutes.js:L11` | `controllers/roomController.js:L105` | Admin + room id | Room | Kiểm tra ownership trước khi trả chi tiết. |
 | API-ROOM-04 | PUT | `/api/rooms/:id` | `routes/roomRoutes.js:L12` | `controllers/roomController.js:L120` | Admin + room fields | Room đã sửa | Cập nhật thông tin, giá mặc định hoặc trạng thái phòng. |
 | API-ROOM-05 | DELETE | `/api/rooms/:id` | `routes/roomRoutes.js:L13` | `controllers/roomController.js:L151` | Admin + room id | Xác nhận xóa | Xóa Room thuộc Landlord sau kiểm tra quyền. |
-| API-ROOM-06 | POST | `/api/rooms/bulk-report-utility` | `routes/roomRoutes.js:L16` | `controllers/roomController.js:L205` | Admin + danh sách room/readings | Các Room đã lưu nháp | Lưu `draftElectricity,draftWater` cho nhiều phòng. |
-| API-ROOM-07 | POST | `/api/rooms/:id/report-utility` | `routes/roomRoutes.js:L19` | `controllers/roomController.js:L181` | Admin + chỉ số điện/nước | Room đã lưu nháp | Lưu chỉ số nháp cho một phòng. |
+| API-ROOM-06 | POST | `/api/rooms/bulk-report-utility` | `routes/roomRoutes.js:L16` | `controllers/roomController.js:L205` | Admin + `{ utilities: [{ roomId,draftElectricity?,draftWater? }] }` | Các Room đã lưu nháp | Validate số hữu hạn không âm, kiểm tra ownership và lưu draft cho nhiều phòng. |
+| API-ROOM-07 | POST | `/api/rooms/:id/report-utility` | `routes/roomRoutes.js:L19` | `controllers/roomController.js:L181` | Admin + `draftElectricity?`, `draftWater?` | Room đã lưu nháp | Chỉ ghi draft vào Room thuộc Landlord; không cập nhật `last*Reading` tại bước scanner. |
 | API-TENANT-01 | POST | `/api/tenants/check-duplicate` | `routes/tenantRoutes.js:L7` | `controllers/tenantController.js:L63` | `phone,idCard,email` | Cờ/match trùng | Kiểm tra trước khi tạo danh bạ hay liên kết người thuê. |
 | API-TENANT-02 | GET | `/api/tenants/lookup` | `routes/tenantRoutes.js:L8` | `controllers/tenantController.js:L99` | Query `identifier` | Account Tenant hoặc không tìm thấy | Chuẩn hóa identifier và tra theo SĐT, CCCD hoặc email. |
 | API-TENANT-03 | GET | `/api/tenants` | `routes/tenantRoutes.js:L9` | `controllers/tenantController.js:L14` | Landlord Bearer | Tenant/contract liên quan | Tổng hợp Tenant trong phạm vi Landlord. |
@@ -96,7 +206,7 @@ Mọi endpoint thành công trả JSON; controller dùng các dạng `message`, 
 | API-INVOICE-02 | GET | `/api/invoices/bulk-preview` | `routes/invoiceRoutes.js:L11` | `controllers/invoiceController.js:L145` | Admin, query period | Room/contract/meter/price preview | Lấy contract active, chỉ số trước và điện/nước từ terms hoặc default `3500/15000`. |
 | API-INVOICE-03 | GET | `/api/invoices/debts` | `routes/invoiceRoutes.js:L14` | `controllers/invoiceController.js:L835` | Admin Bearer | Công nợ theo contract | Tổng hợp invoice chưa thanh toán. |
 | API-INVOICE-04 | POST | `/api/invoices/debts/:contractId/remind` | `routes/invoiceRoutes.js:L15` | `controllers/invoiceController.js:L892` | Admin + contract id | Kết quả gửi nhắc | Tạo notification công nợ cho Tenant hợp đồng. |
-| API-INVOICE-05 | POST | `/api/invoices/bulk` | `routes/invoiceRoutes.js:L18` | `controllers/invoiceController.js:L252` | Admin + `period,invoices[]` | Invoice lô đã tạo | Tính từng dòng, lưu invoice, cập nhật meter Room và phát notification. |
+| API-INVOICE-05 | POST | `/api/invoices/bulk` | `routes/invoiceRoutes.js:L18` | `controllers/invoiceController.js:L252` | Admin + `period,invoices[]` | Invoice lô đã tạo | Luồng bulk thủ công; tính từng dòng, lưu invoice, cập nhật meter Room và phát notification. Scheduler tự động dùng service riêng và `automationKey`. |
 | API-INVOICE-06 | POST | `/api/invoices` | `routes/invoiceRoutes.js:L21` | `controllers/invoiceController.js:L464` | Admin + invoice fields | Invoice mới | Lập invoice đơn lẻ trong phạm vi contract/room hợp lệ. |
 | API-INVOICE-07 | GET | `/api/invoices/:id` | `routes/invoiceRoutes.js:L24` | `controllers/invoiceController.js:L716` | Bearer + invoice id | Invoice detail | Đọc chi tiết invoice có kiểm tra quyền. |
 | API-INVOICE-08 | PUT | `/api/invoices/:id/pay` | `routes/invoiceRoutes.js:L27` | `controllers/invoiceController.js:L737` | Bearer + method/transaction fields | Invoice paid + Transaction | Chuyển thanh toán và sinh transaction. |
@@ -113,9 +223,9 @@ Mọi endpoint thành công trả JSON; controller dùng các dạng `message`, 
 | API-SETTING-01 | GET | `/api/settings` | `routes/settingsRoute.js:L7` | `controllers/settingsController.js:L5` | Admin Bearer | Settings Account | Đọc thiết lập Landlord. |
 | API-SETTING-02 | PUT | `/api/settings` | `routes/settingsRoute.js:L8` | `controllers/settingsController.js:L29` | Admin + setting fields | Settings đã cập nhật | Lưu thiết lập Landlord. |
 | API-BILLING-01 | GET | `/api/settings/billing-policy` | `routes/billingPolicyRoutes.js:L8` | `controllers/billingPolicyController.js:L16` | Admin Bearer | BillingPolicy | Đọc policy hoặc defaults của Landlord. |
-| API-BILLING-02 | PUT | `/api/settings/billing-policy` | `routes/billingPolicyRoutes.js:L9` | `controllers/billingPolicyController.js:L31` | Admin + grace/fee/reminders | BillingPolicy đã lưu | Upsert policy hóa đơn theo Landlord. |
-| API-DASHBOARD-01 | GET | `/api/dashboard/stats` | `routes/dashboardRoutes.js:L5`, `server.js:L73` | `controllers/dashboardController.js:L8` | Bearer | Stats dashboard | Tổng hợp thống kê cho role hiện tại. |
-| API-DASHBOARD-02 | GET | `/api/landlord/stats` | `routes/dashboardRoutes.js:L5`, `server.js:L74` | `controllers/dashboardController.js:L8` | Landlord Bearer | Stats dashboard | Alias tương thích cho WebAdmin/Landlord. |
+| API-BILLING-02 | PUT | `/api/settings/billing-policy` | `routes/billingPolicyRoutes.js:L9` | `controllers/billingPolicyController.js:L31` | Admin + `autoInvoiceEnabled,invoiceDay,dueDay,autoRemindEnabled,remindDaysBeforeDue` và policy phạt | BillingPolicy đã lưu | Normalize ngày 1–31, upsert policy theo Landlord; UI dùng cùng endpoint cho modal cấu hình nhanh. |
+| API-DASHBOARD-01 | GET | `/api/dashboard/stats` | `routes/dashboardRoutes.js:L5`, `server.js:L73` | `controllers/dashboardController.js:L8` | Bearer, query `months=6|12` | Stats dashboard | Tính live rooms, tenants, revenue PAID, debt, payment performance, utility reading, automation và nhóm phòng theo tầng. |
+| API-DASHBOARD-02 | GET | `/api/landlord/stats` | `routes/dashboardRoutes.js:L5`, `server.js:L74` | `controllers/dashboardController.js:L8` | Landlord Bearer, query `months=6|12` | Stats dashboard | Alias tương thích cho WebAdmin/Landlord; dữ liệu vẫn scope theo Landlord hiện tại. |
 
 ### 1.5. Tenant portal, Repairs và Notifications
 
@@ -217,10 +327,15 @@ Tất cả schema bên dưới dùng MongoDB/Mongoose. `timestamps: true` tạo 
 | `landlordId` (L4-L10) | ObjectId, ref `Account`, required, unique, index | Không | Một policy cho mỗi Landlord. |
 | `lateFeeGraceDays` (L11) | Number, min 0, max 90 | `3` | Số ngày ân hạn. |
 | `lateFeeRate` (L12) | Number, min 0, max 100 | `5` | Tỷ lệ phạt. |
-| `automaticReminders` (L13) | Boolean | `true` | Bật lịch nhắc tự động. |
+| `automaticRemindersEnabled` (L13) | Boolean | `true` | Bật lịch nhắc công nợ tự động. |
 | `remindBeforeDueDays` (L14) | `[Number]` | `[3]` | Ngày nhắc trước hạn. |
 | `remindOnDueDate` (L15) | Boolean | `true` | Nhắc ngày đến hạn. |
 | `remindAfterOverdueDays` (L16) | `[Number]` | `[1]` | Ngày nhắc sau quá hạn. |
+| `autoInvoiceEnabled` (L17) | Boolean | `true` | Bật nhịp tự động gom số và phát hành hóa đơn ngày chốt. |
+| `invoiceDay` (L18) | Number, min 1, max 31 | `25` | Ngày phát hành; scheduler chạy lúc 07:00 theo múi giờ Việt Nam. Tháng ngắn dùng ngày cuối tháng. |
+| `dueDay` (L19) | Number, min 1, max 31 | `5` | Hạn thanh toán của tháng kế tiếp, được chặn theo ngày cuối tháng. |
+| `autoRemindEnabled` (L20) | Boolean | `true` | Bật nhắc nợ theo luồng nhắc tự động. |
+| `remindDaysBeforeDue` (L21) | Number, min 1, max 31 | `2` | Số ngày nhắc trước hạn trong cấu hình nhanh. |
 
 ### MODEL-CONTRACT — Hợp đồng thuê
 
@@ -275,16 +390,17 @@ Tất cả schema bên dưới dùng MongoDB/Mongoose. `timestamps: true` tạo 
 | Field (dòng) | Kiểu / ràng buộc | Default | Liên kết / ý nghĩa |
 |---|---|---|---|
 | `invoiceCode` (L4) | String, trim | Không | Mã hóa đơn; unique partial index `L67-L72`. |
-| `contractId` (L5) | ObjectId, ref `Contract` | Không | Hợp đồng; optional cho dữ liệu legacy. |
-| `period` (L6) | String, required | Không | Kỳ hóa đơn. |
-| `dueDate` (L7) | Date | Không | Hạn thanh toán. |
-| `totalAmount` (L8) | Number | Không | Tổng sau tính toán. |
-| `status` (L9) | Number | `0` | `0` draft, `1` unpaid, `2` paid, `3` overdue, `4` merged settlement. |
-| `remindCount` (L10) | Number | `0` | Số lần nhắc. |
-| `issuedAt` (L11) | Date | Không | Mốc phát hành. |
-| `graceDaysSnapshot`, `penaltyRateSnapshot` (L12-L13) | Number, min 0 | Không | Snapshot BillingPolicy. |
-| `overdueAt`, `penaltyAppliedAt` (L14,L16) | Date | `penaltyAppliedAt:null` | Mốc quá hạn/phạt. |
-| `penaltyBaseAmount` (L15) | Number, min 0 | Không | Cơ sở tính phạt. |
+| `automationKey` (L5) | String, trim | Không | Khóa idempotency của hóa đơn tự động: `<landlordId>:<roomId>:<MM/YYYY>`; unique partial index `L76-L82`. |
+| `contractId` (L6) | ObjectId, ref `Contract` | Không | Hợp đồng; optional cho dữ liệu legacy. |
+| `period` (L7) | String, required | Không | Kỳ hóa đơn, chuẩn scheduler là `MM/YYYY`. |
+| `dueDate` (L8) | Date | Không | Hạn thanh toán. |
+| `totalAmount` (L9) | Number | Không | Tổng sau tính toán. |
+| `status` (L10) | Number | `0` | `0` draft, `1` unpaid, `2` paid, `3` overdue, `4` merged settlement. |
+| `remindCount` (L11) | Number | `0` | Số lần nhắc. |
+| `issuedAt` (L12) | Date | Không | Mốc phát hành. |
+| `graceDaysSnapshot`, `penaltyRateSnapshot` (L13-L14) | Number, min 0 | Không | Snapshot BillingPolicy tại thời điểm phát hành. |
+| `overdueAt`, `penaltyAppliedAt` (L15,L17) | Date | `penaltyAppliedAt:null` | Mốc quá hạn/phạt. |
+| `penaltyBaseAmount` (L16) | Number, min 0 | Không | Cơ sở tính phạt. |
 | `room`, `tenant`, `fromDate`, `toDate` (L19-L22) | String | `""` | Snapshot text cho trình bày. |
 | `roomAmount` (L23) | Number | `0` | Tiền phòng. |
 | `electricityOld`, `electricityNew`, `electricity` (L24-L26) | Number | `0` | Chỉ số và tiền điện. |
@@ -514,12 +630,12 @@ Backend gọi `sendNotification` một lần; inbox tồn tại ngay cả khi So
 | `/` | `webadmin/src/app/page.tsx` | Đăng nhập/đăng ký, gọi nhóm Auth. |
 | `/forgot-password` | `webadmin/src/app/forgot-password/page.tsx` | Khởi tạo luồng quên mật khẩu. |
 | `/request-invite` | `webadmin/src/app/request-invite/page.tsx` | Giao diện yêu cầu/thao tác invite. |
-| `/dashboard` | `webadmin/src/app/dashboard/page.tsx` | Dashboard Admin; đọc `/api/landlord/stats` hoặc dashboard stats. |
+| `/dashboard` | `webadmin/src/app/dashboard/page.tsx` | Dashboard Admin; đọc `/api/dashboard/stats` và chuyển giữa Tổng quan/Báo cáo/Tiêu chuẩn. |
 | `/dashboard/rooms` | `webadmin/src/app/dashboard/rooms/page.tsx` | Danh sách, thêm/sửa/xóa Room. |
 | `/dashboard/tenants` | `webadmin/src/app/dashboard/tenants/page.tsx` | Tra cứu, liên kết và quản lý Tenant. |
 | `/dashboard/contracts` | `webadmin/src/app/dashboard/contracts/page.tsx` | Danh sách, ký, duyệt và checkout Contract. |
 | `/dashboard/contracts/new` | `webadmin/src/app/dashboard/contracts/new/page.tsx` | Tạo Contract từ Room/Tenant/terms. |
-| `/dashboard/invoices` | `webadmin/src/app/dashboard/invoices/page.tsx` | Hóa đơn đơn/lô, preview, sửa và drawer detail; modal bulk nằm inline trong file này. |
+| `/dashboard/invoices` | `webadmin/src/app/dashboard/invoices/page.tsx` | Hóa đơn đơn/lô, preview, sửa, drawer detail và thẻ automation; modal bulk nằm inline trong file này. |
 | `/dashboard/debts` | `webadmin/src/app/dashboard/debts/page.tsx` | Công nợ và nhắc nợ. |
 | `/dashboard/payments` | `webadmin/src/app/dashboard/payments/page.tsx` | Theo dõi Payment/Transaction. |
 | `/dashboard/utilities` | `webadmin/src/app/dashboard/utilities/page.tsx` | Chốt/đọc utilities và bulk-reading preview. |
@@ -528,7 +644,7 @@ Backend gọi `sendNotification` một lần; inbox tồn tại ngay cả khi So
 | `/dashboard/settings` | `webadmin/src/app/dashboard/settings/page.tsx` | Hub settings. |
 | `/dashboard/settings/account` | `webadmin/src/app/dashboard/settings/account/page.tsx` | Hồ sơ account/property. |
 | `/dashboard/settings/banking` | `webadmin/src/app/dashboard/settings/banking/page.tsx` | Thông tin ngân hàng/QR nhận tiền. |
-| `/dashboard/settings/billing` | `webadmin/src/app/dashboard/settings/billing/page.tsx` | BillingPolicy, grace/late fee/reminder. |
+| `/dashboard/settings/billing` | `webadmin/src/app/dashboard/settings/billing/page.tsx` | BillingPolicy, tự động phát hành, ngày chốt/hạn nộp, grace/late fee/reminder và mô tả luồng N-1 → N. |
 
 ### 4.3. WebAdmin shared components và modals
 
@@ -538,6 +654,10 @@ Backend gọi `sendNotification` một lần; inbox tồn tại ngay cả khi So
 | `webadmin/src/components/notification-bell.tsx` | Quả chuông, unread count và inbox notification. |
 | `webadmin/src/components/invoice-detail-drawer.tsx` | Drawer hiển thị Invoice detail. |
 | `webadmin/src/components/payment-detail-drawer.tsx` | Drawer Payment/Transaction detail. |
+| `webadmin/src/components/AutomationStatusCard.tsx` | Thẻ trạng thái automation trên Dashboard/Hóa đơn và modal cấu hình nhanh policy. |
+| `webadmin/src/components/BentoGridDashboard.tsx` | Tab `📊 Tổng quan`, bento quick actions và trạng thái vận hành live. |
+| `webadmin/src/components/VisualAnalyticsDashboard.tsx` | Tab `📈 Báo cáo`, chuỗi doanh thu/utility và chỉ số thanh toán live. |
+| `webadmin/src/components/StandardOperationsDashboard.tsx` | Tab `📋 Tiêu chuẩn`, nhóm phòng theo tầng và readiness meter. |
 | `webadmin/src/app/dashboard/invoices/page.tsx` | Chứa Batch Invoice modal inline; không có file `BatchInvoiceModal.tsx` độc lập ở source hiện tại. |
 
 ### 4.4. Mobile screens
@@ -553,19 +673,20 @@ Backend gọi `sendNotification` một lần; inbox tồn tại ngay cả khi So
 | `screens/UtilityScreen.tsx` | Tenant | Báo chỉ số utility. |
 | `screens/ProfileScreen.tsx` | Tenant | Cập nhật profile. |
 | `screens/NotificationsScreen.tsx` | Tenant | Inbox notification và điều hướng entity. |
-| `screens/MeterScannerScreen.tsx` | Tenant | Mở camera OCR meter và đưa kết quả về Utility. |
+| `screens/MeterScannerScreen.tsx` | Admin | Mở camera OCR meter, cho phép chỉnh số và lưu draft vào Room của Landlord. |
 | `screens/CCCDScannerScreen.tsx` | Tenant/Admin entry | Quét CCCD từ camera/QR. |
 | `screens/AIChatScreen.tsx` | Cả hai | Hội thoại AI; Admin mới có auto-fill action. |
 | `screens/ChangePasswordScreen.tsx` | Cả hai | Bắt buộc đổi mật khẩu tạm hoặc đổi password. |
-| `screens/AdminDashboardScreen.tsx` | Admin | Dashboard thống kê, notification entry, quick actions. |
+| `screens/AdminDashboardScreen.tsx` | Admin | Dashboard live với ba chế độ Tổng quan/Báo cáo/Tiêu chuẩn, automation card và quick actions. |
 | `screens/AdminRoomsScreen.tsx` | Admin | Quản lý Room. |
 | `screens/AdminTenantsScreen.tsx` | Admin | Quản lý/lookup Tenant và mở `AddTenantModal`. |
 | `screens/AdminContractsScreen.tsx` | Admin | Tạo/gửi/duyệt/quản lý Contract. |
-| `screens/AdminInvoicesScreen.tsx` | Admin | Hóa đơn đơn lẻ, detail/payment navigation. |
+| `screens/AdminInvoicesScreen.tsx` | Admin | Hóa đơn đơn lẻ, detail/payment navigation, automation card và modal cấu hình nhanh. |
 | `screens/BulkInvoiceScreen.tsx` | Admin | Chốt meter, preview và tạo Invoice hàng loạt. |
 | `screens/AdminRepairsScreen.tsx` | Admin | Xử lý RepairRequest. |
 | `screens/AdminNotificationsScreen.tsx` | Admin | Inbox notification Admin. |
-| `screens/AdminSettingsScreen.tsx` | Admin | Profile/property/banking/push/logout settings. |
+| `screens/AdminSettingsScreen.tsx` | Admin | Profile/property/banking/push, automation policy và shortcut Quản lý dịch vụ. |
+| `screens/AdminServicesScreen.tsx` | Admin | CRUD catalog dịch vụ, lọc active/inactive, preview ảnh hưởng giá và archive khi bị ràng buộc. |
 
 ### 4.5. Mobile components, modals và vai trò cụ thể
 
@@ -576,6 +697,11 @@ Backend gọi `sendNotification` một lần; inbox tồn tại ngay cả khi So
 | `components/CCCDScannerModal.tsx` | Camera/QR CCCD; tách đúng 12 chữ số ở L58-L70 rồi trả callback cho form. |
 | `components/MeterCameraModal.tsx` | Camera scanner chỉ số điện/nước, gọi OCR meter. |
 | `screens/MeterScannerScreen.tsx` và `screens/CCCDScannerScreen.tsx` | Screen wrappers cho hai modal scanner. Không có tệp đúng tên `CameraScannerModal.tsx` trong source hiện tại; hai modal trên là điểm tra cứu tương ứng. |
+| `components/AutomationStatusCard.tsx` | Thẻ bật/tắt automation trên Dashboard và Invoice; hiển thị ngày nhắc N-1, giờ phát hành 07:00 và callback mở cấu hình. |
+| `components/QuickAutoBillingModal.tsx` | Modal Mobile chỉnh `autoInvoiceEnabled`, `invoiceDay`, `dueDay`, `autoRemindEnabled`, `remindDaysBeforeDue`; validate ngày 1–31 trước PUT policy. |
+| `components/BentoGridDashboard.tsx` | Tổng quan vận hành bằng số live, automation status và quick actions. |
+| `components/VisualAnalyticsDashboard.tsx` | Báo cáo 6/12 tháng, doanh thu đã thu, công nợ, cơ cấu doanh thu và utility usage. |
+| `components/StandardOperationsDashboard.tsx` | Danh sách phòng theo tầng, tenant/contract và trạng thái sẵn sàng chốt meter. |
 | `components/InvoiceDetailModal.tsx` | Hiển thị chi tiết hóa đơn Mobile. |
 | `components/PaymentModal.tsx` | Luồng thanh toán Invoice. |
 | `components/SignContractWizard.tsx` | Wizard ký/xác nhận Contract trên Mobile. |

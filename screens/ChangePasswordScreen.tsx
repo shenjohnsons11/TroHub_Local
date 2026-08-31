@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { SafeAreaView, View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText, AppTextInput } from "@/components/ui/typography";
 import { authService } from "../services/authService";
 import { useAppTheme } from "../contexts/ThemeContext";

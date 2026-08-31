@@ -108,7 +108,7 @@ async function createOrLinkTenant(input, dependencies = {}) {
             fixedRentPrice: room.defaultRentPrice || 0,
             fixedDeposit: room.defaultDeposit || 0,
             services: [],
-            status: 0,
+            status: 5,
         });
         await contract.save();
     }

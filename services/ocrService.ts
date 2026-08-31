@@ -1,3 +1,4 @@
+import * as ImageManipulator from "expo-image-manipulator";
 import { apiClient } from "./apiClient";
 import { authService } from "./authService";
 
@@ -103,6 +104,25 @@ export const ocrService = {
 };
 
 async function toDataUrl(uri: string): Promise<string> {
+  try {
+    const manipulated = await ImageManipulator.manipulateAsync(
+      uri,
+      [{ resize: { width: 1024 } }],
+      { compress: 0.75, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+    );
+    if (manipulated.base64) {
+      return "data:image/jpeg;base64," + manipulated.base64;
+    }
+    if (manipulated.uri) {
+      return await fallbackReadDataUrl(manipulated.uri);
+    }
+  } catch (err) {
+    console.warn("[OCR_IMAGE_MANIPULATOR_FALLBACK]", err);
+  }
+  return await fallbackReadDataUrl(uri);
+}
+
+async function fallbackReadDataUrl(uri: string): Promise<string> {
   if (uri.startsWith("data:image/")) return uri;
   const response = await fetch(uri);
   const blob = await response.blob();

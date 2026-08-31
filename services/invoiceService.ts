@@ -202,6 +202,8 @@ const mapApiInvoiceToInvoice = (apiInvoice: ApiInvoice): Invoice => {
 
   return {
     id: apiInvoice._id,
+    contractId: apiInvoice.contractId?._id,
+    roomId: apiInvoice.contractId?.roomId?._id,
     type: apiInvoice.type,
     depositAmount: apiInvoice.depositAmount || 0,
     tenantName: apiInvoice.tenantName || apiInvoice.contractId?.tenantId?.fullName || "",
@@ -253,7 +255,7 @@ export const invoiceService = {
     return mapApiInvoiceToInvoice(response.data);
   },
 
-  async getInvoices(): Promise<Invoice[]> {
+  async getInvoices(roomId?: string): Promise<Invoice[]> {
     try {
       const token = await authService.getToken();
 
@@ -270,7 +272,8 @@ export const invoiceService = {
         throw new Error(response.message || "Không lấy được danh sách hóa đơn");
       }
 
-      return response.data.map(mapApiInvoiceToInvoice);
+      const invoices = response.data.map(mapApiInvoiceToInvoice);
+      return roomId ? invoices.filter((invoice) => invoice.roomId === roomId) : invoices;
     } catch (error) {
       console.log("Lỗi lấy danh sách hóa đơn từ API:", error);
       throw error;

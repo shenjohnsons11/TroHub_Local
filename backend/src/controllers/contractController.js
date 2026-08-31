@@ -28,6 +28,11 @@ const {
     generateContractDocx,
     PDF_DOCUMENT_VERSION,
 } = require('../services/contractGeneratorService');
+const {
+    CONTRACT_STATUS,
+    classifyContractCreation,
+    validateHandoverInput,
+} = require('../services/contractLifecycle');
 const fs = require('fs');
 const path = require('path');
 
@@ -80,8 +85,8 @@ function sendContractError(res, error, fallbackMessage) {
 // 1. Lấy danh sách toàn bộ hợp đồng (Chủ trọ xem trên Web)
 exports.getAllContracts = async (req, res) => {
     try {
-        let landlordId = null;
-        let nguoiThueId = null;
+        let landlordId = req.auth?.role === 1 ? req.auth.id : null;
+        let nguoiThueId = req.auth?.role === 2 ? req.auth.id : null;
         const authHeader = req.headers['authorization'];
         if (authHeader && authHeader.startsWith('Bearer ')) {
             const token = authHeader.split(' ')[1];
@@ -118,6 +123,10 @@ exports.getAllContracts = async (req, res) => {
         res.status(500).json({ success: false, message: "Lỗi Server: " + error.message });
     }
 };
+
+// GET /api/contracts/my-contracts - danh sách hợp đồng của Tenant hiện tại.
+// Giữ endpoint riêng để Mobile không phải tự lọc dữ liệu của các Tenant khác.
+exports.getMyContracts = exports.getAllContracts;
 
 exports.getContractHistory = async (req, res) => {
     try {
@@ -171,9 +180,37 @@ exports.createContract = async (req, res) => {
             });
         }
 
-        // 1. Ràng buộc Phòng: Kiểm tra phòng có đang trống không
+        // 1. Ràng buộc Phòng: kiểm tra ownership và trạng thái đặt chỗ theo từng Room.
         const room = await Room.findById(roomId);
         if (!room) return res.status(404).json({ success: false, message: "Không tìm thấy phòng!" });
+        if (String(room.landlordId) !== String(req.auth.id)) {
+            return res.status(403).json({ success: false, message: "Bạn không có quyền tạo hợp đồng cho phòng này." });
+        }
+
+        const activeContract = await Contract.findOne({ roomId, status: CONTRACT_STATUS.ACTIVE })
+            .sort({ endDate: -1 })
+            .select('endDate')
+            .lean();
+        const reservedContract = await Contract.findOne({ roomId, status: CONTRACT_STATUS.RESERVED })
+            .select('_id startDate endDate')
+            .lean();
+        const pendingRoomContract = await Contract.findOne({ roomId, status: CONTRACT_STATUS.PENDING })
+            .select('_id')
+            .lean();
+        if (pendingRoomContract) {
+            return res.status(400).json({ success: false, message: "Phòng này đã có hợp đồng đang chờ khách ký." });
+        }
+        let lifecycle;
+        try {
+            lifecycle = classifyContractCreation({
+                roomStatus: room.status,
+                activeContract,
+                reservedContract,
+                startDate,
+            });
+        } catch (error) {
+            return res.status(400).json({ success: false, code: 'ROOM_CONTRACT_CONFLICT', message: error.message });
+        }
 
         const utilityDefaults = resolveUtilityPriceDefaults(await Service.find({
             landlordId: room.landlordId,
@@ -209,32 +246,6 @@ exports.createContract = async (req, res) => {
                 : req.body.waterPrice,
         });
 
-        // Chống spam: Kiểm tra xem Phòng hoặc Người thuê đã có hợp đồng chờ xử lý chưa
-        const existingPending = await Contract.findOne({
-            $or: [
-                { roomId, status: { $in: [0, 4] } },
-                { tenantId, status: { $in: [0, 4] } }
-            ]
-        });
-
-        if (existingPending) {
-            return res.status(400).json({
-                success: false,
-                message: "Người thuê hoặc Phòng này đã có một hợp đồng nháp đang chờ xử lý. Vui lòng kiểm tra lại danh sách hợp đồng!"
-            });
-        }
-
-        // Đồng bộ chỉ số điện/nước ban đầu từ hợp đồng vào phòng
-        if (Number.isFinite(Number(meterTerms.initialElectricity))) {
-            room.lastElectricityReading = Number(meterTerms.initialElectricity);
-        }
-        if (Number.isFinite(Number(meterTerms.initialWater))) {
-            room.lastWaterReading = Number(meterTerms.initialWater);
-        }
-        room.draftElectricity = undefined;
-        room.draftWater = undefined;
-        await room.save();
-
         const newContract = new Contract({
             roomId,
             tenantId,
@@ -244,7 +255,8 @@ exports.createContract = async (req, res) => {
             fixedDeposit,
             ...meterTerms,
             services: services || [], // Nhúng thẳng mảng dịch vụ vào đây
-            status: 0 // Trạng thái mặc định: 0 - Chờ Người thuê xác nhận
+            isAdvanceBooking: lifecycle.isAdvanceBooking,
+            status: lifecycle.status,
         });
 
         await newContract.save();
@@ -263,7 +275,9 @@ exports.createContract = async (req, res) => {
 
         res.status(201).json({
             success: true,
-            message: "Tạo dự thảo hợp đồng thành công! Chờ người thuê ký xác nhận.",
+            message: lifecycle.isAdvanceBooking
+                ? "Tạo hợp đồng đặt cọc giữ chỗ thành công! Chờ người thuê ký xác nhận."
+                : "Tạo dự thảo hợp đồng thành công! Chờ người thuê ký xác nhận.",
             data: newContract
         });
     } catch (error) {
@@ -379,70 +393,94 @@ exports.downloadDocx = async (req, res) => {
 };
 
 
-// 4.1. Chủ trọ (Admin) duyệt xác nhận hợp đồng (Trên Web/App)
-exports.confirmContract = async (req, res) => {
+// 4.1. Chủ trọ bàn giao phòng và chốt số điện nước đầu vào.
+exports.handoverContract = async (req, res) => {
     try {
         const contract = await Contract.findById(req.params.id);
-
         if (!contract) return res.status(404).json({ success: false, message: "Không tìm thấy hợp đồng!" });
-        if (contract.status !== 4) {
-            return res.status(400).json({ success: false, message: "Hợp đồng này không ở trạng thái chờ duyệt!" });
+
+        const room = await Room.findById(contract.roomId);
+        if (!room) return res.status(404).json({ success: false, message: "Không tìm thấy phòng của hợp đồng!" });
+        if (String(room.landlordId) !== String(req.auth.id)) {
+            return res.status(403).json({ success: false, message: "Bạn không có quyền bàn giao hợp đồng này." });
+        }
+        if (Number(contract.status) !== CONTRACT_STATUS.RESERVED) {
+            return res.status(400).json({ success: false, code: 'CONTRACT_NOT_RESERVED', message: "Chỉ hợp đồng Đã cọc / Chờ bàn giao mới được bàn giao." });
         }
 
-        // Kiểm tra xem phòng có đang có hợp đồng nào Đang hiệu lực không (để chặn kích hoạt đè)
-        const activeContract = await Contract.findOne({ roomId: contract.roomId, status: 1 });
-        if (activeContract) {
-            return res.status(400).json({
-                success: false,
-                message: "Phòng này vẫn đang có một hợp đồng khác Đang hiệu lực. Vui lòng thanh lý hợp đồng cũ của Người thuê hiện tại trước khi duyệt kích hoạt hợp đồng giữ chỗ này!"
-            });
+        const handoverDate = req.body?.handoverDate || new Date().toISOString();
+        const startDate = new Date(contract.startDate);
+        const handoverAt = new Date(handoverDate);
+        if (Number.isNaN(startDate.getTime()) || Number.isNaN(handoverAt.getTime()) || handoverAt < startDate) {
+            return res.status(400).json({ success: false, code: 'INVALID_HANDOVER_DATE', message: "Ngày bàn giao không được trước ngày bắt đầu hợp đồng." });
         }
 
-        // 1. Kiểm tra hóa đơn cọc đã thanh toán chưa
+        const activeContract = await Contract.findOne({
+            roomId: contract.roomId,
+            status: CONTRACT_STATUS.ACTIVE,
+            _id: { $ne: contract._id },
+        }).select('endDate').lean();
+        if (activeContract && (!activeContract.endDate || handoverAt < new Date(activeContract.endDate))) {
+            return res.status(409).json({ success: false, code: 'ROOM_STILL_OCCUPIED', message: "Phòng vẫn còn hợp đồng hiện tại đến sau ngày bàn giao." });
+        }
+
+        const meterInput = validateHandoverInput(req.body, room);
         const depositInvoice = await Invoice.findOne({ contractId: contract._id, period: "Tiền cọc" });
         if (Number(contract.fixedDeposit) > 0 && (!depositInvoice || depositInvoice.status !== 2)) {
-            return res.status(400).json({ success: false, message: "Người thuê chưa thanh toán tiền cọc! Không thể duyệt." });
+            return res.status(400).json({ success: false, code: 'DEPOSIT_NOT_PAID', message: "Người thuê chưa thanh toán tiền cọc! Không thể bàn giao." });
         }
 
-        // 2. Chuyển trạng thái hợp đồng thành Đang hiệu lực (1)
-        contract.status = 1;
+        contract.status = CONTRACT_STATUS.ACTIVE;
+        contract.handoverDate = handoverAt;
+        contract.initialElectricity = meterInput.initialElectricity;
+        contract.initialWater = meterInput.initialWater;
         await contract.save();
 
-        // 2. Chuyển trạng thái Phòng thành Đang thuê (1) và đồng bộ chỉ số điện/nước ban đầu từ Hợp đồng
-        const room = await Room.findById(contract.roomId);
-        if (room) {
-            room.status = 1;
-            if (Number.isFinite(Number(contract.initialElectricity))) {
-                room.lastElectricityReading = Number(contract.initialElectricity);
-            }
-            if (Number.isFinite(Number(contract.initialWater))) {
-                room.lastWaterReading = Number(contract.initialWater);
-            }
-            await room.save();
-        }
+        room.status = 1;
+        room.lastElectricityReading = meterInput.initialElectricity;
+        room.lastWaterReading = meterInput.initialWater;
+        room.draftElectricity = undefined;
+        room.draftWater = undefined;
+        await room.save();
 
         await sendNotification({
             userId: contract.tenantId,
-            title: 'Hợp đồng đã được kích hoạt',
-            content: `Hợp đồng phòng ${room?.roomCode || ''} đã có hiệu lực.`,
+            title: 'Phòng đã được bàn giao',
+            content: `Phòng ${room.roomCode || ''} của bạn đã được bàn giao thành công! Hợp đồng chính thức có hiệu lực.`,
             category: 'contract',
             deepLink: 'contract',
-            metadata: { contractId: contract._id, roomId: contract.roomId, action: 'view' },
-            eventKey: `contract:${contract._id}:activated`,
+            metadata: { contractId: contract._id, roomId: room._id, handoverDate: handoverAt, action: 'view' },
+            eventKey: `contract:${contract._id}:handover`,
         });
 
-        // (Hóa đơn tiền cọc đã được tạo lúc người thuê ký, không tạo lại ở đây)
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
-            message: "Xác nhận duyệt hợp đồng thành công! Đã tạo hóa đơn tiền cọc.",
-            data: contract
+            message: "Bàn giao phòng thành công! Hợp đồng đã có hiệu lực.",
+            data: contract,
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: "Lỗi khi xác nhận hợp đồng: " + error.message });
+        if (error.message?.includes('Chỉ số')) {
+            return res.status(400).json({ success: false, code: 'INVALID_HANDOVER_METER', message: error.message });
+        }
+        return res.status(500).json({ success: false, message: "Lỗi khi bàn giao hợp đồng: " + error.message });
     }
 };
 
-// 4.2. Chủ trọ quyết toán và duyệt trả phòng
+// 4.2. Alias tương thích cho client cũ; dữ liệu meter lấy từ contract/Room nếu không truyền.
+exports.confirmContract = async (req, res) => {
+    const contract = await Contract.findById(req.params.id).lean();
+    if (!contract) return res.status(404).json({ success: false, message: "Không tìm thấy hợp đồng!" });
+    const room = await Room.findById(contract.roomId).lean();
+    req.body = {
+        ...req.body,
+        initialElectricity: req.body?.initialElectricity ?? contract.initialElectricity ?? room?.lastElectricityReading,
+        initialWater: req.body?.initialWater ?? contract.initialWater ?? room?.lastWaterReading,
+        handoverDate: req.body?.handoverDate || new Date().toISOString(),
+    };
+    return exports.handoverContract(req, res);
+};
+
+// 4.3. Chủ trọ quyết toán và duyệt trả phòng
 exports.getCheckoutPreview = async (req, res) => {
     try {
         const preview = await loadCheckoutPreview({
@@ -515,9 +553,9 @@ exports.updateContract = async (req, res) => {
         const existing = await Contract.findById(req.params.id);
         if (!existing) return res.status(404).json({ success: false, message: "Không tìm thấy hợp đồng!" });
 
-        // Admin tạo hợp đồng phải thông qua người thuê ký (status = 4), nếu không thì không tự xác nhận thành Đang hiệu lực (1) được.
-        if (status !== undefined && Number(status) === 1 && existing.status !== 1 && existing.status !== 4) {
-            return res.status(400).json({ success: false, message: "Người thuê chưa ký hợp đồng này, Chủ trọ không thể xác nhận!" });
+        // Không cho đổi tay sang ACTIVE; hợp đồng phải đi qua handover để chốt meter và Room đồng bộ.
+        if (status !== undefined && Number(status) === CONTRACT_STATUS.ACTIVE && existing.status !== CONTRACT_STATUS.ACTIVE) {
+            return res.status(400).json({ success: false, code: 'HANDOVER_REQUIRED', message: "Hợp đồng phải được bàn giao qua chức năng Bàn giao phòng & chốt số điện nước." });
         }
 
         const updateData = {};

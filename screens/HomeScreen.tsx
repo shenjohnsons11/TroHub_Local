@@ -20,15 +20,18 @@ import { formatCurrency, formatPhone, unformatNumber } from "../utils/formatters
 import { useLanguage } from "../contexts/LanguageContext";
 
 import { UserProfile } from "../types/UserProfile";
+import TenantRoomSwitcher from "../components/TenantRoomSwitcher";
 
 type Props = {
   profile?: UserProfile | null;
   refreshKey: number;
-  onNavigate: (screen: "invoice" | "repair" | "contract" | "utility" | "notifications" | "ai_chat") => void;
+  selectedRoomId?: string;
+  onRoomSelect: (roomId: string) => void;
+  onNavigate: (screen: "invoice" | "repair" | "contract" | "utility" | "notifications" | "ai_chat", params?: any) => void;
   onLogout: () => void;
 };
 
-export default function HomeScreen({ profile, refreshKey, onNavigate, onLogout }: Props) {
+export default function HomeScreen({ profile, refreshKey, selectedRoomId, onRoomSelect, onNavigate, onLogout }: Props) {
   const { theme } = useAppTheme();
   const { t } = useLanguage();
   const styles = createStyles(theme);
@@ -40,7 +43,7 @@ export default function HomeScreen({ profile, refreshKey, onNavigate, onLogout }
 
   useEffect(() => {
     loadHomeData();
-  }, [refreshKey]);
+  }, [refreshKey, selectedRoomId]);
 
   const checkNotifications = async () => {
     try {
@@ -54,10 +57,14 @@ export default function HomeScreen({ profile, refreshKey, onNavigate, onLogout }
     try {
       setIsLoading(true);
       const [data, inviteData] = await Promise.all([
-        homeService.getHomeData(),
+        homeService.getHomeData(selectedRoomId),
         inviteService.getInvites(),
       ]);
       setHomeData(data);
+      if (!selectedRoomId) {
+        const firstRoom = data.contracts.find((contract) => ["active", "reserved", "requesting_termination"].includes(contract.status) && contract.roomId)?.roomId;
+        if (firstRoom) onRoomSelect(firstRoom);
+      }
       setInvites(inviteData);
     } catch (error) {
       console.log("Lỗi load trang chủ:", error);
@@ -142,6 +149,8 @@ export default function HomeScreen({ profile, refreshKey, onNavigate, onLogout }
           </Pressable>
         </View>
       </View>
+
+      <TenantRoomSwitcher contracts={homeData.contracts} selectedRoomId={selectedRoomId || homeData.activeContract?.roomId} onSelect={onRoomSelect} />
 
       <View style={styles.homeHero}>
         <AppText style={styles.heroKicker}>{t("mobile.home.hero")}</AppText>

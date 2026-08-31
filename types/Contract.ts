@@ -1,7 +1,8 @@
-export type ContractStatus = "pending" | "active" | "expired" | "cancelled" | "awaiting_approval" | "requesting_termination";
+export type ContractStatus = "pending" | "active" | "reserved" | "expired" | "terminated" | "cancelled" | "awaiting_approval" | "requesting_termination";
 
 export type Contract = {
   id: string;
+  roomId?: string;
   room: string;
   tenantName: string;
   startDate: string;
@@ -15,7 +16,10 @@ export type Contract = {
     status: "not_required" | "unpaid" | "paid";
   };
   status: ContractStatus;
-  rawStatus: number; // 0: Chờ ký, 1: Hiệu lực, 2: Hết hạn, 3: Hủy, 4: Chờ chủ duyệt
+  rawStatus: number; // 0: Nháp, 1: Hiệu lực, 2: Hết hạn, 3: Thanh lý, 4: Đã cọc/chờ bàn giao, 5: Chờ khách ký
+  isAdvanceBooking?: boolean;
+  handoverDate?: string;
+  checkoutRequestedAt?: string;
   usedMonths: number;
   remainingMonths: number;
   progressPercent: string;
@@ -36,4 +40,3 @@ export type Contract = {
   pdfUrl?: string;
   tenantSignature?: string;
 };
-

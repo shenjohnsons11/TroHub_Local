@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, StyleSheet, SafeAreaView } from "react-native";
-import Toast from "react-native-toast-message";
+import { View, StyleSheet } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import * as Notifications from "expo-notifications";
 import { io } from "socket.io-client";
 
@@ -77,6 +77,7 @@ export default function App() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [homeRefreshKey, setHomeRefreshKey] = useState(0);
   const [notificationRefreshKey, setNotificationRefreshKey] = useState(0);
+  const [selectedTenantRoomId, setSelectedTenantRoomId] = useState<string | undefined>();
   const pushTokenRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -108,6 +109,7 @@ export default function App() {
 
       setProfile(userProfile);
       setIsLoggedIn(true);
+      setSelectedTenantRoomId(undefined);
       setActiveTab(mustChangePassword ? "change_password" : "home");
       setHomeRefreshKey((prev) => prev + 1);
     } catch (error) {
@@ -125,6 +127,7 @@ export default function App() {
       setIsLoggedIn(false);
       setProfile(null);
       setActiveTab("home");
+      setSelectedTenantRoomId(undefined);
       setHomeRefreshKey(0);
     } catch (error) {
       console.log("Lỗi xử lý đăng xuất:", error);
@@ -146,6 +149,7 @@ export default function App() {
       setHomeRefreshKey((prev) => prev + 1);
     }
     setActionParams(params || null);
+    if (params?.roomId) setSelectedTenantRoomId(String(params.roomId));
     setActiveTab(tab);
   };
 
@@ -294,16 +298,18 @@ export default function App() {
                 <HomeScreen
                   profile={profile}
                   refreshKey={homeRefreshKey + notificationRefreshKey}
-                  onNavigate={(screen) => setActiveTab(screen as any)}
+                  selectedRoomId={selectedTenantRoomId}
+                  onRoomSelect={setSelectedTenantRoomId}
+                  onNavigate={(screen, params) => handleChangeTab(screen as any, params)}
                   onLogout={handleLogout}
                 />
               )}
 
-              {activeTab === "invoice" && <InvoiceScreen params={actionParams} />}
+              {activeTab === "invoice" && <InvoiceScreen params={actionParams} selectedRoomId={selectedTenantRoomId} onRoomSelect={setSelectedTenantRoomId} />}
 
-              {activeTab === "repair" && <RepairScreen />}
+              {activeTab === "repair" && <RepairScreen selectedRoomId={selectedTenantRoomId} onRoomSelect={setSelectedTenantRoomId} />}
 
-              {activeTab === "contract" && <ContractScreen onNavigate={handleChangeTab as any} params={actionParams} />}
+              {activeTab === "contract" && <ContractScreen onNavigate={handleChangeTab as any} params={actionParams} selectedRoomId={selectedTenantRoomId} onRoomSelect={setSelectedTenantRoomId} />}
 
               {activeTab === "utility" && (
                 <UtilityScreen onBack={() => setActiveTab("home")} />
@@ -347,7 +353,6 @@ export default function App() {
           {activeTab !== "change_password" && (
             <BottomNav activeTab={activeTab} onChangeTab={handleChangeTab} role={profile.role} />
           )}
-          <Toast />
         </View>
       </SafeAreaView>
       {splash}

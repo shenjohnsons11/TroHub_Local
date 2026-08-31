@@ -17,13 +17,18 @@ import { getNotificationMessage } from "../utils/notificationMessages";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
 import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
 import { useTranslation } from "../contexts/LanguageContext";
+import TenantRoomSwitcher from "../components/TenantRoomSwitcher";
+import { Contract } from "../types/Contract";
 
-export default function RepairScreen() {
+type Props = { selectedRoomId?: string; onRoomSelect: (roomId: string) => void };
+
+export default function RepairScreen({ selectedRoomId, onRoomSelect }: Props) {
   const notification = useNotification();
   const { theme } = useAppTheme();
   const { t } = useTranslation();
   const styles = createStyles(theme);
   const [rooms, setRooms] = useState<string[]>([]);
+  const [contracts, setContracts] = useState<Contract[]>([]);
   const [selectedRoom, setSelectedRoom] = useState("");
   const [type, setType] = useState("");
   const [description, setDescription] = useState("");
@@ -39,14 +44,18 @@ export default function RepairScreen() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   useEffect(() => {
-    loadRequests();
     loadRooms();
   }, []);
+
+  useEffect(() => {
+    loadRequests();
+  }, [selectedRoomId]);
 
   const loadRooms = async () => {
     try {
       const contracts = await contractService.getMyContracts();
-      // filter only active contracts
+      setContracts(contracts);
+      // Chỉ phòng có hợp đồng ACTIVE mới được gửi yêu cầu sửa chữa.
       const activeRooms = contracts
         .filter(c => c.status === "active")
         .map(c => c.room);
@@ -56,29 +65,24 @@ export default function RepairScreen() {
       
       if (uniqueRooms.length > 0) {
         setRooms(uniqueRooms);
-        setSelectedRoom(uniqueRooms[0]);
+        const selected = contracts.find((contract) => contract.roomId === selectedRoomId && contract.status === "active") || contracts.find((contract) => contract.status === "active");
+        setSelectedRoom(selected?.room || uniqueRooms[0]);
+        if (!selectedRoomId && selected?.roomId) onRoomSelect(selected.roomId);
       } else {
-        const allRooms = contracts.map(c => c.room);
-        const uniqueAllRooms = Array.from(new Set(allRooms));
-        if (uniqueAllRooms.length > 0) {
-          setRooms(uniqueAllRooms);
-          setSelectedRoom(uniqueAllRooms[0]);
-        } else {
-          setRooms([t("tenantRepair.noRoom")]);
-          setSelectedRoom(t("tenantRepair.noRoom"));
-        }
+        setRooms([]);
+        setSelectedRoom("");
       }
     } catch (error) {
       console.log("Lỗi load phòng từ hợp đồng:", error);
-      setRooms(["A101"]);
-      setSelectedRoom("A101");
+      setRooms([]);
+      setSelectedRoom("");
     }
   };
 
   const loadRequests = async () => {
     try {
       setIsLoading(true);
-      const data = await repairService.getRequests();
+      const data = await repairService.getRequests(selectedRoomId);
       setRequests(data);
     } catch (error) {
       console.log("Lỗi load yêu cầu sửa chữa:", error);
@@ -111,6 +115,7 @@ export default function RepairScreen() {
 
     try {
       const updatedRequests = await repairService.createRequest({
+        roomId: selectedRoomId || contracts.find((contract) => contract.room === selectedRoom)?.roomId,
         room: selectedRoom,
         type: type.trim(),
         description: description.trim(),
@@ -251,6 +256,11 @@ export default function RepairScreen() {
       <AppText style={styles.subtitle}>
         {t("tenantRepair.subtitle")}
       </AppText>
+      <TenantRoomSwitcher contracts={contracts} selectedRoomId={selectedRoomId} onSelect={(roomId) => {
+        onRoomSelect(roomId);
+        const contract = contracts.find((item) => item.roomId === roomId);
+        if (contract) setSelectedRoom(contract.room);
+      }} />
 
       <AnimatedEntry>
       <Card style={styles.formCard}>
@@ -268,7 +278,11 @@ export default function RepairScreen() {
                 <Pressable
                   key={roomCode}
                   style={[styles.roomButton, active && styles.roomActive]}
-                  onPress={() => setSelectedRoom(roomCode)}
+              onPress={() => {
+                setSelectedRoom(roomCode);
+                const contract = contracts.find((item) => item.room === roomCode);
+                if (contract?.roomId) onRoomSelect(contract.roomId);
+              }}
                 >
                   <AppText
                     style={[
