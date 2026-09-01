@@ -30,6 +30,7 @@ import CCCDScannerScreen from "../screens/CCCDScannerScreen";
 import AIChatScreen from "../screens/AIChatScreen";
 import DraggableAIAssistant from "../components/DraggableAIAssistant";
 import AIAssistantModal from "../components/AIAssistantModal";
+import FeatureSearchModal from "../components/FeatureSearchModal";
 
 import AppSplashScreen from "../components/AppSplashScreen";
 import { useAppTheme } from "../contexts/ThemeContext";
@@ -75,6 +76,7 @@ export default function App() {
   const [isChecking, setIsChecking] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [aiModalVisible, setAiModalVisible] = useState(false);
+  const [searchModalVisible, setSearchModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("home");
   const [actionParams, setActionParams] = useState<any>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -242,6 +244,7 @@ export default function App() {
                   profile={profile}
                   refreshKey={notificationRefreshKey}
                   onNavigate={handleChangeTab}
+                  onOpenSearch={() => setSearchModalVisible(true)}
                   onLogout={handleLogout}
                 />
               )}
@@ -304,6 +307,7 @@ export default function App() {
                   selectedRoomId={selectedTenantRoomId}
                   onRoomSelect={setSelectedTenantRoomId}
                   onNavigate={(screen, params) => handleChangeTab(screen as any, params)}
+                  onOpenSearch={() => setSearchModalVisible(true)}
                   onLogout={handleLogout}
                 />
               )}
@@ -370,6 +374,17 @@ export default function App() {
             onClose={() => setAiModalVisible(false)}
             onNavigate={(tab, params) => {
               setAiModalVisible(false);
+              handleChangeTab(tab as any, params);
+            }}
+          />
+
+          {/* Modal Tìm kiếm tính năng nhanh trong hệ thống */}
+          <FeatureSearchModal
+            visible={searchModalVisible}
+            role={profile?.role || 1}
+            onClose={() => setSearchModalVisible(false)}
+            onSelectFeature={(tab, params) => {
+              setSearchModalVisible(false);
               handleChangeTab(tab as any, params);
             }}
           />

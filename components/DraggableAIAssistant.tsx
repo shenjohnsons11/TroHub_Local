@@ -21,16 +21,16 @@ const PILL_WIDTH = 138;
 const PILL_HEIGHT = 42;
 const EDGE_MARGIN = 14;
 const MIN_Y = Platform.OS === "ios" ? 70 : 50;
-const BOTTOM_NAV_OFFSET = 135;
+const BOTTOM_NAV_OFFSET = Platform.OS === "ios" ? 165 : 145;
 
 export default function DraggableAIAssistant({ visible = true, onPress }: Props) {
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const maxDimWidth = Math.min(screenWidth, 430);
   const maxY = screenHeight - PILL_HEIGHT - BOTTOM_NAV_OFFSET;
 
-  // Initial position: Bottom right above the bottom nav bar
+  // Initial position: Bottom right safely above the bottom nav bar
   const initialX = maxDimWidth - PILL_WIDTH - EDGE_MARGIN;
-  const initialY = maxY - 8;
+  const initialY = maxY - 10;
 
   const pan = useRef(new Animated.ValueXY({ x: initialX, y: initialY })).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;

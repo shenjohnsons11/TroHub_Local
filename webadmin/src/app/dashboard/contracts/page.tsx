@@ -399,7 +399,7 @@ export default function ContractsPage() {
           </div>
 
         <div className="flex gap-2">
-          <Link href="/dashboard/contracts/new" className="flex h-10 items-center rounded-[16px] bg-primary px-4 text-sm font-bold text-primary-foreground shadow-[var(--calm-shadow)] transition hover:opacity-90">
+          <Link href="/dashboard/contracts/new" className="flex h-10 items-center rounded-full bg-primary px-4 text-sm font-bold text-primary-foreground shadow-[var(--calm-shadow)] transition hover:opacity-90">
             <Plus className="w-4 h-4 mr-2" /> {t("contracts.createContract")}
           </Link>
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>

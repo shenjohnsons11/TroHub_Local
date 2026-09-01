@@ -219,7 +219,7 @@ export default function ServicesPage() {
             {t("dashboard.property")}
           </p>
         </div>
-        <Button onClick={openCreate} className="h-11 rounded-[10px] font-bold">
+        <Button onClick={openCreate} className="h-10 rounded-full font-bold px-4">
           <Plus className="mr-2 h-4 w-4" /> {t("common.add")}
         </Button>
       </header>

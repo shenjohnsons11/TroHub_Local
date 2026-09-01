@@ -417,7 +417,7 @@ export default function InvoicesPage() {
         <div className="flex items-center gap-2">
           {/* Single invoice */}
           <Dialog open={isSingleOpen} onOpenChange={setIsSingleOpen}>
-            <DialogTrigger className="flex h-10 items-center gap-2 rounded-[16px] border border-border bg-card px-4 text-sm font-bold transition hover:bg-accent">
+            <DialogTrigger className="flex h-10 items-center gap-2 rounded-full border border-border bg-card px-4 text-sm font-bold transition hover:bg-accent">
               <Plus className="size-4" /> {t("invoices.createSingle")}
             </DialogTrigger>
             <DialogContent className="sm:max-w-[560px] max-h-[90vh] overflow-y-auto">
@@ -605,7 +605,7 @@ export default function InvoicesPage() {
 
 
           <Dialog open={isAddOpen} onOpenChange={(open) => { setIsAddOpen(open); if (open) setBulkStep(1); }}>
-          <DialogTrigger className="flex h-10 items-center justify-center gap-2 rounded-[16px] bg-primary px-4 text-sm font-bold text-primary-foreground shadow-[var(--calm-shadow)] transition hover:opacity-90">
+          <DialogTrigger className="flex h-10 items-center justify-center gap-2 rounded-full bg-primary px-4 text-sm font-bold text-primary-foreground shadow-[var(--calm-shadow)] transition hover:opacity-90">
             <Plus className="w-4 h-4 mr-2" /> {t("invoices.createBulk")}
           </DialogTrigger>
           <DialogContent className="sm:max-w-[1000px] max-h-[90vh] overflow-y-auto">

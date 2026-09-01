@@ -28,10 +28,11 @@ type Props = {
   selectedRoomId?: string;
   onRoomSelect: (roomId: string) => void;
   onNavigate: (screen: "invoice" | "repair" | "contract" | "utility" | "notifications" | "ai_chat", params?: any) => void;
+  onOpenSearch?: () => void;
   onLogout: () => void;
 };
 
-export default function HomeScreen({ profile, refreshKey, selectedRoomId, onRoomSelect, onNavigate, onLogout }: Props) {
+export default function HomeScreen({ profile, refreshKey, selectedRoomId, onRoomSelect, onNavigate, onOpenSearch, onLogout }: Props) {
   const { theme } = useAppTheme();
   const { t } = useLanguage();
   const styles = createStyles(theme);
@@ -119,11 +120,11 @@ export default function HomeScreen({ profile, refreshKey, selectedRoomId, onRoom
         <View style={styles.headerActions}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={t("mobile.home.aiLabel")}
-            onPress={() => onNavigate("ai_chat")}
-            style={[styles.bellButton, { backgroundColor: "#064E3B", borderRadius: 16 }]}
+            accessibilityLabel={t("common.search") || "Tìm kiếm"}
+            onPress={onOpenSearch || (() => onNavigate("ai_chat"))}
+            style={styles.bellButton}
           >
-            <Ionicons name="sparkles" size={20} color="#34D399" />
+            <Ionicons name="search-outline" size={22} color={theme.text} />
           </Pressable>
           <Pressable
             accessibilityRole="button"

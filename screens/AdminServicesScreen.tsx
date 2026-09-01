@@ -245,7 +245,8 @@ export default function AdminServicesScreen({ onBack }: Props) {
                 <AppText style={styles.subtitle}>{t("servicesMobile.subtitle")}</AppText>
               </View>
               <Pressable accessibilityRole="button" accessibilityLabel={t("servicesMobile.add")} onPress={openCreate} style={styles.addButton}>
-                <Ionicons name="add" size={24} color={theme.background} />
+                <Ionicons name="add-circle-outline" size={18} color={theme.background} />
+                <AppText style={[styles.addButtonText, { color: theme.background }]}>{t("servicesMobile.add") || "Thêm dịch vụ"}</AppText>
               </Pressable>
             </View>
             <View style={styles.filterRow}>
@@ -392,13 +393,14 @@ const stylesShared = StyleSheet.create({
 function createStyles(theme: ReturnType<typeof useAppTheme>["theme"]) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: theme.background },
-    content: { paddingHorizontal: 18, paddingTop: 22, paddingBottom: 36, gap: 12 },
+    content: { paddingHorizontal: 18, paddingTop: 22, paddingBottom: 130, gap: 12 },
     headerRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 18 },
     headerCopy: { flex: 1 },
     title: { color: theme.text, fontSize: 24, lineHeight: 30, fontWeight: "900" },
     subtitle: { color: theme.muted, fontSize: 12, lineHeight: 18, marginTop: 3 },
     iconButton: { width: 44, height: 44, alignItems: "center", justifyContent: "center", borderRadius: 14 },
-    addButton: { width: 46, height: 46, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: theme.primary },
+    addButton: { minHeight: 44, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 999, flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: theme.primary },
+    addButtonText: { fontSize: 14, fontWeight: "800" },
     filterRow: { flexDirection: "row", padding: 4, borderRadius: 14, backgroundColor: theme.surfaceElevated, marginBottom: 10 },
     filterButton: { flex: 1, minHeight: 40, alignItems: "center", justifyContent: "center", borderRadius: 11 },
     filterButtonActive: { backgroundColor: theme.primary },

@@ -427,8 +427,8 @@ export default function AdminContractsScreen({ params }: Props) {
   return (
     <View style={styles.container}>
       <FlatList
-        data={filteredContracts}
-        keyExtractor={(item) => item._id}
+        data={filter === "draft" ? drafts : filteredContracts}
+        keyExtractor={(item: any) => item.id || item._id}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
@@ -457,9 +457,24 @@ export default function AdminContractsScreen({ params }: Props) {
               {filterButton("reserved", t("contracts.reserved"))}
               {filterButton("active", t("contractsMobile.activeFilter"))}
             </View>
+            {filter === "draft" && drafts.length > 0 ? (
+              <AppText style={[styles.sectionTitle, { color: theme.text, marginTop: 10, marginBottom: 4 }]}>
+                {t("contractsMobile.drafts")}
+              </AppText>
+            ) : null}
           </View>
         }
-        ListEmptyComponent={filter === "draft" ? null : contracts.length === 0 ? (
+        ListEmptyComponent={
+          filter === "draft" ? (
+            <IllustratedEmptyState
+              kind="contract"
+              title={t("contractsMobile.noDrafts") || "Chưa có bản nháp nào"}
+              description="Tất cả bản thảo hợp đồng đã được lưu hoặc hoàn tất."
+              actionLabel={t("contractsMobile.create")}
+              actionIcon="add-circle-outline"
+              onAction={() => setModalVisible(true)}
+            />
+          ) : contracts.length === 0 ? (
             <IllustratedEmptyState
               kind="contract"
               title={t("contractsMobile.empty")}
@@ -472,7 +487,57 @@ export default function AdminContractsScreen({ params }: Props) {
             <AppText style={styles.filteredEmpty}>{t("contractsMobile.noMatch")}</AppText>
           )
         }
-        renderItem={({ item, index }) => {
+        renderItem={({ item, index }: { item: any; index: number }) => {
+          if (filter === "draft") {
+            const draft = item;
+            return (
+              <AnimatedEntry key={draft.id} delay={index * 50}>
+                <View style={styles.contractCard}>
+                  <View style={styles.cardTop}>
+                    <View style={styles.roomIdentity}>
+                      <View style={styles.iconTile}>
+                        <Ionicons name="document-text-outline" size={20} color={theme.primary} />
+                      </View>
+                      <View>
+                        <AppText style={styles.roomCode}>{t("contractsMobile.draftLabel", { id: draft.id })}</AppText>
+                        <AppText style={styles.tenantName}>{t("contractsMobile.draftStep", { step: draft.step })}</AppText>
+                      </View>
+                    </View>
+                  </View>
+                  <AppButton
+                    variant="outline"
+                    icon="clipboard-outline"
+                    onPress={() => {
+                      setEditingDraftId(draft.id);
+                      setSelectedRoomId(draft.roomId);
+                      setSelectedTenantId(draft.tenantId);
+                      setStartDate(draft.startDate);
+                      setEndDate(draft.endDate);
+                      setFixedRent(draft.fixedRentPrice);
+                      setFixedDeposit(draft.fixedDeposit);
+                      setInitialElectricity(draft.initialElectricity);
+                      setInitialWater(draft.initialWater);
+                      if (draft.services) setServices(draft.services);
+                      setCurrentStep(draft.step);
+                      setModalVisible(true);
+                    }}
+                    style={{ marginTop: 12 }}
+                  >
+                    {t("contractsMobile.resume")}
+                  </AppButton>
+                  <AppButton
+                    variant="ghost"
+                    icon="trash-outline"
+                    onPress={() => void draftContractService.deleteDraft(draft.id).then(async () => setDrafts(await draftContractService.getDrafts()))}
+                    style={{ marginTop: 6 }}
+                  >
+                    {t("contractsMobile.deleteDraft")}
+                  </AppButton>
+                </View>
+              </AnimatedEntry>
+            );
+          }
+
           const roomCode = item.roomId && typeof item.roomId === "object" ? item.roomId.roomCode : "N/A";
           const tenantName = item.tenantId && typeof item.tenantId === "object" ? item.tenantId.fullName : "N/A";
           const tenantPhone = item.tenantId && typeof item.tenantId === "object" ? item.tenantId.phone : "N/A";
@@ -513,7 +578,7 @@ export default function AdminContractsScreen({ params }: Props) {
                 <AppText style={styles.moneyCaption}>{t("contractsMobile.rentDeposit", { deposit: formatCurrency(item.fixedDeposit) })}</AppText>
                 <View style={styles.metaRow}>
                   <Ionicons name="calendar-outline" size={16} color={theme.muted} />
-                <AppText style={styles.contractDates}>
+                  <AppText style={styles.contractDates}>
                     {item.startDate ? new Date(item.startDate).toLocaleDateString(language === "en" ? "en-US" : "vi-VN") : ""} – {item.endDate ? new Date(item.endDate).toLocaleDateString(language === "en" ? "en-US" : "vi-VN") : ""}
                   </AppText>
                 </View>
@@ -549,60 +614,6 @@ export default function AdminContractsScreen({ params }: Props) {
           );
         }}
       />
-
-      {filter === "draft" && (
-        <View style={styles.draftContainer}>
-          <AppText style={[styles.sectionTitle, { color: theme.text }]}>{t("contractsMobile.drafts")}</AppText>
-          {drafts.length === 0 ? (
-            <AppText style={{ color: theme.muted, marginTop: 10 }}>{t("contractsMobile.noDrafts")}</AppText>
-          ) : (
-            drafts.map((draft, idx) => (
-              <AnimatedEntry key={draft.id} delay={idx * 50}>
-                <View style={styles.contractCard}>
-                  <View style={styles.cardTop}>
-                    <View style={styles.roomIdentity}>
-                      <View style={styles.iconTile}>
-                        <Ionicons name="document-text-outline" size={20} color={theme.primary} />
-                      </View>
-                      <View>
-                        <AppText style={styles.roomCode}>{t("contractsMobile.draftLabel", { id: draft.id })}</AppText>
-                        <AppText style={styles.tenantName}>{t("contractsMobile.draftStep", { step: draft.step })}</AppText>
-                      </View>
-                    </View>
-                  </View>
-                  <AppButton
-                    variant="outline"
-                    icon="clipboard-outline"
-                    onPress={() => {
-                      setEditingDraftId(draft.id);
-                      setSelectedRoomId(draft.roomId);
-                      setSelectedTenantId(draft.tenantId);
-                      setStartDate(draft.startDate);
-                      setEndDate(draft.endDate);
-                      setFixedRent(draft.fixedRentPrice);
-                      setFixedDeposit(draft.fixedDeposit);
-                      setInitialElectricity(draft.initialElectricity);
-                      setInitialWater(draft.initialWater);
-                      if (draft.services) setServices(draft.services);
-                      setCurrentStep(draft.step);
-                      setModalVisible(true);
-                    }}
-                  >
-                    {t("contractsMobile.resume")}
-                  </AppButton>
-                  <AppButton
-                    variant="ghost"
-                    icon="trash-outline"
-                    onPress={() => void draftContractService.deleteDraft(draft.id).then(async () => setDrafts(await draftContractService.getDrafts()))}
-                  >
-                    {t("contractsMobile.deleteDraft")}
-                  </AppButton>
-                </View>
-              </AnimatedEntry>
-            ))
-          )}
-        </View>
-      )}
 
       <CheckoutModal
         visible={checkoutModalVisible}
@@ -1042,11 +1053,11 @@ function createStyles(theme: any) {
     container: { flex: 1, backgroundColor: theme.background },
     loadingContainer: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, backgroundColor: theme.background },
     loadingText: { color: theme.muted, fontSize: 13, fontWeight: "700" },
-    listContent: { padding: 18, paddingBottom: 36, gap: 12 },
+    listContent: { padding: 18, paddingBottom: 130, gap: 12 },
     headingRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 22 },
     title: { color: theme.text, fontSize: 23, fontWeight: "900", letterSpacing: -0.5 },
     subtitle: { color: theme.muted, fontSize: 12, marginTop: 3 },
-    addButton: { minHeight: 46, paddingHorizontal: 14 },
+    addButton: { minHeight: 44, paddingHorizontal: 16, borderRadius: 999 },
     filterContainer: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginVertical: 16 },
     filterButton: { minHeight: 38, paddingHorizontal: 13, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: theme.surface },
     filterActive: { backgroundColor: theme.primarySoft },

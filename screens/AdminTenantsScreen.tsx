@@ -82,11 +82,20 @@ export default function AdminTenantsScreen() {
               detail={t("mobile.tenants.heroDetail", { count: vacantRooms.length })}
             />
 
-            <View style={styles.sectionRow}>
-              <View style={{ flex: 1 }}>
-                <AppText style={[styles.sectionTitle, { color: theme.text }]}>{t("mobile.tenants.title")}</AppText>
-                <AppText style={[styles.sectionSub, { color: theme.muted }]}>{t("mobile.tenants.subtitle")}</AppText>
+            <View style={styles.headingRow}>
+              <View style={{ flex: 1, paddingRight: 8 }}>
+                <AppText style={[styles.title, { color: theme.text }]}>{t("mobile.tenants.title")}</AppText>
+                <AppText style={[styles.subtitle, { color: theme.muted }]}>{t("mobile.tenants.subtitle")}</AppText>
               </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t("mobile.tenants.add")}
+                onPress={openCreateModal}
+                style={[styles.addButton, { backgroundColor: theme.primary }]}
+              >
+                <Ionicons name="person-add-outline" size={18} color={theme.background} />
+                <AppText style={[styles.addButtonText, { color: theme.background }]}>{t("mobile.tenants.add") || "Thêm khách"}</AppText>
+              </Pressable>
             </View>
 
             {/* Ô Tìm Kiếm Người Thuê */}
@@ -194,18 +203,13 @@ export default function AdminTenantsScreen() {
         }}
       />
 
-      <Pressable accessibilityRole="button" accessibilityLabel={t("mobile.tenants.add")} onPress={openCreateModal} style={styles.fab}>
-        <Ionicons name="person-add-outline" size={20} color="#b8f5da" />
-        <AppText style={styles.fabText}>{t("mobile.tenants.add")}</AppText>
-      </Pressable>
-
       <AddTenantModal visible={modalVisible} rooms={rooms} onClose={() => setModalVisible(false)} onSuccess={() => { void loadData(); }} />
     </View>
 );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 }, list: { padding: 18, paddingBottom: 36, gap: 10 },
+  container: { flex: 1 }, list: { padding: 18, paddingBottom: 130, gap: 10 },
   card: { flexDirection: "row", alignItems: "center", borderRadius: 22, padding: 14, elevation: 3, shadowOpacity: .09, shadowOffset: { width: 0, height: 5 }, shadowRadius: 10 },
   avatar: { width: 48, height: 48, borderRadius: 18, justifyContent: "center", alignItems: "center", marginRight: 12 },
   avatarText: { fontSize: 14, fontWeight: "900" }, info: { flex: 1 }, name: { fontSize: 16, fontWeight: "900" }, sub: { fontSize: 12, fontWeight: "600", marginTop: 3 },
@@ -217,13 +221,25 @@ const styles = StyleSheet.create({
   lookupBox: { flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 16, padding: 12, marginBottom: 16 }, lookupText: { flex: 1, fontSize: 12, lineHeight: 17 }, resetLookup: { fontSize: 12, fontWeight: "800" },
   roomChips: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 4 }, roomChip: { minHeight: 44, minWidth: 68, borderWidth: 1, borderRadius: 14, alignItems: "center", justifyContent: "center", paddingHorizontal: 14 }, roomChipText: { fontSize: 13, fontWeight: "800" },
   actions: { flexDirection: "row", gap: 10, marginTop: 20 }, action: { flex: 1 },
-  sectionRow: { flexDirection: "row", alignItems: "center", marginTop: 18, marginBottom: 10 },
-  sectionTitle: { fontSize: 16, fontWeight: "900" },
-  sectionSub: { fontSize: 11, fontWeight: "600", marginTop: 2 },
-  sectionBtn: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, gap: 5 },
-  sectionBtnText: { fontSize: 12, fontWeight: "800", color: "#fff" },
-  fab: { position: "absolute", right: 20, bottom: 24, minHeight: 52, flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 26, backgroundColor: "#073e36", paddingHorizontal: 18, elevation: 6, shadowColor: "#073e36", shadowOpacity: 0.28, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } },
-  fabText: { color: "#b8f5da", fontSize: 13, fontWeight: "900" },
+  headingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    marginTop: 22,
+    marginBottom: 12,
+  },
+  title: { fontSize: 23, fontWeight: "900", letterSpacing: -0.5 },
+  subtitle: { fontSize: 12, marginTop: 3 },
+  addButton: {
+    minHeight: 44,
+    paddingHorizontal: 16,
+    borderRadius: 999,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  addButtonText: { fontSize: 14, fontWeight: "800" },
   searchBox: { flexDirection: "row", alignItems: "center", minHeight: 44, borderRadius: 16, borderWidth: 1, paddingHorizontal: 14, gap: 8, marginBottom: 14 },
   searchInput: { flex: 1, fontSize: 13, fontWeight: "600", height: "100%" },
   inviteBtn: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 14, backgroundColor: "#10b981", marginLeft: 10 },

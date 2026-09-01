@@ -182,7 +182,7 @@ export default function TenantsPage() {
           <Input aria-label={t("common.search")} placeholder={t("tenants.phone") + ", " + t("tenants.fullName") + "..."} className="pl-9" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} />
         </div>
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-          <DialogTrigger onClick={openAddModal} className="inline-flex h-10 items-center justify-center gap-2 rounded-[16px] bg-primary px-4 text-sm font-bold text-primary-foreground shadow-[var(--calm-shadow)] transition hover:opacity-90">
+          <DialogTrigger onClick={openAddModal} className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-primary px-4 text-sm font-bold text-primary-foreground shadow-[var(--calm-shadow)] transition hover:opacity-90">
             <Plus className="size-4" />{t("tenants.addTenant")}
           </DialogTrigger>
           <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-[600px]">

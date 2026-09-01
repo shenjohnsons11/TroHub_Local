@@ -112,18 +112,28 @@ export default function AdminRoomsScreen({ params }: Props) {
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={<>
           <GradientHero icon="home-outline" label={t("mobile.rooms.heroLabel")} value={t("mobile.rooms.heroValue", { count: rooms.length })} detail={t("mobile.rooms.heroDetail", { count: rooms.filter((room) => room.status === 0).length })} />
-          <View style={styles.sectionRow}>
-            <View style={{ flex: 1 }}>
-              <AppText style={[styles.sectionTitle, { color: theme.text }]}>{t("mobile.rooms.listTitle")}</AppText>
-              <AppText style={[styles.sectionSub, { color: theme.muted }]}>{t("mobile.rooms.listSubtitle")}</AppText>
+          <View style={styles.headingRow}>
+            <View style={{ flex: 1, paddingRight: 8 }}>
+              <AppText style={[styles.title, { color: theme.text }]}>{t("mobile.rooms.listTitle")}</AppText>
+              <AppText style={[styles.subtitle, { color: theme.muted }]}>{t("mobile.rooms.listSubtitle")}</AppText>
             </View>
-            <Pressable accessibilityRole="button" style={[styles.sectionBtn, { backgroundColor: theme.warning }]} onPress={() => { setMeterReadings({}); setMeterModalVisible(true); }}>
-              <Ionicons name="flash" size={16} color="#fff" />
-              <AppText style={styles.sectionBtnText}>{t("mobile.rooms.recordMeter")}</AppText>
+            <Pressable
+              accessibilityRole="button"
+              style={[styles.addButton, { backgroundColor: theme.primary }]}
+              onPress={() => setModalVisible(true)}
+            >
+              <Ionicons name="add-circle-outline" size={18} color={theme.background} />
+              <AppText style={[styles.addButtonText, { color: theme.background }]}>{t("mobile.rooms.add") || "Thêm phòng"}</AppText>
             </Pressable>
-            <Pressable accessibilityRole="button" style={[styles.sectionBtn, { backgroundColor: theme.primary }]} onPress={() => setModalVisible(true)}>
-              <Ionicons name="add" size={16} color="#fff" />
-              <AppText style={styles.sectionBtnText}>{t("mobile.rooms.add")}</AppText>
+          </View>
+          <View style={styles.subActionBar}>
+            <Pressable
+              accessibilityRole="button"
+              style={[styles.toolBtn, { backgroundColor: theme.primarySoft }]}
+              onPress={() => { setMeterReadings({}); setMeterModalVisible(true); }}
+            >
+              <Ionicons name="flash-outline" size={16} color={theme.primary} />
+              <AppText style={[styles.toolBtnText, { color: theme.primary }]}>{t("mobile.rooms.recordMeter")}</AppText>
             </Pressable>
           </View>
           <View style={styles.filters}>{(["all", "empty", "occupied", "repair"] as const).map((value) => <Pressable key={value} accessibilityRole="button" accessibilityState={{ selected: filter === value }} style={[styles.filter, { backgroundColor: filter === value ? theme.primarySoft : theme.surfaceElevated }]} onPress={() => setFilter(value)}><AppText style={[styles.filterText, { color: filter === value ? theme.primary : theme.muted }]}>{({ all: t("common.all"), empty: t("mobile.rooms.available"), occupied: t("mobile.rooms.occupied"), repair: t("mobile.rooms.repair") })[value]}</AppText></Pressable>)}</View>
@@ -225,7 +235,7 @@ export default function AdminRoomsScreen({ params }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  listContent: { padding: 18, paddingBottom: 36, gap: 10 },
+  listContent: { padding: 18, paddingBottom: 130, gap: 10 },
   filters: { flexDirection: "row", gap: 7, marginVertical: 18 },
   floorFilters: { gap: 7, paddingBottom: 14 },
   floorGroup: { marginBottom: 18 },
@@ -253,11 +263,56 @@ const styles = StyleSheet.create({
   field: { marginBottom: 14 },
   label: { fontSize: 12, fontWeight: "800", marginBottom: 7 },
   input: { minHeight: 48, borderRadius: 16, paddingHorizontal: 14, fontSize: 14 },
-  sectionRow: { flexDirection: "row", alignItems: "center", marginTop: 18, marginBottom: 6 },
-  sectionTitle: { fontSize: 16, fontWeight: "900" },
-  sectionSub: { fontSize: 11, fontWeight: "600", marginTop: 2 },
-  sectionBtn: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, gap: 5 },
-  sectionBtnText: { fontSize: 12, fontWeight: "800", color: "#fff" },
+  headingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    marginTop: 22,
+    marginBottom: 6,
+  },
+  title: {
+    color: "#e4f7ee",
+    fontSize: 23,
+    fontWeight: "900",
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    color: "#a5bcb1",
+    fontSize: 12,
+    marginTop: 3,
+  },
+  addButton: {
+    minHeight: 44,
+    paddingHorizontal: 16,
+    borderRadius: 999,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  addButtonText: {
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  subActionBar: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  toolBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 999,
+    gap: 6,
+    minHeight: 40,
+  },
+  toolBtnText: {
+    fontSize: 13,
+    fontWeight: "800",
+  },
   meterCardHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
   scanMeterButton: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: 5, borderRadius: 10, paddingHorizontal: 10 },
   scanMeterText: { fontSize: 11, fontWeight: "900" },

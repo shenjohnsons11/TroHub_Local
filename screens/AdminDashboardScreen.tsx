@@ -20,9 +20,9 @@ import StandardOperationsDashboard from "../components/StandardOperationsDashboa
 import AutomationStatusCard from "../components/AutomationStatusCard";
 import QuickAutoBillingModal from "../components/QuickAutoBillingModal";
 
-type Props = { profile?: UserProfile; refreshKey?: number; onNavigate: (tab: any, params?: any) => void; onLogout: () => void };
+type Props = { profile?: UserProfile; refreshKey?: number; onNavigate: (tab: any, params?: any) => void; onOpenSearch?: () => void; onLogout: () => void };
 
-export default function AdminDashboardScreen({ profile, refreshKey = 0, onNavigate }: Props) {
+export default function AdminDashboardScreen({ profile, refreshKey = 0, onNavigate, onOpenSearch }: Props) {
   const { theme } = useAppTheme();
   const { t } = useLanguage();
   const [stats, setStats] = useState<AdminDashboardStats | null>(null);
@@ -82,14 +82,14 @@ export default function AdminDashboardScreen({ profile, refreshKey = 0, onNaviga
         </View>
 
         <View style={styles.headerActions}>
-          {/* Trợ lý AI */}
+          {/* Nút Tìm kiếm hệ thống */}
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={t("dashboard.aiAssistant")}
-            style={[styles.headerBtn, { backgroundColor: "#064E3B" }]}
-            onPress={() => onNavigate("ai_chat")}
+            accessibilityLabel={t("common.search") || "Tìm kiếm"}
+            style={[styles.headerBtn, { backgroundColor: theme.surfaceElevated, shadowColor: theme.text }]}
+            onPress={onOpenSearch || (() => onNavigate("ai_chat"))}
           >
-            <Ionicons name="sparkles" size={20} color="#34D399" />
+            <Ionicons name="search-outline" size={21} color={theme.text} />
           </Pressable>
 
           {/* Quả chuông Thông báo */}

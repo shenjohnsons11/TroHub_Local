@@ -383,10 +383,6 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <AppText style={styles.title}>{t("mobile.invoices.title")}</AppText>
-      </View>
-
       <FlatList
         data={filteredInvoices}
         keyExtractor={(item) => item._id}
@@ -397,25 +393,30 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
             <AutomationStatusCard policy={automationPolicy} onConfigure={() => setAutomationVisible(true)} />
             <GradientHero icon="receipt-outline" label={t("mobile.invoices.heroLabel")} value={formatCurrency(invoices.reduce((sum, invoice) => sum + (invoice.totalAmount || 0), 0))} detail={t("mobile.invoices.heroDetail", { count: invoices.length })} />
 
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionHeaderCopy}>
-                <AppText style={styles.sectionTitle}>{t("mobile.invoices.title") || "Quản lý hóa đơn"}</AppText>
-                <AppText style={styles.sectionSub}>{t("mobile.invoices.subtitle") || "Theo dõi và phát hành hóa đơn hàng tháng"}</AppText>
+            <View style={styles.headingRow}>
+              <View style={{ flex: 1, paddingRight: 8 }}>
+                <AppText style={[styles.title, { color: theme.text }]}>{t("mobile.invoices.title") || "Quản lý hóa đơn"}</AppText>
+                <AppText style={[styles.subtitle, { color: theme.muted }]}>{t("mobile.invoices.subtitle") || "Theo dõi và phát hành hóa đơn hàng tháng"}</AppText>
               </View>
-              <View style={styles.actionBar}>
-                <Pressable accessibilityRole="button" style={[styles.sectionBtn, { backgroundColor: theme.primarySoft }]} onPress={() => onNavigate && onNavigate('scan_meter')}>
-                  <Ionicons name="camera-outline" size={16} color={theme.primary} />
-                  <AppText style={[styles.sectionBtnText, { color: theme.primary }]}>{t("dashboard.scanMeter") || "Quét điện nước AI"}</AppText>
-                </Pressable>
-                <Pressable accessibilityRole="button" style={[styles.sectionBtn, { backgroundColor: theme.primarySoft }]} onPress={() => onNavigate && onNavigate('invoice_bulk')}>
-                  <Ionicons name="documents-outline" size={16} color={theme.primary} />
-                  <AppText style={[styles.sectionBtnText, { color: theme.primary }]}>{t("mobile.invoices.bulk") || "Hàng loạt"}</AppText>
-                </Pressable>
-                <Pressable accessibilityRole="button" style={[styles.sectionBtn, { backgroundColor: theme.primary }]} onPress={() => setModalVisible(true)}>
-                  <Ionicons name="add" size={16} color={theme.background} />
-                  <AppText style={[styles.sectionBtnText, { color: theme.background }]}>{t("mobile.invoices.create") || "Tạo mới"}</AppText>
-                </Pressable>
-              </View>
+              <Pressable
+                accessibilityRole="button"
+                style={[styles.addButton, { backgroundColor: theme.primary }]}
+                onPress={() => setModalVisible(true)}
+              >
+                <Ionicons name="add-circle-outline" size={18} color={theme.background} />
+                <AppText style={[styles.addButtonText, { color: theme.background }]}>{t("mobile.invoices.create") || "Tạo mới"}</AppText>
+              </Pressable>
+            </View>
+
+            <View style={styles.subActionBar}>
+              <Pressable accessibilityRole="button" style={[styles.toolBtn, { backgroundColor: theme.primarySoft }]} onPress={() => onNavigate && onNavigate('scan_meter')}>
+                <Ionicons name="camera-outline" size={16} color={theme.primary} />
+                <AppText style={[styles.toolBtnText, { color: theme.primary }]}>{t("dashboard.scanMeter") || "Quét điện nước AI"}</AppText>
+              </Pressable>
+              <Pressable accessibilityRole="button" style={[styles.toolBtn, { backgroundColor: theme.primarySoft }]} onPress={() => onNavigate && onNavigate('invoice_bulk')}>
+                <Ionicons name="documents-outline" size={16} color={theme.primary} />
+                <AppText style={[styles.toolBtnText, { color: theme.primary }]}>{t("mobile.invoices.bulk") || "Hàng loạt"}</AppText>
+              </Pressable>
             </View>
 
             {/* Bộ lọc */}
@@ -627,43 +628,6 @@ const createStyles = (theme: any) => StyleSheet.create({
     backgroundColor: theme.background,
   },
   meterError: { color: theme.danger, fontSize: 12, fontWeight: "700", lineHeight: 18, marginTop: 12 },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 18,
-    paddingTop: 18,
-    paddingBottom: 14,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "900",
-    color: theme.text,
-  },
-  addButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.positive,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    gap: 4,
-  },
-  bulkButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    gap: 4,
-  },
-  addButtonText: {
-    color: theme.background,
-    fontSize: 12,
-    fontWeight: "800",
-    marginLeft: 4,
-  },
   filterContainer: {
     flexDirection: "row",
     paddingHorizontal: 18,
@@ -671,9 +635,12 @@ const createStyles = (theme: any) => StyleSheet.create({
     gap: 8,
   },
   filterButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+    borderRadius: 999,
+    minHeight: 38,
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: theme.surfaceElevated,
   },
   filterActive: {
@@ -682,7 +649,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   filterText: {
     fontSize: 12,
     color: theme.muted,
-    fontWeight: "700",
+    fontWeight: "800",
   },
   filterTextActive: {
     color: theme.primary,
@@ -691,7 +658,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   listContent: {
     paddingHorizontal: 18,
     paddingTop: 18,
-    paddingBottom: 20,
+    paddingBottom: 130,
     gap: 10,
   },
   invoiceCard: {
@@ -748,42 +715,55 @@ const createStyles = (theme: any) => StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 7,
   },
-  sectionHeader: {
-    marginTop: 18,
+  headingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    marginTop: 22,
     marginBottom: 6,
   },
-  sectionHeaderCopy: {
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: '900',
+  title: {
     color: theme.text,
+    fontSize: 23,
+    fontWeight: "900",
+    letterSpacing: -0.5,
   },
-  sectionSub: {
-    fontSize: 13,
+  subtitle: {
     color: theme.muted,
-    fontWeight: '600',
-    marginTop: 4,
-  },
-  actionBar: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    justifyContent: 'flex-start',
-  },
-  sectionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-    gap: 5,
-    minHeight: 38,
-  },
-  sectionBtnText: {
     fontSize: 12,
-    fontWeight: '800',
+    marginTop: 3,
+  },
+  addButton: {
+    minHeight: 44,
+    paddingHorizontal: 16,
+    borderRadius: 999,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  addButtonText: {
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  subActionBar: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 8,
+    marginBottom: 10,
+  },
+  toolBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 999,
+    gap: 6,
+    minHeight: 40,
+  },
+  toolBtnText: {
+    fontSize: 13,
+    fontWeight: "800",
   },
   modalOverlay: {
     flex: 1,

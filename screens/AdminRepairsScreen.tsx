@@ -187,8 +187,8 @@ export default function AdminRepairsScreen({ params }: Props) {
         ListHeaderComponent={
           <>
             <GradientHero icon="construct-outline" label={t("mobile.repairs.heroLabel")} value={t("mobile.repairs.heroValue", { count: repairs.filter((repair) => repair.status === 0 || repair.status === 1).length })} detail={t("mobile.repairs.heroDetail", { count: repairs.length })} />
-            <View style={styles.sectionRow}>
-              <View style={{ flex: 1 }}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionHeaderCopy}>
                 <AppText style={styles.sectionTitle}>{t("mobile.repairs.sectionTitle")}</AppText>
                 <AppText style={styles.sectionSub}>{t("mobile.repairs.sectionSubtitle")}</AppText>
               </View>
@@ -423,11 +423,33 @@ const createStyles = (theme: any) => StyleSheet.create({
     color: theme.muted,
     fontWeight: "600",
   },
+  sectionHeader: {
+    marginTop: 18,
+    marginBottom: 12,
+    paddingHorizontal: 18,
+  },
+  sectionHeaderCopy: {
+    flex: 1,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: "900",
+    color: theme.text,
+  },
+  sectionSub: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: theme.muted,
+    marginTop: 4,
+  },
   filterButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+    borderRadius: 999,
     backgroundColor: theme.surfaceElevated,
+    minHeight: 38,
+    alignItems: "center",
+    justifyContent: "center",
   },
   filterActive: {
     backgroundColor: theme.primarySoft,
@@ -435,7 +457,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   filterText: {
     fontSize: 12,
     color: theme.muted,
-    fontWeight: "700",
+    fontWeight: "800",
   },
   filterTextActive: {
     color: theme.primary,
@@ -444,7 +466,7 @@ const createStyles = (theme: any) => StyleSheet.create({
   listContent: {
     paddingHorizontal: 18,
     paddingTop: 18,
-    paddingBottom: 20,
+    paddingBottom: 130,
     gap: 10,
   },
   repairCard: {
@@ -620,22 +642,5 @@ const createStyles = (theme: any) => StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 14,
     fontWeight: "800",
-  },
-  sectionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 18,
-    marginBottom: 6,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: theme.text,
-  },
-  sectionSub: {
-    fontSize: 11,
-    color: theme.muted,
-    fontWeight: '600',
-    marginTop: 2,
   },
 });
