@@ -18,7 +18,8 @@ exports.getSettings = async (req, res) => {
                 propertyAddress: landlord.propertyAddress || '',
                 bankId: landlord.bankId || '',
                 bankAccountNo: landlord.bankAccountNo || '',
-                bankAccountName: landlord.bankAccountName || ''
+                bankAccountName: landlord.bankAccountName || '',
+                landlordSignature: landlord.landlordSignature || ''
             }
         });
     } catch (error) {
@@ -29,7 +30,7 @@ exports.getSettings = async (req, res) => {
 // 2. Cập nhật thông tin chủ trọ
 exports.updateSettings = async (req, res) => {
     try {
-        const { name, phone, email, password, propertyAddress, bankId, bankAccountNo, bankAccountName } = req.body;
+        const { name, phone, email, password, propertyAddress, bankId, bankAccountNo, bankAccountName, landlordSignature } = req.body;
         const landlord = await Account.findOne({ _id: req.auth.id, role: 1 });
         if (!landlord) {
             return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản chủ trọ!' });
@@ -41,6 +42,7 @@ exports.updateSettings = async (req, res) => {
         if (bankId !== undefined) landlord.bankId = bankId;
         if (bankAccountNo !== undefined) landlord.bankAccountNo = bankAccountNo;
         if (bankAccountName !== undefined) landlord.bankAccountName = bankAccountName;
+        if (landlordSignature !== undefined) landlord.landlordSignature = landlordSignature;
         if (password) {
             const salt = await bcrypt.genSalt(10);
             landlord.password = await bcrypt.hash(password, salt);
@@ -52,7 +54,8 @@ exports.updateSettings = async (req, res) => {
             data: { 
                 id: landlord._id, name: landlord.fullName, phone: landlord.phone, email: landlord.email || '',
                 propertyAddress: landlord.propertyAddress || '',
-                bankId: landlord.bankId || '', bankAccountNo: landlord.bankAccountNo || '', bankAccountName: landlord.bankAccountName || ''
+                bankId: landlord.bankId || '', bankAccountNo: landlord.bankAccountNo || '', bankAccountName: landlord.bankAccountName || '',
+                landlordSignature: landlord.landlordSignature || ''
             }
         });
     } catch (error) {

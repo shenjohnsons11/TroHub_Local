@@ -44,6 +44,7 @@ function serializeUser(account) {
         propertyAddress: account.propertyAddress || '',
         propertyLatitude: account.propertyLatitude,
         propertyLongitude: account.propertyLongitude,
+        landlordSignature: account.landlordSignature || '',
     };
 }
 
@@ -239,7 +240,7 @@ exports.updateMe = async (req, res) => {
         const token = authHeader.split(' ')[1];
         const decoded = jwt.verify(token, JWT_SECRET);
 
-        const { fullName, phone, email, idCard, bankId, bankAccountNo, bankAccountName, propertyAddress, propertyLatitude, propertyLongitude } = req.body;
+        const { fullName, phone, email, idCard, bankId, bankAccountNo, bankAccountName, propertyAddress, propertyLatitude, propertyLongitude, landlordSignature } = req.body;
 
         const account = await Account.findById(decoded.id);
         if (!account) {
@@ -253,6 +254,7 @@ exports.updateMe = async (req, res) => {
         if (bankId !== undefined) account.bankId = bankId;
         if (bankAccountNo !== undefined) account.bankAccountNo = bankAccountNo;
         if (bankAccountName !== undefined) account.bankAccountName = bankAccountName;
+        if (landlordSignature !== undefined) account.landlordSignature = landlordSignature;
         if (account.role === 1 && propertyAddress !== undefined) {
             const cleanAddress = typeof propertyAddress === 'string' ? propertyAddress.trim() : '';
             if (!cleanAddress) return res.status(400).json({ success: false, code: 'PROPERTY_ADDRESS_REQUIRED', message: 'Vui lòng nhập địa chỉ nhà trọ.' });

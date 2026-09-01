@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { fetchAPI } from "@/lib/api";
 import { 
   Bot, 
@@ -15,6 +16,8 @@ import {
   Mic,
   Volume2,
   Square,
+  Compass,
+  ArrowRight,
 } from "lucide-react";
 import { dispatchAIAction, isAIAction } from "@/lib/ai-actions";
 import { safeJsonParse, type WebAdminUser } from "@/lib/client-storage";
@@ -25,6 +28,7 @@ interface Message {
   sender: "user" | "ai";
   text: string;
   timestamp: string;
+  action?: any;
 }
 
 type AIRole = "landlord" | "tenant";
@@ -42,7 +46,25 @@ type AIChatResponse = {
   denied?: unknown;
 };
 
+const TAB_TO_ROUTE: Record<string, string> = {
+  home: "/dashboard",
+  rooms: "/dashboard/rooms",
+  contract: "/dashboard/contracts",
+  contracts: "/dashboard/contracts",
+  invoice: "/dashboard/invoices",
+  invoices: "/dashboard/invoices",
+  invoice_bulk: "/dashboard/invoices",
+  utility: "/dashboard/utilities",
+  utilities: "/dashboard/utilities",
+  tenants: "/dashboard/tenants",
+  repair: "/dashboard/repairs",
+  repairs: "/dashboard/repairs",
+  services: "/dashboard/services",
+  settings: "/dashboard/settings",
+};
+
 export default function AIChatWidget() {
+  const router = useRouter();
   const { t, language } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -132,6 +154,14 @@ export default function AIChatWidget() {
     window.speechSynthesis.speak(utterance);
   };
 
+  const handleExecuteAction = (action: any) => {
+    if (!action) return;
+    dispatchAIAction(action);
+    const targetKey = String(action.target || action.tab || (action.type === "FILL_CONTRACT_FORM" ? "contract" : action.type === "FILL_UTILITY_READING" ? "utility" : action.type === "CREATE_INVOICE" ? "invoice" : "home")).toLowerCase();
+    const route = TAB_TO_ROUTE[targetKey] || "/dashboard";
+    router.push(route);
+  };
+
   const handleSend = async (customMessage?: string) => {
     const textToSend = customMessage || inputMessage;
     if (!textToSend.trim() || loading) return;
@@ -159,16 +189,18 @@ export default function AIChatWidget() {
             ? response.data.reply
             : (t("ai.systemError") || t("common.error")));
 
+      const action = response?.action || response?.data?.action;
+
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         sender: "ai",
         text: replyText,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        action,
       };
 
       setMessages((prev) => [...prev, aiMessage]);
 
-      const action = response?.action || response?.data?.action;
       if (isAIAction(action)) {
         dispatchAIAction(action);
       }
@@ -183,7 +215,6 @@ export default function AIChatWidget() {
     } finally {
       setLoading(false);
     }
-
   };
 
   const handleCopy = (text: string, id: string) => {
@@ -231,7 +262,7 @@ export default function AIChatWidget() {
                   <h3 className="font-semibold text-sm text-emerald-100">{presentation.title}</h3>
                   <span className="px-1.5 py-0.5 text-[10px] font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    Gemini 2.5
+                    Gemini 3.5 Flash
                   </span>
                 </div>
                 <p className="text-[11px] text-emerald-300/70">{t("ai.assistantTitle")}</p>
@@ -293,6 +324,12 @@ export default function AIChatWidget() {
                       }`}
                     >
                       <div className="whitespace-pre-wrap">{msg.text}</div>
+                      {msg.sender === "ai" && msg.action && (
+                        <AutoNavigateActionCard
+                          action={msg.action}
+                          onExecute={() => handleExecuteAction(msg.action)}
+                        />
+                      )}
                       {msg.sender === "ai" && (
                         <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-slate-950/80 rounded-md p-1 border border-emerald-500/20">
                           <button
@@ -387,5 +424,83 @@ export default function AIChatWidget() {
         </div>
       )}
     </>
+  );
+}
+
+function AutoNavigateActionCard({
+  action,
+  onExecute,
+}: {
+  action: any;
+  onExecute: () => void;
+}) {
+  const [countdown, setCountdown] = useState(1.5);
+  const [isCancelled, setIsCancelled] = useState(false);
+
+  useEffect(() => {
+    if (isCancelled || action.autoNavigate === false) return;
+
+    const interval = setInterval(() => {
+      setCountdown((prev) => Math.max(0, +(prev - 0.5).toFixed(1)));
+    }, 500);
+
+    const timer = setTimeout(() => {
+      onExecute();
+    }, 1500);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timer);
+    };
+  }, [isCancelled]);
+
+  const getActionTitle = () => {
+    if (action.label) return action.label;
+    if (action.type === "NAVIGATE_TAB") return `Mở ${action.target || action.tab}`;
+    if (action.type === "FILL_CONTRACT_FORM") return `Tạo HĐ phòng ${action.roomCode || ""}`;
+    if (action.type === "FILL_UTILITY_READING") return `Chốt điện nước phòng ${action.roomCode || ""}`;
+    if (action.type === "CREATE_INVOICE") return `Lập hóa đơn phòng ${action.roomCode || ""}`;
+    if (action.type === "CREATE_REPAIR_REQUEST") return "Gửi yêu cầu sửa chữa";
+    return "Thực thi hành động";
+  };
+
+  return (
+    <div className="mt-2.5 overflow-hidden rounded-xl border border-emerald-500/40 bg-slate-950/80 shadow-md">
+      {!isCancelled && action.autoNavigate !== false && (
+        <div className="h-1 w-full bg-slate-800">
+          <div className="h-1 bg-emerald-400 transition-all duration-[1500ms] ease-linear w-full animate-[progress_1.5s_linear_forwards]" />
+        </div>
+      )}
+      <div className="flex items-center gap-3 p-3">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400">
+          <Compass className="size-5" />
+        </div>
+        <div className="flex-1 overflow-hidden">
+          <p className="truncate text-xs font-bold text-emerald-100">{getActionTitle()}</p>
+          <p className={`text-[11px] ${isCancelled ? "text-slate-400" : "text-emerald-400 font-semibold"}`}>
+            {isCancelled ? "Đã dừng tự chuyển trang" : `Tự động chuyển trang sau ${countdown}s...`}
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center justify-end gap-2 border-t border-emerald-500/20 bg-slate-900/60 px-3 py-2">
+        {!isCancelled && action.autoNavigate !== false && (
+          <button
+            type="button"
+            onClick={() => setIsCancelled(true)}
+            className="rounded-lg border border-slate-700 px-2.5 py-1 text-xs font-medium text-slate-300 hover:bg-slate-800"
+          >
+            Hủy
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onExecute}
+          className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1 text-xs font-bold text-white hover:bg-emerald-500 transition"
+        >
+          <span>Đi tới ngay</span>
+          <ArrowRight className="size-3.5" />
+        </button>
+      </div>
+    </div>
   );
 }

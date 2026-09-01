@@ -50,7 +50,9 @@ const contractSchema = new mongoose.Schema({
     }],
 
     // Chữ ký điện tử & File xuất bản hợp đồng
-    tenantSignature: { type: String }, // Base64 PNG chữ ký tay
+    propertyAddress: { type: String, trim: true, default: "" },
+    landlordSignature: { type: String }, // Base64 PNG chữ ký chủ trọ
+    tenantSignature: { type: String }, // Base64 PNG chữ ký tay người thuê
     docxUrl: { type: String, select: false }, // Chỉ dùng nội bộ cho bản nháp; không phát hành qua API
     pdfUrl: { type: String },          // Endpoint PDF có xác thực
     pdfVersion: { type: Number, default: 0 },

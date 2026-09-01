@@ -9,7 +9,7 @@ function getGeminiVisionClient() {
     return { primaryClient, fallbackClient };
 }
 
-const VISION_MODELS = ['gemini-3.6-flash', 'gemini-3.5-flash'];
+const VISION_MODELS = ['gemini-3.5-flash-lite', 'gemini-3.6-flash'];
 
 async function callGeminiVision(base64Data, prompt) {
     const { primaryClient, fallbackClient } = getGeminiVisionClient();

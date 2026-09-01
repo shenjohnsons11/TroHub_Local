@@ -21,10 +21,13 @@ import AppButton from "../components/ui/AppButton";
 import GradientHero from "../components/ui/GradientHero";
 import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
 import { ContentSkeleton } from "../components/ui/content-skeleton";
+import AppLoadingScreen from "../components/AppLoadingScreen";
 import ProgressStepper from "../components/ui/ProgressStepper";
 import { draftContractService, DraftContract } from "../services/draftContractService";
 import CheckoutModal from "../components/modals/CheckoutModal";
 import ContractViewerModal from "../components/ContractViewerModal";
+import DraftContractViewerModal from "../components/DraftContractViewerModal";
+import { userService } from "../services/userService";
 import {
   formatCurrency,
   formatMeterReading,
@@ -60,6 +63,8 @@ export default function AdminContractsScreen({ params }: Props) {
   const [handoverWater, setHandoverWater] = useState("");
   const [handoverDate, setHandoverDate] = useState(new Date().toISOString().slice(0, 10));
   const [viewerContractId, setViewerContractId] = useState<string | null>(null);
+  const [propertyAddress, setPropertyAddress] = useState("");
+  const [draftPreviewVisible, setDraftPreviewVisible] = useState(false);
   const [editingDraftId, setEditingDraftId] = useState<string | undefined>();
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const draftSession = useRef(0);
@@ -87,15 +92,19 @@ export default function AdminContractsScreen({ params }: Props) {
 
   const loadData = async () => {
     try {
-      const [contractsData, roomsData, tenantsData] = await Promise.all([
+      const [contractsData, roomsData, tenantsData, userProfile] = await Promise.all([
         adminService.getContracts(),
         adminService.getRooms(),
         adminService.getTenants(),
+        userService.getProfile().catch(() => null),
       ]);
       setContracts(contractsData);
       setRooms(roomsData);
       setTenants(tenantsData);
       setDrafts(await draftContractService.getDrafts());
+      if (userProfile?.propertyAddress) {
+        setPropertyAddress((prev) => prev || userProfile.propertyAddress || "");
+      }
     } catch (error) {
       console.log("Lỗi tải dữ liệu hợp đồng:", error);
       notification.error(t("contractsMobile.loadFailed"));
@@ -239,6 +248,7 @@ export default function AdminContractsScreen({ params }: Props) {
         endDate: endDateIso,
         fixedRentPrice: unformatNumber(fixedRent),
         fixedDeposit: unformatNumber(fixedDeposit),
+        propertyAddress: propertyAddress.trim(),
         ...meterTerms,
       });
       notification.success(t("contractsMobile.created"));
@@ -400,7 +410,7 @@ export default function AdminContractsScreen({ params }: Props) {
   const styles = createStyles(theme);
 
   if (loading) {
-    return <ContentSkeleton rows={4} />;
+    return <AppLoadingScreen />;
   }
 
   const filterButton = (value: typeof filter, label: string) => (
@@ -772,6 +782,9 @@ export default function AdminContractsScreen({ params }: Props) {
                     <Field label={t("contractsMobile.deposit")} required styles={styles}>
                       <AppTextInput style={styles.input} value={fixedDeposit} onChangeText={(value) => setFixedDeposit(formatNumberInput(value))} keyboardType="numeric" placeholder="VD: 3.500.000" placeholderTextColor={theme.muted} />
                     </Field>
+                    <Field label="Địa chỉ nhà trọ / Cơ sở" styles={styles}>
+                      <AppTextInput style={styles.input} value={propertyAddress} onChangeText={setPropertyAddress} placeholder="VD: 123 Nguyễn Huệ, Quận 1, TP.HCM" placeholderTextColor={theme.muted} />
+                    </Field>
                     <View style={styles.inputRow}>
                       <View style={styles.inputColumn}>
                         <Field label={t("contractsMobile.startDate")} required styles={styles}>
@@ -896,6 +909,19 @@ export default function AdminContractsScreen({ params }: Props) {
                     <PreviewRow label={t("contractsMobile.term")} value={`${startDate} → ${endDate}`} styles={styles} />
                   </View>
                   <Pressable
+                    accessibilityRole="button"
+                    onPress={() => setDraftPreviewVisible(true)}
+                    style={[styles.fullPreviewButton, { backgroundColor: theme.primarySoft, borderColor: theme.primary }]}
+                  >
+                    <Ionicons name="document-text" size={24} color={theme.primary} />
+                    <View style={styles.fullPreviewCopy}>
+                      <AppText style={[styles.fullPreviewTitle, { color: theme.primary }]}>Xem trước toàn văn hợp đồng</AppText>
+                      <AppText style={[styles.fullPreviewSubtitle, { color: theme.muted }]}>Kiểm tra văn bản pháp lý & chữ ký Bên A trước khi tạo</AppText>
+                    </View>
+                    <Ionicons name="eye-outline" size={20} color={theme.primary} />
+                  </Pressable>
+
+                  <Pressable
                     accessibilityRole="checkbox"
                     accessibilityState={{ checked: confirmed }}
                     accessibilityLabel={t("contractsMobile.confirmInfo")}
@@ -948,6 +974,25 @@ export default function AdminContractsScreen({ params }: Props) {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      <DraftContractViewerModal
+        visible={draftPreviewVisible}
+        draftData={{
+          roomId: selectedRoomId,
+          tenantId: selectedTenantId,
+          startDate,
+          endDate,
+          fixedRentPrice: fixedRent,
+          fixedDeposit,
+          electricityPrice: services.electricity.price,
+          waterPrice: services.water.price,
+          propertyAddress,
+          services: Object.entries(services)
+            .filter(([_, v]) => v.enabled)
+            .map(([k, v]) => ({ name: k, fixedPrice: v.price })),
+        }}
+        onClose={() => setDraftPreviewVisible(false)}
+      />
     </View>
   );
 }
@@ -1085,6 +1130,10 @@ function createStyles(theme: any) {
     confirmCopy: { flex: 1 },
     confirmTitle: { color: theme.text, fontSize: 14, fontWeight: "900" },
     confirmDesc: { color: theme.muted, fontSize: 12, lineHeight: 17, marginTop: 3 },
+    fullPreviewButton: { flexDirection: "row", alignItems: "center", gap: 12, padding: 16, borderRadius: 20, borderWidth: 1.5, marginBottom: 14 },
+    fullPreviewCopy: { flex: 1 },
+    fullPreviewTitle: { fontSize: 14, fontWeight: "900" },
+    fullPreviewSubtitle: { fontSize: 11, marginTop: 2, lineHeight: 16 },
     wizardFooter: { flexDirection: "row", alignItems: "center", gap: 8, padding: 12, paddingBottom: Platform.OS === "ios" ? 24 : 12, backgroundColor: theme.surface, shadowColor: theme.text, shadowOpacity: 0.08, shadowOffset: { width: 0, height: -4 }, shadowRadius: 12, elevation: 8 },
     footerButton: { minHeight: 46, paddingHorizontal: 10 },
     primaryFooterButton: { flex: 1, minHeight: 46, paddingHorizontal: 10 },

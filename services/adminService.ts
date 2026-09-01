@@ -335,7 +335,7 @@ export const adminService = {
     return apiClient.get<TenantLookupResult>(`/tenants/lookup?identifier=${encodeURIComponent(identifier)}`, token);
   },
 
-  async createTenant(tenantData: { fullName: string; phone: string; email: string; idCard: string; roomCode: string }): Promise<AdminTenant> {
+  async createTenant(tenantData: { fullName: string; phone: string; email: string; idCard: string; roomCode?: string }): Promise<AdminTenant> {
     const token = await authService.getToken();
     const response = await apiClient.post<{ success: boolean; data: AdminTenant }>("/tenants", tenantData, token);
     return response.data;
@@ -411,6 +411,7 @@ export const adminService = {
     waterPrice: number;
     initialElectricity: number;
     initialWater: number;
+    propertyAddress?: string;
   }): Promise<AdminContract> {
     const token = await authService.getToken();
 

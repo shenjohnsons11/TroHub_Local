@@ -20,6 +20,7 @@ type ApiUser = {
   propertyAddress?: string;
   propertyLatitude?: number;
   propertyLongitude?: number;
+  landlordSignature?: string;
 };
 
 type GetMeResponse = {
@@ -61,6 +62,7 @@ const mapApiUserToProfile = (user: ApiUser): UserProfile => {
     propertyAddress: user.propertyAddress || "",
     propertyLatitude: user.propertyLatitude,
     propertyLongitude: user.propertyLongitude,
+    landlordSignature: user.landlordSignature || "",
   };
 };
 
@@ -129,6 +131,8 @@ export const userService = {
           bankId: profile.bankId,
           bankAccountNo: profile.bankAccountNo,
           bankAccountName: profile.bankAccountName,
+          propertyAddress: profile.propertyAddress,
+          landlordSignature: profile.landlordSignature,
         },
         token
       );

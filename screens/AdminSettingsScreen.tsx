@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Modal, ScrollView, Switch, StyleSheet, View, Pressable } from "react-native";
+import { ActivityIndicator, Image, Modal, ScrollView, Switch, StyleSheet, View, Pressable } from "react-native";
 import { AppText, AppTextInput } from "@/components/ui/typography";
 import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "../contexts/ThemeContext";
 import { useNotification } from "../hooks/useNotification";
 import { UserProfile } from "../types/UserProfile";
 import ChangePasswordModal from "../components/ChangePasswordModal";
+import SignaturePadModal from "../components/SignaturePadModal";
 import AppButton from "../components/ui/AppButton";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
 import { formatPhone, unformatDigits } from "../utils/formatters";
@@ -57,6 +58,8 @@ export default function AdminSettingsScreen({
   const [phone, setPhone] = useState(formatPhone(profile.phone));
   const [email, setEmail] = useState(profile.email || "");
   const [propertyAddress, setPropertyAddress] = useState(profile.propertyAddress || "");
+  const [landlordSignature, setLandlordSignature] = useState(profile.landlordSignature || "");
+  const [signatureModalVisible, setSignatureModalVisible] = useState(false);
   const [bankId, setBankId] = useState(profile.bankId || "");
   const [bankAccountNo, setBankAccountNo] = useState(profile.bankAccountNo || "");
   const [bankAccountName, setBankAccountName] = useState(profile.bankAccountName || "");
@@ -135,6 +138,7 @@ export default function AdminSettingsScreen({
       bankId: bankId.trim().toUpperCase(),
       bankAccountNo: bankAccountNo.trim(),
       bankAccountName: bankAccountName.trim().toUpperCase(),
+      landlordSignature: landlordSignature.trim(),
     });
     notification.success(t("common.success"));
   };
@@ -225,6 +229,57 @@ export default function AdminSettingsScreen({
             <Field label={t("auth.phone")} value={phone} setValue={(v: string) => setPhone(formatPhone(v))} placeholder="0901.234.567" keyboardType="number-pad" style={inputStyle} muted={theme.muted} />
             <Field label={t("auth.email")} value={email} setValue={setEmail} placeholder="landlord@email.com" keyboardType="email-address" style={inputStyle} muted={theme.muted} autoCapitalize="none" />
             <Field label="Địa chỉ nhà trọ" value={propertyAddress} setValue={setPropertyAddress} placeholder="123 Nguyễn Huệ, Quận 1, TP.HCM" style={inputStyle} muted={theme.muted} />
+          </View>
+        </AnimatedEntry>
+
+        {/* Chữ ký mẫu của Chủ trọ */}
+        <AnimatedEntry delay={120}>
+          <View style={[styles.bentoSection, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+            <View style={styles.sectionHeading}>
+              <View style={[styles.sectionIcon, { backgroundColor: "rgba(16, 185, 129, 0.15)" }]}>
+                <Ionicons name="create" size={18} color="#10B981" />
+              </View>
+              <View style={styles.automationHeadingCopy}>
+                <AppText style={[styles.cardTitle, { color: theme.text }]}>Chữ ký mẫu Chủ trọ (Bên A)</AppText>
+                <AppText style={[styles.pushDescription, { color: theme.muted }]}>Tự động đóng dấu chữ ký vào hợp đồng PDF</AppText>
+              </View>
+            </View>
+
+            {landlordSignature ? (
+              <View style={[styles.signatureBox, { borderColor: theme.primary, backgroundColor: "#ffffff" }]}>
+                <Image
+                  source={{ uri: landlordSignature.startsWith("data:") ? landlordSignature : `data:image/png;base64,${landlordSignature}` }}
+                  style={styles.signatureImage}
+                  resizeMode="contain"
+                />
+              </View>
+            ) : (
+              <View style={[styles.signatureEmptyBox, { borderColor: theme.border, backgroundColor: theme.background }]}>
+                <Ionicons name="brush-outline" size={28} color={theme.muted} />
+                <AppText style={[styles.signatureEmptyText, { color: theme.muted }]}>Chưa thiết lập chữ ký mẫu</AppText>
+              </View>
+            )}
+
+            <View style={styles.signatureActions}>
+              <AppButton
+                variant={landlordSignature ? "secondary" : "primary"}
+                icon="brush-outline"
+                onPress={() => setSignatureModalVisible(true)}
+                style={styles.signatureBtn}
+              >
+                {landlordSignature ? "Ký lại / Đổi chữ ký" : "Vẽ hoặc tải chữ ký"}
+              </AppButton>
+              {landlordSignature ? (
+                <AppButton
+                  variant="ghost"
+                  icon="trash-outline"
+                  onPress={() => setLandlordSignature("")}
+                  style={styles.signatureDeleteBtn}
+                >
+                  Xóa
+                </AppButton>
+              ) : null}
+            </View>
           </View>
         </AnimatedEntry>
 
@@ -391,6 +446,7 @@ export default function AdminSettingsScreen({
       </ScrollView>
 
       <ChangePasswordModal visible={passwordVisible} onClose={() => setPasswordVisible(false)} />
+      <SignaturePadModal visible={signatureModalVisible} onSave={(sig) => setLandlordSignature(sig)} onClose={() => setSignatureModalVisible(false)} />
       <DayPickerModal visible={dayPicker !== null} title={dayPicker?.title || ""} closeLabel={t("common.close")} selected={dayPicker ? automationPolicy[dayPicker.field] : 1} theme={theme} onSelect={selectAutomationDay} onClose={() => setDayPicker(null)} />
     </>
   );
@@ -509,4 +565,11 @@ const styles = StyleSheet.create({
   dayPickerList: { maxHeight: 430 },
   dayOption: { minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: StyleSheet.hairlineWidth, paddingHorizontal: 12 },
   dayOptionText: { fontSize: 15, fontWeight: "800" },
+  signatureBox: { height: 110, borderRadius: 16, borderWidth: 1.5, borderStyle: "dashed", alignItems: "center", justifyContent: "center", marginTop: 12, padding: 8, overflow: "hidden" },
+  signatureImage: { width: "100%", height: "100%" },
+  signatureEmptyBox: { height: 100, borderRadius: 16, borderWidth: 1, borderStyle: "dashed", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 12 },
+  signatureEmptyText: { fontSize: 12, fontWeight: "600" },
+  signatureActions: { flexDirection: "row", gap: 10, marginTop: 12 },
+  signatureBtn: { flex: 1, minHeight: 44 },
+  signatureDeleteBtn: { minWidth: 70, minHeight: 44 },
 });

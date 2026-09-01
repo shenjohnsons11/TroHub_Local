@@ -76,36 +76,83 @@ function parseAIResponse(rawText) {
         const action = parsed?.action;
         const reply = isNonEmptyString(parsed?.reply) ? parsed.reply.trim() : fallback;
 
-        if (action?.type === 'FILL_CONTRACT_FORM'
-            && isNonEmptyString(action.roomCode)
-            && isNonEmptyString(action.tenantName)
-            && isNonNegativeNumber(action.rentPrice)
-            && isValidISODate(action.startDate)) {
-            return {
-                reply,
-                action: {
-                    type: 'FILL_CONTRACT_FORM',
-                    roomCode: action.roomCode.trim(),
-                    tenantName: action.tenantName.trim(),
-                    rentPrice: action.rentPrice,
-                    startDate: action.startDate,
-                },
-            };
-        }
+        if (action && typeof action === 'object') {
+            if (action.type === 'NAVIGATE_TAB' && (action.target || action.tab)) {
+                const target = String(action.target || action.tab).trim();
+                return {
+                    reply,
+                    action: {
+                        type: 'NAVIGATE_TAB',
+                        target,
+                        tab: target,
+                        params: typeof action.params === 'object' && action.params ? action.params : {},
+                        label: isNonEmptyString(action.label) ? action.label.trim() : `Chuyển đến ${target}`,
+                        autoNavigate: action.autoNavigate !== false,
+                    }
+                };
+            }
 
-        if (action?.type === 'FILL_UTILITY_READING'
-            && isNonEmptyString(action.roomCode)
-            && isNonNegativeNumber(action.newElec)
-            && isNonNegativeNumber(action.newWater)) {
-            return {
-                reply,
-                action: {
-                    type: 'FILL_UTILITY_READING',
-                    roomCode: action.roomCode.trim(),
-                    newElec: action.newElec,
-                    newWater: action.newWater,
-                },
-            };
+            if (action.type === 'FILL_CONTRACT_FORM' && isNonEmptyString(action.roomCode)) {
+                return {
+                    reply,
+                    action: {
+                        type: 'FILL_CONTRACT_FORM',
+                        target: 'contract',
+                        tab: 'contract',
+                        roomCode: action.roomCode.trim(),
+                        tenantName: isNonEmptyString(action.tenantName) ? action.tenantName.trim() : '',
+                        rentPrice: isNonNegativeNumber(action.rentPrice) ? action.rentPrice : 0,
+                        startDate: isValidISODate(action.startDate) ? action.startDate : new Date().toISOString().slice(0, 10),
+                        label: `Tạo HĐ phòng ${action.roomCode.trim()}`,
+                        autoNavigate: action.autoNavigate !== false,
+                    },
+                };
+            }
+
+            if (action.type === 'FILL_UTILITY_READING' && isNonEmptyString(action.roomCode)) {
+                return {
+                    reply,
+                    action: {
+                        type: 'FILL_UTILITY_READING',
+                        target: 'utility',
+                        tab: 'utility',
+                        roomCode: action.roomCode.trim(),
+                        newElec: isNonNegativeNumber(action.newElec) ? action.newElec : 0,
+                        newWater: isNonNegativeNumber(action.newWater) ? action.newWater : 0,
+                        label: `Chốt điện nước phòng ${action.roomCode.trim()}`,
+                        autoNavigate: action.autoNavigate !== false,
+                    },
+                };
+            }
+
+            if (action.type === 'CREATE_INVOICE' && isNonEmptyString(action.roomCode)) {
+                return {
+                    reply,
+                    action: {
+                        type: 'CREATE_INVOICE',
+                        target: 'invoice',
+                        tab: 'invoice',
+                        roomCode: action.roomCode.trim(),
+                        month: isNonEmptyString(action.month) ? action.month.trim() : '',
+                        label: `Lập hóa đơn phòng ${action.roomCode.trim()}`,
+                        autoNavigate: action.autoNavigate !== false,
+                    }
+                };
+            }
+
+            if (action.type === 'CREATE_REPAIR_REQUEST') {
+                return {
+                    reply,
+                    action: {
+                        type: 'CREATE_REPAIR_REQUEST',
+                        target: 'repair',
+                        tab: 'repair',
+                        title: isNonEmptyString(action.title) ? action.title.trim() : 'Báo sửa chữa',
+                        label: 'Gửi yêu cầu sửa chữa',
+                        autoNavigate: action.autoNavigate !== false,
+                    }
+                };
+            }
         }
 
         return { reply, action: null };
@@ -288,16 +335,31 @@ Bạn đang hỗ trợ Cư dân. Chỉ được sử dụng dữ liệu phòng �
 Không tiết lộ hoặc hướng dẫn các thao tác quản trị của Chủ trọ; luôn trả về action là null.
 `;
     const roleGuidance = normalizedRole === 'landlord' ? `
-1. Nếu người dùng hỏi về thống kê phòng, doanh thu, nợ nần hoặc hợp đồng, hãy dùng số liệu bối cảnh thực tế.
-2. Nếu người dùng hỏi "Soạn tin nhắn nhắc nợ", hãy dùng debtDetails và thông tin ngân hàng để soạn tin nhắn lịch sự.
-3. Nếu người dùng hỏi cách sử dụng ứng dụng TroHub, hãy đưa ra các bước ngắn gọn, rõ ràng.
-4. Trả về duy nhất JSON hợp lệ theo cấu trúc {"reply":"...", "action":null}; reply có thể dùng Markdown.
-5. Khi đủ dữ liệu tạo hợp đồng, action là {"type":"FILL_CONTRACT_FORM","roomCode":"...","tenantName":"...","rentPrice":0,"startDate":"YYYY-MM-DD"}.
-6. Khi đủ dữ liệu chốt điện nước, action là {"type":"FILL_UTILITY_READING","roomCode":"...","newElec":0,"newWater":0}.
+1. Trả về duy nhất JSON hợp lệ theo cấu trúc {"reply":"...", "action": null hoặc action_object}.
+2. Nếu người dùng hỏi thống kê, doanh thu, nợ nần, hợp đồng, hãy dùng số liệu bối cảnh thực tế.
+3. Nếu người dùng hỏi "Soạn tin nhắn nhắc nợ", hãy dùng debtDetails và thông tin ngân hàng để soạn tin nhắn lịch sự.
+4. QUY TẮC ĐIỀU HƯỚNG TỰ ĐỘNG (ACTION DISPATCH):
+   - Khi người dùng muốn xem/mở/quản lý Phòng: action là {"type":"NAVIGATE_TAB","target":"rooms","label":"Mở Quản lý phòng"}
+   - Khi muốn tạo hợp đồng (có thể kèm phòng/khách/giá): action là {"type":"FILL_CONTRACT_FORM","roomCode":"...","tenantName":"...","rentPrice":0,"startDate":"YYYY-MM-DD","label":"Tạo hợp đồng"}
+   - Khi muốn xem hợp đồng: action là {"type":"NAVIGATE_TAB","target":"contract","label":"Mở Hợp đồng"}
+   - Khi muốn lập hóa đơn phòng cụ thể: action là {"type":"CREATE_INVOICE","roomCode":"...","label":"Lập hóa đơn"}
+   - Khi muốn lập hóa đơn hàng loạt cả dãy: action là {"type":"NAVIGATE_TAB","target":"invoice_bulk","label":"Lập hóa đơn cả dãy"}
+   - Khi muốn xem danh sách hóa đơn: action là {"type":"NAVIGATE_TAB","target":"invoice","label":"Mở Hóa đơn"}
+   - Khi muốn chốt số điện nước: action là {"type":"FILL_UTILITY_READING","roomCode":"...","newElec":0,"newWater":0,"label":"Chốt điện nước"}
+   - Khi muốn quét camera đồng hồ điện nước (OCR): action là {"type":"NAVIGATE_TAB","target":"scan_meter","label":"Quét đồng hồ OCR"}
+   - Khi muốn xem/thêm Người thuê: action là {"type":"NAVIGATE_TAB","target":"tenants","label":"Danh bạ khách thuê"}
+   - Khi muốn quét CCCD: action là {"type":"NAVIGATE_TAB","target":"cccd_scan","label":"Quét CCCD"}
+   - Khi muốn xem báo sửa chữa: action là {"type":"NAVIGATE_TAB","target":"repair","label":"Quản lý sửa chữa"}
+   - Khi muốn cài đặt VietQR, ngân hàng, chữ ký: action là {"type":"NAVIGATE_TAB","target":"settings","label":"Cài đặt VietQR & Chữ ký"}
+   - Khi muốn cài đặt bảng giá dịch vụ: action là {"type":"NAVIGATE_TAB","target":"services","label":"Bảng giá dịch vụ"}
 ` : `
-1. Chỉ dùng dữ liệu phòng và hóa đơn của chính người dùng để trả lời.
-2. Với câu hỏi về sửa chữa hoặc cách dùng ứng dụng, đưa ra hướng dẫn ngắn gọn, rõ ràng.
-3. Trả về duy nhất JSON hợp lệ theo cấu trúc {"reply":"...", "action":null}; action luôn phải là null.
+1. Trả về duy nhất JSON hợp lệ theo cấu trúc {"reply":"...", "action": null hoặc action_object}.
+2. Chỉ dùng dữ liệu phòng và hóa đơn của chính người dùng để trả lời.
+3. QUY TẮC ĐIỀU HƯỚNG TỰ ĐỘNG (ACTION DISPATCH):
+   - Khi muốn xem tiền phòng / hóa đơn / thanh toán: action là {"type":"NAVIGATE_TAB","target":"invoice","label":"Xem hóa đơn của tôi"}
+   - Khi muốn xem hợp đồng / ký hợp đồng: action là {"type":"NAVIGATE_TAB","target":"contract","label":"Xem hợp đồng"}
+   - Khi muốn báo sửa chữa / báo hỏng thiết bị: action là {"type":"CREATE_REPAIR_REQUEST","title":"...","label":"Gửi báo sửa chữa"}
+   - Khi muốn xem chỉ số điện nước: action là {"type":"NAVIGATE_TAB","target":"utility","label":"Chỉ số điện nước"}
 `;
     const systemInstruction = `
 Bạn là TroHub AI - Trợ lý AI thông minh tích hợp trên ứng dụng quản lý nhà trọ TroHub.
@@ -312,7 +374,7 @@ HƯỚNG DẪN TRẢ LỜI:
 ${roleGuidance}
 `;
 
-    const candidateModels = ['gemini-3.6-flash', 'gemini-3.5-flash'];
+    const candidateModels = ['gemini-3.5-flash-lite', 'gemini-3.6-flash'];
     const { primaryClient, fallbackClient, primaryKey, fallbackKey } = getGenAIClient(role);
 
     if (!primaryClient && !fallbackClient) {

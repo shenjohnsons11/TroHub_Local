@@ -1,5 +1,6 @@
 const Contract = require('../models/Contract');
 const Room = require('../models/Room');
+const Account = require('../models/Account');
 const Invoice = require('../models/Invoice');
 const Service = require('../models/Service');
 const {
@@ -26,6 +27,7 @@ const { canViewContract, canDownloadDocx } = require('../services/contractDocume
 const {
     generateContractPdf,
     generateContractDocx,
+    renderContractHtml,
     PDF_DOCUMENT_VERSION,
 } = require('../services/contractGeneratorService');
 const {
@@ -246,6 +248,12 @@ exports.createContract = async (req, res) => {
                 : req.body.waterPrice,
         });
 
+        const landlord = await Account.findById(req.auth.id).select('propertyAddress landlordSignature');
+        const propertyAddress = typeof req.body.propertyAddress === 'string' && req.body.propertyAddress.trim()
+            ? req.body.propertyAddress.trim()
+            : (landlord?.propertyAddress || '');
+        const landlordSignature = landlord?.landlordSignature || '';
+
         const newContract = new Contract({
             roomId,
             tenantId,
@@ -253,6 +261,8 @@ exports.createContract = async (req, res) => {
             endDate,
             fixedRentPrice,
             fixedDeposit,
+            propertyAddress,
+            landlordSignature,
             ...meterTerms,
             services: services || [], // Nhúng thẳng mảng dịch vụ vào đây
             isAdvanceBooking: lifecycle.isAdvanceBooking,
@@ -635,5 +645,58 @@ exports.deleteContract = async (req, res) => {
         });
     } catch (error) {
         return sendContractError(res, error, 'Lỗi khi xóa hợp đồng');
+    }
+};
+
+// 7. Xem trước toàn văn Hợp đồng trước khi tạo chính thức
+exports.previewDraftHtml = async (req, res) => {
+    try {
+        const { roomId, tenantId, startDate, endDate, fixedRentPrice, fixedDeposit, electricityPrice, waterPrice, services, propertyAddress } = req.body;
+        const landlord = await Account.findById(req.auth.id);
+        if (!landlord) return res.status(404).json({ success: false, message: "Không tìm thấy tài khoản chủ trọ." });
+        
+        let roomCode = '';
+        if (roomId) {
+            const room = await Room.findById(roomId).select('roomCode');
+            if (room) roomCode = room.roomCode;
+        }
+
+        let tenantName = '', tenantIdCard = '', tenantPhone = '';
+        if (tenantId) {
+            const tenant = await Account.findById(tenantId).select('fullName idCard phone');
+            if (tenant) {
+                tenantName = tenant.fullName || '';
+                tenantIdCard = tenant.idCard || '';
+                tenantPhone = tenant.phone || '';
+            }
+        }
+
+        const address = propertyAddress || landlord.propertyAddress || '';
+        const fixedServicesTotal = (services || []).reduce((sum, s) => sum + (Number(s.fixedPrice || s.price) || 0), 0);
+
+        const data = {
+            ten_chu_tro: landlord.fullName || '',
+            cccd_chu_tro: landlord.idCard || '',
+            sdt_chu_tro: landlord.phone || '',
+            dia_chi_nha_tro: address,
+            ten_nguoi_thue: tenantName,
+            cccd_nguoi_thue: tenantIdCard,
+            sdt_nguoi_thue: tenantPhone,
+            ma_phong: roomCode,
+            gia_thue: Number(fixedRentPrice || 0).toLocaleString('vi-VN'),
+            tien_coc: Number(fixedDeposit || 0).toLocaleString('vi-VN'),
+            tien_coc_bang_chu: require('../services/vietnameseNumber').numberToVietnameseWords(fixedDeposit),
+            ngay_bat_dau: startDate || '',
+            ngay_ket_thuc: endDate || '',
+            gia_dien: electricityPrice == null ? '' : Number(electricityPrice).toLocaleString('vi-VN'),
+            gia_nuoc: waterPrice == null ? '' : Number(waterPrice).toLocaleString('vi-VN'),
+            phi_dich_vu: Number(fixedServicesTotal).toLocaleString('vi-VN'),
+        };
+
+        const html = renderContractHtml(data, landlord.landlordSignature || '', '');
+        res.set({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+        return res.send(html);
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Lỗi xem trước hợp đồng: ' + error.message });
     }
 };

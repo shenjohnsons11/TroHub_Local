@@ -36,5 +36,8 @@ export const aiService = {
   async sendMessage(message: string): Promise<AIChatResponse> {
     return this.chat(message);
   },
+  async chatWithAI(message: string, _role?: string): Promise<AIChatResponse> {
+    return this.chat(message);
+  },
 };
 

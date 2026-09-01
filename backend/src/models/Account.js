@@ -23,7 +23,8 @@ const accountSchema = new mongoose.Schema({
     bankAccountName: { type: String, default: "" }, // Tên chủ tài khoản
     propertyAddress: { type: String, trim: true, default: "" },
     propertyLatitude: { type: Number },
-    propertyLongitude: { type: Number }
+    propertyLongitude: { type: Number },
+    landlordSignature: { type: String, default: "" }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Account', accountSchema);
