@@ -13,4 +13,5 @@ export type UserProfile = {
   propertyAddress?: string;
   propertyLatitude?: number;
   propertyLongitude?: number;
+  landlordSignature?: string;
 };

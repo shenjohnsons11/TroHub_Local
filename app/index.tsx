@@ -28,6 +28,8 @@ import AdminNotificationsScreen from "../screens/AdminNotificationsScreen";
 import MeterScannerScreen from "../screens/MeterScannerScreen";
 import CCCDScannerScreen from "../screens/CCCDScannerScreen";
 import AIChatScreen from "../screens/AIChatScreen";
+import DraggableAIAssistant from "../components/DraggableAIAssistant";
+import AIAssistantModal from "../components/AIAssistantModal";
 
 import AppSplashScreen from "../components/AppSplashScreen";
 import { useAppTheme } from "../contexts/ThemeContext";
@@ -72,6 +74,7 @@ export default function App() {
   const { theme } = useAppTheme();
   const [isChecking, setIsChecking] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [aiModalVisible, setAiModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("home");
   const [actionParams, setActionParams] = useState<any>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -353,6 +356,23 @@ export default function App() {
           {activeTab !== "change_password" && (
             <BottomNav activeTab={activeTab} onChangeTab={handleChangeTab} role={profile.role} />
           )}
+
+          {/* Nút Trợ lý AI nổi kéo di chuyển khắp màn hình */}
+          <DraggableAIAssistant
+            visible={isLoggedIn && Boolean(profile) && activeTab !== "ai_chat"}
+            onPress={() => setAiModalVisible(true)}
+          />
+
+          {/* Modal Trợ lý ảo AI Copilot */}
+          <AIAssistantModal
+            visible={aiModalVisible}
+            profile={profile}
+            onClose={() => setAiModalVisible(false)}
+            onNavigate={(tab, params) => {
+              setAiModalVisible(false);
+              handleChangeTab(tab as any, params);
+            }}
+          />
         </View>
       </SafeAreaView>
       {splash}

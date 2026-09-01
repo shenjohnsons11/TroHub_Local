@@ -2,6 +2,8 @@ import React from "react";
 import { StyleSheet, View, Image } from "react-native";
 import { AppText } from "@/components/ui/typography";
 
+import { useAppTheme } from "../contexts/ThemeContext";
+
 type Props = {
   compact?: boolean;
   inverted?: boolean;
@@ -9,6 +11,8 @@ type Props = {
 };
 
 export default function TroHubLogo({ compact = false, inverted = false, size = "medium" }: Props) {
+  const { resolvedTheme } = useAppTheme();
+  const isDark = resolvedTheme === "dark";
   const scale = size === "small" ? 0.78 : size === "large" ? 1.35 : 1;
   const imageSize = 38 * scale;
   
@@ -20,15 +24,15 @@ export default function TroHubLogo({ compact = false, inverted = false, size = "
     >
       <View style={styles.mark}> 
         <Image 
-          source={require("../assets/images/logo_dark_theme.png")} 
+          source={isDark ? require("../assets/images/logo_dark_theme.png") : require("../assets/images/logo_3d_glass.png")} 
           style={{ width: imageSize, height: imageSize }} 
           resizeMode="contain" 
         />
       </View>
       {!compact && (
         <View style={styles.wordmark}>
-          <AppText style={[styles.name, inverted && styles.inverted]}>TRO HUB</AppText>
-          <AppText style={[styles.tagline, inverted && styles.taglineInverted]}>QUẢN LÝ NHÀ TRỌ</AppText>
+          <AppText style={[styles.name, (inverted || isDark) && styles.inverted]}>TRO HUB</AppText>
+          <AppText style={[styles.tagline, (inverted || isDark) && styles.taglineInverted]}>QUẢN LÝ NHÀ TRỌ</AppText>
         </View>
       )}
     </View>

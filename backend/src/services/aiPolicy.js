@@ -36,12 +36,55 @@ function classifyAIIntent(message) {
   return 'general';
 }
 
+const LANDLORD_ALLOWED_TABS = new Set([
+  'home', 'rooms', 'contract', 'invoice', 'invoice_bulk', 'utility',
+  'scan_meter', 'tenants', 'cccd_scan', 'repair', 'services', 'settings', 'account', 'notifications'
+]);
+
+const TENANT_ALLOWED_TABS = new Set([
+  'home', 'invoice', 'contract', 'repair', 'utility', 'account', 'notifications'
+]);
+
 function authorizeAIAction(role, action) {
   if (!action || typeof action !== 'object') return null;
-  if (normalizeRole(role) !== ROLE.landlord) return null;
-  if (action.type === 'FILL_CONTRACT_FORM' || action.type === 'FILL_UTILITY_READING') {
-    return { ...action, requiresConfirmation: false };
+  const normalized = normalizeRole(role);
+
+  if (action.type === 'NAVIGATE_TAB') {
+    const target = String(action.target || action.tab || '').toLowerCase().trim();
+    const allowedSet = normalized === ROLE.landlord ? LANDLORD_ALLOWED_TABS : TENANT_ALLOWED_TABS;
+    if (allowedSet.has(target)) {
+      return {
+        type: 'NAVIGATE_TAB',
+        target,
+        tab: target,
+        params: typeof action.params === 'object' && action.params ? action.params : {},
+        label: String(action.label || 'Chuyển đến chức năng'),
+        autoNavigate: Boolean(action.autoNavigate !== false),
+      };
+    }
+    return null;
   }
+
+  if (normalized === ROLE.landlord) {
+    if (action.type === 'FILL_CONTRACT_FORM' || action.type === 'FILL_UTILITY_READING' || action.type === 'CREATE_INVOICE') {
+      return {
+        ...action,
+        target: action.type === 'FILL_CONTRACT_FORM' ? 'contract' : action.type === 'FILL_UTILITY_READING' ? 'utility' : 'invoice',
+        autoNavigate: Boolean(action.autoNavigate !== false),
+      };
+    }
+  }
+
+  if (normalized === ROLE.tenant) {
+    if (action.type === 'CREATE_REPAIR_REQUEST') {
+      return {
+        ...action,
+        target: 'repair',
+        autoNavigate: Boolean(action.autoNavigate !== false),
+      };
+    }
+  }
+
   return null;
 }
 

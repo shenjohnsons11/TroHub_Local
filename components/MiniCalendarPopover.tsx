@@ -36,20 +36,20 @@ export default function MiniCalendarPopover() {
 
   return (
     <View>
-      {/* Trigger Pill */}
+      {/* Trigger Pill (Matching WebAdmin Date Widget) */}
       <Pressable
         accessibilityRole="button"
         onPress={() => setModalVisible(true)}
         style={[
           styles.pill,
           {
-            backgroundColor: theme.primarySoft,
+            backgroundColor: theme.surface,
             borderColor: theme.border,
           },
         ]}
       >
-        <Ionicons name="calendar-outline" size={13} color={theme.primary} />
-        <AppText style={[styles.pillText, { color: theme.primary }]}>
+        <Ionicons name="calendar-outline" size={13} color={theme.text} />
+        <AppText style={[styles.pillText, { color: theme.text, fontWeight: "700" }]}>
           {getFormattedDateWidget(locale)}
         </AppText>
       </Pressable>

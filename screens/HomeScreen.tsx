@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { AppText } from "@/components/ui/typography";
 import Card from "../components/Card";
+import AppLoadingScreen from "../components/AppLoadingScreen";
 import { useAppTheme } from "../contexts/ThemeContext";
 import { homeService } from "../services/homeService";
 import { Invite, inviteService } from "../services/inviteService";
@@ -21,6 +22,7 @@ import { useLanguage } from "../contexts/LanguageContext";
 
 import { UserProfile } from "../types/UserProfile";
 import TenantRoomSwitcher from "../components/TenantRoomSwitcher";
+import FeatureSearchModal from "../components/FeatureSearchModal";
 
 type Props = {
   profile?: UserProfile | null;
@@ -40,6 +42,7 @@ export default function HomeScreen({ profile, refreshKey, selectedRoomId, onRoom
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [searchModalVisible, setSearchModalVisible] = useState(false);
 
   useEffect(() => {
     loadHomeData();
@@ -76,11 +79,7 @@ export default function HomeScreen({ profile, refreshKey, selectedRoomId, onRoom
   };
 
   if (isLoading || !homeData) {
-    return (
-      <View style={styles.loadingBox}>
-        <ActivityIndicator size="large" color={theme.primary} />
-      </View>
-    );
+    return <AppLoadingScreen />;
   }
 
   const handleAcceptInvite = async (id: string) => {
@@ -119,11 +118,11 @@ export default function HomeScreen({ profile, refreshKey, selectedRoomId, onRoom
         <View style={styles.headerActions}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={t("mobile.home.aiLabel")}
-            onPress={() => onNavigate("ai_chat")}
-            style={[styles.bellButton, { backgroundColor: "#064E3B", borderRadius: 16 }]}
+            accessibilityLabel="Tìm kiếm chức năng"
+            onPress={() => setSearchModalVisible(true)}
+            style={styles.bellButton}
           >
-            <Ionicons name="sparkles" size={20} color="#34D399" />
+            <Ionicons name="search-outline" size={22} color={theme.text} />
           </Pressable>
           <Pressable
             accessibilityRole="button"
@@ -302,6 +301,13 @@ export default function HomeScreen({ profile, refreshKey, selectedRoomId, onRoom
         </Card>
       </Pressable>
       </AnimatedEntry>
+
+      <FeatureSearchModal
+        visible={searchModalVisible}
+        role={2}
+        onClose={() => setSearchModalVisible(false)}
+        onSelectFeature={(tab, params) => onNavigate(tab as any, params)}
+      />
     </ScrollView>
   );
 }

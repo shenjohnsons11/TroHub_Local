@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { AccessibilityInfo, findNodeHandle, Modal, View, Pressable, StyleSheet, ScrollView } from "react-native";
 import { AppText } from "@/components/ui/typography";
+import TroHubIcon from "@/components/ui/icons/TroHubIcon";
 import { Invoice } from "../types/Invoice";
 import { useAppTheme } from "../contexts/ThemeContext";
 import AppButton from "./ui/AppButton";
@@ -60,18 +61,21 @@ export default function InvoiceDetailModal({
           {invoice && (
             <>
               <View style={styles.modalHeader}>
-                <View style={styles.modalTitleBox}>
-                  <AppText
-                    ref={titleRef}
-                    style={styles.modalTitle}
-                    accessibilityRole="header"
-                    accessibilityLiveRegion="polite"
-                  >
-                    {t("invoiceDetail.title")}
-                  </AppText>
-                  <AppText style={styles.modalSub}>
-                    {t("invoiceDetail.subtitle", { month: invoice.month, room: invoice.room })}
-                  </AppText>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
+                  <TroHubIcon name="billing" size="sm" badge glow />
+                  <View style={styles.modalTitleBox}>
+                    <AppText
+                      ref={titleRef}
+                      style={styles.modalTitle}
+                      accessibilityRole="header"
+                      accessibilityLiveRegion="polite"
+                    >
+                      {t("invoiceDetail.title")}
+                    </AppText>
+                    <AppText style={styles.modalSub}>
+                      {t("invoiceDetail.subtitle", { month: invoice.month, room: invoice.room })}
+                    </AppText>
+                  </View>
                 </View>
 
                 <Pressable

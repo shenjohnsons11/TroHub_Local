@@ -156,7 +156,7 @@ export default function LoginScreen({ onLogin }: Props) {
           <View style={styles.page}>
             <ImageBackground
               imageStyle={styles.brandArtwork}
-              source={require("../assets/images/trohub-property-loading.png")}
+              source={require("../assets/images/loading_cozy_house.jpg")}
               style={[
                 styles.brandPanel,
                 { backgroundColor: themeMode === "dark" ? theme.surfaceElevated : "#20302A" },

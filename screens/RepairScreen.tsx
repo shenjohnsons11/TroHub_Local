@@ -16,6 +16,7 @@ import { useNotification } from "../hooks/useNotification";
 import { getNotificationMessage } from "../utils/notificationMessages";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
 import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
+import AppLoadingScreen from "../components/AppLoadingScreen";
 import { useTranslation } from "../contexts/LanguageContext";
 import TenantRoomSwitcher from "../components/TenantRoomSwitcher";
 import { Contract } from "../types/Contract";
@@ -235,11 +236,7 @@ export default function RepairScreen({ selectedRoomId, onRoomSelect }: Props) {
   };
 
   if (isLoading) {
-    return (
-      <View style={styles.loadingBox}>
-        <ActivityIndicator size="large" color={theme.primary} />
-      </View>
-    );
+    return <AppLoadingScreen />;
   }
 
   return (

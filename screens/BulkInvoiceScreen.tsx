@@ -44,9 +44,10 @@ type BulkInvoiceItem = {
 
 type Props = {
   onNavigate: (tab: any, params?: any) => void;
+  params?: any;
 };
 
-export default function BulkInvoiceScreen({ onNavigate }: Props) {
+export default function BulkInvoiceScreen({ onNavigate, params }: Props) {
   const { theme } = useAppTheme();
   const { t } = useTranslation();
   const notification = useNotification();

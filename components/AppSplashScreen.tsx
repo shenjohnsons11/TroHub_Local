@@ -119,7 +119,7 @@ export default function AppSplashScreen({ visible = true }: AppSplashScreenProps
           onError={() => setLogoReady(true)}
           onLoad={() => setLogoReady(true)}
           resizeMode="cover"
-          source={require("../assets/images/logo_3d_glass.png")}
+          source={require("../assets/images/loading_cozy_house.jpg")}
           style={styles.logo}
         />
       </Animated.View>

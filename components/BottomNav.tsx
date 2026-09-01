@@ -26,7 +26,6 @@ type Tab =
   | "admin_settings"
   | "change_password";
 
-
 type Props = {
   activeTab: Tab;
   onChangeTab: (tab: Tab) => void;
@@ -35,12 +34,14 @@ type Props = {
 
 type IconName = React.ComponentProps<typeof Ionicons>["name"];
 
-const tenantTabs: {
+type TabItem = {
   key: Tab;
   label: string;
   icon: IconName;
   activeIcon: IconName;
-}[] = [
+};
+
+const tenantTabs: TabItem[] = [
   {
     key: "home",
     label: "nav.home",
@@ -73,12 +74,7 @@ const tenantTabs: {
   },
 ];
 
-const landlordTabs: {
-  key: Tab;
-  label: string;
-  icon: IconName;
-  activeIcon: IconName;
-}[] = [
+const landlordTabs: TabItem[] = [
   {
     key: "home",
     label: "nav.overview",
@@ -114,17 +110,19 @@ const landlordTabs: {
 export default function BottomNav({ activeTab, onChangeTab, role }: Props) {
   const tabs = role === 1 ? landlordTabs : tenantTabs;
   const { theme, resolvedTheme } = useAppTheme();
+  const isDark = resolvedTheme === "dark";
+
   const { t } = useLanguage();
 
   return (
     <View style={[styles.wrapper, { backgroundColor: theme.background }]}>
       <View style={[styles.shadowShell, { shadowColor: theme.text }]}>
         <BlurView
-          intensity={resolvedTheme === "dark" ? 52 : 72}
+          intensity={isDark ? 52 : 72}
           tint={resolvedTheme}
           style={[styles.container, { borderColor: theme.border }]}
         >
-          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: theme.surface, opacity: 0.82 }]} />
+          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: theme.surface, opacity: 0.88 }]} />
           {tabs.map((tab) => {
             const active =
               activeTab === tab.key ||
@@ -142,18 +140,28 @@ export default function BottomNav({ activeTab, onChangeTab, role }: Props) {
                 <View
                   style={[
                     styles.iconBox,
-                    active && styles.iconBoxActive,
-                    active && { backgroundColor: theme.primarySoft, shadowColor: theme.primary },
+                    active && [
+                      styles.iconBoxActive,
+                      {
+                        backgroundColor: isDark ? "rgba(184, 245, 218, 0.16)" : "#DFF1E7",
+                      },
+                    ],
                   ]}
                 >
                   <Ionicons
                     name={active ? tab.activeIcon : tab.icon}
-                    size={21}
-                    color={active ? theme.primary : theme.muted}
+                    size={22}
+                    color={active ? (isDark ? "#B8F5DA" : "#0F5247") : (isDark ? "#A5BCB1" : "#52635C")}
                   />
                 </View>
 
-                <AppText style={[styles.label, { color: theme.muted }, active && styles.activeLabel, active && { color: theme.primary }]}>
+                <AppText
+                  style={[
+                    styles.label,
+                    { color: isDark ? "#A5BCB1" : "#52635C" },
+                    active && [styles.activeLabel, { color: isDark ? "#B8F5DA" : "#0F5247" }],
+                  ]}
+                >
                   {t(tab.label)}
                 </AppText>
               </Pressable>
@@ -168,23 +176,23 @@ export default function BottomNav({ activeTab, onChangeTab, role }: Props) {
 const styles = StyleSheet.create({
   wrapper: {
     backgroundColor: "transparent",
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingBottom: 10,
     paddingTop: 6,
   },
   shadowShell: {
-    borderRadius: 22,
-    shadowOpacity: 0.14,
-    shadowOffset: { width: 0, height: 8 },
-    shadowRadius: 20,
-    elevation: 10,
+    borderRadius: 24,
+    shadowOpacity: 0.12,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 18,
+    elevation: 8,
   },
   container: {
-    minHeight: 72,
+    minHeight: 70,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-around",
-    borderRadius: 22,
+    borderRadius: 24,
     borderWidth: 1,
     overflow: "hidden",
   },
@@ -195,18 +203,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   iconBox: {
-    width: 38,
+    width: 44,
     height: 30,
-    borderRadius: 10,
+    borderRadius: 15,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 3,
   },
   iconBoxActive: {
-    shadowOpacity: 0.24,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 7,
-    elevation: 5,
+    shadowColor: "#0F5247",
+    shadowOpacity: 0.18,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 6,
+    elevation: 3,
   },
   label: {
     fontSize: 10.5,

@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "../contexts/ThemeContext";
 import { useNotification } from "../hooks/useNotification";
 import { ContentSkeleton } from "../components/ui/content-skeleton";
+import AppLoadingScreen from "../components/AppLoadingScreen";
 import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
 import GradientHero from "../components/ui/GradientHero";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
@@ -379,7 +380,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
     || (parseMeterReading(elecNew) ?? 0) < (parseMeterReading(elecOld) ?? 0)
     || (parseMeterReading(waterNew) ?? 0) < (parseMeterReading(waterOld) ?? 0);
 
-  if (loading) return <ContentSkeleton rows={4} />;
+  if (loading) return <AppLoadingScreen />;
 
   return (
     <View style={styles.container}>

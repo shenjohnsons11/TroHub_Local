@@ -19,11 +19,13 @@ import BentoGridDashboard from "../components/BentoGridDashboard";
 import StandardOperationsDashboard from "../components/StandardOperationsDashboard";
 import AutomationStatusCard from "../components/AutomationStatusCard";
 import QuickAutoBillingModal from "../components/QuickAutoBillingModal";
+import FeatureSearchModal from "../components/FeatureSearchModal";
 
 type Props = { profile?: UserProfile; refreshKey?: number; onNavigate: (tab: any, params?: any) => void; onLogout: () => void };
 
 export default function AdminDashboardScreen({ profile, refreshKey = 0, onNavigate }: Props) {
-  const { theme } = useAppTheme();
+  const { theme, resolvedTheme } = useAppTheme();
+  const isDark = resolvedTheme === "dark";
   const { t } = useLanguage();
   const [stats, setStats] = useState<AdminDashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -33,6 +35,7 @@ export default function AdminDashboardScreen({ profile, refreshKey = 0, onNaviga
   const [months, setMonths] = useState<6 | 12>(6);
   const [error, setError] = useState(false);
   const [automationVisible, setAutomationVisible] = useState(false);
+  const [searchModalVisible, setSearchModalVisible] = useState(false);
 
 
   const loadStats = async () => {
@@ -82,14 +85,14 @@ export default function AdminDashboardScreen({ profile, refreshKey = 0, onNaviga
         </View>
 
         <View style={styles.headerActions}>
-          {/* Trợ lý AI */}
+          {/* Nút Tìm kiếm chức năng */}
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={t("dashboard.aiAssistant")}
-            style={[styles.headerBtn, { backgroundColor: "#064E3B" }]}
-            onPress={() => onNavigate("ai_chat")}
+            accessibilityLabel="Tìm kiếm chức năng"
+            style={[styles.headerBtn, { backgroundColor: theme.surfaceElevated, shadowColor: theme.text }]}
+            onPress={() => setSearchModalVisible(true)}
           >
-            <Ionicons name="sparkles" size={20} color="#34D399" />
+            <Ionicons name="search-outline" size={22} color={theme.text} />
           </Pressable>
 
           {/* Quả chuông Thông báo */}
@@ -131,32 +134,87 @@ export default function AdminDashboardScreen({ profile, refreshKey = 0, onNaviga
         </View>
       ) : null}
 
-      {/* Segmented Mode Switcher */}
-      <View style={{ flexDirection: "row", backgroundColor: theme.surfaceElevated, borderRadius: 16, padding: 4, marginBottom: 16 }}>
+      {/* Segmented Mode Switcher (Matching WebAdmin) */}
+      <View
+        style={{
+          flexDirection: "row",
+          backgroundColor: isDark ? theme.surface : "#EDF3EF",
+          borderColor: theme.border,
+          borderWidth: 1,
+          borderRadius: 16,
+          padding: 4,
+          marginBottom: 14,
+        }}
+      >
         <Pressable
           accessibilityRole="button"
-          style={[{ flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: "center", justifyContent: "center" }, viewMode === "bento" && { backgroundColor: theme.primary }]}
+          style={[
+            { flex: 1, paddingVertical: 9, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+            viewMode === "bento" && {
+              backgroundColor: isDark ? "#B8F5DA" : "#0F5247",
+              shadowColor: "#0F5247",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.15,
+              shadowRadius: 4,
+              elevation: 2,
+            },
+          ]}
           onPress={() => setViewMode("bento")}
         >
-          <AppText style={[{ fontSize: 12, fontWeight: "900", color: theme.muted }, viewMode === "bento" && { color: theme.background }]}>
+          <AppText
+            style={[
+              { fontSize: 11.5, fontWeight: "800", color: isDark ? "#A5BCB1" : "#52635C" },
+              viewMode === "bento" && { color: isDark ? "#04100E" : "#FFFFFF", fontWeight: "900" },
+            ]}
+          >
             {t("dashboard.viewBento")}
           </AppText>
         </Pressable>
         <Pressable
           accessibilityRole="button"
-          style={[{ flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: "center", justifyContent: "center" }, viewMode === "analytics" && { backgroundColor: theme.primary }]}
+          style={[
+            { flex: 1, paddingVertical: 9, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+            viewMode === "analytics" && {
+              backgroundColor: isDark ? "#B8F5DA" : "#0F5247",
+              shadowColor: "#0F5247",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.15,
+              shadowRadius: 4,
+              elevation: 2,
+            },
+          ]}
           onPress={() => setViewMode("analytics")}
         >
-          <AppText style={[{ fontSize: 12, fontWeight: "900", color: theme.muted }, viewMode === "analytics" && { color: theme.background }]}>
+          <AppText
+            style={[
+              { fontSize: 11.5, fontWeight: "800", color: isDark ? "#A5BCB1" : "#52635C" },
+              viewMode === "analytics" && { color: isDark ? "#04100E" : "#FFFFFF", fontWeight: "900" },
+            ]}
+          >
             {t("dashboard.viewReport")}
           </AppText>
         </Pressable>
         <Pressable
           accessibilityRole="button"
-          style={[{ flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: "center", justifyContent: "center" }, viewMode === "standard" && { backgroundColor: theme.primary }]}
+          style={[
+            { flex: 1, paddingVertical: 9, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+            viewMode === "standard" && {
+              backgroundColor: isDark ? "#B8F5DA" : "#0F5247",
+              shadowColor: "#0F5247",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.15,
+              shadowRadius: 4,
+              elevation: 2,
+            },
+          ]}
           onPress={() => setViewMode("standard")}
         >
-          <AppText style={[{ fontSize: 12, fontWeight: "900", color: theme.muted }, viewMode === "standard" && { color: theme.background }]}>
+          <AppText
+            style={[
+              { fontSize: 11.5, fontWeight: "800", color: isDark ? "#A5BCB1" : "#52635C" },
+              viewMode === "standard" && { color: isDark ? "#04100E" : "#FFFFFF", fontWeight: "900" },
+            ]}
+          >
             {t("dashboard.viewStandard")}
           </AppText>
         </Pressable>
@@ -174,6 +232,12 @@ export default function AdminDashboardScreen({ profile, refreshKey = 0, onNaviga
 
       {viewMode === "bento" ? <><AppText style={[styles.sectionTitle, { color: theme.text }]}>{t("dashboard.today")}</AppText><PriorityCard title={t("dashboard.repairs")} count={stats.pendingRepairs} description={t("dashboard.repairHint")} urgent={Boolean(stats.pendingRepairs)} onPress={() => onNavigate("repair")} /><AppText style={[styles.sectionTitle, { color: theme.text }]}>{t("dashboard.quickActions")}</AppText><View style={styles.quickRow}>{quickActions.map(([label, icon, onPress], index) => <AnimatedEntry key={label} delay={index * 45} style={styles.quickWrap}><Pressable accessibilityRole="button" onPress={onPress} style={[styles.quick, { backgroundColor: theme.surfaceElevated, shadowColor: theme.text }]}><View style={[styles.quickIcon, { backgroundColor: theme.primarySoft }]}><Ionicons name={icon} size={22} color={theme.primary} /></View><AppText style={[styles.quickText, { color: theme.text }]}>{label}</AppText></Pressable></AnimatedEntry>)}</View></> : null}
       <QuickAutoBillingModal visible={automationVisible} policy={stats.automation} onClose={() => setAutomationVisible(false)} onSaved={(automation) => setStats((current) => current ? { ...current, automation: { ...automation, issueTime: current.automation.issueTime } } : current)} />
+      <FeatureSearchModal
+        visible={searchModalVisible}
+        role={1}
+        onClose={() => setSearchModalVisible(false)}
+        onSelectFeature={(tab, params) => onNavigate(tab, params)}
+      />
     </ScrollView>
   );
 }

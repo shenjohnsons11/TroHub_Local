@@ -7,6 +7,7 @@ const { requireAuth } = require('../middleware/requireAuth');
 
 // Lấy danh sách & Tạo hợp đồng dự thảo
 router.get('/', requireAuth, contractController.getAllContracts);
+router.post('/preview-draft', requireAdmin, contractController.previewDraftHtml);
 router.post('/', requireAdmin, contractController.createContract);
 router.post('/:id/send', requireAdmin, contractController.sendContract);
 

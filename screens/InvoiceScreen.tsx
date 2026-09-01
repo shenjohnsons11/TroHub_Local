@@ -12,6 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import GradientHero from "../components/ui/GradientHero";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
 import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
+import AppLoadingScreen from "../components/AppLoadingScreen";
 import { ContentSkeleton } from "../components/ui/content-skeleton";
 import { calculateUnpaidTotal } from "../utils/invoicePresentation";
 import { formatCurrency, unformatNumber } from "../utils/formatters";
@@ -98,7 +99,7 @@ export default function InvoiceScreen({ params, selectedRoomId, onRoomSelect }: 
   };
 
   if (isLoading) {
-    return <ContentSkeleton rows={3} />;
+    return <AppLoadingScreen />;
   }
 
   return (

@@ -4,6 +4,7 @@ import * as ImageManipulator from "expo-image-manipulator";
 import { ActivityIndicator, Animated, Modal, Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
 import { AppText, AppTextInput } from "@/components/ui/typography";
 import { Ionicons } from "@expo/vector-icons";
+import TroHubIcon from "@/components/ui/icons/TroHubIcon";
 import { ocrService } from "../services/ocrService";
 import type { MeterType } from "../utils/meterReadingTarget";
 import { useTranslation } from "../contexts/LanguageContext";
@@ -139,9 +140,12 @@ export default function MeterCameraModal({ visible, roomCode, initialMeterType, 
         ) : null}
 
         <View style={styles.header}>
-          <View>
-            <AppText style={styles.title}>{t("mobile.camera.meterTitle", { roomCode })}</AppText>
-            <AppText style={styles.subtitle}>{t("mobile.camera.meterSubtitle")}</AppText>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <TroHubIcon name="meter" size="sm" badge glow />
+            <View>
+              <AppText style={styles.title}>{t("mobile.camera.meterTitle", { roomCode })}</AppText>
+              <AppText style={styles.subtitle}>{t("mobile.camera.meterSubtitle")}</AppText>
+            </View>
           </View>
           <View style={styles.headerActions}>
             <Pressable

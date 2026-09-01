@@ -12,6 +12,7 @@ import { WebView } from "react-native-webview";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { AppText } from "@/components/ui/typography";
+import TroHubIcon from "@/components/ui/icons/TroHubIcon";
 import { Contract } from "../types/Contract";
 import { useAppTheme } from "../contexts/ThemeContext";
 import ProgressStepper from "./ui/ProgressStepper";
@@ -354,16 +355,19 @@ export default function SignContractWizard({ visible, contract, onClose, onSign 
         <View style={styles.modalOverlay}>
           <View style={styles.wizardContent} accessibilityViewIsModal>
           <View style={styles.wizardHeader}>
-            <View>
-              <AppText
-                ref={titleRef}
-                style={styles.wizardTitle}
-                accessibilityRole="header"
-                accessibilityLiveRegion="polite"
-              >
-                {t("contracts.signContract")}
-              </AppText>
-              <AppText style={styles.wizardSubtitle}>Bước {currentStep}/4</AppText>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <TroHubIcon name="contract" size="sm" badge glow />
+              <View>
+                <AppText
+                  ref={titleRef}
+                  style={styles.wizardTitle}
+                  accessibilityRole="header"
+                  accessibilityLiveRegion="polite"
+                >
+                  {t("contracts.signContract")}
+                </AppText>
+                <AppText style={styles.wizardSubtitle}>Bước {currentStep}/4</AppText>
+              </View>
             </View>
             <Pressable
               onPress={onClose}

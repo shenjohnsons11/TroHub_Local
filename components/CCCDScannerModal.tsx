@@ -13,6 +13,7 @@ import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "@/components/ui/typography";
+import TroHubIcon from "@/components/ui/icons/TroHubIcon";
 import { useTranslation } from "../contexts/LanguageContext";
 import { ocrService } from "../services/ocrService";
 
@@ -20,12 +21,13 @@ type Props = {
   visible: boolean;
   onClose: () => void;
   onScan: (cccdNumber: string, fullName?: string) => void;
+  useModal?: boolean;
 };
 
 // Chuẩn tỉ lệ thẻ CCCD quốc tế ID-1: 85.6mm x 53.98mm (~1.58)
 const CARD_ASPECT_RATIO = 1.58;
 
-export default function CCCDScannerModal({ visible, onClose, onScan }: Props) {
+export default function CCCDScannerModal({ visible, onClose, onScan, useModal = true }: Props) {
   const { t } = useTranslation();
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
@@ -127,112 +129,125 @@ export default function CCCDScannerModal({ visible, onClose, onScan }: Props) {
 
   const cameraReady = Boolean(permission?.granted);
 
-  return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose} statusBarTranslucent>
-      <View style={styles.container}>
-        {cameraReady ? (
-          <CameraView
-            ref={cameraRef}
-            style={StyleSheet.absoluteFill}
-            facing="back"
-            enableTorch={torchOn}
-            autofocus="on"
-          />
-        ) : (
-          <View style={styles.permission}>
-            <AppText style={styles.message}>
-              {permission ? t("mobile.camera.idPermission") : t("mobile.camera.initializing")}
-            </AppText>
-            {permission ? (
-              <Pressable accessibilityRole="button" style={styles.permissionButton} onPress={requestPermission}>
-                <AppText style={styles.permissionText}>{t("mobile.camera.allow")}</AppText>
-              </Pressable>
-            ) : null}
-          </View>
-        )}
+  if (!visible) return null;
 
-        {cameraReady ? (
-          <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-            {/* Scrim Overlay */}
-            <View style={[styles.scrim, { top: 0, left: 0, right: 0, height: frameTop }]} />
-            <View style={[styles.scrim, { top: frameTop, left: 0, width: frameLeft, height: cardHeight }]} />
-            <View style={[styles.scrim, { top: frameTop, left: frameLeft + cardWidth, right: 0, height: cardHeight }]} />
-            <View style={[styles.scrim, { top: frameBottom, left: 0, right: 0, bottom: 0 }]} />
+  const scannerBody = (
+    <View style={[styles.container, !useModal && StyleSheet.absoluteFillObject, !useModal && { zIndex: 9999, elevation: 99 }]}>
+      {cameraReady ? (
+        <CameraView
+          ref={cameraRef}
+          style={StyleSheet.absoluteFill}
+          facing="back"
+          enableTorch={torchOn}
+          autofocus="on"
+        />
+      ) : (
+        <View style={styles.permission}>
+          <AppText style={styles.message}>
+            {permission ? t("mobile.camera.idPermission") : t("mobile.camera.initializing")}
+          </AppText>
+          {permission ? (
+            <Pressable accessibilityRole="button" style={styles.permissionButton} onPress={requestPermission}>
+              <AppText style={styles.permissionText}>{t("mobile.camera.allow")}</AppText>
+            </Pressable>
+          ) : null}
+        </View>
+      )}
 
-            {/* Khung ngắm Căn Cước Công Dân (Card Viewfinder) */}
-            <View style={[styles.viewfinder, { top: frameTop, left: frameLeft, width: cardWidth, height: cardHeight }]}>
-              <View style={[styles.corner, styles.cornerTopLeft]} />
-              <View style={[styles.corner, styles.cornerTopRight]} />
-              <View style={[styles.corner, styles.cornerBottomLeft]} />
-              <View style={[styles.corner, styles.cornerBottomRight]} />
+      {cameraReady ? (
+        <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+          {/* Scrim Overlay */}
+          <View style={[styles.scrim, { top: 0, left: 0, right: 0, height: frameTop }]} />
+          <View style={[styles.scrim, { top: frameTop, left: 0, width: frameLeft, height: cardHeight }]} />
+          <View style={[styles.scrim, { top: frameTop, left: frameLeft + cardWidth, right: 0, height: cardHeight }]} />
+          <View style={[styles.scrim, { top: frameBottom, left: 0, right: 0, bottom: 0 }]} />
 
-              {/* Laser / Grid watermark */}
-              <View style={styles.cardWatermark}>
-                <Ionicons name="card-outline" size={44} color="rgba(184, 245, 218, 0.2)" />
-                <AppText style={styles.cardWatermarkText}>CĂN CƯỚC CÔNG DÂN</AppText>
-              </View>
+          {/* Khung ngắm Căn Cước Công Dân (Card Viewfinder) */}
+          <View style={[styles.viewfinder, { top: frameTop, left: frameLeft, width: cardWidth, height: cardHeight }]}>
+            <View style={[styles.corner, styles.cornerTopLeft]} />
+            <View style={[styles.corner, styles.cornerTopRight]} />
+            <View style={[styles.corner, styles.cornerBottomLeft]} />
+            <View style={[styles.corner, styles.cornerBottomRight]} />
+
+            {/* Laser / Grid watermark */}
+            <View style={styles.cardWatermark}>
+              <Ionicons name="card-outline" size={44} color="rgba(184, 245, 218, 0.2)" />
+              <AppText style={styles.cardWatermarkText}>CĂN CƯỚC CÔNG DÂN</AppText>
             </View>
-
-            <AppText style={[styles.hint, { top: frameBottom + 18 }]}>
-              Đặt mặt trước thẻ CCCD vừa vặn trong khung để AI đọc chính xác 12 số định danh
-            </AppText>
           </View>
-        ) : null}
 
-        {/* Top Header Controls */}
-        <View style={styles.header}>
+          <AppText style={[styles.hint, { top: frameBottom + 18 }]}>
+            Đặt mặt trước thẻ CCCD vừa vặn trong khung để AI đọc chính xác 12 số định danh
+          </AppText>
+        </View>
+      ) : null}
+
+      {/* Top Header Controls */}
+      <View style={styles.header}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <TroHubIcon name="cccd" size="sm" badge glow />
           <AppText style={styles.title}>Quét CCCD (AI OCR)</AppText>
-          <View style={styles.headerRight}>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => setTorchOn((prev) => !prev)}
-              style={[styles.headerBtn, torchOn && styles.headerBtnActive]}
-            >
-              <Ionicons name={torchOn ? "flash" : "flash-outline"} size={20} color={torchOn ? "#073e36" : "#ffffff"} />
-            </Pressable>
-            <Pressable accessibilityRole="button" onPress={onClose} style={styles.close}>
-              <Ionicons name="close" size={20} color="#ffffff" />
-            </Pressable>
+        </View>
+        <View style={styles.headerRight}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setTorchOn((prev) => !prev)}
+            style={[styles.headerBtn, torchOn && styles.headerBtnActive]}
+          >
+            <Ionicons name={torchOn ? "flash" : "flash-outline"} size={20} color={torchOn ? "#073e36" : "#ffffff"} />
+          </Pressable>
+          <Pressable accessibilityRole="button" onPress={onClose} style={styles.close}>
+            <Ionicons name="close" size={20} color="#ffffff" />
+          </Pressable>
+        </View>
+      </View>
+
+      {/* Bottom Shutter & Gallery Controls */}
+      {cameraReady && !isProcessing ? (
+        <View style={styles.bottomControls}>
+          <Pressable accessibilityRole="button" onPress={handlePickGallery} style={styles.galleryBtn}>
+            <Ionicons name="images-outline" size={24} color="#ffffff" />
+            <AppText style={styles.controlLabel}>Chọn ảnh</AppText>
+          </Pressable>
+
+          {/* Circular Shutter Button */}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Chụp & Nhận diện CCCD"
+            onPress={handleCapture}
+            style={({ pressed }) => [styles.shutterOuter, pressed && styles.shutterPressed]}
+          >
+            <View style={styles.shutterInner}>
+              <Ionicons name="scan" size={28} color="#073e36" />
+            </View>
+          </Pressable>
+
+          <View style={{ width: 64, alignItems: "center" }}>
+            <AppText style={[styles.controlLabel, { opacity: 0 }]}>Placeholder</AppText>
           </View>
         </View>
+      ) : null}
 
-        {/* Bottom Shutter & Gallery Controls */}
-        {cameraReady && !isProcessing ? (
-          <View style={styles.bottomControls}>
-            <Pressable accessibilityRole="button" onPress={handlePickGallery} style={styles.galleryBtn}>
-              <Ionicons name="images-outline" size={24} color="#ffffff" />
-              <AppText style={styles.controlLabel}>Chọn ảnh</AppText>
-            </Pressable>
-
-            {/* Circular Shutter Button */}
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Chụp & Nhận diện CCCD"
-              onPress={handleCapture}
-              style={({ pressed }) => [styles.shutterOuter, pressed && styles.shutterPressed]}
-            >
-              <View style={styles.shutterInner}>
-                <Ionicons name="scan" size={28} color="#073e36" />
-              </View>
-            </Pressable>
-
-            <View style={{ width: 64, alignItems: "center" }}>
-              <AppText style={[styles.controlLabel, { opacity: 0 }]}>Placeholder</AppText>
-            </View>
+      {/* Loading Overlay */}
+      {isProcessing && (
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="large" color="#10b981" />
+            <AppText style={styles.loadingTitle}>Đang phân tích AI Vision...</AppText>
+            <AppText style={styles.loadingSubtitle}>{statusMessage}</AppText>
           </View>
-        ) : null}
+        </View>
+      )}
+    </View>
+  );
 
-        {/* Loading Overlay */}
-        {isProcessing && (
-          <View style={styles.loadingOverlay}>
-            <View style={styles.loadingBox}>
-              <ActivityIndicator size="large" color="#10b981" />
-              <AppText style={styles.loadingTitle}>Đang phân tích AI Vision...</AppText>
-              <AppText style={styles.loadingSubtitle}>{statusMessage}</AppText>
-            </View>
-          </View>
-        )}
-      </View>
+  if (!useModal) {
+    return scannerBody;
+  }
+
+  return (
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose} statusBarTranslucent>
+      {scannerBody}
     </Modal>
   );
 }

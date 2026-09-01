@@ -1,16 +1,23 @@
 import { safeJsonParse } from "@/lib/client-storage";
 
 export type AIAction =
-  | { type: "FILL_CONTRACT_FORM"; roomCode: string; tenantName: string; rentPrice: number; startDate: string }
-  | { type: "FILL_UTILITY_READING"; roomCode: string; newElec: number; newWater: number };
+  | { type: "NAVIGATE_TAB"; target: string; tab?: string; params?: Record<string, unknown>; label?: string; autoNavigate?: boolean }
+  | { type: "FILL_CONTRACT_FORM"; roomCode: string; tenantName?: string; rentPrice?: number; startDate?: string; label?: string; autoNavigate?: boolean }
+  | { type: "FILL_UTILITY_READING"; roomCode: string; newElec?: number; newWater?: number; label?: string; autoNavigate?: boolean }
+  | { type: "CREATE_INVOICE"; roomCode: string; month?: string; label?: string; autoNavigate?: boolean }
+  | { type: "CREATE_REPAIR_REQUEST"; title?: string; label?: string; autoNavigate?: boolean };
 
 const PENDING_ACTION_KEY = "trohub-ai-action";
 
 export function isAIAction(value: unknown): value is AIAction {
   if (!value || typeof value !== "object") return false;
   const action = value as Record<string, unknown>;
-  if (action.type === "FILL_CONTRACT_FORM") return typeof action.roomCode === "string" && typeof action.tenantName === "string" && typeof action.rentPrice === "number" && /^\d{4}-\d{2}-\d{2}$/.test(String(action.startDate));
-  return action.type === "FILL_UTILITY_READING" && typeof action.roomCode === "string" && typeof action.newElec === "number" && typeof action.newWater === "number";
+  if (action.type === "NAVIGATE_TAB") return typeof action.target === "string" || typeof action.tab === "string";
+  if (action.type === "FILL_CONTRACT_FORM") return typeof action.roomCode === "string";
+  if (action.type === "FILL_UTILITY_READING") return typeof action.roomCode === "string";
+  if (action.type === "CREATE_INVOICE") return typeof action.roomCode === "string";
+  if (action.type === "CREATE_REPAIR_REQUEST") return true;
+  return false;
 }
 
 export function dispatchAIAction(action: unknown) {
