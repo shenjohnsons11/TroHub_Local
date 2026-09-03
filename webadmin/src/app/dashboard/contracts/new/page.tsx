@@ -1,15 +1,38 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Building2, CalendarDays, Check, ChevronLeft, ChevronRight, Gauge, PenLine, Save, UserRound } from "lucide-react";
+import {
+  AlertCircle,
+  Building2,
+  CalendarDays,
+  Check,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  FileText,
+  Gauge,
+  Loader2,
+  PenLine,
+  Save,
+  UserRound,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useNotification } from "@/hooks/use-notification";
 import { fetchAPI } from "@/lib/api";
 import { getNotificationMessage } from "@/lib/notification-messages";
-import { formatCurrency, formatMeterReading, formatNumberInput, formatPhone, parseMeterReading, unformatNumber } from "@/lib/formatters";
+import {
+  formatCurrency,
+  formatMeterReading,
+  formatNumberInput,
+  formatPhone,
+  parseMeterReading,
+  unformatNumber,
+} from "@/lib/formatters";
 import {
   ContractDraft,
   buildContractDraftKey,
@@ -59,6 +82,10 @@ export default function NewContractPage() {
   const [services, setServices] = useState<Option[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [landlordSignature, setLandlordSignature] = useState("");
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState("");
+  const [previewLoading, setPreviewLoading] = useState(false);
   const draftHydrated = useRef(false);
 
   const stepsList = [
@@ -76,13 +103,28 @@ export default function NewContractPage() {
   const draftKey = buildContractDraftKey(adminId);
 
   useEffect(() => {
-    Promise.all([fetchAPI("/rooms"), fetchAPI("/tenants"), fetchAPI("/services?isActive=true")])
-      .then(([roomResponse, nguoiThueResponse, serviceResponse]) => {
+    Promise.all([
+      fetchAPI("/rooms"),
+      fetchAPI("/tenants"),
+      fetchAPI("/services?isActive=true"),
+      fetchAPI("/settings").catch(() => ({ data: null })),
+    ])
+      .then(([roomResponse, nguoiThueResponse, serviceResponse, settingsResponse]) => {
         setRooms(roomResponse.data || []);
         setNguoiThueList(nguoiThueResponse.data || []);
         setServices(serviceResponse.data || []);
+        if (settingsResponse?.data?.landlordSignature) {
+          setLandlordSignature(settingsResponse.data.landlordSignature);
+        }
+        if (settingsResponse?.data?.propertyAddress) {
+          setDraft((prev) => ({
+            ...prev,
+            propertyAddress: prev.propertyAddress || settingsResponse.data.propertyAddress,
+          }));
+        }
       })
       .catch((error) => notification.error(getNotificationMessage(error, t("common.error"))));
+
     const saved = localStorage.getItem(draftKey);
     if (saved) {
       const savedDraft = safeJsonParse<Partial<ContractDraft> | null>(saved, null);
@@ -95,6 +137,7 @@ export default function NewContractPage() {
             ...savedDraft,
             fixedRentPrice: formatNumberInput(savedDraft.fixedRentPrice),
             fixedDeposit: formatNumberInput(savedDraft.fixedDeposit),
+            propertyAddress: savedDraft.propertyAddress || "",
             electricityPrice: formatNumberInput(savedDraft.electricityPrice ?? 3500),
             waterPrice: formatNumberInput(savedDraft.waterPrice ?? 15000),
             initialElectricity: formatMeterReading(savedDraft.initialElectricity),
@@ -161,6 +204,40 @@ export default function NewContractPage() {
     setStep((s) => Math.min(4, s + 1));
   };
 
+  // Xem trước toàn bộ hợp đồng (Full draft preview)
+  const handlePreviewDraft = async () => {
+    try {
+      setPreviewLoading(true);
+      setPreviewOpen(true);
+      const startDateIso = parseDisplayToIso(draft.startDate);
+      const endDateIso = parseDisplayToIso(draft.endDate);
+      const res = await fetchAPI("/contracts/preview-draft", {
+        method: "POST",
+        body: JSON.stringify({
+          roomId: draft.roomId,
+          tenantId: draft.tenantId,
+          startDate: startDateIso,
+          endDate: endDateIso,
+          fixedRentPrice: unformatNumber(draft.fixedRentPrice),
+          fixedDeposit: unformatNumber(draft.fixedDeposit),
+          propertyAddress: draft.propertyAddress?.trim() || undefined,
+          electricityPrice: unformatNumber(draft.electricityPrice || "3500"),
+          waterPrice: unformatNumber(draft.waterPrice || "15000"),
+          initialElectricity: draft.initialElectricity ? parseMeterReading(draft.initialElectricity) : undefined,
+          initialWater: draft.initialWater ? parseMeterReading(draft.initialWater) : undefined,
+          services: draft.services.map((item) => ({ ...item, fixedPrice: unformatNumber(item.fixedPrice) })),
+        }),
+      });
+      if (res.data?.html) {
+        setPreviewHtml(res.data.html);
+      }
+    } catch (err) {
+      notification.error(getNotificationMessage(err, "Không thể tải bản xem trước hợp đồng."));
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
   const submit = async () => {
     try {
       setSubmitting(true);
@@ -175,6 +252,7 @@ export default function NewContractPage() {
         method: "POST",
         body: JSON.stringify({
           ...draft,
+          propertyAddress: draft.propertyAddress?.trim() || undefined,
           startDate: startDateIso,
           endDate: endDateIso,
           fixedRentPrice: unformatNumber(draft.fixedRentPrice),
@@ -212,6 +290,7 @@ export default function NewContractPage() {
         <h1 className="mt-2 text-3xl font-black tracking-[-.04em] sm:text-4xl">{t("contracts.createContract")}</h1>
         <p className="mt-2 max-w-xl opacity-80">{t("dashboard.property")}</p>
       </header>
+
       <ol aria-label={t("contracts.title")} className="grid grid-cols-4 gap-2">
         {stepsList.map((item, index) => {
           const Icon = STEP_ICONS[index];
@@ -235,7 +314,9 @@ export default function NewContractPage() {
           );
         })}
       </ol>
+
       <section className="calm-surface min-h-[420px] p-6 sm:p-8">
+        {/* BƯỚC 1: CHỌN PHÒNG & KHÁCH THUÊ */}
         {step === 1 && (
           <div className="grid gap-5 md:grid-cols-2">
             <Field label={t("common.room")} error={errors.roomId}>
@@ -265,6 +346,7 @@ export default function NewContractPage() {
                 ))}
               </select>
             </Field>
+
             <Field label={t("common.tenant")} error={errors.tenantId}>
               <select
                 className="h-11 w-full rounded-[16px] border border-input bg-background px-3"
@@ -281,6 +363,8 @@ export default function NewContractPage() {
             </Field>
           </div>
         )}
+
+        {/* BƯỚC 2: ĐIỀU KHOẢN THUÊ & ĐỊA CHỈ NHÀ TRỌ */}
         {step === 2 && (
           <div className="grid gap-5 md:grid-cols-2">
             <Field label={t("contracts.startDate")} error={errors.startDate}>
@@ -294,6 +378,7 @@ export default function NewContractPage() {
                 }}
               />
             </Field>
+
             <Field label={t("contracts.endDate")} error={errors.endDate}>
               <DateField
                 ariaLabel={t("contracts.endDate")}
@@ -304,6 +389,7 @@ export default function NewContractPage() {
                 }}
               />
             </Field>
+
             {[
               ["fixedRentPrice", t("contracts.rentPrice")],
               ["fixedDeposit", t("contracts.depositAmount")],
@@ -316,25 +402,47 @@ export default function NewContractPage() {
                 />
               </Field>
             ))}
+
+            <div className="md:col-span-2">
+              <Field label="Địa chỉ cơ sở / Nhà trọ">
+                <Input
+                  value={draft.propertyAddress || ""}
+                  onChange={(e) => update("propertyAddress", e.target.value as never)}
+                  placeholder="VD: 123 Đường Cầu Giấy, Phường Quan Hoa, Quận Cầu Giấy, Hà Nội"
+                />
+              </Field>
+            </div>
           </div>
         )}
+
+        {/* BƯỚC 3: ĐIỆN NƯỚC & DỊCH VỤ */}
         {step === 3 && (
           <div className="space-y-6">
             <div className="grid gap-4 sm:grid-cols-2">
               {services.map((service) => {
                 const id = service._id || service.id || "";
-                const chosen = draft.services.find((item) => item.serviceId === id);
+                const chosen = draft.services.find((s) => s.serviceId === id);
                 return (
                   <label
                     key={id}
-                    className={`rounded-[20px] p-4 shadow-[var(--calm-shadow)] ${
-                      chosen ? "bg-primary/10 text-foreground" : "bg-background"
+                    className={`block cursor-pointer rounded-[20px] border p-4 transition ${
+                      chosen
+                        ? "border-primary bg-primary/10 shadow-[var(--calm-shadow)]"
+                        : "border-border bg-card shadow-[var(--calm-shadow)]"
                     }`}
                   >
-                    <span className="flex items-center gap-3 font-bold">
-                      <input type="checkbox" checked={Boolean(chosen)} onChange={() => toggleService(service)} />
-                      {service.name} · {service.unit}
-                    </span>
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="font-bold">{service.name || service.fullName}</p>
+                        <p className="text-xs text-muted-foreground">{service.unit || "phòng / tháng"}</p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={Boolean(chosen)}
+                        onChange={() => toggleService(service)}
+                        className="size-5 rounded text-primary focus:ring-primary"
+                      />
+                    </div>
                     {chosen && (
                       <Input
                         className="mt-3"
@@ -354,6 +462,7 @@ export default function NewContractPage() {
                 );
               })}
             </div>
+
             <div className="grid gap-5 md:grid-cols-2">
               <Field label={`${t("contracts.electricityPrice")} (đ/kWh)`} error={errors.electricityPrice}>
                 <Input
@@ -402,20 +511,90 @@ export default function NewContractPage() {
             </div>
           </div>
         )}
+
+        {/* BƯỚC 4: KÝ & XÁC NHẬN (VỚI HUY HIỆU CHỮ KÝ VÀ NÚT XEM TRƯỚC TOÀN BỘ HỢP ĐỒNG) */}
         {step === 4 && (
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Summary label={t("common.room")} value={selectedRoom?.roomCode || "—"} />
-            <Summary label={t("common.tenant")} value={selectedNguoiThue?.fullName || selectedNguoiThue?.name || "—"} />
-            <Summary label={t("invoices.period")} value={`${draft.startDate} → ${draft.endDate}`} />
-            <Summary label={t("contracts.rentPrice")} value={formatCurrency(draft.fixedRentPrice)} />
-            <Summary label={t("contracts.depositAmount")} value={formatCurrency(draft.fixedDeposit)} />
-            <Summary label={t("contracts.electricityPrice")} value={`${draft.electricityPrice || "3.500"}đ / kWh`} />
-            <Summary label={t("contracts.waterPrice")} value={`${draft.waterPrice || "15.000"}đ / m³`} />
-            <Summary label={t("contracts.services")} value={`${draft.services.length} services`} />
+          <div className="space-y-6">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Summary label={t("common.room")} value={selectedRoom?.roomCode || "—"} />
+              <Summary label={t("common.tenant")} value={selectedNguoiThue?.fullName || selectedNguoiThue?.name || "—"} />
+              <Summary label={t("invoices.period")} value={`${draft.startDate} → ${draft.endDate}`} />
+              <Summary label={t("contracts.rentPrice")} value={formatCurrency(draft.fixedRentPrice)} />
+              <Summary label={t("contracts.depositAmount")} value={formatCurrency(draft.fixedDeposit)} />
+              <Summary label="Địa chỉ cơ sở / Nhà trọ" value={draft.propertyAddress || "Theo cài đặt"} />
+              <Summary label={t("contracts.electricityPrice")} value={`${draft.electricityPrice || "3.500"}đ / kWh`} />
+              <Summary label={t("contracts.waterPrice")} value={`${draft.waterPrice || "15.000"}đ / m³`} />
+              <Summary label={t("contracts.services")} value={`${draft.services.length} dịch vụ`} />
+            </div>
+
+            {/* Trạng thái chữ ký số Bên A */}
+            <div
+              className={`rounded-2xl border p-4 flex items-center justify-between gap-4 ${
+                landlordSignature
+                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                  : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                {landlordSignature ? (
+                  <CheckCircle2 className="size-5 shrink-0" />
+                ) : (
+                  <AlertCircle className="size-5 shrink-0" />
+                )}
+                <div>
+                  <p className="font-bold text-sm">
+                    {landlordSignature
+                      ? "Đã sẵn sàng chữ ký số Bên A (sẽ tự động đóng dấu vào hợp đồng)"
+                      : "Chưa thiết lập chữ ký mẫu Bên A"}
+                  </p>
+                  <p className="text-xs opacity-80">
+                    {landlordSignature
+                      ? "Chữ ký tay số hóa của Chủ trọ sẽ được tự động chèn vào văn bản và file PDF."
+                      : "Bạn có thể vào Cài đặt tài khoản để thiết lập chữ ký mẫu tự động bất kỳ lúc nào."}
+                  </p>
+                </div>
+              </div>
+
+              {landlordSignature ? (
+                <div className="hidden sm:flex h-12 w-28 items-center justify-center rounded-lg border bg-white p-1 shadow-sm">
+                  <img
+                    src={
+                      landlordSignature.startsWith("data:")
+                        ? landlordSignature
+                        : `data:image/png;base64,${landlordSignature}`
+                    }
+                    alt="Chữ ký Bên A"
+                    className="max-h-full max-w-full object-contain"
+                  />
+                </div>
+              ) : null}
+            </div>
+
+            {/* Nút Xem trước toàn bộ hợp đồng */}
+            <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <FileText className="size-6 text-primary" />
+                <div>
+                  <h4 className="font-bold text-sm text-foreground">Xem trước toàn bộ hợp đồng</h4>
+                  <p className="text-xs text-muted-foreground">
+                    Kiểm tra toàn văn 12 điều khoản pháp lý và chữ ký trước khi phát hành chính thức
+                  </p>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handlePreviewDraft}
+                className="w-full sm:w-auto font-bold border-primary/30 text-primary hover:bg-primary/10"
+              >
+                <Eye className="size-4" />
+                Xem trước toàn bộ hợp đồng
+              </Button>
+            </div>
           </div>
         )}
-
       </section>
+
       <footer className="flex justify-between gap-3">
         <Button variant="outline" disabled={step === 1} onClick={() => setStep((value) => Math.max(1, value - 1))}>
           <ChevronLeft className="size-4" />
@@ -438,6 +617,36 @@ export default function NewContractPage() {
           </div>
         )}
       </footer>
+
+      {/* Modal Xem trước toàn bộ hợp đồng */}
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="w-[min(96vw,1000px)] max-w-none h-[90vh] flex flex-col p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="size-5 text-primary" />
+              Xem trước toàn bộ hợp đồng
+            </DialogTitle>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 rounded-xl border border-border bg-card overflow-hidden mt-2">
+            {previewLoading ? (
+              <div className="h-full grid place-items-center text-sm text-muted-foreground gap-2">
+                <Loader2 className="size-6 animate-spin text-primary" />
+                <span>Đang tạo bản xem trước hợp đồng...</span>
+              </div>
+            ) : previewHtml ? (
+              <iframe
+                title="Xem trước toàn bộ hợp đồng"
+                srcDoc={previewHtml}
+                className="h-full w-full border-0"
+              />
+            ) : (
+              <div className="h-full grid place-items-center text-sm text-muted-foreground">
+                Không có dữ liệu xem trước
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -451,11 +660,12 @@ function Field({ label, error, children }: { label: string; error?: string; chil
     </div>
   );
 }
+
 function Summary({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[12px] bg-background p-4">
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="mt-1 font-black">{value}</p>
+    <div className="rounded-[16px] border border-border bg-card p-4">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="font-bold">{value}</p>
     </div>
   );
 }
@@ -469,43 +679,24 @@ function DateField({
   value: string;
   onChange: (value: string) => void;
 }) {
-  const pickerRef = useRef<HTMLInputElement>(null);
-  const openPicker = () => {
-    const picker = pickerRef.current;
-    if (!picker) return;
-    const showPicker = (picker as HTMLInputElement & { showPicker?: () => void }).showPicker;
-    if (typeof showPicker === "function") showPicker.call(picker);
-    else HTMLElement.prototype.click.call(picker);
-  };
+  const [typed, setTyped] = useState(value);
+  useEffect(() => {
+    setTyped(value);
+  }, [value]);
 
   return (
     <div className="relative">
       <Input
         aria-label={ariaLabel}
-        className="pr-11 tabular-nums"
-        inputMode="numeric"
-        maxLength={10}
-        placeholder="dd/mm/yyyy"
-        value={value}
-        onChange={(event) => onChange(formatDisplayDateInput(event.target.value))}
+        value={typed}
+        onChange={(e) => {
+          const nextVal = formatDisplayDateInput(e.target.value);
+          setTyped(nextVal);
+          onChange(nextVal);
+        }}
+        placeholder="DD/MM/YYYY"
       />
-      <button
-        type="button"
-        aria-label={`Open calendar`}
-        className="absolute right-1 top-1 flex h-9 w-9 items-center justify-center rounded-[16px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        onClick={openPicker}
-      >
-        <CalendarDays className="h-4 w-4" />
-      </button>
-      <input
-        ref={pickerRef}
-        aria-hidden="true"
-        className="pointer-events-none absolute h-px w-px opacity-0"
-        tabIndex={-1}
-        type="date"
-        value={parseDisplayToIso(value) || ""}
-        onChange={(event) => onChange(formatIsoToDisplay(event.target.value))}
-      />
+      <CalendarDays className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
     </div>
   );
 }

@@ -562,7 +562,10 @@ export default function ContractsPage() {
         <Dialog open={viewerOpen} onOpenChange={(open) => open ? setViewerOpen(true) : closeViewer()}>
           <DialogContent className="w-[min(96vw,1100px)] max-w-none h-[90vh] flex flex-col">
             <DialogHeader>
-              <DialogTitle>{t("contracts.detail")}</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                <FileSignature className="size-5 text-primary" />
+                Xem trước toàn bộ hợp đồng
+              </DialogTitle>
             </DialogHeader>
             <div className="min-h-0 flex-1 rounded-xl border border-border bg-muted/20 overflow-hidden">
               {viewerLoading ? (

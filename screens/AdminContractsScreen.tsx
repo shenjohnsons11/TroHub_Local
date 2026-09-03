@@ -82,6 +82,7 @@ export default function AdminContractsScreen({ params }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [confirmed, setConfirmed] = useState(false);
+  const [landlordSignature, setLandlordSignature] = useState("");
   const [services, setServices] = useState({
     electricity: { enabled: true, price: formatNumberInput(3500) },
     water: { enabled: true, price: formatNumberInput(15000) },
@@ -104,6 +105,9 @@ export default function AdminContractsScreen({ params }: Props) {
       setDrafts(await draftContractService.getDrafts());
       if (userProfile?.propertyAddress) {
         setPropertyAddress((prev) => prev || userProfile.propertyAddress || "");
+      }
+      if (userProfile?.landlordSignature) {
+        setLandlordSignature(userProfile.landlordSignature);
       }
     } catch (error) {
       console.log("Lỗi tải dữ liệu hợp đồng:", error);
@@ -918,6 +922,12 @@ export default function AdminContractsScreen({ params }: Props) {
                     <PreviewRow label={t("contractsMobile.rent")} value={`${formatCurrency(fixedRent)}/${t("mobile.rooms.month")}`} styles={styles} />
                     <PreviewRow label={t("contractsMobile.deposit")} value={formatCurrency(fixedDeposit)} styles={styles} />
                     <PreviewRow label={t("contractsMobile.term")} value={`${startDate} → ${endDate}`} styles={styles} />
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 10, marginTop: 4, borderTopWidth: 1, borderTopColor: "rgba(0,0,0,0.06)" }}>
+                      <Ionicons name={landlordSignature ? "checkmark-circle" : "alert-circle"} size={18} color={landlordSignature ? "#10B981" : "#F59E0B"} />
+                      <AppText style={{ fontSize: 13, fontWeight: "700", color: landlordSignature ? "#10B981" : "#F59E0B", flex: 1 }}>
+                        {landlordSignature ? "Đã sẵn sàng chữ ký số Bên A (sẽ tự động đóng dấu)" : "Chưa có chữ ký mẫu (vào Cài đặt để thêm chữ ký tự động)"}
+                      </AppText>
+                    </View>
                   </View>
                   <Pressable
                     accessibilityRole="button"
@@ -926,7 +936,7 @@ export default function AdminContractsScreen({ params }: Props) {
                   >
                     <Ionicons name="document-text" size={24} color={theme.primary} />
                     <View style={styles.fullPreviewCopy}>
-                      <AppText style={[styles.fullPreviewTitle, { color: theme.primary }]}>Xem trước toàn văn hợp đồng</AppText>
+                      <AppText style={[styles.fullPreviewTitle, { color: theme.primary }]}>Xem trước toàn bộ hợp đồng</AppText>
                       <AppText style={[styles.fullPreviewSubtitle, { color: theme.muted }]}>Kiểm tra văn bản pháp lý & chữ ký Bên A trước khi tạo</AppText>
                     </View>
                     <Ionicons name="eye-outline" size={20} color={theme.primary} />
@@ -974,8 +984,15 @@ export default function AdminContractsScreen({ params }: Props) {
                     notification.warning("Vui lòng chọn khách thuê trước khi tiếp tục.");
                     return;
                   }
-                  if (currentStep < 4) setCurrentStep((step) => step + 1);
-                  else void handleCreateContract();
+                  if (currentStep === 3 && (!startDate || !endDate || !fixedRent || !fixedDeposit)) {
+                    notification.warning("Vui lòng điền đầy đủ ngày bắt đầu, ngày kết thúc, giá thuê và tiền cọc.");
+                    return;
+                  }
+                  if (currentStep < 4) {
+                    setCurrentStep((step) => step + 1);
+                    return;
+                  }
+                  void handleCreateContract();
                 }}
                 style={styles.primaryFooterButton}
               >
@@ -983,27 +1000,27 @@ export default function AdminContractsScreen({ params }: Props) {
               </AppButton>
             </View>
           </View>
+          <DraftContractViewerModal
+            visible={draftPreviewVisible}
+            useModal={false}
+            draftData={{
+              roomId: selectedRoomId,
+              tenantId: selectedTenantId,
+              startDate,
+              endDate,
+              fixedRentPrice: fixedRent,
+              fixedDeposit,
+              electricityPrice: services.electricity.price,
+              waterPrice: services.water.price,
+              propertyAddress,
+              services: Object.entries(services)
+                .filter(([_, v]) => v.enabled)
+                .map(([k, v]) => ({ name: k, fixedPrice: v.price })),
+            }}
+            onClose={() => setDraftPreviewVisible(false)}
+          />
         </KeyboardAvoidingView>
       </Modal>
-
-      <DraftContractViewerModal
-        visible={draftPreviewVisible}
-        draftData={{
-          roomId: selectedRoomId,
-          tenantId: selectedTenantId,
-          startDate,
-          endDate,
-          fixedRentPrice: fixedRent,
-          fixedDeposit,
-          electricityPrice: services.electricity.price,
-          waterPrice: services.water.price,
-          propertyAddress,
-          services: Object.entries(services)
-            .filter(([_, v]) => v.enabled)
-            .map(([k, v]) => ({ name: k, fixedPrice: v.price })),
-        }}
-        onClose={() => setDraftPreviewVisible(false)}
-      />
     </View>
   );
 }

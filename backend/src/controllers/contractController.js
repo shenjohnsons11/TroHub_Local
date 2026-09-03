@@ -648,55 +648,118 @@ exports.deleteContract = async (req, res) => {
     }
 };
 
-// 7. Xem trước toàn văn Hợp đồng trước khi tạo chính thức
+// 7. Xem trước toàn bộ Hợp đồng trước khi tạo chính thức
 exports.previewDraftHtml = async (req, res) => {
     try {
         const { roomId, tenantId, startDate, endDate, fixedRentPrice, fixedDeposit, electricityPrice, waterPrice, services, propertyAddress } = req.body;
         const landlord = await Account.findById(req.auth.id);
         if (!landlord) return res.status(404).json({ success: false, message: "Không tìm thấy tài khoản chủ trọ." });
         
-        let roomCode = '';
+        let roomCode = '', floor = '1', area = '20', lastElec = 0, lastWater = 0;
         if (roomId) {
-            const room = await Room.findById(roomId).select('roomCode');
-            if (room) roomCode = room.roomCode;
+            const room = await Room.findById(roomId);
+            if (room) {
+                roomCode = room.roomCode || '';
+                floor = room.floor != null ? String(room.floor) : '1';
+                area = room.area || '20';
+                lastElec = room.lastElectricityReading != null ? room.lastElectricityReading : 0;
+                lastWater = room.lastWaterReading != null ? room.lastWaterReading : 0;
+            }
         }
 
-        let tenantName = '', tenantIdCard = '', tenantPhone = '';
+        let tenantName = '', tenantIdCard = '', tenantPhone = '', tenantAddress = '';
         if (tenantId) {
-            const tenant = await Account.findById(tenantId).select('fullName idCard phone');
+            const tenant = await Account.findById(tenantId);
             if (tenant) {
                 tenantName = tenant.fullName || '';
                 tenantIdCard = tenant.idCard || '';
                 tenantPhone = tenant.phone || '';
+                tenantAddress = tenant.propertyAddress || 'Theo đăng ký thường trú/CCCD';
             }
         }
 
-        const address = propertyAddress || landlord.propertyAddress || '';
+        const address = propertyAddress || landlord.propertyAddress || 'Cơ sở nhà trọ TroHub';
         const fixedServicesTotal = (services || []).reduce((sum, s) => sum + (Number(s.fixedPrice || s.price) || 0), 0);
 
+        const rentNum = Math.round(Number(String(fixedRentPrice || 0).replace(/\D/g, '')) || 0);
+        const depositNum = Math.round(Number(String(fixedDeposit || 0).replace(/\D/g, '')) || 0);
+        const elecNum = Math.round(Number(String(electricityPrice || 0).replace(/\D/g, '')) || 0);
+        const waterNum = Math.round(Number(String(waterPrice || 0).replace(/\D/g, '')) || 0);
+
+        const { numberToVietnameseWords } = require('../services/vietnameseNumber');
+        let gia_thue_bang_chu = '';
+        try { if (rentNum > 0) gia_thue_bang_chu = numberToVietnameseWords(rentNum); } catch {}
+        let tien_coc_bang_chu = '';
+        try { if (depositNum > 0) tien_coc_bang_chu = numberToVietnameseWords(depositNum); } catch {}
+
+        const now = new Date();
+        const ngay_ky = String(now.getDate()).padStart(2, '0');
+        const thang_ky = String(now.getMonth() + 1).padStart(2, '0');
+        const nam_ky = String(now.getFullYear());
+
+        let thoi_han_thang = 12;
+        if (startDate && endDate) {
+            const parseDate = (str) => {
+                if (!str) return null;
+                if (String(str).includes('/')) {
+                    const [day, m, y] = String(str).split('/');
+                    return new Date(`${y}-${m}-${day}`);
+                }
+                return new Date(str);
+            };
+            const s = parseDate(startDate);
+            const e = parseDate(endDate);
+            if (s && e && !isNaN(s.getTime()) && !isNaN(e.getTime())) {
+                const diff = (e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth());
+                thoi_han_thang = Math.max(1, diff);
+            }
+        }
+
+        const so_hop_dong = `HD-${roomCode || 'P'}/DU-THAO`;
+
         const data = {
-            ten_chu_tro: landlord.fullName || '',
-            cccd_chu_tro: landlord.idCard || '',
-            sdt_chu_tro: landlord.phone || '',
+            so_hop_dong,
+            ngay_ky,
+            thang_ky,
+            nam_ky,
+            ten_chu_tro: landlord.fullName || '.....................................................',
+            cccd_chu_tro: landlord.idCard || '........................',
+            sdt_chu_tro: landlord.phone || '........................',
+            email_chu_tro: landlord.email || '',
+            dia_chi_chu_tro: landlord.propertyAddress || address,
+            stk_chu_tro: landlord.bankAccountNo || '........................',
+            ngan_hang_chu_tro: landlord.bankId || '........................',
+            ten_tai_khoan_chu_tro: landlord.bankAccountName || landlord.fullName || '',
+            ten_nguoi_thue: tenantName || '.....................................................',
+            cccd_nguoi_thue: tenantIdCard || '........................',
+            sdt_nguoi_thue: tenantPhone || '........................',
+            email_nguoi_thue: '',
+            dia_chi_nguoi_thue: tenantAddress || 'Theo đăng ký thường trú/CCCD',
+            ma_phong: roomCode || '................',
+            tang_phong: floor,
+            dien_tich_phong: area,
             dia_chi_nha_tro: address,
-            ten_nguoi_thue: tenantName,
-            cccd_nguoi_thue: tenantIdCard,
-            sdt_nguoi_thue: tenantPhone,
-            ma_phong: roomCode,
-            gia_thue: Number(fixedRentPrice || 0).toLocaleString('vi-VN'),
-            tien_coc: Number(fixedDeposit || 0).toLocaleString('vi-VN'),
-            tien_coc_bang_chu: require('../services/vietnameseNumber').numberToVietnameseWords(fixedDeposit),
+            chi_so_dien_ban_dau: String(lastElec),
+            chi_so_nuoc_ban_dau: String(lastWater),
+            gia_thue: rentNum ? rentNum.toLocaleString('vi-VN') : '0',
+            gia_thue_bang_chu: gia_thue_bang_chu || '.....................................................',
+            tien_coc: depositNum ? depositNum.toLocaleString('vi-VN') : '0',
+            tien_coc_bang_chu: tien_coc_bang_chu || '.....................................................',
             ngay_bat_dau: startDate || '',
             ngay_ket_thuc: endDate || '',
-            gia_dien: electricityPrice == null ? '' : Number(electricityPrice).toLocaleString('vi-VN'),
-            gia_nuoc: waterPrice == null ? '' : Number(waterPrice).toLocaleString('vi-VN'),
-            phi_dich_vu: Number(fixedServicesTotal).toLocaleString('vi-VN'),
+            thoi_han_thang: String(thoi_han_thang),
+            ngay_giao_phong: startDate || '',
+            gia_dien: elecNum ? elecNum.toLocaleString('vi-VN') : '0',
+            gia_nuoc: waterNum ? waterNum.toLocaleString('vi-VN') : '0',
+            phi_dich_vu: fixedServicesTotal ? fixedServicesTotal.toLocaleString('vi-VN') : '0',
+            ngay_thanh_toan_hang_thang: 'từ ngày 01 đến ngày 05',
         };
 
         const html = renderContractHtml(data, landlord.landlordSignature || '', '');
         res.set({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
         return res.send(html);
     } catch (error) {
+        console.error('[PREVIEW_DRAFT_ERROR]', error);
         res.status(500).json({ success: false, message: 'Lỗi xem trước hợp đồng: ' + error.message });
     }
 };

@@ -2,7 +2,9 @@ import React, { useState, useEffect } from "react";
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   Switch,
   StyleSheet,
@@ -27,6 +29,9 @@ import {
 } from "../services/pushNotificationService";
 import { notificationService } from "../services/notificationService";
 import { authService } from "../services/authService";
+import { userService } from "../services/userService";
+import * as Location from "expo-location";
+import { API_BASE_URL } from "../constants/api";
 
 type Props = {
   profile: UserProfile;
@@ -43,7 +48,8 @@ export default function AccountScreen({
   onPushTokenChange,
   onProfileUpdate,
 }: Props) {
-  const { theme, isDark, toggleTheme } = useAppTheme();
+  const { theme, resolvedTheme, toggleTheme } = useAppTheme();
+  const isDark = resolvedTheme === "dark";
   const { t } = useTranslation();
   const { language, setLanguage } = useLanguage();
 
@@ -53,13 +59,79 @@ export default function AccountScreen({
   const [pushLoading, setPushLoading] = useState(false);
   const [pushError, setPushError] = useState("");
 
-  // Edit profile form state
+  // Edit profile form state — đầy đủ các trường tương tự lúc đăng ký
   const [editName, setEditName] = useState(profile.fullName || "");
   const [editPhone, setEditPhone] = useState(formatPhone(profile.phone));
   const [editEmail, setEditEmail] = useState(profile.email || "");
+  const [editIdCard, setEditIdCard] = useState(profile.cccd || profile.idCard || "");
+  const [editPropertyAddress, setEditPropertyAddress] = useState(profile.propertyAddress || "");
+  const [editLatitude, setEditLatitude] = useState<number | undefined>(profile.propertyLatitude);
+  const [editLongitude, setEditLongitude] = useState<number | undefined>(profile.propertyLongitude);
+  const [isLocating, setIsLocating] = useState(false);
   const [editSaving, setEditSaving] = useState(false);
 
   const isLandlord = profile.role === 1 || String(profile.role) === "1";
+
+  const openEditProfile = () => {
+    setEditName(profile.fullName || "");
+    setEditPhone(formatPhone(profile.phone));
+    setEditEmail(profile.email || "");
+    setEditIdCard(profile.cccd || profile.idCard || "");
+    setEditPropertyAddress(profile.propertyAddress || "");
+    setEditLatitude(profile.propertyLatitude);
+    setEditLongitude(profile.propertyLongitude);
+    setEditProfileVisible(true);
+  };
+
+  const handleGetLocation = async () => {
+    try {
+      setIsLocating(true);
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "Quyền vị trí",
+          "Vui lòng cho phép ứng dụng truy cập vị trí để tự động điền địa chỉ hiện tại."
+        );
+        return;
+      }
+
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      const { latitude, longitude } = loc.coords;
+      setEditLatitude(latitude);
+      setEditLongitude(longitude);
+
+      // Gọi backend reverse-geocode để đổi tọa độ thành địa chỉ chuẩn
+      try {
+        const res = await fetch(`${API_BASE_URL}/auth/reverse-geocode?lat=${latitude}&lng=${longitude}`);
+        const json = await res.json();
+        if (json.success && json.data?.address) {
+          setEditPropertyAddress(json.data.address);
+          return;
+        }
+      } catch {}
+
+      // Dự phòng dịch ngược native của Expo
+      const geocoded = await Location.reverseGeocodeAsync({ latitude, longitude });
+      if (geocoded && geocoded.length > 0) {
+        const g = geocoded[0];
+        const parts = [
+          g.streetNumber ? `${g.streetNumber} ${g.street || ""}`.trim() : g.street,
+          g.subregion || g.district,
+          g.city || g.region,
+          g.country,
+        ].filter(Boolean);
+        if (parts.length > 0) {
+          setEditPropertyAddress(parts.join(", "));
+        }
+      }
+    } catch (err: any) {
+      Alert.alert("Lỗi vị trí", err?.message || "Không thể lấy vị trí hiện tại.");
+    } finally {
+      setIsLocating(false);
+    }
+  };
 
   useEffect(() => {
     void isPushEnabled(profile.id).then(setPushPreference);
@@ -69,29 +141,34 @@ export default function AccountScreen({
     const previous = pushEnabled;
     setPushLoading(true);
     setPushError("");
+    setPushPreference(next);
+
     try {
       if (next) {
-        const status = await requestNotificationPermission();
-        if (status !== "granted") {
-          setPushError(t("common.error"));
+        const granted = await requestNotificationPermission();
+        if (!granted) {
+          setPushPreference(false);
+          await setPushEnabled(profile.id, false);
           return;
         }
+
         const token = await getExpoPushToken();
-        if (!token) throw new Error(t("common.error"));
-        await notificationService.registerDevice(token, notificationPlatform());
+        if (token) {
+          await notificationService.registerDevice(token, notificationPlatform());
+          onPushTokenChange?.(token);
+        }
         await setPushEnabled(profile.id, true);
-        setPushPreference(true);
-        onPushTokenChange?.(token);
       } else {
         const token = await getExpoPushToken();
-        if (token) await notificationService.deactivateDevice(token);
+        if (token) {
+          await notificationService.deactivateDevice(token);
+          onPushTokenChange?.(null);
+        }
         await setPushEnabled(profile.id, false);
-        setPushPreference(false);
-        onPushTokenChange?.(null);
       }
-    } catch (error: any) {
+    } catch {
       setPushPreference(previous);
-      setPushError(error instanceof Error ? error.message : t("common.error"));
+      setPushError(t("account.pushUpdateFailed"));
     } finally {
       setPushLoading(false);
     }
@@ -102,15 +179,31 @@ export default function AccountScreen({
       Alert.alert(t("common.error"), t("auth.fullName"));
       return;
     }
+    const cleanPhone = unformatDigits(editPhone);
+    if (cleanPhone.length !== 10) {
+      Alert.alert(t("common.error"), "Số điện thoại phải gồm đúng 10 chữ số");
+      return;
+    }
+    const cleanId = unformatDigits(editIdCard);
+    if (cleanId && cleanId.length !== 12) {
+      Alert.alert(t("common.error"), "CCCD phải gồm đúng 12 chữ số");
+      return;
+    }
+
     try {
       setEditSaving(true);
-      const updated = {
+      const updated: UserProfile = {
         ...profile,
         fullName: editName.trim(),
-        phone: unformatDigits(editPhone),
+        phone: cleanPhone,
         email: editEmail.trim(),
+        cccd: cleanId,
+        idCard: cleanId,
+        propertyAddress: editPropertyAddress.trim(),
+        propertyLatitude: editLatitude,
+        propertyLongitude: editLongitude,
       };
-      await authService.updateProfile(updated);
+      await userService.updateProfile(updated);
       onProfileUpdate?.(updated);
       setEditProfileVisible(false);
       Alert.alert(t("common.success"), t("account.saveSuccess"));
@@ -206,18 +299,13 @@ export default function AccountScreen({
             {/* Tile 1: Chỉnh sửa thông tin */}
             <Pressable
               style={[styles.bentoTile, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
-              onPress={() => {
-                setEditName(profile.fullName || "");
-                setEditPhone(formatPhone(profile.phone));
-                setEditEmail(profile.email || "");
-                setEditProfileVisible(true);
-              }}
+              onPress={openEditProfile}
             >
               <View style={[styles.tileIconCircle, { backgroundColor: "rgba(59, 130, 246, 0.15)" }]}>
                 <Ionicons name="person" size={20} color="#3B82F6" />
               </View>
               <AppText style={[styles.tileTitle, { color: theme.text }]}>{t("account.editProfile")}</AppText>
-              <AppText style={[styles.tileSubtitle, { color: theme.muted }]}>Tên, SĐT, Email</AppText>
+              <AppText style={[styles.tileSubtitle, { color: theme.muted }]}>Tên, SĐT, CCCD, Địa chỉ</AppText>
             </Pressable>
 
             {/* Tile 2: Đổi mật khẩu */}
@@ -233,15 +321,18 @@ export default function AccountScreen({
             </Pressable>
 
             {/* Tile 3: Căn cước công dân */}
-            <View style={[styles.bentoTile, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+            <Pressable
+              style={[styles.bentoTile, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
+              onPress={openEditProfile}
+            >
               <View style={[styles.tileIconCircle, { backgroundColor: "rgba(16, 185, 129, 0.15)" }]}>
                 <Ionicons name="card" size={20} color="#10B981" />
               </View>
               <AppText style={[styles.tileTitle, { color: theme.text }]}>{t("account.idCard")}</AppText>
               <AppText style={[styles.tileSubtitle, { color: "#10B981", fontWeight: "800" }]}>
-                {profile.idCard ? formatCCCD(profile.idCard) : "Chưa xác thực"}
+                {(profile.cccd || profile.idCard) ? formatCCCD(profile.cccd || profile.idCard) : "Chưa xác thực"}
               </AppText>
-            </View>
+            </Pressable>
 
             {/* Tile 4: Role-specific Tile */}
             {isLandlord ? (
@@ -438,16 +529,19 @@ export default function AccountScreen({
       {/* 5. MODAL CHỈNH SỬA HỒ SƠ                                  */}
       {/* ========================================================= */}
       <Modal visible={editProfileVisible} transparent animationType="slide" onRequestClose={() => setEditProfileVisible(false)}>
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.modalOverlay}>
           <View style={[styles.modalCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
             <View style={styles.modalHeader}>
-              <AppText style={[styles.modalTitle, { color: theme.text }]}>{t("account.editProfile")}</AppText>
-              <Pressable onPress={() => setEditProfileVisible(false)}>
+              <View>
+                <AppText style={[styles.modalTitle, { color: theme.text }]}>{t("account.editProfile")}</AppText>
+                <AppText style={{ color: theme.muted, fontSize: 12, marginTop: 2 }}>Cập nhật thông tin định danh & liên hệ</AppText>
+              </View>
+              <Pressable onPress={() => setEditProfileVisible(false)} hitSlop={10}>
                 <Ionicons name="close" size={24} color={theme.text} />
               </Pressable>
             </View>
 
-            <View style={styles.modalBody}>
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 460 }} contentContainerStyle={{ gap: 14, paddingBottom: 10 }}>
               <View style={styles.fieldGroup}>
                 <AppText style={[styles.fieldLabel, { color: theme.text }]}>{t("auth.fullName")}</AppText>
                 <AppTextInput
@@ -472,6 +566,19 @@ export default function AccountScreen({
               </View>
 
               <View style={styles.fieldGroup}>
+                <AppText style={[styles.fieldLabel, { color: theme.text }]}>Số CCCD/CMND (12 số)</AppText>
+                <AppTextInput
+                  value={editIdCard}
+                  onChangeText={(val) => setEditIdCard(unformatDigits(val))}
+                  keyboardType="number-pad"
+                  maxLength={12}
+                  placeholder="012345678901"
+                  placeholderTextColor={theme.muted}
+                  style={[styles.input, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border }]}
+                />
+              </View>
+
+              <View style={styles.fieldGroup}>
                 <AppText style={[styles.fieldLabel, { color: theme.text }]}>Email</AppText>
                 <AppTextInput
                   value={editEmail}
@@ -482,6 +589,60 @@ export default function AccountScreen({
                   placeholderTextColor={theme.muted}
                   style={[styles.input, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border }]}
                 />
+              </View>
+
+              <View style={styles.fieldGroup}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <AppText style={[styles.fieldLabel, { color: theme.text }]}>
+                    {isLandlord ? "Địa chỉ nhà trọ / Cơ sở" : "Địa chỉ thường trú"}
+                  </AppText>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={handleGetLocation}
+                    disabled={isLocating}
+                    hitSlop={8}
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 4,
+                      paddingHorizontal: 9,
+                      paddingVertical: 4,
+                      borderRadius: 999,
+                      backgroundColor: theme.primarySoft,
+                    }}
+                  >
+                    {isLocating ? (
+                      <ActivityIndicator size="small" color={theme.primary} />
+                    ) : (
+                      <Ionicons name="location-sharp" size={13} color={theme.primary} />
+                    )}
+                    <AppText style={{ fontSize: 11, fontWeight: "800", color: theme.primary }}>
+                      {isLocating ? "Đang định vị..." : "Lấy vị trí hiện tại"}
+                    </AppText>
+                  </Pressable>
+                </View>
+
+                <View style={{ position: "relative", justifyContent: "center" }}>
+                  <AppTextInput
+                    value={editPropertyAddress}
+                    onChangeText={setEditPropertyAddress}
+                    placeholder={isLandlord ? "123 Đường Cầu Giấy, Hà Nội" : "Địa chỉ theo CCCD"}
+                    placeholderTextColor={theme.muted}
+                    style={[styles.input, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border, paddingRight: 42 }]}
+                  />
+                  <Pressable
+                    onPress={handleGetLocation}
+                    disabled={isLocating}
+                    hitSlop={10}
+                    style={{ position: "absolute", right: 12 }}
+                  >
+                    {isLocating ? (
+                      <ActivityIndicator size="small" color={theme.primary} />
+                    ) : (
+                      <Ionicons name="navigate-circle-outline" size={22} color={theme.primary} />
+                    )}
+                  </Pressable>
+                </View>
               </View>
 
               <Pressable
@@ -495,9 +656,9 @@ export default function AccountScreen({
                   <AppText style={[styles.saveModalBtnText, { color: theme.background }]}>{t("common.save")}</AppText>
                 )}
               </Pressable>
-            </View>
+            </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Change Password Modal */}

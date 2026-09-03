@@ -8,7 +8,7 @@ import { LanguageProvider } from "../contexts/LanguageContext";
 import { InboxNotificationProvider } from "../contexts/InboxNotificationContext";
 
 // Keep the native splash visible until the first branded React frame is ready.
-void SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -22,7 +22,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (fontsLoaded || fontError) {
-      void SplashScreen.hideAsync();
+      SplashScreen.hideAsync().catch(() => {});
     }
   }, [fontsLoaded, fontError]);
 

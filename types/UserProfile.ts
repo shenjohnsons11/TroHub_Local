@@ -4,6 +4,7 @@ export type UserProfile = {
   phone: string;
   email: string;
   cccd: string;
+  idCard?: string;
   room: string;
   startDate: string;
   role: number; // 1: Chủ trọ, 2: Người thuê

@@ -19,6 +19,7 @@ export type ContractDraft = {
   endDate: string;
   fixedRentPrice: string;
   fixedDeposit: string;
+  propertyAddress?: string;
   electricityPrice: string;
   waterPrice: string;
   initialElectricity: string;
@@ -33,6 +34,7 @@ export const EMPTY_CONTRACT_DRAFT: ContractDraft = {
   endDate: "",
   fixedRentPrice: "",
   fixedDeposit: "",
+  propertyAddress: "",
   electricityPrice: formatNumberInput(3500),
   waterPrice: formatNumberInput(15000),
   initialElectricity: "",

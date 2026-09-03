@@ -57,6 +57,7 @@ export default function AdminSettingsScreen({
   const [fullName, setFullName] = useState(profile.fullName || "");
   const [phone, setPhone] = useState(formatPhone(profile.phone));
   const [email, setEmail] = useState(profile.email || "");
+  const [cccd, setCccd] = useState(profile.cccd || "");
   const [propertyAddress, setPropertyAddress] = useState(profile.propertyAddress || "");
   const [landlordSignature, setLandlordSignature] = useState(profile.landlordSignature || "");
   const [signatureModalVisible, setSignatureModalVisible] = useState(false);
@@ -134,6 +135,7 @@ export default function AdminSettingsScreen({
       fullName: fullName.trim(),
       phone: unformatDigits(phone),
       email: email.trim(),
+      cccd: cccd.trim(),
       propertyAddress: propertyAddress.trim(),
       bankId: bankId.trim().toUpperCase(),
       bankAccountNo: bankAccountNo.trim(),
@@ -226,6 +228,7 @@ export default function AdminSettingsScreen({
               <AppText style={[styles.cardTitle, { color: theme.text }]}>{t("auth.account")}</AppText>
             </View>
             <Field label={t("auth.fullName")} value={fullName} setValue={setFullName} placeholder="Nguyen Van A" style={inputStyle} muted={theme.muted} />
+            <Field label="Số CCCD/CMND Chủ trọ" value={cccd} setValue={setCccd} placeholder="012345678901" keyboardType="number-pad" style={inputStyle} muted={theme.muted} />
             <Field label={t("auth.phone")} value={phone} setValue={(v: string) => setPhone(formatPhone(v))} placeholder="0901.234.567" keyboardType="number-pad" style={inputStyle} muted={theme.muted} />
             <Field label={t("auth.email")} value={email} setValue={setEmail} placeholder="landlord@email.com" keyboardType="email-address" style={inputStyle} muted={theme.muted} autoCapitalize="none" />
             <Field label="Địa chỉ nhà trọ" value={propertyAddress} setValue={setPropertyAddress} placeholder="123 Nguyễn Huệ, Quận 1, TP.HCM" style={inputStyle} muted={theme.muted} />
@@ -273,7 +276,22 @@ export default function AdminSettingsScreen({
                 <AppButton
                   variant="ghost"
                   icon="trash-outline"
-                  onPress={() => setLandlordSignature("")}
+                  onPress={() => {
+                    setLandlordSignature("");
+                    onSave({
+                      ...profile,
+                      fullName: fullName.trim(),
+                      phone: unformatDigits(phone),
+                      email: email.trim(),
+                      cccd: cccd.trim(),
+                      propertyAddress: propertyAddress.trim(),
+                      bankId: bankId.trim().toUpperCase(),
+                      bankAccountNo: bankAccountNo.trim(),
+                      bankAccountName: bankAccountName.trim().toUpperCase(),
+                      landlordSignature: "",
+                    });
+                    notification.success("Đã xóa chữ ký mẫu!");
+                  }}
                   style={styles.signatureDeleteBtn}
                 >
                   Xóa
@@ -446,7 +464,28 @@ export default function AdminSettingsScreen({
       </ScrollView>
 
       <ChangePasswordModal visible={passwordVisible} onClose={() => setPasswordVisible(false)} />
-      <SignaturePadModal visible={signatureModalVisible} onSave={(sig) => setLandlordSignature(sig)} onClose={() => setSignatureModalVisible(false)} />
+      <SignaturePadModal
+        visible={signatureModalVisible}
+        onSave={(sig) => {
+          const cleanSig = sig.trim();
+          setLandlordSignature(cleanSig);
+          setSignatureModalVisible(false);
+          onSave({
+            ...profile,
+            fullName: fullName.trim(),
+            phone: unformatDigits(phone),
+            email: email.trim(),
+            cccd: cccd.trim(),
+            propertyAddress: propertyAddress.trim(),
+            bankId: bankId.trim().toUpperCase(),
+            bankAccountNo: bankAccountNo.trim(),
+            bankAccountName: bankAccountName.trim().toUpperCase(),
+            landlordSignature: cleanSig,
+          });
+          notification.success("Đã tự động lưu chữ ký mẫu của Chủ trọ!");
+        }}
+        onClose={() => setSignatureModalVisible(false)}
+      />
       <DayPickerModal visible={dayPicker !== null} title={dayPicker?.title || ""} closeLabel={t("common.close")} selected={dayPicker ? automationPolicy[dayPicker.field] : 1} theme={theme} onSelect={selectAutomationDay} onClose={() => setDayPicker(null)} />
     </>
   );

@@ -63,7 +63,7 @@ assert.equal(canDownloadDocx({ role: 1, userId: 'owner-1' }, contract), true);
 assert.equal(canDownloadDocx({ role: 2, userId: 'tenant-1' }, contract), false);
 
 (async () => {
-    assert.equal(PDF_DOCUMENT_VERSION, 1);
+    assert.equal(PDF_DOCUMENT_VERSION, 2);
     for (const fontPath of Object.values(fontPaths)) {
         assert.equal(path.extname(fontPath), '.ttf');
         assert.equal(fs.existsSync(fontPath), true, `missing packaged font: ${fontPath}`);
