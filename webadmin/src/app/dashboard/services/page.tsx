@@ -59,6 +59,18 @@ type PriceImpact = {
   }>;
 };
 
+const generateServiceCode = (name: string) => {
+  return name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+};
+
 export default function ServicesPage() {
   const { t } = useLanguage();
   const notification = useNotification();
@@ -303,24 +315,44 @@ export default function ServicesPage() {
           <form onSubmit={handleSubmit} className="space-y-5 pt-2">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="service-name">{t("nav.services")}</Label>
-                <Input id="service-name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Internet" />
+                <Label htmlFor="service-name">Tên dịch vụ</Label>
+
+                <Input
+                  id="service-name"
+                  value={form.name}
+                  onChange={(event) => {
+                    const name = event.target.value;
+
+                    setForm({
+                      ...form,
+                      name,
+                      code: editingId
+                        ? form.code
+                        : generateServiceCode(name),
+                    });
+                  }}
+                  placeholder="VD: Internet, Giữ xe, Rác..."
+                />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="service-code">{t("services.code")}</Label>
-                <Input id="service-code" value={form.code} onChange={(event) => setForm({ ...form, code: event.target.value })} placeholder="INTERNET" />
-              </div>
-              <div className="space-y-2">
+
+
+              <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="service-type">{t("services.billingMode")}</Label>
-                <select id="service-type" value={form.billingMode} onChange={(event) => setForm({ ...form, billingMode: event.target.value as ServiceForm["billingMode"] })} className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                <select
+                  id="service-type"
+                  value={form.billingMode}
+                  onChange={(event) =>
+                    setForm({
+                      ...form,
+                      billingMode: event.target.value as ServiceForm["billingMode"],
+                    })
+                  }
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                >
                   <option value="FIXED">{t("services.billingFixed")}</option>
                   <option value="QUANTITY">{t("services.billingQty")}</option>
                   <option value="METER">{t("services.billingMeter")}</option>
                 </select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="service-unit">{t("services.unit")}</Label>
-                <Input id="service-unit" value={form.unit} onChange={(event) => setForm({ ...form, unit: event.target.value })} placeholder="kWh, m3, month" />
               </div>
             </div>
             <div className="space-y-2">
@@ -355,8 +387,27 @@ export default function ServicesPage() {
               </section>
             )}
             <label className="flex cursor-pointer items-center gap-3 rounded-[10px] border border-border p-3">
-              <input type="checkbox" checked={form.isActive} onChange={(event) => setForm({ ...form, isActive: event.target.checked })} className="h-4 w-4 accent-primary" />
-              <span className="text-sm font-semibold text-foreground">{t("common.active")}</span>
+              <input
+                type="checkbox"
+                checked={form.isActive}
+                onChange={(event) =>
+                  setForm({
+                    ...form,
+                    isActive: event.target.checked,
+                  })
+                }
+                className="h-4 w-4 accent-primary"
+              />
+
+              <div>
+                <p className="text-sm font-semibold text-foreground">
+                  Bật dịch vụ
+                </p>
+
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Cho phép sử dụng dịch vụ này khi tạo hợp đồng.
+                </p>
+              </div>
             </label>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>{t("common.cancel")}</Button>
