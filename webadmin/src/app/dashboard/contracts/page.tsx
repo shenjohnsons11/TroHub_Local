@@ -49,10 +49,13 @@ export default function ContractsPage() {
   const [finalWater, setFinalWater] = useState("");
   const [damageAmount, setDamageAmount] = useState("");
   const [checkoutNote, setCheckoutNote] = useState("");
+  const [forfeitDeposit, setForfeitDeposit] = useState(false);
+  const [terminationReason, setTerminationReason] = useState("Khách trả phòng theo thỏa thuận / hết hạn");
   const [checkoutSubmitting, setCheckoutSubmitting] = useState(false);
   const [checkoutPreviewLoading, setCheckoutPreviewLoading] = useState(false);
   const [checkoutPreview, setCheckoutPreview] = useState<CheckoutPreview | null>(null);
   const [handoverModalOpen, setHandoverModalOpen] = useState(false);
+  const [selectedHandoverContract, setSelectedHandoverContract] = useState<any>(null);
   const [handoverContractId, setHandoverContractId] = useState("");
   const [handoverDate, setHandoverDate] = useState(new Date().toISOString().slice(0, 10));
   const [handoverElectricity, setHandoverElectricity] = useState("");
@@ -136,6 +139,8 @@ export default function ContractsPage() {
     setFinalWater("");
     setDamageAmount("");
     setCheckoutNote("");
+    setForfeitDeposit(false);
+    setTerminationReason("Khách trả phòng theo thỏa thuận / hết hạn");
     setCheckoutPreview(null);
     setCheckoutModalOpen(true);
     setCheckoutPreviewLoading(true);
@@ -144,6 +149,11 @@ export default function ContractsPage() {
       setCheckoutPreview(response.data);
       setFinalElectricity(formatMeterReading(response.data.electricityOld));
       setFinalWater(formatMeterReading(response.data.waterOld));
+      if (response.data.checkoutRequestedAt) {
+        setTerminationReason("Khách trả phòng theo thỏa thuận / hết hạn");
+      } else {
+        setTerminationReason("Chủ trọ thanh lý hợp đồng");
+      }
     } catch (error) {
       notification.error(getNotificationMessage(error, t("common.error")));
       setCheckoutModalOpen(false);
@@ -193,7 +203,9 @@ export default function ContractsPage() {
           finalElectricity: electricity,
           finalWater: water,
           damageAmount: unformatNumber(damageAmount),
-          note: checkoutNote
+          note: checkoutNote,
+          forfeitDeposit,
+          terminationReason,
         })
       });
       notification.success(t("contracts.checkoutSuccess"));
@@ -278,10 +290,13 @@ export default function ContractsPage() {
   };
 
   const openHandoverModal = (contract: any) => {
+    setSelectedHandoverContract(contract);
     setHandoverContractId(contract._id || contract.id);
-    setHandoverDate(new Date().toISOString().slice(0, 10));
-    setHandoverElectricity(formatMeterReading(contract.initialElectricity ?? contract.roomId?.lastElectricityReading));
-    setHandoverWater(formatMeterReading(contract.initialWater ?? contract.roomId?.lastWaterReading));
+    const today = new Date().toISOString().slice(0, 10);
+    const contractStart = contract.startDate ? new Date(contract.startDate).toISOString().slice(0, 10) : today;
+    setHandoverDate(contractStart || today);
+    setHandoverElectricity(formatMeterReading(contract.initialElectricity ?? contract.roomId?.lastElectricityReading ?? 0));
+    setHandoverWater(formatMeterReading(contract.initialWater ?? contract.roomId?.lastWaterReading ?? 0));
     setHandoverModalOpen(true);
   };
 
@@ -353,10 +368,12 @@ export default function ContractsPage() {
     const watUsage = Math.max(0, finalWat - checkoutPreview.waterOld);
     const utilitiesAmount = (elecUsage * checkoutPreview.electricityPrice) + (watUsage * checkoutPreview.waterPrice);
     const totalDebt = checkoutPreview.unpaidAmount + utilitiesAmount + unformatNumber(damageAmount);
-    const balance = checkoutPreview.depositAmount - totalDebt;
+    const effectiveDeposit = forfeitDeposit ? 0 : checkoutPreview.depositAmount;
+    const balance = effectiveDeposit - totalDebt;
     return {
       utilitiesAmount,
       totalDebt,
+      effectiveDeposit,
       refundAmount: Math.max(0, balance),
       amountDue: Math.max(0, -balance),
     };
@@ -580,14 +597,56 @@ export default function ContractsPage() {
         </Dialog>
 
         <Dialog open={handoverModalOpen} onOpenChange={setHandoverModalOpen}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader><DialogTitle>{t("contracts.handover")}</DialogTitle></DialogHeader>
-            <form onSubmit={handleHandover} className="space-y-4 mt-4">
-              <p className="rounded-2xl bg-primary/10 p-3 text-sm text-muted-foreground">{t("contracts.handoverHint")}</p>
-              <div className="space-y-2"><Label htmlFor="handoverDate">{t("contracts.handoverDate")}</Label><Input id="handoverDate" type="date" value={handoverDate} onChange={e => setHandoverDate(e.target.value)} required /></div>
-              <div className="space-y-2"><Label htmlFor="handoverElectricity">{t("contracts.initialElec")}</Label><Input id="handoverElectricity" inputMode="decimal" value={handoverElectricity} onChange={e => setHandoverElectricity(e.target.value)} required /></div>
-              <div className="space-y-2"><Label htmlFor="handoverWater">{t("contracts.initialWater")}</Label><Input id="handoverWater" inputMode="decimal" value={handoverWater} onChange={e => setHandoverWater(e.target.value)} required /></div>
-              <Button type="submit" disabled={handoverSubmitting} className="w-full">{handoverSubmitting ? t("common.loading") : t("contracts.confirmHandover")}</Button>
+          <DialogContent className="sm:max-w-[460px]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <CheckCircle2 className="size-5 text-primary" />
+                Xác nhận bàn giao phòng
+              </DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleHandover} className="space-y-4 mt-2">
+              <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+                <div className="flex justify-between items-center border-b border-border/50 pb-2">
+                  <span className="text-sm font-semibold text-muted-foreground">Phòng bàn giao:</span>
+                  <span className="font-bold text-foreground">
+                    {selectedHandoverContract?.roomId?.roomCode || selectedHandoverContract?.roomCode || "—"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center border-b border-border/50 pb-2">
+                  <span className="text-sm font-semibold text-muted-foreground">Người đại diện thuê:</span>
+                  <span className="font-bold text-foreground">
+                    {selectedHandoverContract?.tenantId?.fullName || selectedHandoverContract?.tenantName || "—"}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <div className="rounded-xl bg-card border border-border p-2.5 text-center">
+                    <p className="text-xs text-muted-foreground font-medium">⚡ Điện ban đầu</p>
+                    <p className="text-base font-black text-foreground">{handoverElectricity || "0"} kWh</p>
+                  </div>
+                  <div className="rounded-xl bg-card border border-border p-2.5 text-center">
+                    <p className="text-xs text-muted-foreground font-medium">💧 Nước ban đầu</p>
+                    <p className="text-base font-black text-foreground">{handoverWater || "0"} m³</p>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center text-xs text-muted-foreground pt-1">
+                  <span>Ngày bàn giao nhận phòng:</span>
+                  <span className="font-bold text-foreground">{handoverDate}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5 rounded-xl bg-muted/70 p-3 text-xs text-muted-foreground border border-border/50">
+                <span className="text-sm">🔒</span>
+                <span>Chỉ số điện, nước và ngày nhận phòng được <strong>khóa cố định theo Hợp đồng đã ký kết</strong> để bảo đảm tính pháp lý và chống gian lận.</span>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <Button type="button" variant="outline" onClick={() => setHandoverModalOpen(false)} className="flex-1">
+                  {t("common.cancel")}
+                </Button>
+                <Button type="submit" disabled={handoverSubmitting} className="flex-1 bg-primary text-primary-foreground font-bold">
+                  {handoverSubmitting ? t("common.loading") : "✓ Bàn giao phòng ngay"}
+                </Button>
+              </div>
             </form>
           </DialogContent>
         </Dialog>
@@ -602,7 +661,18 @@ export default function ContractsPage() {
                 <div className="rounded-2xl bg-muted p-4 text-sm text-muted-foreground">{t("common.loading")}</div>
               ) : checkoutPreview && checkoutCalculation ? (
                 <div className="space-y-2 rounded-2xl bg-muted p-4 text-sm">
-                  <div className="flex justify-between"><span>{t("contracts.depositAmount")}</span><strong>{formatCurrency(checkoutPreview.depositAmount)}</strong></div>
+                  <div className="flex justify-between">
+                    <span>{t("contracts.depositAmount")}</span>
+                    <strong className={forfeitDeposit ? "text-destructive line-through" : ""}>
+                      {formatCurrency(checkoutPreview.depositAmount)}
+                    </strong>
+                  </div>
+                  {forfeitDeposit && (
+                    <div className="flex justify-between text-destructive text-xs font-bold">
+                      <span>Tiền cọc bị tịch thu (Vi phạm)</span>
+                      <span>−{formatCurrency(checkoutPreview.depositAmount)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between"><span>(−) {t("invoices.status.unpaid")}</span><strong>{formatCurrency(checkoutPreview.unpaidAmount)}</strong></div>
                   <div className="flex justify-between"><span>(−) {t("utilities.title")}</span><strong>{formatCurrency(checkoutCalculation.utilitiesAmount)}</strong></div>
                   <div className="flex justify-between"><span>(−) {t("common.amount")}</span><strong>{formatCurrency(unformatNumber(damageAmount))}</strong></div>
@@ -614,6 +684,37 @@ export default function ContractsPage() {
                   </div>
                 </div>
               ) : null}
+
+              <div className="space-y-2">
+                <Label htmlFor="terminationReason">Lý do thanh lý / trả phòng</Label>
+                <select
+                  id="terminationReason"
+                  value={terminationReason}
+                  onChange={(e) => setTerminationReason(e.target.value)}
+                  className="flex h-10 w-full rounded-[16px] border border-border bg-card px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="Khách trả phòng theo thỏa thuận / hết hạn">Khách trả phòng theo thỏa thuận / hết hạn</option>
+                  <option value="Khách đơn phương vi phạm nghĩa vụ thanh toán (> 15 ngày)">Khách đơn phương vi phạm nghĩa vụ thanh toán (&gt; 15 ngày)</option>
+                  <option value="Khách đơn phương chuyển đi không báo trước">Khách đơn phương chuyển đi không báo trước</option>
+                  <option value="Chủ trọ thu hồi phòng theo điều khoản hợp đồng">Chủ trọ thu hồi phòng theo điều khoản hợp đồng</option>
+                  <option value="Lý do khác">Lý do khác</option>
+                </select>
+              </div>
+
+              <label className="flex items-start gap-3 p-3 rounded-xl border border-destructive/30 bg-destructive/5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={forfeitDeposit}
+                  onChange={(e) => setForfeitDeposit(e.target.checked)}
+                  className="size-4 mt-0.5 rounded text-destructive focus:ring-destructive"
+                />
+                <div>
+                  <p className="text-sm font-bold text-destructive">Tịch thu toàn bộ tiền cọc</p>
+                  <p className="text-xs text-muted-foreground">
+                    Áp dụng khi khách vi phạm hợp đồng hoặc đơn phương chấm dứt hợp đồng.
+                  </p>
+                </div>
+              </label>
               {checkoutPreview ? <div className="space-y-3"><MeterLedger label={t("nav.utilities")} unit="kWh" previous={checkoutPreview.electricityOld} current={finalElectricity} unitPrice={checkoutPreview.electricityPrice} onChange={setFinalElectricity} /><MeterLedger label={t("nav.utilities")} unit="m³" previous={checkoutPreview.waterOld} current={finalWater} unitPrice={checkoutPreview.waterPrice} onChange={setFinalWater} /></div> : null}
               <div className="space-y-2">
                 <Label htmlFor="damageAmount">{t("common.amount")} (VNĐ)</Label>
@@ -730,9 +831,9 @@ export default function ContractsPage() {
                         <CheckCircle2 className="size-4" />{t("contracts.handover")}
                       </Button>
                     )}
-                    {(contract.checkoutRequestedAt || contract.status === 2) && (
+                    {(contract.checkoutRequestedAt || contract.status === 1 || contract.status === 2) && (
                       <Button onClick={() => void openCheckoutModal(contract._id || contract.id)} variant="outline" size="sm" className="mr-2 border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive">
-                        {t("contracts.checkout")}
+                        {contract.checkoutRequestedAt ? t("contracts.checkout") : "Thanh lý / Trả phòng"}
                       </Button>
                     )}
                     {contract.status === 0 && (

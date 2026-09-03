@@ -80,7 +80,14 @@ export default function DraftContractViewerModal({ visible, draftData, onClose, 
           throw new Error(errData.message || `Lỗi tải bản xem trước (${res.status})`);
         }
 
-        const html = await res.text();
+        const text = await res.text();
+        let html = text;
+        try {
+          const parsed = JSON.parse(text);
+          if (parsed.data?.html) {
+            html = parsed.data.html;
+          }
+        } catch {}
         if (isMounted) {
           setHtmlContent(html);
         }

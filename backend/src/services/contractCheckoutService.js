@@ -32,11 +32,14 @@ function calculateCheckoutSettlement(contract, previousInvoice, input, unpaidAmo
         newIndex: input.finalWater,
         unitPrice: meter.waterPrice,
     });
-    const depositAmount = roundVnd(parseNonNegativeFinite(
+    const originalDeposit = roundVnd(parseNonNegativeFinite(
         contract.fixedDeposit,
         'fixedDeposit',
         'Tiền cọc'
     ));
+    const isDepositForfeited = Boolean(input.forfeitDeposit);
+    const depositAmount = isDepositForfeited ? 0 : originalDeposit;
+
     const damageAmount = roundVnd(parseNonNegativeFinite(
         input.damageAmount ?? input.deductionAmount ?? 0,
         'damageAmount',
@@ -63,13 +66,17 @@ function calculateCheckoutSettlement(contract, previousInvoice, input, unpaidAmo
         waterUsage: water.usage,
         waterAmount: water.amount,
         utilitiesAmount,
-        depositAmount,
+        depositAmount: originalDeposit,
+        forfeitDeposit: isDepositForfeited,
         unpaidAmount,
         damageAmount,
         totalDebt,
         refundAmount: Math.max(0, balance),
         amountDue: Math.max(0, -balance),
         note: typeof input.note === 'string' ? input.note.trim() : '',
+        terminationReason: typeof input.terminationReason === 'string' && input.terminationReason.trim()
+            ? input.terminationReason.trim()
+            : (isDepositForfeited ? 'Chủ trọ đơn phương chấm dứt (Khách vi phạm điều khoản)' : (contract.checkoutRequestedAt ? 'Khách yêu cầu trả phòng' : 'Chủ trọ thanh lý hợp đồng')),
     };
 }
 
@@ -99,8 +106,9 @@ async function getCheckoutPreview({
     if (!contract) {
         throw new CheckoutError(404, 'CONTRACT_NOT_FOUND', 'Không tìm thấy hợp đồng.');
     }
-    if (!contract.checkoutRequestedAt) {
-        throw new CheckoutError(400, 'CHECKOUT_NOT_REQUESTED', 'Hợp đồng chưa có yêu cầu trả phòng.');
+    // Cho phép quyết toán nếu khách có yêu cầu hoặc hợp đồng đang có hiệu lực (chủ trọ chủ động thanh lý)
+    if (contract.status !== 1 && !contract.checkoutRequestedAt) {
+        throw new CheckoutError(400, 'CONTRACT_NOT_ACTIVE', 'Chỉ hợp đồng đang có hiệu lực mới có thể quyết toán trả phòng.');
     }
 
     const room = await RoomModel.findOne({ _id: contract.roomId, landlordId: adminId }).session(null);
@@ -124,6 +132,7 @@ async function getCheckoutPreview({
         waterOld: meter.waterOld,
         electricityPrice: meter.electricityPrice,
         waterPrice: meter.waterPrice,
+        checkoutRequestedAt: contract.checkoutRequestedAt || null,
     };
 }
 
@@ -145,11 +154,11 @@ async function checkoutContract({
             if (!contract) {
                 throw new CheckoutError(404, 'CONTRACT_NOT_FOUND', 'Không tìm thấy hợp đồng.');
             }
-            if (!contract.checkoutRequestedAt) {
+            if (contract.status !== 1 && !contract.checkoutRequestedAt) {
                 throw new CheckoutError(
                     400,
-                    'CHECKOUT_NOT_REQUESTED',
-                    'Hợp đồng chưa có yêu cầu trả phòng.'
+                    'CONTRACT_NOT_ACTIVE',
+                    'Chỉ hợp đồng đang có hiệu lực mới có thể quyết toán trả phòng.'
                 );
             }
 

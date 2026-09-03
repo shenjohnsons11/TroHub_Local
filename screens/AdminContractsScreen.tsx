@@ -58,6 +58,7 @@ export default function AdminContractsScreen({ params }: Props) {
   const [checkoutPreviewLoading, setCheckoutPreviewLoading] = useState(false);
   const [checkoutPreview, setCheckoutPreview] = useState<CheckoutPreview | null>(null);
   const [handoverModalVisible, setHandoverModalVisible] = useState(false);
+  const [selectedHandoverContract, setSelectedHandoverContract] = useState<AdminContract | null>(null);
   const [handoverContractId, setHandoverContractId] = useState("");
   const [handoverElectricity, setHandoverElectricity] = useState("");
   const [handoverWater, setHandoverWater] = useState("");
@@ -297,12 +298,15 @@ export default function AdminContractsScreen({ params }: Props) {
   };
 
   const openHandoverModal = (contract: AdminContract) => {
+    setSelectedHandoverContract(contract);
     const roomId = typeof contract.roomId === "object" ? contract.roomId._id : contract.roomId;
     const room = rooms.find((item) => item._id === roomId);
     setHandoverContractId(contract._id);
-    setHandoverElectricity(formatMeterReading(contract.initialElectricity ?? room?.lastElectricityReading));
-    setHandoverWater(formatMeterReading(contract.initialWater ?? room?.lastWaterReading));
-    setHandoverDate(new Date().toISOString().slice(0, 10));
+    setHandoverElectricity(formatMeterReading(contract.initialElectricity ?? room?.lastElectricityReading ?? 0));
+    setHandoverWater(formatMeterReading(contract.initialWater ?? room?.lastWaterReading ?? 0));
+    const today = new Date().toISOString().slice(0, 10);
+    const contractStart = contract.startDate ? new Date(contract.startDate).toISOString().slice(0, 10) : today;
+    setHandoverDate(contractStart || today);
     setHandoverModalVisible(true);
   };
 
@@ -612,6 +616,15 @@ export default function AdminContractsScreen({ params }: Props) {
                   >
                     {t("contractsMobile.approveCheckout")}
                   </AppButton>
+                ) : item.status === 1 ? (
+                  <AppButton
+                    variant="outline"
+                    icon="exit-outline"
+                    onPress={() => void openCheckoutModal(item._id)}
+                    style={[styles.approveButton, { borderColor: theme.danger }]}
+                  >
+                    Thanh lý / Trả phòng
+                  </AppButton>
                 ) : null}
               </View>
             </AnimatedEntry>
@@ -637,6 +650,8 @@ export default function AdminContractsScreen({ params }: Props) {
               finalWater: Number(data.waterNew),
               damageAmount: Number(data.damage),
               note: data.note,
+              forfeitDeposit: data.forfeitDeposit,
+              terminationReason: data.terminationReason,
             });
             setCheckoutModalVisible(false);
             notification.success(
@@ -662,14 +677,53 @@ export default function AdminContractsScreen({ params }: Props) {
       <Modal visible={handoverModalVisible} transparent animationType="slide" onRequestClose={() => setHandoverModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View accessibilityViewIsModal style={styles.handoverContent}>
-            <AppText accessibilityRole="header" style={styles.wizardTitle}>{t("contracts.handover")}</AppText>
-            <AppText style={styles.wizardSubtitle}>{t("contractsMobile.handoverHint")}</AppText>
-            <AppTextInput value={handoverDate} onChangeText={setHandoverDate} placeholder="YYYY-MM-DD" placeholderTextColor={theme.muted} style={styles.input} />
-            <AppTextInput value={handoverElectricity} onChangeText={setHandoverElectricity} keyboardType="decimal-pad" placeholder={t("contractsMobile.initialElectricity")} placeholderTextColor={theme.muted} style={styles.input} />
-            <AppTextInput value={handoverWater} onChangeText={setHandoverWater} keyboardType="decimal-pad" placeholder={t("contractsMobile.initialWater")} placeholderTextColor={theme.muted} style={styles.input} />
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Ionicons name="checkmark-circle" size={24} color={theme.primary} />
+              <AppText accessibilityRole="header" style={styles.wizardTitle}>Xác nhận bàn giao phòng</AppText>
+            </View>
+
+            {/* Thẻ tóm tắt thông tin sẵn có */}
+            <View style={{ backgroundColor: theme.surfaceElevated, borderRadius: 16, padding: 14, gap: 8 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <AppText style={{ color: theme.muted, fontSize: 13 }}>Phòng:</AppText>
+                <AppText style={{ color: theme.text, fontWeight: "900", fontSize: 14 }}>
+                  {typeof selectedHandoverContract?.roomId === "object" ? selectedHandoverContract?.roomId?.roomCode : "—"}
+                </AppText>
+              </View>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <AppText style={{ color: theme.muted, fontSize: 13 }}>Khách thuê:</AppText>
+                <AppText style={{ color: theme.text, fontWeight: "800", fontSize: 13 }}>
+                  {typeof selectedHandoverContract?.tenantId === "object" ? selectedHandoverContract?.tenantId?.fullName : "—"}
+                </AppText>
+              </View>
+              <View style={{ flexDirection: "row", gap: 8, marginTop: 4 }}>
+                <View style={{ flex: 1, backgroundColor: theme.surface, borderRadius: 10, padding: 8, alignItems: "center", borderWidth: 1, borderColor: theme.border }}>
+                  <AppText style={{ color: theme.muted, fontSize: 11 }}>⚡ Điện ban đầu</AppText>
+                  <AppText style={{ color: theme.text, fontWeight: "900", fontSize: 14 }}>{handoverElectricity || "0"} kWh</AppText>
+                </View>
+                <View style={{ flex: 1, backgroundColor: theme.surface, borderRadius: 10, padding: 8, alignItems: "center", borderWidth: 1, borderColor: theme.border }}>
+                  <AppText style={{ color: theme.muted, fontSize: 11 }}>💧 Nước ban đầu</AppText>
+                  <AppText style={{ color: theme.text, fontWeight: "900", fontSize: 14 }}>{handoverWater || "0"} m³</AppText>
+                </View>
+              </View>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 2 }}>
+                <AppText style={{ color: theme.muted, fontSize: 12 }}>Ngày nhận phòng:</AppText>
+                <AppText style={{ color: theme.primary, fontWeight: "800", fontSize: 12 }}>{handoverDate}</AppText>
+              </View>
+            </View>
+
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: theme.surfaceElevated, borderRadius: 12, padding: 10, marginTop: 4 }}>
+              <Ionicons name="lock-closed" size={16} color={theme.primary} />
+              <AppText style={{ color: theme.muted, fontSize: 11, flex: 1, lineHeight: 16 }}>
+                Chỉ số điện, nước và ngày nhận phòng được khóa cố định theo Hợp đồng đã ký kết để bảo đảm tính pháp lý và chống gian lận.
+              </AppText>
+            </View>
+
             <View style={styles.handoverActions}>
-              <AppButton variant="ghost" onPress={() => setHandoverModalVisible(false)}>{t("common.cancel")}</AppButton>
-              <AppButton icon="checkmark-circle-outline" onPress={() => void handleHandover()}>{t("common.confirm")}</AppButton>
+              <AppButton variant="ghost" onPress={() => setHandoverModalVisible(false)} style={{ flex: 1 }}>{t("common.cancel")}</AppButton>
+              <AppButton icon="checkmark-circle-outline" onPress={() => void handleHandover()} style={{ flex: 1 }}>
+                Bàn giao ngay
+              </AppButton>
             </View>
           </View>
         </View>

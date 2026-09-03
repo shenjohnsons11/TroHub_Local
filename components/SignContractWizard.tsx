@@ -281,12 +281,14 @@ export default function SignContractWizard({ visible, contract, onClose, onSign 
             </AppText>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={t("contracts.previewPdf")}
-              style={styles.previewPdfBtn}
+              accessibilityLabel="Xem trước toàn bộ hợp đồng"
+              style={[styles.previewPdfBtn, { backgroundColor: theme.primarySoft, borderColor: theme.primary }]}
               onPress={() => setPreviewVisible(true)}
             >
-              <Ionicons name="document-text-outline" size={20} color="#059669" />
-              <AppText style={styles.previewPdfText}>{t("contracts.previewPdf")}</AppText>
+              <Ionicons name="document-text" size={20} color={theme.primary} />
+              <AppText style={[styles.previewPdfText, { color: theme.primary, fontWeight: "800" }]}>
+                📄 Xem trước toàn bộ hợp đồng
+              </AppText>
             </Pressable>
           </ScrollView>
         );
@@ -297,6 +299,18 @@ export default function SignContractWizard({ visible, contract, onClose, onSign 
             <AppText style={styles.confirmText}>
               Người thuê: <AppText style={{ fontWeight: "900", color: theme.primary }}>{contract.tenantName}</AppText> • Phòng {contract.room}
             </AppText>
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Xem trước toàn bộ hợp đồng"
+              style={[styles.previewPdfBtn, { backgroundColor: theme.primarySoft, borderColor: theme.primary, marginBottom: 14 }]}
+              onPress={() => setPreviewVisible(true)}
+            >
+              <Ionicons name="document-text" size={20} color={theme.primary} />
+              <AppText style={[styles.previewPdfText, { color: theme.primary, fontWeight: "800" }]}>
+                📄 Xem trước toàn bộ hợp đồng (đã có chữ ký Bên A)
+              </AppText>
+            </Pressable>
 
             {/* Signature Pad */}
             <View style={styles.canvasSection}>
@@ -413,12 +427,15 @@ export default function SignContractWizard({ visible, contract, onClose, onSign 
           </View>
           </View>
         </View>
+
+        {/* Tránh lỗi lồng Modal trên iOS bằng cách render dưới dạng Full-screen Overlay */}
+        <ContractViewerModal
+          visible={previewVisible}
+          contractId={contract.id}
+          onClose={() => setPreviewVisible(false)}
+          useModal={false}
+        />
       </Modal>
-      <ContractViewerModal
-        visible={previewVisible}
-        contractId={contract.id}
-        onClose={() => setPreviewVisible(false)}
-      />
     </>
   );
 }

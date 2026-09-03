@@ -10,6 +10,7 @@ export type AdminRoom = {
   floor: number;
   status: number; // 0: Trống, 1: Đang thuê, 2: Đang sửa
   landlordId?: string;
+  tenant?: string;
   lastElectricityReading?: number;
   lastWaterReading?: number;
   draftElectricity?: number;
@@ -67,6 +68,7 @@ export type CheckoutPreview = {
   waterOld: number;
   electricityPrice: number;
   waterPrice: number;
+  checkoutRequestedAt?: string;
 };
 
 export type CheckoutSettlement = CheckoutPreview & {
@@ -324,6 +326,17 @@ export const adminService = {
     return response.data;
   },
 
+  async updateRoom(roomId: string, roomData: Partial<{ roomCode: string; area: string; defaultRentPrice: number; defaultDeposit: number; floor: number; status: number }>): Promise<AdminRoom> {
+    const token = await authService.getToken();
+    const response = await apiClient.put<{ success: boolean; data: AdminRoom }>(`/rooms/${roomId}`, roomData, token);
+    return response.data;
+  },
+
+  async deleteRoom(roomId: string): Promise<void> {
+    const token = await authService.getToken();
+    await apiClient.delete<{ success: boolean }>(`/rooms/${roomId}`, token);
+  },
+
   async getTenants(): Promise<AdminTenant[]> {
     const token = await authService.getToken();
     const response = await apiClient.get<{ success: boolean; data: AdminTenant[] }>("/tenants", token);
@@ -455,6 +468,8 @@ export const adminService = {
     finalWater: number;
     damageAmount: number;
     note: string;
+    forfeitDeposit?: boolean;
+    terminationReason?: string;
   }): Promise<CheckoutSettlement> {
     const token = await authService.getToken();
     const response = await apiClient.put<{

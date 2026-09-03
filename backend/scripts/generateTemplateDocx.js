@@ -92,26 +92,26 @@ async function createContractTemplate() {
                 new Paragraph({
                     children: [
                         new TextRun({ text: '- Họ và tên: ', bold: true }),
-                        new TextRun({ text: '{ten_chu_tro}' }),
+                        new TextRun({ text: '{ten_chu_tro}', bold: true }),
                     ],
                 }),
                 new Paragraph({
                     children: [
                         new TextRun({ text: '- Số CCCD/CMND: ', bold: true }),
-                        new TextRun({ text: '{cccd_chu_tro}' }),
+                        new TextRun({ text: '{cccd_chu_tro}', bold: true }),
                     ],
                 }),
                 new Paragraph({
                     children: [
                         new TextRun({ text: '- Số điện thoại: ', bold: true }),
-                        new TextRun({ text: '{sdt_chu_tro}' }),
+                        new TextRun({ text: '{sdt_chu_tro}', bold: true }),
                     ],
                 }),
                 new Paragraph({
                     spacing: { after: 160 },
                     children: [
                         new TextRun({ text: '- Địa chỉ nhà trọ: ', bold: true }),
-                        new TextRun({ text: '{dia_chi_nha_tro}' }),
+                        new TextRun({ text: '{dia_chi_nha_tro}', bold: true }),
                     ],
                 }),
 
@@ -125,20 +125,20 @@ async function createContractTemplate() {
                 new Paragraph({
                     children: [
                         new TextRun({ text: '- Họ và tên: ', bold: true }),
-                        new TextRun({ text: '{ten_nguoi_thue}' }),
+                        new TextRun({ text: '{ten_nguoi_thue}', bold: true }),
                     ],
                 }),
                 new Paragraph({
                     children: [
                         new TextRun({ text: '- Số CCCD/CMND: ', bold: true }),
-                        new TextRun({ text: '{cccd_nguoi_thue}' }),
+                        new TextRun({ text: '{cccd_nguoi_thue}', bold: true }),
                     ],
                 }),
                 new Paragraph({
                     spacing: { after: 180 },
                     children: [
                         new TextRun({ text: '- Số điện thoại liên hệ: ', bold: true }),
-                        new TextRun({ text: '{sdt_nguoi_thue}' }),
+                        new TextRun({ text: '{sdt_nguoi_thue}', bold: true }),
                     ],
                 }),
 
@@ -153,7 +153,9 @@ async function createContractTemplate() {
                     children: [
                         new TextRun({ text: '1.1. Bên A đồng ý cho Bên B thuê phòng số: ' }),
                         new TextRun({ text: '{ma_phong}', bold: true }),
-                        new TextRun({ text: ' tại địa chỉ: {dia_chi_nha_tro}.' }),
+                        new TextRun({ text: ' tại địa chỉ: ' }),
+                        new TextRun({ text: '{dia_chi_nha_tro}', bold: true }),
+                        new TextRun({ text: '.' }),
                     ],
                 }),
                 new Paragraph({

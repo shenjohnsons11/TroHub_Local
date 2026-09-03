@@ -211,8 +211,11 @@ export default function NewContractPage() {
       setPreviewOpen(true);
       const startDateIso = parseDisplayToIso(draft.startDate);
       const endDateIso = parseDisplayToIso(draft.endDate);
-      const res = await fetchAPI("/contracts/preview-draft", {
+      const res = await fetchAPI("/contracts/preview-draft?format=json", {
         method: "POST",
+        headers: {
+          Accept: "application/json",
+        },
         body: JSON.stringify({
           roomId: draft.roomId,
           tenantId: draft.tenantId,
@@ -230,6 +233,8 @@ export default function NewContractPage() {
       });
       if (res.data?.html) {
         setPreviewHtml(res.data.html);
+      } else {
+        setPreviewHtml("");
       }
     } catch (err) {
       notification.error(getNotificationMessage(err, "Không thể tải bản xem trước hợp đồng."));
@@ -680,9 +685,39 @@ function DateField({
   onChange: (value: string) => void;
 }) {
   const [typed, setTyped] = useState(value);
+  const hiddenDateRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     setTyped(value);
   }, [value]);
+
+  const isoValue = useMemo(() => {
+    const iso = parseDisplayToIso(typed);
+    return iso && iso.length === 10 ? iso : "";
+  }, [typed]);
+
+  const handleOpenPicker = () => {
+    if (hiddenDateRef.current) {
+      if (typeof hiddenDateRef.current.showPicker === "function") {
+        try {
+          hiddenDateRef.current.showPicker();
+        } catch {
+          hiddenDateRef.current.focus();
+        }
+      } else {
+        hiddenDateRef.current.focus();
+      }
+    }
+  };
+
+  const handlePickerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const nextIso = e.target.value;
+    if (nextIso) {
+      const displayVal = formatIsoToDisplay(nextIso);
+      setTyped(displayVal);
+      onChange(displayVal);
+    }
+  };
 
   return (
     <div className="relative">
@@ -695,8 +730,26 @@ function DateField({
           onChange(nextVal);
         }}
         placeholder="DD/MM/YYYY"
+        className="pr-10"
       />
-      <CalendarDays className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+      <input
+        ref={hiddenDateRef}
+        type="date"
+        value={isoValue}
+        onChange={handlePickerChange}
+        tabIndex={-1}
+        aria-hidden="true"
+        className="sr-only absolute right-2 top-1/2 -translate-y-1/2 opacity-0 pointer-events-none"
+      />
+      <button
+        type="button"
+        onClick={handleOpenPicker}
+        aria-label={`Mở lịch chọn ${ariaLabel}`}
+        title="Mở lịch chọn ngày"
+        className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-muted/80 transition-colors focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer flex items-center justify-center"
+      >
+        <CalendarDays className="size-4" />
+      </button>
     </div>
   );
 }

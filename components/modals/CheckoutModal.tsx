@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, View, StyleSheet, Modal, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { ActivityIndicator, View, StyleSheet, Modal, KeyboardAvoidingView, Platform, ScrollView, Switch, Pressable } from "react-native";
 import { AppText, AppTextInput } from "@/components/ui/typography";
 import AppButton from "../ui/AppButton";
 import { useAppTheme } from "../../contexts/ThemeContext";
@@ -8,15 +8,31 @@ import { formatCurrency, formatMeterReading, formatNumberInput, parseMeterReadin
 import { getMeterPreview } from "../../utils/meter-reading";
 import { MeterReadingCard } from "../ui/meter-reading-card";
 import type { CheckoutPreview } from "../../services/adminService";
+import { Ionicons } from "@expo/vector-icons";
 
 type CheckoutModalProps = {
   visible: boolean;
   onClose: () => void;
-  onConfirm: (data: { electricityNew: string; waterNew: string; damage: string; note: string }) => void;
+  onConfirm: (data: {
+    electricityNew: string;
+    waterNew: string;
+    damage: string;
+    note: string;
+    forfeitDeposit?: boolean;
+    terminationReason?: string;
+  }) => void;
   loading?: boolean;
   preview?: CheckoutPreview | null;
   previewLoading?: boolean;
 };
+
+const TERMINATION_REASONS = [
+  "Khách trả phòng theo thỏa thuận / hết hạn",
+  "Khách đơn phương vi phạm nghĩa vụ thanh toán (> 15 ngày)",
+  "Khách đơn phương chuyển đi không báo trước",
+  "Chủ trọ thu hồi phòng theo điều khoản hợp đồng",
+  "Lý do khác",
+];
 
 export default function CheckoutModal({ visible, onClose, onConfirm, loading, preview, previewLoading }: CheckoutModalProps) {
   const { theme } = useAppTheme();
@@ -26,6 +42,8 @@ export default function CheckoutModal({ visible, onClose, onConfirm, loading, pr
   const [damage, setDamage] = useState("0");
   const [note, setNote] = useState("");
   const [meterError, setMeterError] = useState("");
+  const [forfeitDeposit, setForfeitDeposit] = useState(false);
+  const [terminationReason, setTerminationReason] = useState(TERMINATION_REASONS[0]);
 
   useEffect(() => {
     if (!visible || !preview) return;
@@ -34,6 +52,12 @@ export default function CheckoutModal({ visible, onClose, onConfirm, loading, pr
     setDamage("0");
     setNote("");
     setMeterError("");
+    setForfeitDeposit(false);
+    setTerminationReason(
+      preview.checkoutRequestedAt
+        ? TERMINATION_REASONS[0]
+        : "Chủ trọ thanh lý hợp đồng"
+    );
   }, [preview, visible]);
 
   const electricityReading = parseMeterReading(electricityNew);
@@ -44,7 +68,8 @@ export default function CheckoutModal({ visible, onClose, onConfirm, loading, pr
   const waterAmount = waterPreview?.amount || 0;
   const utilitiesAmount = electricityAmount + waterAmount;
   const totalDebt = (preview?.unpaidAmount || 0) + utilitiesAmount + unformatNumber(damage);
-  const balance = (preview?.depositAmount || 0) - totalDebt;
+  const effectiveDeposit = forfeitDeposit ? 0 : (preview?.depositAmount || 0);
+  const balance = effectiveDeposit - totalDebt;
 
   const handleConfirm = () => {
     if (!preview || electricityReading === null || electricityReading < preview.electricityOld || waterReading === null || waterReading < preview.waterOld) {
@@ -56,24 +81,30 @@ export default function CheckoutModal({ visible, onClose, onConfirm, loading, pr
       waterNew: String(waterReading),
       damage: String(unformatNumber(damage)),
       note,
+      forfeitDeposit,
+      terminationReason,
     });
   };
 
   if (!visible) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="slide">
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.container}>
         <View style={styles.backdrop} />
         <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
-          <ScrollView>
+          <ScrollView showsVerticalScrollIndicator={false}>
             <AppText style={[styles.title, { color: theme.text }]}>{t("mobile.checkout.title")}</AppText>
 
             {previewLoading ? (
               <ActivityIndicator color={theme.primary} />
             ) : preview ? (
               <View style={[styles.summary, { backgroundColor: theme.surfaceElevated }]}>
-                <SummaryRow label={t("mobile.checkout.deposit")} value={formatCurrency(preview.depositAmount)} color={theme.text} />
+                <SummaryRow
+                  label={t("mobile.checkout.deposit")}
+                  value={forfeitDeposit ? `${formatCurrency(preview.depositAmount)} (Tịch thu)` : formatCurrency(preview.depositAmount)}
+                  color={forfeitDeposit ? theme.danger : theme.text}
+                />
                 <SummaryRow label={t("mobile.checkout.unpaid")} value={formatCurrency(preview.unpaidAmount)} color={theme.text} />
                 <SummaryRow label={t("mobile.checkout.utilities")} value={formatCurrency(utilitiesAmount)} color={theme.text} />
                 <SummaryRow label={t("mobile.checkout.damage")} value={formatCurrency(unformatNumber(damage))} color={theme.text} />
@@ -85,6 +116,53 @@ export default function CheckoutModal({ visible, onClose, onConfirm, loading, pr
                 </AppText>
               </View>
             ) : null}
+
+            {/* Tùy chọn tịch thu tiền cọc khi vi phạm */}
+            <View style={[styles.forfeitCard, { borderColor: forfeitDeposit ? theme.danger : theme.border, backgroundColor: forfeitDeposit ? "rgba(239, 68, 68, 0.08)" : theme.surfaceElevated }]}>
+              <View style={{ flex: 1, paddingRight: 10 }}>
+                <AppText style={[styles.forfeitTitle, { color: forfeitDeposit ? theme.danger : theme.text }]}>
+                  Tịch thu tiền cọc (Vi phạm hợp đồng)
+                </AppText>
+                <AppText style={[styles.forfeitDesc, { color: theme.muted }]}>
+                  Áp dụng khi khách đơn phương chấm dứt hợp đồng trái luật hoặc vi phạm nghĩa vụ thanh toán.
+                </AppText>
+              </View>
+              <Switch
+                value={forfeitDeposit}
+                onValueChange={setForfeitDeposit}
+                trackColor={{ false: theme.border, true: theme.danger }}
+              />
+            </View>
+
+            {/* Lý do thanh lý */}
+            <AppText style={[styles.label, { color: theme.text }]}>Lý do thanh lý / trả phòng</AppText>
+            <View style={styles.reasonList}>
+              {TERMINATION_REASONS.map((reason) => {
+                const isSelected = terminationReason === reason;
+                return (
+                  <Pressable
+                    key={reason}
+                    style={[
+                      styles.reasonOption,
+                      {
+                        borderColor: isSelected ? theme.primary : theme.border,
+                        backgroundColor: isSelected ? theme.primarySoft : "transparent",
+                      },
+                    ]}
+                    onPress={() => setTerminationReason(reason)}
+                  >
+                    <Ionicons
+                      name={isSelected ? "radio-button-on" : "radio-button-off"}
+                      size={16}
+                      color={isSelected ? theme.primary : theme.muted}
+                    />
+                    <AppText style={[styles.reasonText, { color: isSelected ? theme.primary : theme.text, fontWeight: isSelected ? "700" : "400" }]}>
+                      {reason}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </View>
             
             {preview ? <View style={styles.meterCards}>
               <MeterReadingCard icon="flash-outline" label={t("mobile.checkout.electricity")} unit="kWh" previous={preview.electricityOld} current={electricityReading ?? preview.electricityOld} unitPrice={preview.electricityPrice} editable currentInput={electricityNew} onChangeCurrent={(value) => { setMeterError(""); setElectricityNew(value); }} />
@@ -135,13 +213,35 @@ function SummaryRow({ label, value, color, strong = false }: { label: string; va
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: "flex-end" },
   backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.5)" },
-  modalContent: { padding: 24, borderTopLeftRadius: 24, borderTopRightRadius: 24, minHeight: 400 },
+  modalContent: { padding: 24, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: "90%" },
   title: { fontSize: 20, fontWeight: "900", marginBottom: 20 },
   summary: { padding: 16, borderRadius: 16, gap: 9 },
   summaryRow: { flexDirection: "row", justifyContent: "space-between", gap: 12 },
   summaryText: { flexShrink: 1, fontSize: 13 },
   strong: { fontWeight: "900" },
   result: { marginTop: 4, textAlign: "center", fontSize: 14, fontWeight: "900" },
+  forfeitCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 12,
+    marginTop: 14,
+  },
+  forfeitTitle: { fontSize: 13, fontWeight: "800" },
+  forfeitDesc: { fontSize: 11, marginTop: 2 },
+  reasonList: { gap: 6, marginTop: 4 },
+  reasonOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+  },
+  reasonText: { fontSize: 12, flex: 1 },
   label: { fontSize: 13, fontWeight: "700", marginBottom: 8, marginTop: 16 },
   input: { borderWidth: 1, borderRadius: 12, padding: 14, fontSize: 15 },
   meterCards: { gap: 12, marginTop: 16 },

@@ -418,7 +418,7 @@ exports.handoverContract = async (req, res) => {
             return res.status(400).json({ success: false, code: 'CONTRACT_NOT_RESERVED', message: "Chỉ hợp đồng Đã cọc / Chờ bàn giao mới được bàn giao." });
         }
 
-        const handoverDate = req.body?.handoverDate || new Date().toISOString();
+        const handoverDate = contract.startDate ? new Date(contract.startDate).toISOString() : (req.body?.handoverDate || new Date().toISOString());
         const startDate = new Date(contract.startDate);
         const handoverAt = new Date(handoverDate);
         if (Number.isNaN(startDate.getTime()) || Number.isNaN(handoverAt.getTime()) || handoverAt < startDate) {
@@ -434,7 +434,15 @@ exports.handoverContract = async (req, res) => {
             return res.status(409).json({ success: false, code: 'ROOM_STILL_OCCUPIED', message: "Phòng vẫn còn hợp đồng hiện tại đến sau ngày bàn giao." });
         }
 
-        const meterInput = validateHandoverInput(req.body, room);
+        // Chống gian lận: Ưu tiên chỉ số đã ký kết trong hợp đồng
+        const initialElectricity = contract.initialElectricity != null
+            ? contract.initialElectricity
+            : (req.body?.initialElectricity != null ? Number(req.body.initialElectricity) : (room.lastElectricityReading || 0));
+        const initialWater = contract.initialWater != null
+            ? contract.initialWater
+            : (req.body?.initialWater != null ? Number(req.body.initialWater) : (room.lastWaterReading || 0));
+
+        const meterInput = validateHandoverInput({ initialElectricity, initialWater, handoverDate }, room);
         const depositInvoice = await Invoice.findOne({ contractId: contract._id, period: "Tiền cọc" });
         if (Number(contract.fixedDeposit) > 0 && (!depositInvoice || depositInvoice.status !== 2)) {
             return res.status(400).json({ success: false, code: 'DEPOSIT_NOT_PAID', message: "Người thuê chưa thanh toán tiền cọc! Không thể bàn giao." });
@@ -515,9 +523,14 @@ exports.checkoutContract = async (req, res) => {
             input: req.body,
         });
         const money = new Intl.NumberFormat('vi-VN');
-        const content = result.settlement.amountDue > 0
-            ? `Quyết toán phòng ${result.roomCode}: cọc ${money.format(result.settlement.depositAmount)}đ, tổng nợ ${money.format(result.settlement.totalDebt)}đ; bạn cần thanh toán thêm ${money.format(result.settlement.amountDue)}đ.`
-            : `Quyết toán phòng ${result.roomCode}: cọc ${money.format(result.settlement.depositAmount)}đ, tổng nợ ${money.format(result.settlement.totalDebt)}đ; tiền cọc được hoàn ${money.format(result.settlement.refundAmount)}đ.`;
+        let content = '';
+        if (result.settlement.forfeitDeposit) {
+            content = `Quyết toán phòng ${result.roomCode} (Chủ trọ thanh lý hợp đồng): Tiền cọc ${money.format(result.settlement.depositAmount)}đ bị tịch thu do vi phạm điều khoản. Tổng chi phí ${money.format(result.settlement.totalDebt)}đ; bạn cần thanh toán ${money.format(result.settlement.amountDue)}đ.`;
+        } else if (result.settlement.amountDue > 0) {
+            content = `Quyết toán phòng ${result.roomCode}: cọc ${money.format(result.settlement.depositAmount)}đ, tổng nợ ${money.format(result.settlement.totalDebt)}đ; bạn cần thanh toán thêm ${money.format(result.settlement.amountDue)}đ.`;
+        } else {
+            content = `Quyết toán phòng ${result.roomCode}: cọc ${money.format(result.settlement.depositAmount)}đ, tổng nợ ${money.format(result.settlement.totalDebt)}đ; tiền cọc được hoàn ${money.format(result.settlement.refundAmount)}đ.`;
+        }
 
         await sendNotification({
             userId: result.tenantId,
@@ -756,6 +769,9 @@ exports.previewDraftHtml = async (req, res) => {
         };
 
         const html = renderContractHtml(data, landlord.landlordSignature || '', '');
+        if (req.headers.accept?.includes('application/json') || req.query.format === 'json') {
+            return res.json({ success: true, data: { html } });
+        }
         res.set({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
         return res.send(html);
     } catch (error) {

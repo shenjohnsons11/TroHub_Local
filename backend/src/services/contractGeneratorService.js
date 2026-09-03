@@ -228,60 +228,104 @@ function generatePdfFile(outputPath, data, signatureBuffer, landlordSignatureBuf
 
         doc.font('Roboto').fontSize(9.5).fillColor('#000000').text('Hai bên chúng tôi thống nhất ký kết hợp đồng thuê nhà ở với các nội dung sau:').moveDown(0.4);
 
+        // Helper to print labeled field with BOLD value
+        const printField = (label, value) => {
+            doc.font('Roboto').fillColor('#000000').text(`- ${label}: `, { continued: true });
+            doc.font('Roboto-Bold').text(value || '........................');
+        };
+
         // I. BÊN CHO THUÊ (BÊN A)
         doc.font('Roboto-Bold').fontSize(10.5).fillColor('#0D9488').text('I. BÊN CHO THUÊ NHÀ Ở (BÊN A):');
-        doc.font('Roboto').fontSize(9.5).fillColor('#000000');
-        doc.text(`- Họ và tên: ${data.ten_chu_tro}`);
-        doc.text(`- Số CCCD/CMND: ${data.cccd_chu_tro}`);
-        doc.text(`- Điện thoại liên hệ: ${data.sdt_chu_tro}`);
-        doc.text(`- Địa chỉ cư trú / Cơ sở: ${data.dia_chi_chu_tro}`);
+        doc.fontSize(9.5).fillColor('#000000');
+        printField('Họ và tên', data.ten_chu_tro);
+        printField('Số CCCD/CMND', data.cccd_chu_tro);
+        printField('Điện thoại liên hệ', data.sdt_chu_tro);
+        printField('Địa chỉ cư trú / Cơ sở', data.dia_chi_chu_tro);
         if (data.stk_chu_tro && data.stk_chu_tro !== '........................') {
-            doc.text(`- Số tài khoản nhận tiền: ${data.stk_chu_tro} tại Ngân hàng: ${data.ngan_hang_chu_tro} (${data.ten_tai_khoan_chu_tro})`);
+            doc.font('Roboto').text('- Số tài khoản nhận tiền: ', { continued: true })
+               .font('Roboto-Bold').text(data.stk_chu_tro, { continued: true })
+               .font('Roboto').text(' tại Ngân hàng: ', { continued: true })
+               .font('Roboto-Bold').text(data.ngan_hang_chu_tro, { continued: true })
+               .font('Roboto').text(` (${data.ten_tai_khoan_chu_tro})`);
         }
         doc.moveDown(0.5);
 
         // II. BÊN THUÊ (BÊN B)
         doc.font('Roboto-Bold').fontSize(10.5).fillColor('#0D9488').text('II. BÊN THUÊ NHÀ Ở (BÊN B):');
-        doc.font('Roboto').fontSize(9.5).fillColor('#000000');
-        doc.text(`- Họ và tên: ${data.ten_nguoi_thue}`);
-        doc.text(`- Số CCCD/CMND: ${data.cccd_nguoi_thue}`);
-        doc.text(`- Điện thoại liên hệ: ${data.sdt_nguoi_thue}`);
-        doc.text(`- Nơi đăng ký cư trú / Địa chỉ: ${data.dia_chi_nguoi_thue}`);
+        doc.fontSize(9.5).fillColor('#000000');
+        printField('Họ và tên', data.ten_nguoi_thue);
+        printField('Số CCCD/CMND', data.cccd_nguoi_thue);
+        printField('Điện thoại liên hệ', data.sdt_nguoi_thue);
+        printField('Nơi đăng ký cư trú / Địa chỉ', data.dia_chi_nguoi_thue);
         doc.moveDown(0.6);
 
         // ĐIỀU 1
         doc.font('Roboto-Bold').fontSize(10).fillColor('#0F172A').text('Điều 1. Các thông tin về nhà ở cho thuê');
         doc.font('Roboto').fontSize(9).fillColor('#000000');
-        doc.text(`1.1. Loại nhà ở: Phòng trọ / Căn hộ mini khép kín trong khuôn viên nhà ở.`);
-        doc.text(`1.2. Vị trí, địa điểm: Phòng số ${data.ma_phong} (Tầng ${data.tang_phong}), tại địa chỉ: ${data.dia_chi_nha_tro}.`);
-        doc.text(`1.3. Diện tích sử dụng: Khoảng ${data.dien_tich_phong} m²; Công năng sử dụng: Để ở sinh hoạt.`);
-        doc.text(`1.4. Hiện trạng bàn giao: Phòng kiên cố, hệ thống điện nước, cửa khóa an toàn và trang thiết bị kèm theo hoạt động tốt.`);
-        doc.text(`1.5. Chỉ số đồng hồ ban đầu khi bàn giao: Điện: ${data.chi_so_dien_ban_dau} kWh; Nước: ${data.chi_so_nuoc_ban_dau} m³.`);
+        doc.text('1.1. Loại nhà ở: Phòng trọ / Căn hộ mini khép kín trong khuôn viên nhà ở.');
+        doc.text('1.2. Vị trí, địa điểm: Phòng số ', { continued: true })
+           .font('Roboto-Bold').text(data.ma_phong, { continued: true })
+           .font('Roboto').text(` (Tầng ${data.tang_phong}), tại địa chỉ: `, { continued: true })
+           .font('Roboto-Bold').text(data.dia_chi_nha_tro, { continued: true })
+           .font('Roboto').text('.');
+        doc.text('1.3. Diện tích sử dụng: Khoảng ', { continued: true })
+           .font('Roboto-Bold').text(`${data.dien_tich_phong} m²`, { continued: true })
+           .font('Roboto').text('; Công năng sử dụng: Để ở sinh hoạt.');
+        doc.text('1.4. Hiện trạng bàn giao: Phòng kiên cố, hệ thống điện nước, cửa khóa an toàn và trang thiết bị kèm theo hoạt động tốt.');
+        doc.text('1.5. Chỉ số đồng hồ ban đầu khi bàn giao: Điện: ', { continued: true })
+           .font('Roboto-Bold').text(`${data.chi_so_dien_ban_dau} kWh`, { continued: true })
+           .font('Roboto').text('; Nước: ', { continued: true })
+           .font('Roboto-Bold').text(`${data.chi_so_nuoc_ban_dau} m³`, { continued: true })
+           .font('Roboto').text('.');
         doc.moveDown(0.5);
 
         // ĐIỀU 2
         doc.font('Roboto-Bold').fontSize(10).fillColor('#0F172A').text('Điều 2. Giá thuê nhà ở, tiền cọc và chi phí dịch vụ');
         doc.font('Roboto').fontSize(9).fillColor('#000000');
-        doc.text(`2.1. Giá thuê phòng cố định: ${data.gia_thue} VNĐ/tháng (Bằng chữ: ${data.gia_thue_bang_chu}).`);
-        doc.text(`2.2. Tiền đặt cọc giữ phòng: ${data.tien_coc} VNĐ (Bằng chữ: ${data.tien_coc_bang_chu}). Khoản cọc được Bên A hoàn trả lại cho Bên B khi kết thúc hợp đồng sau khi đã khấu trừ hết các nghĩa vụ tài chính chưa thanh toán (nếu có).`);
-        doc.text(`2.3. Đơn giá điện tiêu thụ: ${data.gia_dien} VNĐ/kWh (Tính theo chỉ số công tơ thực tế hàng tháng).`);
-        doc.text(`2.4. Đơn giá nước sinh hoạt: ${data.gia_nuoc} VNĐ/m³ (Tính theo chỉ số đồng hồ thực tế hàng tháng).`);
-        doc.text(`2.5. Chi phí dịch vụ cố định (rác, wifi, vệ sinh chung...): ${data.phi_dich_vu} VNĐ/tháng.`);
+        doc.text('2.1. Giá thuê phòng cố định: ', { continued: true })
+           .font('Roboto-Bold').text(`${data.gia_thue} VNĐ/tháng`, { continued: true })
+           .font('Roboto').text(' (Bằng chữ: ', { continued: true })
+           .font('Roboto-Bold').text(data.gia_thue_bang_chu, { continued: true })
+           .font('Roboto').text(').');
+        doc.text('2.2. Tiền đặt cọc giữ phòng: ', { continued: true })
+           .font('Roboto-Bold').text(`${data.tien_coc} VNĐ`, { continued: true })
+           .font('Roboto').text(' (Bằng chữ: ', { continued: true })
+           .font('Roboto-Bold').text(data.tien_coc_bang_chu, { continued: true })
+           .font('Roboto').text('). Khoản cọc được Bên A hoàn trả lại cho Bên B khi kết thúc hợp đồng sau khi đã khấu trừ hết các nghĩa vụ tài chính chưa thanh toán (nếu có).');
+        doc.text('2.3. Đơn giá điện tiêu thụ: ', { continued: true })
+           .font('Roboto-Bold').text(`${data.gia_dien} VNĐ/kWh`, { continued: true })
+           .font('Roboto').text(' (Tính theo chỉ số công tơ thực tế hàng tháng).');
+        doc.text('2.4. Đơn giá nước sinh hoạt: ', { continued: true })
+           .font('Roboto-Bold').text(`${data.gia_nuoc} VNĐ/m³`, { continued: true })
+           .font('Roboto').text(' (Tính theo chỉ số đồng hồ thực tế hàng tháng).');
+        doc.text('2.5. Chi phí dịch vụ cố định (rác, wifi, vệ sinh chung...): ', { continued: true })
+           .font('Roboto-Bold').text(`${data.phi_dich_vu} VNĐ/tháng`, { continued: true })
+           .font('Roboto').text('.');
         doc.moveDown(0.5);
 
         // ĐIỀU 3
         doc.font('Roboto-Bold').fontSize(10).fillColor('#0F172A').text('Điều 3. Phương thức và thời hạn thanh toán');
         doc.font('Roboto').fontSize(9).fillColor('#000000');
-        doc.text(`3.1. Phương thức thanh toán: Chuyển khoản ngân hàng (qua số tài khoản của Bên A hoặc quét mã VietQR tự động trên ứng dụng TroHub) hoặc tiền mặt.`);
-        doc.text(`3.2. Thời hạn thanh toán: Định kỳ hàng tháng ${data.ngay_thanh_toan_hang_thang} sau khi Bên A phát hành hóa đơn trên TroHub.`);
+        doc.text('3.1. Phương thức thanh toán: Chuyển khoản ngân hàng (qua số tài khoản của Bên A hoặc quét mã VietQR tự động trên ứng dụng TroHub) hoặc tiền mặt.');
+        doc.text('3.2. Thời hạn thanh toán: Định kỳ hàng tháng ', { continued: true })
+           .font('Roboto-Bold').text(data.ngay_thanh_toan_hang_thang, { continued: true })
+           .font('Roboto').text(' sau khi Bên A phát hành hóa đơn trên TroHub.');
         doc.moveDown(0.5);
 
         // ĐIỀU 4
         doc.font('Roboto-Bold').fontSize(10).fillColor('#0F172A').text('Điều 4. Thời hạn thuê, thời điểm bàn giao nhà ở');
         doc.font('Roboto').fontSize(9).fillColor('#000000');
-        doc.text(`4.1. Thời hạn thuê: ${data.thoi_han_thang} tháng, từ ngày ${data.ngay_bat_dau} đến hết ngày ${data.ngay_ket_thuc}.`);
-        doc.text(`4.2. Thời điểm bàn giao phòng: Ngày ${data.ngay_giao_phong || data.ngay_bat_dau}.`);
-        doc.text(`4.3. Hồ sơ kèm theo: Biên bản bàn giao hiện trạng phòng, chỉ số điện nước và Nội quy phòng trọ.`);
+        doc.text('4.1. Thời hạn thuê: ', { continued: true })
+           .font('Roboto-Bold').text(`${data.thoi_han_thang} tháng`, { continued: true })
+           .font('Roboto').text(', từ ngày ', { continued: true })
+           .font('Roboto-Bold').text(data.ngay_bat_dau, { continued: true })
+           .font('Roboto').text(' đến hết ngày ', { continued: true })
+           .font('Roboto-Bold').text(data.ngay_ket_thuc, { continued: true })
+           .font('Roboto').text('.');
+        doc.text('4.2. Thời điểm bàn giao phòng: Ngày ', { continued: true })
+           .font('Roboto-Bold').text(data.ngay_giao_phong || data.ngay_bat_dau, { continued: true })
+           .font('Roboto').text('.');
+        doc.text('4.3. Hồ sơ kèm theo: Biên bản bàn giao hiện trạng phòng, chỉ số điện nước và Nội quy phòng trọ.');
         doc.moveDown(0.5);
 
         // ĐIỀU 5
@@ -332,7 +376,9 @@ function generatePdfFile(outputPath, data, signatureBuffer, landlordSignatureBuf
 
         doc.font('Roboto-Bold').fontSize(10).fillColor('#0F172A').text('Điều 12. Hiệu lực của hợp đồng');
         doc.font('Roboto').fontSize(9).fillColor('#000000');
-        doc.text(`12.1. Hợp đồng này có hiệu lực kể từ ngày ${data.ngay_bat_dau} sau khi hai bên ký xác nhận.`);
+        doc.text('12.1. Hợp đồng này có hiệu lực kể từ ngày ', { continued: true })
+           .font('Roboto-Bold').text(data.ngay_bat_dau, { continued: true })
+           .font('Roboto').text(' sau khi hai bên ký xác nhận.');
         doc.text(`12.2. Hợp đồng điện tử gồm 12 điều, được khởi tạo, ký số/ký điện tử và lưu trữ an toàn trên nền tảng TroHub, có giá trị pháp lý ràng buộc quyền và nghĩa vụ của các bên tương đương văn bản giấy.`);
         doc.moveDown(0.8);
 
@@ -406,6 +452,7 @@ function renderContractHtml(data, landlordSignature, tenantSignature) {
     .info-list li { margin-bottom: 5px; }
     .article-title { font-size: 13px; font-weight: 800; color: #0f172a; margin: 18px 0 6px 0; }
     .article-body { font-size: 12.5px; margin: 0 0 6px 0; text-align: justify; }
+    strong, b { font-weight: 800; color: #000000; }
     .signatures { display: flex; justify-content: space-between; margin-top: 32px; padding-top: 20px; border-top: 1px dashed #cbd5e1; }
     .sign-col { width: 48%; text-align: center; }
     .sign-title { font-size: 12px; font-weight: 800; text-transform: uppercase; color: #0f172a; }
@@ -428,7 +475,7 @@ function renderContractHtml(data, landlordSignature, tenantSignature) {
       <div class="divider"></div>
     </div>
     
-    <div class="date-row">Hôm nay, ngày ${data.ngay_ky} tháng ${data.thang_ky} năm ${data.nam_ky}</div>
+    <div class="date-row">Hôm nay, ngày <strong>${data.ngay_ky}</strong> tháng <strong>${data.thang_ky}</strong> năm <strong>${data.nam_ky}</strong></div>
     <div class="title">HỢP ĐỒNG THUÊ NHÀ Ở</div>
     <div class="sub-number">Số: <strong>${data.so_hop_dong}</strong> / HĐTN</div>
 
@@ -443,31 +490,31 @@ function renderContractHtml(data, landlordSignature, tenantSignature) {
 
     <div class="section-header">I. BÊN CHO THUÊ NHÀ Ở (BÊN A):</div>
     <ul class="info-list">
-      <li><strong>- Họ và tên:</strong> ${data.ten_chu_tro}</li>
-      <li><strong>- Số CCCD/CMND:</strong> ${data.cccd_chu_tro}</li>
-      <li><strong>- Điện thoại liên hệ:</strong> ${data.sdt_chu_tro}</li>
-      <li><strong>- Địa chỉ cư trú / Cơ sở:</strong> ${data.dia_chi_chu_tro}</li>
-      ${data.stk_chu_tro && data.stk_chu_tro !== '........................' ? `<li><strong>- Số tài khoản:</strong> ${data.stk_chu_tro} tại Ngân hàng ${data.ngan_hang_chu_tro} (${data.ten_tai_khoan_chu_tro})</li>` : ''}
+      <li>- Họ và tên: <strong>${data.ten_chu_tro}</strong></li>
+      <li>- Số CCCD/CMND: <strong>${data.cccd_chu_tro}</strong></li>
+      <li>- Điện thoại liên hệ: <strong>${data.sdt_chu_tro}</strong></li>
+      <li>- Địa chỉ cư trú / Cơ sở: <strong>${data.dia_chi_chu_tro}</strong></li>
+      ${data.stk_chu_tro && data.stk_chu_tro !== '........................' ? `<li>- Số tài khoản nhận tiền: <strong>${data.stk_chu_tro}</strong> tại Ngân hàng <strong>${data.ngan_hang_chu_tro}</strong> (Chủ TK: <strong>${data.ten_tai_khoan_chu_tro}</strong>)</li>` : ''}
     </ul>
 
     <div class="section-header">II. BÊN THUÊ NHÀ Ở (BÊN B):</div>
     <ul class="info-list">
-      <li><strong>- Họ và tên:</strong> ${data.ten_nguoi_thue}</li>
-      <li><strong>- Số CCCD/CMND:</strong> ${data.cccd_nguoi_thue}</li>
-      <li><strong>- Điện thoại liên hệ:</strong> ${data.sdt_nguoi_thue}</li>
-      <li><strong>- Nơi đăng ký cư trú:</strong> ${data.dia_chi_nguoi_thue}</li>
+      <li>- Họ và tên: <strong>${data.ten_nguoi_thue}</strong></li>
+      <li>- Số CCCD/CMND: <strong>${data.cccd_nguoi_thue}</strong></li>
+      <li>- Điện thoại liên hệ: <strong>${data.sdt_nguoi_thue}</strong></li>
+      <li>- Nơi đăng ký cư trú / Địa chỉ: <strong>${data.dia_chi_nguoi_thue}</strong></li>
     </ul>
 
     <div class="article-title">Điều 1. Các thông tin về nhà ở cho thuê</div>
     <div class="article-body">1.1. Loại nhà ở: Phòng trọ / Căn hộ mini khép kín trong khuôn viên nhà ở.</div>
-    <div class="article-body">1.2. Vị trí, địa điểm: Phòng số <strong>${data.ma_phong}</strong> (Tầng ${data.tang_phong}), tại địa chỉ: <strong>${data.dia_chi_nha_tro}</strong>.</div>
+    <div class="article-body">1.2. Vị trí, địa điểm: Phòng số <strong>${data.ma_phong}</strong> (Tầng <strong>${data.tang_phong}</strong>), tại địa chỉ: <strong>${data.dia_chi_nha_tro}</strong>.</div>
     <div class="article-body">1.3. Diện tích sử dụng: Khoảng <strong>${data.dien_tich_phong} m²</strong>; Công năng sử dụng: Để ở sinh hoạt.</div>
     <div class="article-body">1.4. Hiện trạng chất lượng: Phòng trọ kiên cố, hệ thống điện nước, cửa khóa an toàn và trang thiết bị kèm theo hoạt động tốt, bảo đảm an toàn PCCC.</div>
     <div class="article-body">1.5. Chỉ số đồng hồ khi bàn giao: Điện: <strong>${data.chi_so_dien_ban_dau} kWh</strong>; Nước: <strong>${data.chi_so_nuoc_ban_dau} m³</strong>.</div>
 
     <div class="article-title">Điều 2. Giá thuê nhà ở, tiền cọc và chi phí dịch vụ</div>
-    <div class="article-body">2.1. Giá thuê phòng cố định: <strong>${data.gia_thue} VNĐ/tháng</strong> (Bằng chữ: <em>${data.gia_thue_bang_chu}</em>).</div>
-    <div class="article-body">2.2. Tiền đặt cọc giữ phòng: <strong>${data.tien_coc} VNĐ</strong> (Bằng chữ: <em>${data.tien_coc_bang_chu}</em>). Tiền đặt cọc được Bên A hoàn trả lại cho Bên B khi kết thúc hợp đồng sau khi đã khấu trừ hết các nghĩa vụ tài chính chưa thanh toán (nếu có).</div>
+    <div class="article-body">2.1. Giá thuê phòng cố định: <strong>${data.gia_thue} VNĐ/tháng</strong> (Bằng chữ: <strong>${data.gia_thue_bang_chu}</strong>).</div>
+    <div class="article-body">2.2. Tiền đặt cọc giữ phòng: <strong>${data.tien_coc} VNĐ</strong> (Bằng chữ: <strong>${data.tien_coc_bang_chu}</strong>). Tiền đặt cọc được Bên A hoàn trả lại cho Bên B khi kết thúc hợp đồng sau khi đã khấu trừ hết các nghĩa vụ tài chính chưa thanh toán (nếu có).</div>
     <div class="article-body">2.3. Đơn giá điện tiêu thụ: <strong>${data.gia_dien} VNĐ/kWh</strong> (Theo chỉ số công tơ thực tế hàng tháng).</div>
     <div class="article-body">2.4. Đơn giá nước sinh hoạt: <strong>${data.gia_nuoc} VNĐ/m³</strong> (Theo chỉ số đồng hồ thực tế hàng tháng).</div>
     <div class="article-body">2.5. Chi phí dịch vụ cố định (rác, wifi, vệ sinh...): <strong>${data.phi_dich_vu} VNĐ/tháng</strong>.</div>

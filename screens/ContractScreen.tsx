@@ -440,16 +440,18 @@ export default function ContractScreen({ onNavigate, params, selectedRoomId, onR
               </View>
             )}
 
-            {/* Xem PDF trực tiếp; không phát hành file Word */}
+            {/* Xem toàn bộ hợp đồng */}
             <View style={styles.downloadRow}>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Xem hợp đồng điện tử"
+                accessibilityLabel="Xem trước toàn bộ hợp đồng"
                 style={[styles.downloadBtn, { backgroundColor: theme.primarySoft, borderColor: theme.primary }]}
                 onPress={() => setViewerContractId(contract.id)}
               >
-                <Ionicons name="eye-outline" size={17} color={theme.primary} />
-                <AppText style={[styles.downloadBtnText, { color: theme.primary }]}>Xem Hợp đồng điện tử</AppText>
+                <Ionicons name="document-text" size={17} color={theme.primary} />
+                <AppText style={[styles.downloadBtnText, { color: theme.primary, fontWeight: "700" }]}>
+                  Xem trước toàn bộ hợp đồng
+                </AppText>
               </Pressable>
             </View>
           </Card>
