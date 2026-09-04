@@ -31,6 +31,14 @@ type Props = {
   onRoomSelect: (roomId: string) => void;
 };
 
+const formatInvoicePeriod = (period?: string): string => {
+  if (!period) return "Hóa đơn dịch vụ";
+  if (period === "final_invoice") return "Quyết toán trả phòng";
+  if (period.toLowerCase().includes("tiền cọc") || period.toLowerCase() === "deposit") return "Hóa đơn tiền cọc";
+  if (/^\d{1,2}\/\d{4}$/.test(period)) return `Hóa đơn tháng ${period}`;
+  return `Hóa đơn ${period}`;
+};
+
 export default function InvoiceScreen({ params, selectedRoomId, onRoomSelect }: Props) {
   const { theme } = useAppTheme();
   const { t } = useLanguage();
@@ -165,33 +173,87 @@ export default function InvoiceScreen({ params, selectedRoomId, onRoomSelect }: 
           return (
             <AnimatedEntry delay={Math.min(index, 5) * 35}>
               <Card style={styles.invoiceCard}>
-                <AppText style={styles.amount}>{formatCurrency(invoice.numericAmount ?? unformatNumber(invoice.amount))}</AppText>
+                {/* Header: Icon + Info + Status */}
                 <View style={styles.cardHeader}>
                   <View style={styles.cardLeftWrap}>
-                    <FeatureIconBox token={FEATURE_ICONS.invoiceCreate} accessibilityLabel={t("invoices.title")} />
-                    <View style={styles.cardLeft}>
-                    <AppText style={{ fontSize: 11, fontWeight: '800', color: theme.primary, marginBottom: 2 }}>{t("invoices.code", { code: invoice.id || "" })}</AppText>
-                    <AppText style={styles.cardTitle}>{t("invoices.period")}: {invoice.month}</AppText>
-                    <AppText style={styles.room}>{t("common.room")} {invoice.room}</AppText>
+                    <FeatureIconBox token={FEATURE_ICONS.invoiceCreate} size={22} />
+                    <View style={styles.cardTitleBox}>
+                      <AppText style={[styles.periodTitle, { color: theme.text }]}>
+                        {formatInvoicePeriod(invoice.month)}
+                      </AppText>
+                      <View style={styles.subInfoRow}>
+                        <View style={[styles.roomTag, { backgroundColor: theme.primarySoft }]}>
+                          <AppText style={[styles.roomTagText, { color: theme.primary }]}>
+                            {t("common.room")} {invoice.room}
+                          </AppText>
+                        </View>
+                        <AppText style={[styles.codeText, { color: theme.muted }]}>
+                          #{invoice.id ? invoice.id.slice(-8).toUpperCase() : ""}
+                        </AppText>
+                      </View>
                     </View>
                   </View>
+
                   <View style={[styles.statusBadge, isClosed ? styles.paidBadge : styles.unpaidBadge]}>
+                    <Ionicons
+                      name={isClosed ? "checkmark-circle" : "time-outline"}
+                      size={12}
+                      color={isClosed ? theme.positive : theme.warningForeground}
+                    />
                     <AppText style={[styles.statusText, isClosed ? styles.paidText : styles.unpaidText]}>
                       {getStatusText("invoice", invoice.status, t)}
                     </AppText>
                   </View>
                 </View>
-                <AppText style={styles.dueDate}>{t("invoices.dueDate")}: {invoice.dueDate}</AppText>
+
+                {/* Amount and Due Date Section */}
+                <View style={[styles.amountSection, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+                  <View style={styles.amountWrap}>
+                    <AppText style={[styles.amountLabel, { color: theme.muted }]}>
+                      {isClosed ? "Số tiền đã thanh toán" : "Số tiền cần thanh toán"}
+                    </AppText>
+                    <AppText style={[styles.amount, { color: isClosed ? theme.positive : theme.primary }]}>
+                      {formatCurrency(invoice.numericAmount ?? unformatNumber(invoice.amount))}
+                    </AppText>
+                  </View>
+                  <View style={styles.dueWrap}>
+                    <Ionicons name="calendar-outline" size={13} color={theme.muted} />
+                    <AppText style={[styles.dueDate, { color: theme.muted }]}>
+                      {t("invoices.dueDate")}: {invoice.dueDate}
+                    </AppText>
+                  </View>
+                </View>
+
+                {/* Action Buttons */}
                 <View style={styles.actionRow}>
                   {!isClosed ? (
-                    <Pressable style={styles.payButton} onPress={() => openPaymentModal(invoice)}>
-                      <Ionicons name="card-outline" size={18} color={theme.background} />
-                      <AppText style={styles.payText}>{t("invoices.payNow")}</AppText>
+                    <Pressable
+                      accessibilityRole="button"
+                      style={[styles.payButton, { backgroundColor: theme.primary }]}
+                      onPress={() => openPaymentModal(invoice)}
+                    >
+                      <Ionicons name="card-outline" size={16} color={theme.background} />
+                      <AppText style={[styles.payText, { color: theme.background }]}>
+                        {t("invoices.payNow")}
+                      </AppText>
                     </Pressable>
                   ) : null}
-                  <Pressable style={styles.detailButton} onPress={() => setSelectedInvoice(invoice)}>
-                    <Ionicons name="eye-outline" size={18} color={theme.primary} />
-                    <AppText style={styles.detailText}>{t("common.details")}</AppText>
+                  <Pressable
+                    accessibilityRole="button"
+                    style={[
+                      styles.detailButton,
+                      {
+                        backgroundColor: theme.surfaceElevated,
+                        borderColor: theme.border,
+                        flex: isClosed ? 1 : undefined,
+                      },
+                    ]}
+                    onPress={() => setSelectedInvoice(invoice)}
+                  >
+                    <Ionicons name="eye-outline" size={16} color={theme.primary} />
+                    <AppText style={[styles.detailText, { color: theme.primary }]}>
+                      {t("common.details")}
+                    </AppText>
                   </Pressable>
                 </View>
               </Card>
@@ -275,42 +337,54 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSh
     fontWeight: "600",
   },
   invoiceCard: {
-    marginBottom: 14,
-    padding: 16,
-  },
-  amount: {
-    fontSize: 20,
-    fontWeight: "900",
-    color: theme.primary,
-    marginBottom: 8,
+    marginBottom: 16,
+    padding: 18,
+    borderRadius: 22,
   },
   cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
+    marginBottom: 14,
   },
   cardLeftWrap: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 12,
     paddingRight: 8,
   },
-  cardLeft: {
+  cardTitleBox: {
     flex: 1,
   },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: theme.text,
+  periodTitle: {
+    fontSize: 15,
+    fontWeight: "900",
+    marginBottom: 4,
   },
-  room: {
-    fontSize: 13,
-    color: theme.muted,
-    marginTop: 2,
+  subInfoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  roomTag: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  roomTagText: {
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  codeText: {
+    fontSize: 11,
+    fontWeight: "700",
   },
   statusBadge: {
-    paddingHorizontal: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 9,
     paddingVertical: 4,
     borderRadius: 999,
   },
@@ -321,7 +395,7 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSh
     backgroundColor: theme.warningSoft,
   },
   statusText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "800",
   },
   paidText: {
@@ -330,42 +404,67 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSh
   unpaidText: {
     color: theme.warningForeground,
   },
+  amountSection: {
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 14,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+  },
+  amountWrap: {
+    flex: 1,
+  },
+  amountLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    marginBottom: 2,
+  },
+  amount: {
+    fontSize: 20,
+    fontWeight: "900",
+  },
+  dueWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
   dueDate: {
-    fontSize: 12,
-    color: theme.muted,
-    marginTop: 10,
+    fontSize: 11,
+    fontWeight: "700",
   },
   actionRow: {
     flexDirection: "row",
     gap: 10,
-    marginTop: 14,
+    alignItems: "center",
     justifyContent: "flex-end",
   },
   payButton: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 6,
-    backgroundColor: theme.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 12,
+    height: 44,
+    borderRadius: 14,
   },
   payText: {
-    color: theme.background,
     fontWeight: "800",
     fontSize: 13,
   },
   detailButton: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 6,
-    backgroundColor: theme.surface,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 12,
+    height: 44,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: 1,
   },
   detailText: {
-    color: theme.primary,
     fontWeight: "800",
     fontSize: 13,
   },

@@ -174,14 +174,55 @@ export default function HomeScreen({ profile, refreshKey, selectedRoomId, onRoom
       />
 
       {homeData.propertyAddress ? (
-        <Card style={styles.propertyCard}>
-          <AppText style={[styles.propertyTitle, { color: theme.text }]}>{t("dashboard.property")}</AppText>
-          <AppText style={[styles.propertyAddress, { color: theme.muted }]}>{homeData.propertyAddress}</AppText>
-          <Pressable accessibilityRole="button" onPress={openPropertyMap} style={[styles.mapButton, { backgroundColor: theme.primarySoft }]}>
-            <Ionicons name="map-outline" size={18} color={theme.primary} />
-            <AppText style={[styles.mapButtonText, { color: theme.primary }]}>{t("common.openMaps")}</AppText>
-          </Pressable>
-        </Card>
+        <AnimatedEntry delay={40}>
+          <Card style={styles.propertyCard}>
+            <View style={styles.propertyHeader}>
+              <View style={styles.propertyHeaderLeft}>
+                <FeatureIconBox token={FEATURE_ICONS.rooms} size={20} />
+                <View style={styles.propertyTitleWrap}>
+                  <AppText style={[styles.propertyKicker, { color: theme.muted }]}>
+                    {t("dashboard.property").replace("🏠 ", "").toUpperCase()}
+                  </AppText>
+                  <AppText style={[styles.propertyTitle, { color: theme.text }]}>
+                    {t("dashboard.property").replace("🏠 ", "")}
+                  </AppText>
+                </View>
+              </View>
+              <View style={[styles.verifiedBadge, { backgroundColor: theme.positiveSoft }]}>
+                <Ionicons name="checkmark-circle" size={13} color={theme.positive} />
+                <AppText style={[styles.verifiedText, { color: theme.positive }]}>Đang thuê</AppText>
+              </View>
+            </View>
+
+            <View style={[styles.addressBox, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+              <Ionicons name="location" size={17} color={theme.primary} style={styles.locationPin} />
+              <AppText style={[styles.propertyAddress, { color: theme.text }]}>
+                {homeData.propertyAddress}
+              </AppText>
+            </View>
+
+            <Pressable
+              accessibilityRole="button"
+              onPress={openPropertyMap}
+              style={({ pressed }) => [
+                styles.mapButton,
+                {
+                  backgroundColor: theme.primarySoft,
+                  borderColor: theme.border,
+                  opacity: pressed ? 0.8 : 1,
+                },
+              ]}
+            >
+              <View style={styles.mapButtonInner}>
+                <Ionicons name="map" size={16} color={theme.primary} />
+                <AppText style={[styles.mapButtonText, { color: theme.primary }]}>
+                  {t("common.openMaps")}
+                </AppText>
+              </View>
+              <Ionicons name="open-outline" size={16} color={theme.primary} />
+            </Pressable>
+          </Card>
+        </AnimatedEntry>
       ) : null}
 
       {invites.length > 0 && invites.map((invite, index) => (
@@ -377,11 +418,84 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSh
     borderRadius: 16,
     backgroundColor: theme.primarySoft,
   },
-  propertyCard: { marginBottom: 18, padding: 16 },
-  propertyTitle: { fontSize: 14, fontWeight: "900" },
-  propertyAddress: { fontSize: 13, lineHeight: 19, marginTop: 5 },
-  mapButton: { alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 12, marginTop: 12, minHeight: 42, paddingHorizontal: 12 },
-  mapButtonText: { fontSize: 12, fontWeight: "900" },
+  propertyCard: {
+    marginBottom: 18,
+    padding: 18,
+    borderRadius: 22,
+  },
+  propertyHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  propertyHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flex: 1,
+  },
+  propertyTitleWrap: {
+    flex: 1,
+  },
+  propertyKicker: {
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+    marginBottom: 2,
+  },
+  propertyTitle: {
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  verifiedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  verifiedText: {
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  addressBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  locationPin: {
+    marginTop: 2,
+  },
+  propertyAddress: {
+    fontSize: 13,
+    lineHeight: 19,
+    flex: 1,
+    fontWeight: "600",
+  },
+  mapButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderRadius: 14,
+    borderWidth: 1,
+    minHeight: 44,
+    paddingHorizontal: 14,
+  },
+  mapButtonInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  mapButtonText: {
+    fontSize: 13,
+    fontWeight: "800",
+  },
   heroKicker: {
     color: theme.primary,
     fontSize: 10,

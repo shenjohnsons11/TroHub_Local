@@ -49,6 +49,14 @@ const tenantTabs: {
     label: "nav.home",
     icon: "home-outline",
     activeIcon: "home",
+    token: FEATURE_ICONS.home,
+  },
+  {
+    key: "contract",
+    label: "nav.contracts",
+    icon: "document-text-outline",
+    activeIcon: "document-text",
+    token: FEATURE_ICONS.contracts,
   },
   {
     key: "invoice",
@@ -65,17 +73,11 @@ const tenantTabs: {
     token: FEATURE_ICONS.repairs,
   },
   {
-    key: "contract",
-    label: "nav.contracts",
-    icon: "document-text-outline",
-    activeIcon: "document-text",
-    token: FEATURE_ICONS.contracts,
-  },
-  {
     key: "account",
     label: "nav.account",
     icon: "person-outline",
     activeIcon: "person",
+    token: FEATURE_ICONS.account,
   },
 ];
 
@@ -152,7 +154,20 @@ export default function BottomNav({ activeTab, onChangeTab, role }: Props) {
                 accessibilityState={{ selected: active }}
               >
                 {tab.token ? (
-                  <FeatureIconBox token={tab.token} size={21} style={[styles.iconBox, active && styles.iconBoxActive]} accessibilityLabel={t(tab.label)} />
+                  <FeatureIconBox
+                    token={tab.token}
+                    size={21}
+                    style={[
+                      styles.iconBox,
+                      active && styles.iconBoxActive,
+                      active && {
+                        borderWidth: 1.5,
+                        borderColor: tab.token.color,
+                        shadowColor: tab.token.color,
+                      },
+                    ]}
+                    accessibilityLabel={t(tab.label)}
+                  />
                 ) : (
                   <View style={[styles.iconBox, active && styles.iconBoxActive, active && { backgroundColor: theme.primarySoft, shadowColor: theme.primary }]}>
                     <Ionicons name={active ? tab.activeIcon : tab.icon} size={21} color={active ? theme.primary : theme.muted} />

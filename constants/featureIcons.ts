@@ -21,6 +21,8 @@ export const FEATURE_ICONS = {
   repairs: { icon: "construct-outline", color: "#F97316", bg: "#F9731620" },
   services: { icon: "pricetags-outline", color: "#84CC16", bg: "#84CC1620" },
   vietqr: { icon: "qr-code-outline", color: "#6B7280", bg: "#6B728020" },
+  home: { icon: "home-outline", color: "#10B981", bg: "#10B98120" },
+  account: { icon: "person-outline", color: "#3B82F6", bg: "#3B82F620" },
 } as const satisfies Record<string, FeatureIconToken>;
 
 export const FEATURE_ICON_BOX = {
