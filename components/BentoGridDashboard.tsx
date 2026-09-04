@@ -126,7 +126,7 @@ export default function BentoGridDashboard({ stats, onNavigate }: Props) {
               onPress={() => onNavigate && onNavigate("scan_meter")}
             >
               <FeatureIconBox token={FEATURE_ICONS.scanMeter} size={16} />
-              <AppText style={styles.pillText}>Quét AI 📸</AppText>
+              <AppText style={styles.pillText}>Quét AI</AppText>
             </Pressable>
 
             <Pressable

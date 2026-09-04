@@ -157,29 +157,6 @@ export default function AdminRepairsScreen({ params }: Props) {
         <AppText style={styles.title}>{t("mobile.repairs.title")}</AppText>
       </View>
 
-      {/* Hành động hàng loạt */}
-      {selectedIds.length > 0 && (
-        <View style={styles.bulkActionContainer}>
-          <AppText style={styles.bulkText}>{t("mobile.repairs.selected", { count: selectedIds.length })}</AppText>
-          <Pressable accessibilityRole="button" accessibilityLabel={t("mobile.repairs.deleteSelected", { count: selectedIds.length })} style={styles.bulkDeleteButton} onPress={handleBulkDelete}>
-            <Ionicons name="trash-outline" size={16} color={theme.dangerForeground} />
-            <AppText style={styles.bulkDeleteText}>{t("mobile.repairs.deleteAll")}</AppText>
-          </Pressable>
-        </View>
-      )}
-
-      {/* Tùy chọn chọn tất cả */}
-      {filteredRepairs.length > 0 && (
-        <Pressable accessibilityRole="checkbox" accessibilityLabel={t("mobile.repairs.selectAllLabel")} accessibilityState={{ checked: selectedIds.length === filteredRepairs.length }} style={styles.selectAllContainer} onPress={toggleAll}>
-          <Ionicons 
-            name={selectedIds.length === filteredRepairs.length ? "checkbox" : "square-outline"} 
-            size={22} 
-            color={selectedIds.length === filteredRepairs.length ? theme.primary : theme.muted}
-          />
-          <AppText style={styles.selectAllText}>{t("mobile.repairs.selectAll")}</AppText>
-        </Pressable>
-      )}
-
       <FlatList
         data={filteredRepairs}
         keyExtractor={(item) => item._id}
@@ -206,6 +183,29 @@ export default function AdminRepairsScreen({ params }: Props) {
                 <AppText style={[styles.filterText, filter === 'done' && styles.filterTextActive]}>{t("mobile.repairs.done")}</AppText>
               </Pressable>
             </View>
+
+            {/* Hành động hàng loạt */}
+            {selectedIds.length > 0 && (
+              <View style={styles.bulkActionContainer}>
+                <AppText style={styles.bulkText}>{t("mobile.repairs.selected", { count: selectedIds.length })}</AppText>
+                <Pressable accessibilityRole="button" accessibilityLabel={t("mobile.repairs.deleteSelected", { count: selectedIds.length })} style={styles.bulkDeleteButton} onPress={handleBulkDelete}>
+                  <Ionicons name="trash-outline" size={16} color={theme.dangerForeground} />
+                  <AppText style={styles.bulkDeleteText}>{t("mobile.repairs.deleteAll")}</AppText>
+                </Pressable>
+              </View>
+            )}
+
+            {/* Tùy chọn chọn tất cả */}
+            {filteredRepairs.length > 0 && (
+              <Pressable accessibilityRole="checkbox" accessibilityLabel={t("mobile.repairs.selectAllLabel")} accessibilityState={{ checked: selectedIds.length === filteredRepairs.length }} style={styles.selectAllContainer} onPress={toggleAll}>
+                <Ionicons 
+                  name={selectedIds.length === filteredRepairs.length ? "checkbox" : "square-outline"} 
+                  size={22} 
+                  color={selectedIds.length === filteredRepairs.length ? theme.primary : theme.muted}
+                />
+                <AppText style={styles.selectAllText}>{t("mobile.repairs.selectAll")}</AppText>
+              </Pressable>
+            )}
           </>
         }
         ListEmptyComponent={<IllustratedEmptyState kind="repair" title={repairs.length ? t("mobile.repairs.noMatch") : t("mobile.repairs.empty")} description={repairs.length ? t("mobile.repairs.tryFilter") : t("mobile.repairs.emptyDescription")} />}
@@ -389,6 +389,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 18,
+    marginTop: 10,
     marginBottom: 8,
     backgroundColor: theme.warningSoft,
     paddingVertical: 10,
@@ -419,6 +420,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     alignItems: "center",
     gap: 8,
     paddingHorizontal: 18,
+    marginTop: 8,
     marginBottom: 10,
   },
   selectAllText: {

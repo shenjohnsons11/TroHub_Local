@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Building2, KeyRound, LoaderCircle, LogIn, ShieldCheck, UserPlus, ExternalLink, MapPin } from "lucide-react";
+import { Building2, KeyRound, LoaderCircle, LogIn, ShieldCheck, UserPlus, ExternalLink, MapPin, Eye, EyeOff, CheckCircle2, AlertCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +38,9 @@ export default function LoginPage() {
   const [mode, setMode] = useState<"login" | "register">("login");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [idCard, setIdCard] = useState("");
@@ -105,6 +108,8 @@ export default function LoginPage() {
       if (!/^\S+@\S+\.\S+$/.test(email.trim())) throw new Error(t("auth.invalidEmail"));
       if (idCardClean.length !== 12) throw new Error("CCCD phải gồm đúng 12 chữ số.");
       if (password.length < 6) throw new Error(t("auth.invalidPassword"));
+      if (!confirmPassword) throw new Error("Vui lòng nhập lại mật khẩu.");
+      if (password !== confirmPassword) throw new Error(t("auth.passwordMismatch") || "Mật khẩu xác nhận không khớp.");
       if (!propertyAddress.trim()) throw new Error(t("auth.propertyAddress"));
       if (!inviteCode.trim()) throw new Error(t("auth.invalidInvite"));
 
@@ -127,6 +132,9 @@ export default function LoginPage() {
       setMode("login");
       setIdentifier(phoneClean);
       setPassword("");
+      setConfirmPassword("");
+      setShowPassword(false);
+      setShowConfirmPassword(false);
       setInviteCode("");
     } catch (err) {
       setError(err instanceof Error ? err.message : t("auth.registerFailed"));
@@ -242,18 +250,29 @@ export default function LoginPage() {
                   <Label htmlFor="password" className="font-bold text-foreground">
                     {t("auth.password")}
                   </Label>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    autoComplete="current-password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    placeholder={t("auth.passwordPlaceholder")}
-                    required
-                    minLength={6}
-                    className="h-12 rounded-[16px] bg-background px-4 text-base placeholder:text-muted-foreground focus-visible:ring-primary"
-                  />
+                  <div className="relative flex items-center">
+                    <Input
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="current-password"
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      placeholder={t("auth.passwordPlaceholder")}
+                      required
+                      minLength={6}
+                      className="h-12 rounded-[16px] bg-background px-4 pr-12 text-base placeholder:text-muted-foreground focus-visible:ring-primary"
+                    />
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 text-muted-foreground hover:text-foreground transition-colors p-1"
+                    >
+                      {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2 py-1">
@@ -359,17 +378,73 @@ export default function LoginPage() {
                   <Label htmlFor="password" className="font-bold text-foreground">
                     {t("auth.password")} *
                   </Label>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    placeholder={t("auth.passwordPlaceholderMin")}
-                    required
-                    minLength={6}
-                    className="h-12 rounded-[16px] bg-background px-4 text-base placeholder:text-muted-foreground focus-visible:ring-primary"
-                  />
+                  <div className="relative flex items-center">
+                    <Input
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      placeholder={t("auth.passwordPlaceholderMin")}
+                      required
+                      minLength={6}
+                      className="h-12 rounded-[16px] bg-background px-4 pr-12 text-base placeholder:text-muted-foreground focus-visible:ring-primary"
+                    />
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 text-muted-foreground hover:text-foreground transition-colors p-1"
+                    >
+                      {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword" className="font-bold text-foreground">
+                    {t("auth.confirmPassword") || "Nhập lại mật khẩu"} *
+                  </Label>
+                  <div className="relative flex items-center">
+                    <Input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(event) => setConfirmPassword(event.target.value)}
+                      placeholder="Nhập lại mật khẩu của bạn"
+                      required
+                      minLength={6}
+                      className={`h-12 rounded-[16px] bg-background px-4 pr-12 text-base placeholder:text-muted-foreground focus-visible:ring-primary ${
+                        confirmPassword
+                          ? confirmPassword === password
+                            ? "border-emerald-500/80 focus-visible:ring-emerald-500"
+                            : "border-destructive/80 focus-visible:ring-destructive"
+                          : ""
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      aria-label={showConfirmPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3.5 text-muted-foreground hover:text-foreground transition-colors p-1"
+                    >
+                      {showConfirmPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+                    </button>
+                  </div>
+                  {confirmPassword ? (
+                    confirmPassword === password ? (
+                      <p className="text-xs font-bold text-emerald-500 flex items-center gap-1.5 mt-1">
+                        <CheckCircle2 className="size-3.5" /> Mật khẩu trùng khớp
+                      </p>
+                    ) : (
+                      <p className="text-xs font-bold text-destructive flex items-center gap-1.5 mt-1">
+                        <AlertCircle className="size-3.5" /> Mật khẩu xác nhận không khớp
+                      </p>
+                    )
+                  ) : null}
                 </div>
 
                 <div className="space-y-2">
@@ -460,7 +535,7 @@ export default function LoginPage() {
 
                 <Button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || (Boolean(confirmPassword && confirmPassword !== password))}
                   className="h-12 w-full rounded-[16px] bg-primary text-base font-extrabold text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_25%,transparent)] transition-transform hover:bg-primary/90 active:scale-[0.98]"
                 >
                   {loading ? (
@@ -476,7 +551,13 @@ export default function LoginPage() {
               {mode === "login" ? (
                 <button
                   type="button"
-                  onClick={() => { setMode("register"); setError(""); }}
+                  onClick={() => {
+                    setMode("register");
+                    setError("");
+                    setConfirmPassword("");
+                    setShowPassword(false);
+                    setShowConfirmPassword(false);
+                  }}
                   className="text-sm font-bold text-primary hover:underline"
                 >
                   Đăng ký tài khoản quản trị mới
@@ -484,7 +565,13 @@ export default function LoginPage() {
               ) : (
                 <button
                   type="button"
-                  onClick={() => { setMode("login"); setError(""); }}
+                  onClick={() => {
+                    setMode("login");
+                    setError("");
+                    setConfirmPassword("");
+                    setShowPassword(false);
+                    setShowConfirmPassword(false);
+                  }}
                   className="text-sm font-bold text-primary hover:underline"
                 >
                   Đã có tài khoản? Đăng nhập ngay

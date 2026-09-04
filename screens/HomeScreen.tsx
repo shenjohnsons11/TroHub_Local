@@ -23,6 +23,7 @@ import { UserProfile } from "../types/UserProfile";
 import TenantRoomSwitcher from "../components/TenantRoomSwitcher";
 import FeatureIconBox from "../components/ui/FeatureIconBox";
 import { FEATURE_ICONS, SYSTEM_ICONS } from "../constants/featureIcons";
+import TenantBentoDashboard from "../components/TenantBentoDashboard";
 
 type Props = {
   profile?: UserProfile | null;
@@ -117,234 +118,121 @@ export default function HomeScreen({ profile, refreshKey, selectedRoomId, onRoom
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.brandRow}>
-        <TroHubLogo compact />
+      <View style={styles.heading}>
+        <View style={{ flex: 1, paddingRight: 10 }}>
+          <View style={{ marginBottom: 6 }}>
+            <TroHubLogo compact />
+          </View>
+          <AppText style={[styles.eyebrow, { color: theme.primary }]}>
+            {t("mobile.home.hero")}
+          </AppText>
+          <AppText style={[styles.title, { color: theme.text }]}>
+            {getRealtimeGreeting().slice(0, -1)}, {userDisplayName}
+          </AppText>
+          <AppText style={[styles.subtitle, { color: theme.muted }]}>
+            {homeData.room === t("mobile.home.noRoom")
+              ? t("mobile.home.noRoom")
+              : t("mobile.home.room", { room: homeData.room })}
+          </AppText>
+          <MiniCalendarPopover />
+        </View>
+
         <View style={styles.headerActions}>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={t("common.search") || "Tìm kiếm"}
             onPress={onOpenSearch || (() => onNavigate("ai_chat"))}
-            style={styles.bellButton}
+            style={[styles.headerBtn, { backgroundColor: theme.surfaceElevated, shadowColor: theme.text }]}
           >
-            <Ionicons name="search-outline" size={22} color={theme.text} />
+            <Ionicons name="search-outline" size={21} color={theme.text} />
           </Pressable>
+
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={t("mobile.home.unread", { count: unreadCount })}
             onPress={() => onNavigate("notifications")}
-            style={styles.bellButton}
+            style={[styles.headerBtn, { backgroundColor: theme.surfaceElevated, shadowColor: theme.text }]}
           >
-
-            <Ionicons name="notifications-outline" size={24} color={theme.text} />
+            <Ionicons name="notifications-outline" size={22} color={theme.text} />
             {unreadCount > 0 && (
-              <View style={styles.bellBadge}>
-                <AppText style={styles.bellBadgeText}>{unreadCount > 99 ? '99+' : unreadCount}</AppText>
+              <View style={[styles.unreadBadge, { backgroundColor: theme.danger }]}>
+                <AppText style={styles.unreadBadgeText}>
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </AppText>
               </View>
             )}
           </Pressable>
+
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={t("nav.settings")}
             onPress={() => onNavigate("account" as any)}
-            style={styles.bellButton}
+            style={[styles.headerBtn, { backgroundColor: theme.surfaceElevated, shadowColor: theme.text }]}
           >
             <Ionicons name="settings-outline" size={22} color={theme.text} />
           </Pressable>
         </View>
       </View>
 
-      <TenantRoomSwitcher contracts={homeData.contracts} selectedRoomId={selectedRoomId || homeData.activeContract?.roomId} onSelect={onRoomSelect} />
-
-      <View style={styles.homeHero}>
-        <AppText style={styles.heroKicker}>{t("mobile.home.hero")}</AppText>
-        <AppText style={styles.heroTitle}>
-          {getRealtimeGreeting().slice(0, -1)}, {userDisplayName}
-        </AppText>
-        <AppText style={styles.heroRoom}>
-          {homeData.room === t("mobile.home.noRoom") ? t("mobile.home.noRoom") : t("mobile.home.room", { room: homeData.room })}
-        </AppText>
-        <MiniCalendarPopover />
-      </View>
-
-      <TenantPersonalTimeline
-        myInvoices={homeData.myInvoices}
-        activeContract={homeData.activeContract}
-        activeRepairs={homeData.activeRepairs}
-        onNavigate={onNavigate}
+      <TenantRoomSwitcher
+        contracts={homeData.contracts}
+        selectedRoomId={selectedRoomId || homeData.activeContract?.roomId}
+        onSelect={onRoomSelect}
       />
 
-      {homeData.propertyAddress ? (
-        <AnimatedEntry delay={40}>
-          <Card style={styles.propertyCard}>
-            <View style={styles.propertyHeader}>
-              <View style={styles.propertyHeaderLeft}>
-                <FeatureIconBox token={FEATURE_ICONS.rooms} size={20} />
-                <View style={styles.propertyTitleWrap}>
-                  <AppText style={[styles.propertyKicker, { color: theme.muted }]}>
-                    {t("dashboard.property").replace("🏠 ", "").toUpperCase()}
-                  </AppText>
-                  <AppText style={[styles.propertyTitle, { color: theme.text }]}>
-                    {t("dashboard.property").replace("🏠 ", "")}
-                  </AppText>
-                </View>
-              </View>
-              <View style={[styles.verifiedBadge, { backgroundColor: theme.positiveSoft }]}>
-                <Ionicons name="checkmark-circle" size={13} color={theme.positive} />
-                <AppText style={[styles.verifiedText, { color: theme.positive }]}>Đang thuê</AppText>
-              </View>
-            </View>
-
-            <View style={[styles.addressBox, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
-              <Ionicons name="location" size={17} color={theme.primary} style={styles.locationPin} />
-              <AppText style={[styles.propertyAddress, { color: theme.text }]}>
-                {homeData.propertyAddress}
+      {invites.length > 0 &&
+        invites.map((invite, index) => (
+          <AnimatedEntry delay={index * 40} key={invite.id}>
+            <Card style={[styles.amountCard, styles.inviteCard]}>
+              <AppText
+                style={[styles.cardTitle, { color: theme.warningForeground, marginBottom: 4 }]}
+              >
+                {t("mobile.home.inviteTitle")}
               </AppText>
-            </View>
-
-            <Pressable
-              accessibilityRole="button"
-              onPress={openPropertyMap}
-              style={({ pressed }) => [
-                styles.mapButton,
-                {
-                  backgroundColor: theme.primarySoft,
-                  borderColor: theme.border,
-                  opacity: pressed ? 0.8 : 1,
-                },
-              ]}
-            >
-              <View style={styles.mapButtonInner}>
-                <Ionicons name="map" size={16} color={theme.primary} />
-                <AppText style={[styles.mapButtonText, { color: theme.primary }]}>
-                  {t("common.openMaps")}
-                </AppText>
+              <AppText style={styles.smallText}>
+                {t("mobile.home.inviteMessage", {
+                  name: invite.landlordName,
+                  phone: formatPhone(invite.phone),
+                })}
+              </AppText>
+              <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
+                <Pressable
+                  style={[styles.primaryButton, { flex: 1, marginTop: 0 }]}
+                  onPress={() => handleAcceptInvite(invite.id)}
+                >
+                  <Ionicons name="checkmark-circle-outline" size={18} color={theme.background} />
+                  <AppText style={styles.primaryText}>{t("mobile.home.accept")}</AppText>
+                </Pressable>
+                <Pressable
+                  style={[styles.secondaryButton, { flex: 1 }]}
+                  onPress={() => handleRejectInvite(invite.id)}
+                >
+                  <Ionicons name="close-circle-outline" size={18} color={theme.warningForeground} />
+                  <AppText style={[styles.primaryText, { color: theme.warningForeground }]}>
+                    {t("mobile.home.reject")}
+                  </AppText>
+                </Pressable>
               </View>
-              <Ionicons name="open-outline" size={16} color={theme.primary} />
-            </Pressable>
-          </Card>
-        </AnimatedEntry>
-      ) : null}
+            </Card>
+          </AnimatedEntry>
+        ))}
 
-      {invites.length > 0 && invites.map((invite, index) => (
-        <AnimatedEntry delay={index * 40} key={invite.id}>
-        <Card style={[styles.amountCard, styles.inviteCard]}>
-          <AppText style={[styles.cardTitle, { color: theme.warningForeground, marginBottom: 4 }]}>{t("mobile.home.inviteTitle")}</AppText>
-          <AppText style={styles.smallText}>
-            {t("mobile.home.inviteMessage", { name: invite.landlordName, phone: formatPhone(invite.phone) })}
-          </AppText>
-          <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
-            <Pressable
-              style={[styles.primaryButton, { flex: 1, marginTop: 0 }]}
-              onPress={() => handleAcceptInvite(invite.id)}
-            >
-              <Ionicons name="checkmark-circle-outline" size={18} color={theme.background} />
-              <AppText style={styles.primaryText}>{t("mobile.home.accept")}</AppText>
-            </Pressable>
-            <Pressable
-              style={[styles.secondaryButton, { flex: 1 }]}
-              onPress={() => handleRejectInvite(invite.id)}
-            >
-              <Ionicons name="close-circle-outline" size={18} color={theme.warningForeground} />
-              <AppText style={[styles.primaryText, { color: theme.warningForeground }]}>{t("mobile.home.reject")}</AppText>
-            </Pressable>
-          </View>
-        </Card>
-        </AnimatedEntry>
-      ))}
+      {/* Bento Grid Dashboard for Tenant (Matching Landlord Bento Grid Layout) */}
+      <TenantBentoDashboard
+        homeData={homeData}
+        onNavigate={onNavigate}
+        openPropertyMap={openPropertyMap}
+      />
 
-      <AnimatedEntry delay={60}>
-        <GradientHero
-          actionIcon="card-outline"
-          actionLabel={isUnpaid ? t("mobile.home.pay") : undefined}
-          detail={t("mobile.home.due", { status: homeData.paymentStatusText, date: homeData.dueDate })}
-          icon="wallet-outline"
-          iconToken={FEATURE_ICONS.invoiceCreate}
-          label={t("mobile.home.invoice")}
-          onAction={isUnpaid ? () => onNavigate("invoice") : undefined}
-          value={formatCurrency(unformatNumber(homeData.totalAmount))}
+      {/* Mốc sự kiện quan trọng */}
+      <View style={{ marginTop: 12 }}>
+        <TenantPersonalTimeline
+          myInvoices={homeData.myInvoices}
+          activeContract={homeData.activeContract}
+          activeRepairs={homeData.activeRepairs}
+          onNavigate={onNavigate}
         />
-      </AnimatedEntry>
-
-      <AnimatedEntry delay={80}>
-        <Pressable onPress={() => onNavigate("ai_chat")}>
-          <Card style={[styles.infoCard, { backgroundColor: "#064E3B", borderColor: "rgba(16, 185, 129, 0.4)", borderWidth: 1 }]}>
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <FeatureIconBox token={SYSTEM_ICONS.aiAssistant} size={20} />
-                <View>
-                  <AppText style={[styles.cardTitle, { color: "#ECFDF5", marginBottom: 2 }]}>{t("mobile.home.aiTitle")}</AppText>
-                  <AppText style={{ fontSize: 12, color: "#A7F3D0" }}>{t("mobile.home.aiDescription")}</AppText>
-                </View>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#34D399" />
-            </View>
-          </Card>
-        </Pressable>
-      </AnimatedEntry>
-
-      <SectionHeader title={t("mobile.home.utilities")} />
-
-      <AnimatedEntry delay={100} style={styles.quickGrid}>
-        <Pressable
-          style={styles.quickItem}
-          onPress={() => onNavigate("contract")}
-        >
-          <Card style={styles.quickCard}>
-            <FeatureIconBox token={FEATURE_ICONS.contractCreate} />
-            <AppText style={styles.quickText}>{t("mobile.home.contract")}</AppText>
-          </Card>
-        </Pressable>
-
-        <Pressable
-          style={styles.quickItem}
-          onPress={() => onNavigate("utility")}
-        >
-          <Card style={styles.quickCard}>
-            <FeatureIconBox token={FEATURE_ICONS.utility} />
-            <AppText style={styles.quickText}>{t("mobile.home.utility")}</AppText>
-          </Card>
-        </Pressable>
-
-        <Pressable
-          style={styles.quickItem}
-          onPress={() => onNavigate("repair")}
-        >
-          <Card style={styles.quickCard}>
-            <FeatureIconBox token={FEATURE_ICONS.repairs} />
-            <AppText style={styles.quickText}>{t("mobile.home.repair")}</AppText>
-          </Card>
-        </Pressable>
-
-        <Pressable
-          style={styles.quickItem}
-          onPress={() => onNavigate("invoice")}
-        >
-          <Card style={styles.quickCard}>
-            <FeatureIconBox token={FEATURE_ICONS.invoiceCreate} />
-            <AppText style={styles.quickText}>{t("mobile.home.invoiceShort")}</AppText>
-          </Card>
-        </Pressable>
-      </AnimatedEntry>
-
-      <AnimatedEntry delay={140}>
-      <Pressable onPress={() => onNavigate("contract")}>
-        <Card style={styles.infoCard}>
-          <AppText style={styles.cardTitle}>{t("mobile.home.contract")}</AppText>
-          <AppText style={styles.cardDesc}>
-            {t("mobile.home.expires", { date: homeData.contractEndDate })}
-          </AppText>
-        </Card>
-      </Pressable>
-      </AnimatedEntry>
-
-      <AnimatedEntry delay={180}>
-      <Pressable onPress={() => onNavigate("repair")}>
-        <Card style={styles.infoCard}>
-          <AppText style={styles.cardTitle}>{homeData.recentRepair.title}</AppText>
-          <StatusBadge label={homeData.recentRepair.status || t("mobile.home.processing")} />
-        </Card>
-      </Pressable>
-      </AnimatedEntry>
+      </View>
     </ScrollView>
   );
 }
@@ -374,17 +262,61 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSh
     alignItems: "center",
     marginBottom: 18,
   },
-  brandRow: {
+  heading: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
-    marginBottom: 26,
-    marginTop: 10,
+    marginBottom: 16,
+    marginTop: 6,
+  },
+  eyebrow: {
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1.3,
+  },
+  title: {
+    fontSize: 26,
+    lineHeight: 32,
+    fontWeight: "900",
+    marginTop: 4,
+  },
+  subtitle: {
+    fontSize: 13,
+    marginTop: 4,
+    fontWeight: "700",
   },
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 10,
+  },
+  headerBtn: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 16,
+    elevation: 4,
+    shadowOpacity: 0.12,
+    shadowOffset: { width: 0, height: 5 },
+    shadowRadius: 10,
+    position: "relative",
+  },
+  unreadBadge: {
+    position: "absolute",
+    top: -3,
+    right: -3,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 4,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  unreadBadgeText: {
+    color: "#ffffff",
+    fontSize: 9,
+    fontWeight: "900",
   },
   bellButton: {
     width: 44,
@@ -409,14 +341,6 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSh
     color: "#fff",
     fontSize: 9,
     fontWeight: "bold",
-  },
-  homeHero: {
-    minHeight: 176,
-    justifyContent: "flex-end",
-    marginBottom: 18,
-    padding: 22,
-    borderRadius: 16,
-    backgroundColor: theme.primarySoft,
   },
   propertyCard: {
     marginBottom: 18,

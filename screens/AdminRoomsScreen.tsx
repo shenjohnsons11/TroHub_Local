@@ -294,7 +294,7 @@ export default function AdminRoomsScreen({ params, onNavigate }: Props) {
                 <Ionicons name={FEATURE_ICONS.scanMeter.icon} size={16} color={FEATURE_ICONS.scanMeter.color} />
               </View>
               <AppText style={[styles.toolBtnText, { color: theme.text }]}>
-                {t("dashboard.scanMeter") || "Quét điện nước AI"} 📸
+                {t("dashboard.scanMeter") || "Quét điện nước AI"}
               </AppText>
             </Pressable>
           </View>

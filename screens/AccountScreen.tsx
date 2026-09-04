@@ -20,6 +20,7 @@ import { useTranslation, useLanguage } from "../contexts/LanguageContext";
 import { UserProfile } from "../types/UserProfile";
 import ChangePasswordModal from "../components/ChangePasswordModal";
 import SignaturePadModal from "../components/SignaturePadModal";
+import TermsAndPoliciesModal from "../components/TermsAndPoliciesModal";
 import AutomationStatusCard from "../components/AutomationStatusCard";
 import QuickAutoBillingModal from "../components/QuickAutoBillingModal";
 import { adminService, BillingAutomationPolicy } from "../services/adminService";
@@ -61,6 +62,7 @@ export default function AccountScreen({
   const { language, setLanguage } = useLanguage();
 
   const [passwordVisible, setPasswordVisible] = useState(false);
+  const [termsModalVisible, setTermsModalVisible] = useState(false);
   const [editProfileVisible, setEditProfileVisible] = useState(false);
   const [signaturePadVisible, setSignaturePadVisible] = useState(false);
   const [signatureDetailVisible, setSignatureDetailVisible] = useState(false);
@@ -579,13 +581,18 @@ export default function AccountScreen({
           </View>
 
           <View style={[styles.bentoListCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
-            <View style={styles.bentoListRow}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t("account.terms")}
+              style={({ pressed }) => [styles.bentoListRow, pressed && { opacity: 0.75 }]}
+              onPress={() => setTermsModalVisible(true)}
+            >
               <View style={styles.rowLeft}>
                 <FeatureIconBox token={SYSTEM_ICONS.security} size={18} accessibilityLabel={t("account.terms")} />
                 <AppText style={[styles.rowLabel, { color: theme.text }]}>{t("account.terms")}</AppText>
               </View>
               <Ionicons name="chevron-forward" size={18} color={theme.muted} />
-            </View>
+            </Pressable>
 
             <View style={[styles.rowDivider, { backgroundColor: theme.border }]} />
 
@@ -595,7 +602,7 @@ export default function AccountScreen({
                 <AppText style={[styles.rowLabel, { color: theme.text }]}>{t("account.appVersion")}</AppText>
               </View>
               <AppText style={[styles.versionPill, { color: theme.primary, backgroundColor: theme.primarySoft }]}>
-                v2.0 AI Edition
+                v2.0.0 (TroHub)
               </AppText>
             </View>
           </View>
@@ -841,6 +848,9 @@ export default function AccountScreen({
 
       {/* Change Password Modal */}
       <ChangePasswordModal visible={passwordVisible} onClose={() => setPasswordVisible(false)} />
+
+      {/* Terms and Policies Modal */}
+      <TermsAndPoliciesModal visible={termsModalVisible} onClose={() => setTermsModalVisible(false)} />
     </>
   );
 }

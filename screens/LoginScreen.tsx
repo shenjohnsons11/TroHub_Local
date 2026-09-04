@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { KeyboardAvoidingView, ImageBackground, Platform, ScrollView, StyleSheet, View, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import { AppText, AppTextInput } from "@/components/ui/typography";
 import ForgotPasswordModal from "../components/ForgotPasswordModal";
 import TroHubLogo from "../components/TroHubLogo";
@@ -35,6 +36,10 @@ export default function LoginScreen({ onLogin }: Props) {
   
   const [identifierError, setIdentifierError] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [confirmPasswordError, setConfirmPasswordError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [fullNameError, setFullNameError] = useState("");
   const [emailError, setEmailError] = useState("");
   const [idCardError, setIdCardError] = useState("");
@@ -98,6 +103,16 @@ export default function LoginScreen({ onLogin }: Props) {
       setPasswordError("");
     }
 
+    if (!confirmPassword) {
+      setConfirmPasswordError("Vui lòng nhập lại mật khẩu");
+      isValid = false;
+    } else if (confirmPassword !== password) {
+      setConfirmPasswordError(t("auth.passwordMismatch") || "Mật khẩu xác nhận không khớp");
+      isValid = false;
+    } else {
+      setConfirmPasswordError("");
+    }
+
     return isValid;
   };
 
@@ -134,6 +149,9 @@ export default function LoginScreen({ onLogin }: Props) {
         notification.success("Đăng ký tài khoản Người thuê thành công!");
         setMode("login");
         setPassword("");
+        setConfirmPassword("");
+        setShowPassword(false);
+        setShowConfirmPassword(false);
       } catch (error) {
         notification.error(error instanceof Error ? error.message : "Đăng ký tài khoản thất bại.");
       } finally {
@@ -311,34 +329,117 @@ export default function LoginScreen({ onLogin }: Props) {
 
               <View style={styles.field}>
                 <AppText style={[styles.label, { color: theme.text }]}>{t("auth.password")}</AppText>
-                <AppTextInput
-                  accessibilityLabel={t("auth.password")}
-                  editable={!isSubmitting}
-                  onChangeText={(value) => {
-                    setPassword(value);
-                    if (passwordError) setPasswordError("");
-                  }}
-                  onSubmitEditing={handleSubmit}
-                  placeholder="Nhập mật khẩu"
-                  placeholderTextColor={theme.muted}
-                  secureTextEntry
-                  style={[
-                    styles.input,
-                    {
-                      backgroundColor: theme.surfaceElevated,
-                      borderColor: passwordError ? theme.danger : theme.border,
-                      color: theme.text,
-                    },
-                  ]}
-                  value={password}
-                />
+                <View style={styles.passwordInputContainer}>
+                  <AppTextInput
+                    accessibilityLabel={t("auth.password")}
+                    editable={!isSubmitting}
+                    onChangeText={(value) => {
+                      setPassword(value);
+                      if (passwordError) setPasswordError("");
+                      if (confirmPassword && confirmPasswordError && value === confirmPassword) {
+                        setConfirmPasswordError("");
+                      }
+                    }}
+                    onSubmitEditing={mode === "login" ? handleSubmit : undefined}
+                    placeholder="Nhập mật khẩu"
+                    placeholderTextColor={theme.muted}
+                    secureTextEntry={!showPassword}
+                    style={[
+                      styles.input,
+                      styles.passwordInput,
+                      {
+                        backgroundColor: theme.surfaceElevated,
+                        borderColor: passwordError ? theme.danger : theme.border,
+                        color: theme.text,
+                      },
+                    ]}
+                    value={password}
+                  />
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                    hitSlop={8}
+                    onPress={() => setShowPassword((prev) => !prev)}
+                    style={styles.eyeToggleBtn}
+                  >
+                    <Ionicons
+                      name={showPassword ? "eye-off-outline" : "eye-outline"}
+                      size={20}
+                      color={theme.muted}
+                    />
+                  </Pressable>
+                </View>
                 {passwordError ? (
                   <AppText style={[styles.errorText, { color: theme.danger }]}>{passwordError}</AppText>
                 ) : null}
               </View>
 
+              {mode === "register" && (
+                <View style={styles.field}>
+                  <AppText style={[styles.label, { color: theme.text }]}>Nhập lại mật khẩu</AppText>
+                  <View style={styles.passwordInputContainer}>
+                    <AppTextInput
+                      accessibilityLabel="Nhập lại mật khẩu"
+                      editable={!isSubmitting}
+                      onChangeText={(value) => {
+                        setConfirmPassword(value);
+                        if (confirmPasswordError) setConfirmPasswordError("");
+                      }}
+                      onSubmitEditing={handleSubmit}
+                      placeholder="Xác nhận lại mật khẩu"
+                      placeholderTextColor={theme.muted}
+                      secureTextEntry={!showConfirmPassword}
+                      style={[
+                        styles.input,
+                        styles.passwordInput,
+                        {
+                          backgroundColor: theme.surfaceElevated,
+                          borderColor: confirmPasswordError
+                            ? theme.danger
+                            : confirmPassword && confirmPassword === password
+                            ? theme.positive
+                            : theme.border,
+                          color: theme.text,
+                        },
+                      ]}
+                      value={confirmPassword}
+                    />
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={showConfirmPassword ? "Ẩn mật khẩu xác nhận" : "Hiện mật khẩu xác nhận"}
+                      hitSlop={8}
+                      onPress={() => setShowConfirmPassword((prev) => !prev)}
+                      style={styles.eyeToggleBtn}
+                    >
+                      <Ionicons
+                        name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
+                        size={20}
+                        color={theme.muted}
+                      />
+                    </Pressable>
+                  </View>
+                  {confirmPasswordError ? (
+                    <AppText style={[styles.errorText, { color: theme.danger }]}>{confirmPasswordError}</AppText>
+                  ) : confirmPassword && confirmPassword === password ? (
+                    <View style={styles.matchFeedbackRow}>
+                      <Ionicons name="checkmark-circle" size={14} color={theme.positive} />
+                      <AppText style={[styles.matchFeedbackText, { color: theme.positive }]}>
+                        Mật khẩu trùng khớp
+                      </AppText>
+                    </View>
+                  ) : confirmPassword && confirmPassword !== password ? (
+                    <View style={styles.matchFeedbackRow}>
+                      <Ionicons name="alert-circle" size={14} color={theme.danger} />
+                      <AppText style={[styles.matchFeedbackText, { color: theme.danger }]}>
+                        Mật khẩu chưa khớp
+                      </AppText>
+                    </View>
+                  ) : null}
+                </View>
+              )}
+
               <AppButton
-                disabled={isSubmitting}
+                disabled={isSubmitting || (mode === "register" && !!confirmPassword && confirmPassword !== password)}
                 icon={mode === "login" ? "key-outline" : "person-add-outline"}
                 loading={isSubmitting}
                 onPress={handleSubmit}
@@ -361,11 +462,23 @@ export default function LoginScreen({ onLogin }: Props) {
 
               <View style={styles.toggleContainer}>
                 {mode === "login" ? (
-                  <Pressable onPress={() => { setMode("register"); setIdentifierError(""); setPasswordError(""); }}>
+                  <Pressable onPress={() => {
+                    setMode("register");
+                    setIdentifierError("");
+                    setPasswordError("");
+                    setConfirmPassword("");
+                    setConfirmPasswordError("");
+                  }}>
                     <AppText style={[styles.toggleText, { color: theme.primary }]}>{t("auth.tenantRegister")}</AppText>
                   </Pressable>
                 ) : (
-                  <Pressable onPress={() => { setMode("login"); setIdentifierError(""); setPasswordError(""); }}>
+                  <Pressable onPress={() => {
+                    setMode("login");
+                    setIdentifierError("");
+                    setPasswordError("");
+                    setConfirmPassword("");
+                    setConfirmPasswordError("");
+                  }}>
                     <AppText style={[styles.toggleText, { color: theme.primary }]}>{t("auth.backToLogin")}</AppText>
                   </Pressable>
                 )}
@@ -561,5 +674,31 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILIES.regular,
     fontSize: 14,
     fontWeight: "800",
+  },
+  passwordInputContainer: {
+    position: "relative",
+    justifyContent: "center",
+  },
+  passwordInput: {
+    paddingRight: 48,
+  },
+  eyeToggleBtn: {
+    position: "absolute",
+    right: 14,
+    height: 52,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 2,
+  },
+  matchFeedbackRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 6,
+  },
+  matchFeedbackText: {
+    fontFamily: FONT_FAMILIES.regular,
+    fontSize: 12,
+    fontWeight: "600",
   },
 });

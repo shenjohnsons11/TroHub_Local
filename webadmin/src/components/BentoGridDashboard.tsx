@@ -106,7 +106,7 @@ export function BentoGridDashboard({ stats }: Props) {
           <Link href="/dashboard/invoices" className="group flex items-center gap-3.5 rounded-2xl bg-gradient-to-r from-pink-500/10 to-pink-500/5 p-4 transition-all hover:scale-[1.02] border border-pink-500/20">
             <FeatureIconBox token={FEATURE_ICONS.scanMeter} size="md" />
             <div>
-              <p className="font-black text-foreground">Quét điện nước AI 📸</p>
+              <p className="font-black text-foreground">Quét điện nước AI</p>
               <p className="text-xs text-muted-foreground">Chụp camera tự chốt số</p>
             </div>
           </Link>
