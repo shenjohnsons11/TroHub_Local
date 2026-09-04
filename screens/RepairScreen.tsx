@@ -19,6 +19,8 @@ import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
 import { useTranslation } from "../contexts/LanguageContext";
 import TenantRoomSwitcher from "../components/TenantRoomSwitcher";
 import { Contract } from "../types/Contract";
+import FeatureIconBox from "../components/ui/FeatureIconBox";
+import { FEATURE_ICONS } from "../constants/featureIcons";
 
 type Props = { selectedRoomId?: string; onRoomSelect: (roomId: string) => void };
 
@@ -264,7 +266,10 @@ export default function RepairScreen({ selectedRoomId, onRoomSelect }: Props) {
 
       <AnimatedEntry>
       <Card style={styles.formCard}>
-        <AppText style={styles.sectionTitle}>{t("tenantRepair.new")}</AppText>
+        <View style={styles.sectionHeading}>
+          <FeatureIconBox token={FEATURE_ICONS.repairs} size={20} accessibilityLabel={t("tenantRepair.new")} />
+          <AppText style={styles.sectionTitle}>{t("tenantRepair.new")}</AppText>
+        </View>
 
         <AppText style={styles.label}>{t("tenantRepair.room")}</AppText>
         {rooms.length <= 1 ? (
@@ -512,6 +517,12 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSh
     backgroundColor: theme.primarySoft,
     borderColor: "transparent",
     borderRadius: 24,
+  },
+  sectionHeading: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 4,
   },
   sectionTitle: {
     fontSize: 16,

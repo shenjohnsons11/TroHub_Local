@@ -8,6 +8,8 @@ import { authService } from "../services/authService";
 import { useAppTheme } from "../contexts/ThemeContext";
 import { AppText } from "./ui/typography";
 import { useTranslation } from "../contexts/LanguageContext";
+import FeatureIconBox from "./ui/FeatureIconBox";
+import { FEATURE_ICONS } from "../constants/featureIcons";
 
 type Props = {
   visible: boolean;
@@ -41,11 +43,14 @@ export default function ContractViewerModal({ visible, contractId, onClose, useM
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Header bar tránh hoàn toàn Dynamic Island & Status Bar */}
       <View style={[styles.header, { borderBottomColor: theme.border, paddingTop: topPadding + 6 }]}>
-        <View style={{ flex: 1, paddingRight: 12 }}>
+        <View style={{ flex: 1, paddingRight: 12, flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <FeatureIconBox token={FEATURE_ICONS.contracts} size={20} accessibilityLabel="Xem trước toàn bộ hợp đồng" />
+          <View style={{ flex: 1 }}>
           <AppText style={[styles.title, { color: theme.text }]}>Xem trước toàn bộ hợp đồng</AppText>
           <AppText style={[styles.subtitle, { color: theme.muted }]}>
             Toàn văn điều khoản pháp lý & chữ ký số TroHub
           </AppText>
+          </View>
         </View>
         <Pressable
           accessibilityRole="button"

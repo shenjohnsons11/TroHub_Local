@@ -19,6 +19,8 @@ import { useTranslation } from "../contexts/LanguageContext";
 import { formatCurrency, formatMeterReading, unformatNumber } from "../utils/formatters";
 import ContractViewerModal from "../components/ContractViewerModal";
 import TenantRoomSwitcher from "../components/TenantRoomSwitcher";
+import FeatureIconBox from "../components/ui/FeatureIconBox";
+import { FEATURE_ICONS } from "../constants/featureIcons";
 
 
 
@@ -245,6 +247,7 @@ export default function ContractScreen({ onNavigate, params, selectedRoomId, onR
           <GradientHero
             detail={`${getStatusLabel(contract.status, t)} · ${contract.startDate} — ${contract.endDate}`}
             icon="document-text-outline"
+            iconToken={FEATURE_ICONS.contracts}
             label={t("tenantContract.hero", { room: contract.room })}
             value={formatCurrency(unformatNumber(contract.rentFee))}
           />
@@ -448,7 +451,7 @@ export default function ContractScreen({ onNavigate, params, selectedRoomId, onR
                 style={[styles.downloadBtn, { backgroundColor: theme.primarySoft, borderColor: theme.primary }]}
                 onPress={() => setViewerContractId(contract.id)}
               >
-                <Ionicons name="document-text" size={17} color={theme.primary} />
+                <FeatureIconBox token={FEATURE_ICONS.contracts} size={17} />
                 <AppText style={[styles.downloadBtnText, { color: theme.primary, fontWeight: "700" }]}>
                   Xem trước toàn bộ hợp đồng
                 </AppText>

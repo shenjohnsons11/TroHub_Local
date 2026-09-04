@@ -12,6 +12,8 @@ import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
 import AddTenantModal from "../components/AddTenantModal";
 import { formatCCCD, formatPhone, unformatDigits } from "../utils/formatters";
 import { useTranslation } from "../contexts/LanguageContext";
+import FeatureIconBox from "../components/ui/FeatureIconBox";
+import { FEATURE_ICONS } from "../constants/featureIcons";
 
 export default function AdminTenantsScreen() {
   const { theme } = useAppTheme();
@@ -77,6 +79,7 @@ export default function AdminTenantsScreen() {
           <>
             <GradientHero
               icon="people-outline"
+              iconToken={FEATURE_ICONS.tenants}
               label={t("mobile.tenants.heroLabel")}
               value={t("mobile.tenants.heroValue", { count: tenants.length })}
               detail={t("mobile.tenants.heroDetail", { count: vacantRooms.length })}

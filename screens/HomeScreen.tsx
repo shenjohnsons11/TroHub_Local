@@ -21,6 +21,8 @@ import { useLanguage } from "../contexts/LanguageContext";
 
 import { UserProfile } from "../types/UserProfile";
 import TenantRoomSwitcher from "../components/TenantRoomSwitcher";
+import FeatureIconBox from "../components/ui/FeatureIconBox";
+import { FEATURE_ICONS, SYSTEM_ICONS } from "../constants/featureIcons";
 
 type Props = {
   profile?: UserProfile | null;
@@ -215,6 +217,7 @@ export default function HomeScreen({ profile, refreshKey, selectedRoomId, onRoom
           actionLabel={isUnpaid ? t("mobile.home.pay") : undefined}
           detail={t("mobile.home.due", { status: homeData.paymentStatusText, date: homeData.dueDate })}
           icon="wallet-outline"
+          iconToken={FEATURE_ICONS.invoiceCreate}
           label={t("mobile.home.invoice")}
           onAction={isUnpaid ? () => onNavigate("invoice") : undefined}
           value={formatCurrency(unformatNumber(homeData.totalAmount))}
@@ -226,9 +229,7 @@ export default function HomeScreen({ profile, refreshKey, selectedRoomId, onRoom
           <Card style={[styles.infoCard, { backgroundColor: "#064E3B", borderColor: "rgba(16, 185, 129, 0.4)", borderWidth: 1 }]}>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: "#042F2E", alignItems: "center", justifyContent: "center" }}>
-                  <Ionicons name="sparkles" size={20} color="#34D399" />
-                </View>
+                <FeatureIconBox token={SYSTEM_ICONS.aiAssistant} size={20} />
                 <View>
                   <AppText style={[styles.cardTitle, { color: "#ECFDF5", marginBottom: 2 }]}>{t("mobile.home.aiTitle")}</AppText>
                   <AppText style={{ fontSize: 12, color: "#A7F3D0" }}>{t("mobile.home.aiDescription")}</AppText>
@@ -248,7 +249,7 @@ export default function HomeScreen({ profile, refreshKey, selectedRoomId, onRoom
           onPress={() => onNavigate("contract")}
         >
           <Card style={styles.quickCard}>
-            <View style={styles.quickIcon}><Ionicons name="document-text-outline" size={22} color={theme.primary} /></View>
+            <FeatureIconBox token={FEATURE_ICONS.contractCreate} />
             <AppText style={styles.quickText}>{t("mobile.home.contract")}</AppText>
           </Card>
         </Pressable>
@@ -258,7 +259,7 @@ export default function HomeScreen({ profile, refreshKey, selectedRoomId, onRoom
           onPress={() => onNavigate("utility")}
         >
           <Card style={styles.quickCard}>
-            <View style={styles.quickIcon}><Ionicons name="water-outline" size={22} color={theme.primary} /></View>
+            <FeatureIconBox token={FEATURE_ICONS.utility} />
             <AppText style={styles.quickText}>{t("mobile.home.utility")}</AppText>
           </Card>
         </Pressable>
@@ -268,7 +269,7 @@ export default function HomeScreen({ profile, refreshKey, selectedRoomId, onRoom
           onPress={() => onNavigate("repair")}
         >
           <Card style={styles.quickCard}>
-            <View style={styles.quickIcon}><Ionicons name="construct-outline" size={22} color={theme.primary} /></View>
+            <FeatureIconBox token={FEATURE_ICONS.repairs} />
             <AppText style={styles.quickText}>{t("mobile.home.repair")}</AppText>
           </Card>
         </Pressable>
@@ -278,7 +279,7 @@ export default function HomeScreen({ profile, refreshKey, selectedRoomId, onRoom
           onPress={() => onNavigate("invoice")}
         >
           <Card style={styles.quickCard}>
-            <View style={styles.quickIcon}><Ionicons name="receipt-outline" size={22} color={theme.primary} /></View>
+            <FeatureIconBox token={FEATURE_ICONS.invoiceCreate} />
             <AppText style={styles.quickText}>{t("mobile.home.invoiceShort")}</AppText>
           </Card>
         </Pressable>
@@ -496,14 +497,6 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSh
     backgroundColor: theme.surface,
     borderColor: "transparent",
     borderRadius: 20,
-  },
-  quickIcon: {
-    alignItems: "center",
-    backgroundColor: theme.primarySoft,
-    borderRadius: 14,
-    height: 40,
-    justifyContent: "center",
-    width: 40,
   },
   quickText: {
     fontSize: 11,

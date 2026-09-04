@@ -14,6 +14,8 @@ import { fetchAPI } from "@/lib/api";
 import { formatCurrency, formatNumberInput, unformatNumber } from "@/lib/formatters";
 import { getNotificationMessage } from "@/lib/notification-messages";
 import { useLanguage } from "@/components/language-provider";
+import { PageHeader } from "@/components/calm-ops/page-header";
+import { FEATURE_ICONS } from "@/constants/feature-icons";
 
 type Service = {
   _id: string;
@@ -211,18 +213,17 @@ export default function ServicesPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-sm font-bold uppercase tracking-[0.12em] text-primary">{t("nav.overview")}</p>
-          <h1 className="mt-1 text-3xl font-black tracking-[-0.025em] text-foreground">{t("nav.services")}</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            {t("dashboard.property")}
-          </p>
-        </div>
-        <Button onClick={openCreate} className="h-10 rounded-full font-bold px-4">
-          <Plus className="mr-2 h-4 w-4" /> {t("common.add")}
-        </Button>
-      </header>
+      <PageHeader
+        eyebrow={t("nav.overview")}
+        title={t("nav.services")}
+        description={t("dashboard.property")}
+        iconToken={FEATURE_ICONS.services}
+        action={
+          <Button onClick={openCreate} className="h-10 rounded-full font-bold px-4">
+            <Plus className="mr-2 h-4 w-4" /> {t("common.add")}
+          </Button>
+        }
+      />
 
       <section className="overflow-hidden rounded-[14px] border border-border bg-card">
         <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">

@@ -23,6 +23,7 @@ import { PageHeader } from "@/components/calm-ops/page-header";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useNotification } from "@/hooks/use-notification";
 import { fetchAPI } from "@/lib/api";
+import { FEATURE_ICONS } from "@/constants/feature-icons";
 import { getNotificationMessage } from "@/lib/notification-messages";
 import { formatPhone, unformatDigits } from "@/lib/formatters";
 import { useLanguage } from "@/components/language-provider";
@@ -243,6 +244,7 @@ export default function AccountSettingsPage() {
         eyebrow={t("nav.settings")}
         title={t("settings.account.title")}
         description={t("settings.account.subtitle")}
+        iconToken={FEATURE_ICONS.tenants}
       />
 
       <div className="grid gap-6 md:grid-cols-[200px_1fr]">

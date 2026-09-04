@@ -17,6 +17,7 @@ import { formatCurrency, formatNumberInput, unformatNumber } from "@/lib/formatt
 import { useLanguage } from "@/components/language-provider";
 import { getStatusText } from "@/lib/status-helpers";
 import { Skeleton } from "@/components/ui/skeleton";
+import { FEATURE_ICONS } from "@/constants/feature-icons";
 
 export default function RoomsPage() {
   const notification = useNotification();
@@ -180,7 +181,12 @@ export default function RoomsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow={t("nav.overview")} title={t("rooms.title")} description={t("rooms.subtitle")} />
+      <PageHeader
+        eyebrow={t("nav.overview")}
+        title={t("rooms.title")}
+        description={t("rooms.subtitle")}
+        iconToken={FEATURE_ICONS.rooms}
+      />
       <section className="calm-surface flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />

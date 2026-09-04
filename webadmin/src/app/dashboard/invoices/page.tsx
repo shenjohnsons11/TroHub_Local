@@ -19,6 +19,7 @@ import { InvoiceDetailDrawer } from "@/components/invoice-detail-drawer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getStatusText } from "@/lib/status-helpers";
 import { AutomationStatusCard } from "@/components/AutomationStatusCard";
+import { FEATURE_ICONS } from "@/constants/feature-icons";
 
 type InvoiceMeterField = "electricity" | "water";
 
@@ -401,7 +402,12 @@ export default function InvoicesPage() {
   return (
     <div className="space-y-6">
       <input ref={meterImageInputRef} className="sr-only" type="file" accept="image/*" capture="environment" onChange={handleMeterImage} tabIndex={-1} />
-      <PageHeader eyebrow={t("nav.overview")} title={t("invoices.title")} description={t("invoices.subtitle")} />
+      <PageHeader
+        eyebrow={t("nav.overview")}
+        title={t("invoices.title")}
+        description={t("invoices.subtitle")}
+        iconToken={FEATURE_ICONS.invoices}
+      />
       <AutomationStatusCard />
       <section className="calm-surface flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:max-w-sm">

@@ -16,10 +16,15 @@ import MeterCameraModal from "../components/MeterCameraModal";
 import { formatCurrency, formatMeterReading, formatNumberInput, parseMeterReading, unformatNumber } from "../utils/formatters";
 import { useLanguage } from "../contexts/LanguageContext";
 import { applyMeterReading, type MeterType } from "../utils/meterReadingTarget";
+import FeatureIconBox from "../components/ui/FeatureIconBox";
+import { FEATURE_ICONS } from "../constants/featureIcons";
 
-type Props = { params?: any };
+type Props = {
+  params?: any;
+  onNavigate?: (tab: any, params?: any) => void;
+};
 
-export default function AdminRoomsScreen({ params }: Props) {
+export default function AdminRoomsScreen({ params, onNavigate }: Props) {
   const { theme } = useAppTheme();
   const { t } = useLanguage();
   const notification = useNotification();
@@ -236,7 +241,7 @@ export default function AdminRoomsScreen({ params }: Props) {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={<>
-          <GradientHero icon="home-outline" label={t("mobile.rooms.heroLabel")} value={t("mobile.rooms.heroValue", { count: rooms.length })} detail={t("mobile.rooms.heroDetail", { count: rooms.filter((room) => room.status === 0).length })} />
+          <GradientHero icon="home-outline" iconToken={FEATURE_ICONS.rooms} label={t("mobile.rooms.heroLabel")} value={t("mobile.rooms.heroValue", { count: rooms.length })} detail={t("mobile.rooms.heroDetail", { count: rooms.filter((room) => room.status === 0).length })} />
           <View style={styles.headingRow}>
             <View style={{ flex: 1, paddingRight: 8 }}>
               <AppText style={[styles.title, { color: theme.text }]}>{t("mobile.rooms.listTitle")}</AppText>
@@ -254,11 +259,43 @@ export default function AdminRoomsScreen({ params }: Props) {
           <View style={styles.subActionBar}>
             <Pressable
               accessibilityRole="button"
-              style={[styles.toolBtn, { backgroundColor: theme.primarySoft }]}
-              onPress={() => { setMeterReadings({}); setMeterModalVisible(true); }}
+              style={[
+                styles.toolBtn,
+                {
+                  backgroundColor: FEATURE_ICONS.utility.bg,
+                  borderColor: `${FEATURE_ICONS.utility.color}35`,
+                },
+              ]}
+              onPress={() => {
+                setMeterReadings({});
+                setMeterModalVisible(true);
+              }}
             >
-              <Ionicons name="flash-outline" size={16} color={theme.primary} />
-              <AppText style={[styles.toolBtnText, { color: theme.primary }]}>{t("mobile.rooms.recordMeter")}</AppText>
+              <View style={styles.toolIconBox}>
+                <Ionicons name="flash" size={16} color={FEATURE_ICONS.utility.color} />
+              </View>
+              <AppText style={[styles.toolBtnText, { color: theme.text }]}>
+                {t("mobile.rooms.recordMeter") || "Chốt điện nước"}
+              </AppText>
+            </Pressable>
+
+            <Pressable
+              accessibilityRole="button"
+              style={[
+                styles.toolBtn,
+                {
+                  backgroundColor: FEATURE_ICONS.scanMeter.bg,
+                  borderColor: `${FEATURE_ICONS.scanMeter.color}35`,
+                },
+              ]}
+              onPress={() => onNavigate?.("scan_meter")}
+            >
+              <View style={styles.toolIconBox}>
+                <Ionicons name={FEATURE_ICONS.scanMeter.icon} size={16} color={FEATURE_ICONS.scanMeter.color} />
+              </View>
+              <AppText style={[styles.toolBtnText, { color: theme.text }]}>
+                {t("dashboard.scanMeter") || "Quét điện nước AI"} 📸
+              </AppText>
             </Pressable>
           </View>
           <View style={styles.filters}>
@@ -301,13 +338,16 @@ export default function AdminRoomsScreen({ params }: Props) {
                     <View style={[styles.card, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, shadowColor: theme.text }]}>
                       {/* Top row: PHÒNG / roomCode / statusBadge / settings */}
                       <View style={styles.cardHeader}>
-                        <View>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                          <FeatureIconBox token={FEATURE_ICONS.rooms} accessibilityLabel={t("common.room")} />
+                          <View>
                           <AppText style={[styles.roomEyebrow, { color: theme.muted }]}>
                             {t("common.room")?.toUpperCase() || "PHÒNG"}
                           </AppText>
                           <AppText style={[styles.roomCode, { color: theme.text }]}>
                             {item.roomCode}
                           </AppText>
+                          </View>
                         </View>
                         <View style={styles.badgeRow}>
                           <View style={[styles.badge, { backgroundColor: background as string }]}>
@@ -671,16 +711,28 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
     marginTop: 8,
-    marginBottom: 4,
+    marginBottom: 10,
   },
   toolBtn: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 999,
-    gap: 6,
-    minHeight: 40,
+    gap: 8,
+    minHeight: 48,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  toolIconBox: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.58)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.78)",
   },
   toolBtnText: {
     fontSize: 13,

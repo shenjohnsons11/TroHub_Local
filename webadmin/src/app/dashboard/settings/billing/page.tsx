@@ -12,6 +12,8 @@ import { fetchAPI } from "@/lib/api";
 import { formatCurrency } from "@/lib/formatters";
 import { getNotificationMessage } from "@/lib/notification-messages";
 import { useLanguage } from "@/components/language-provider";
+import { PageHeader } from "@/components/calm-ops/page-header";
+import { FEATURE_ICONS } from "@/constants/feature-icons";
 
 const DAYS = Array.from({ length: 31 }, (_, index) => index + 1);
 
@@ -86,7 +88,12 @@ export default function BillingPolicyPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <header><p className="text-sm font-bold text-primary">{t("nav.settings")}</p><h1 className="mt-1 text-3xl font-black tracking-[-0.025em] text-balance">{t("settings.billing.title")}</h1><p className="mt-2 max-w-2xl text-muted-foreground">{t("settings.billing.subtitle")}</p></header>
+      <PageHeader
+        eyebrow={t("nav.settings")}
+        title={t("settings.billing.title")}
+        description={t("settings.billing.subtitle")}
+        iconToken={FEATURE_ICONS.invoices}
+      />
       <form onSubmit={submit} className="space-y-5">
         <div className="grid gap-5 lg:grid-cols-2">
           <Card>

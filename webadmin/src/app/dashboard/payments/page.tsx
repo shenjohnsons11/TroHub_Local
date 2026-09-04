@@ -18,6 +18,8 @@ import { useNotification } from "@/hooks/use-notification";
 import { fetchAPI } from "@/lib/api";
 import { getNotificationMessage } from "@/lib/notification-messages";
 import { formatCurrency } from "@/lib/formatters";
+import { PageHeader } from "@/components/calm-ops/page-header";
+import { FEATURE_ICONS } from "@/constants/feature-icons";
 import {
   formatPaidAt,
   paidDateKey,
@@ -83,21 +85,18 @@ export default function PaymentsPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div>
-          <p className="text-sm font-bold text-primary">{t("nav.overview")}</p>
-          <h1 className="mt-1 text-3xl font-black tracking-[-0.025em]">
-            {t("payments.title")}
-          </h1>
-          <p className="mt-2 text-muted-foreground">
-            {t("payments.subtitle")}
-          </p>
-        </div>
-        <Button variant="outline" onClick={load} disabled={loading}>
-          <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-          {t("common.loading")}
-        </Button>
-      </header>
+      <PageHeader
+        eyebrow={t("nav.overview")}
+        title={t("payments.title")}
+        description={t("payments.subtitle")}
+        iconToken={FEATURE_ICONS.payments}
+        action={
+          <Button variant="outline" onClick={load} disabled={loading}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            {t("common.loading")}
+          </Button>
+        }
+      />
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="border-t-2 border-primary bg-card px-5 py-4">

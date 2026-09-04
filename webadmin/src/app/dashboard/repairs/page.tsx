@@ -17,6 +17,7 @@ import { getNotificationMessage } from "@/lib/notification-messages";
 import { formatCurrency } from "@/lib/formatters";
 import { useLanguage } from "@/components/language-provider";
 import { getStatusText } from "@/lib/status-helpers";
+import { FEATURE_ICONS } from "@/constants/feature-icons";
 
 export default function RepairsPage() {
   const { t } = useLanguage();
@@ -85,7 +86,12 @@ export default function RepairsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow={t("nav.overview")} title={t("repairs.title")} description={t("repairs.subtitle")} />
+      <PageHeader
+        eyebrow={t("nav.overview")}
+        title={t("repairs.title")}
+        description={t("repairs.subtitle")}
+        iconToken={FEATURE_ICONS.repairs}
+      />
       <section className="calm-surface overflow-hidden">
         <div className="flex flex-col gap-3 bg-muted/35 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative w-full sm:max-w-sm">

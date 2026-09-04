@@ -6,6 +6,8 @@ import { useAppTheme } from "../contexts/ThemeContext";
 import AnimatedEntry from "./ui/AnimatedEntry";
 import { formatCurrency } from "../utils/formatters";
 import { LinearGradient } from "expo-linear-gradient";
+import FeatureIconBox from "./ui/FeatureIconBox";
+import { FEATURE_ICONS, SYSTEM_ICONS } from "../constants/featureIcons";
 
 type Props = {
   stats: any;
@@ -123,9 +125,7 @@ export default function BentoGridDashboard({ stats, onNavigate }: Props) {
               style={styles.actionPill}
               onPress={() => onNavigate && onNavigate("scan_meter")}
             >
-              <LinearGradient colors={["#10B981", "#059669"]} style={styles.pillIconBg}>
-                <Ionicons name="camera" size={16} color="#FFFFFF" />
-              </LinearGradient>
+              <FeatureIconBox token={FEATURE_ICONS.scanMeter} size={16} />
               <AppText style={styles.pillText}>Quét AI 📸</AppText>
             </Pressable>
 
@@ -133,9 +133,7 @@ export default function BentoGridDashboard({ stats, onNavigate }: Props) {
               style={styles.actionPill}
               onPress={() => onNavigate && onNavigate("invoice_bulk")}
             >
-              <LinearGradient colors={["#3B82F6", "#2563EB"]} style={styles.pillIconBg}>
-                <Ionicons name="document-text" size={16} color="#FFFFFF" />
-              </LinearGradient>
+              <FeatureIconBox token={FEATURE_ICONS.invoiceBulk} size={16} />
               <AppText style={styles.pillText}>Tạo Hóa Đơn</AppText>
             </Pressable>
 
@@ -143,9 +141,7 @@ export default function BentoGridDashboard({ stats, onNavigate }: Props) {
               style={styles.actionPill}
               onPress={() => onNavigate && onNavigate("ai_chat")}
             >
-              <LinearGradient colors={["#F59E0B", "#D97706"]} style={styles.pillIconBg}>
-                <Ionicons name="sparkles" size={16} color="#FFFFFF" />
-              </LinearGradient>
+              <FeatureIconBox token={SYSTEM_ICONS.aiAssistant} size={16} />
               <AppText style={styles.pillText}>Trợ Lý AI 🤖</AppText>
             </Pressable>
           </View>
@@ -161,9 +157,7 @@ export default function BentoGridDashboard({ stats, onNavigate }: Props) {
             onPress={() => onNavigate && onNavigate("invoice")}
           >
             <View style={styles.cardIconHeader}>
-              <View style={[styles.iconTile, { backgroundColor: "rgba(239, 68, 68, 0.15)" }]}>
-                <Ionicons name="wallet" size={18} color="#EF4444" />
-              </View>
+              <FeatureIconBox token={FEATURE_ICONS.invoiceCreate} size={18} />
               {outstandingDebt > 0 && <View style={styles.redGlowDot} />}
             </View>
 
@@ -185,9 +179,7 @@ export default function BentoGridDashboard({ stats, onNavigate }: Props) {
             onPress={() => onNavigate && onNavigate("repair")}
           >
             <View style={styles.cardIconHeader}>
-              <View style={[styles.iconTile, { backgroundColor: "rgba(245, 158, 11, 0.15)" }]}>
-                <Ionicons name="construct" size={18} color="#F59E0B" />
-              </View>
+              <FeatureIconBox token={FEATURE_ICONS.repairs} size={18} />
               {pendingRepairs > 0 && <View style={styles.amberGlowDot} />}
             </View>
 
@@ -307,12 +299,14 @@ function createStyles(theme: any) {
       flexDirection: "row",
       alignItems: "center",
       gap: 8,
-      backgroundColor: theme.background,
+      backgroundColor: "rgba(255, 255, 255, 0.08)",
       borderRadius: 16,
-      padding: 10,
+      borderWidth: 1,
+      borderColor: "rgba(255, 255, 255, 0.12)",
+      paddingVertical: 10,
+      paddingHorizontal: 10,
     },
-    pillIconBg: { width: 28, height: 28, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-    pillText: { color: theme.text, fontSize: 11, fontWeight: "800", flexShrink: 1 },
+    pillText: { color: "#ECFDF5", fontSize: 12, fontWeight: "800", flexShrink: 1 },
 
     bottomRow: { flexDirection: "row", gap: 12 },
     halfBentoWrap: { flex: 1 },
@@ -329,7 +323,6 @@ function createStyles(theme: any) {
       elevation: 3,
     },
     cardIconHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-    iconTile: { width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center" },
     redGlowDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#EF4444" },
     amberGlowDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#F59E0B" },
     squareCardTitle: { color: theme.muted, fontSize: 11, fontWeight: "800" },

@@ -16,6 +16,8 @@ import QuickAutoBillingModal from "../components/QuickAutoBillingModal";
 import { Invoice } from "../types/Invoice";
 import { formatCurrency, formatMeterReading, formatNumberInput, parseMeterReading, unformatNumber } from "../utils/formatters";
 import { useTranslation } from "../contexts/LanguageContext";
+import FeatureIconBox from "../components/ui/FeatureIconBox";
+import { FEATURE_ICONS } from "../constants/featureIcons";
 type Props = {
   params?: any;
   onNavigate?: (tab: any, params?: any) => void;
@@ -390,8 +392,7 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <>
-            <AutomationStatusCard policy={automationPolicy} onConfigure={() => setAutomationVisible(true)} />
-            <GradientHero icon="receipt-outline" label={t("mobile.invoices.heroLabel")} value={formatCurrency(invoices.reduce((sum, invoice) => sum + (invoice.totalAmount || 0), 0))} detail={t("mobile.invoices.heroDetail", { count: invoices.length })} />
+            <GradientHero icon="receipt-outline" iconToken={FEATURE_ICONS.invoiceCreate} label={t("mobile.invoices.heroLabel")} value={formatCurrency(invoices.reduce((sum, invoice) => sum + (invoice.totalAmount || 0), 0))} detail={t("mobile.invoices.heroDetail", { count: invoices.length })} />
 
             <View style={styles.headingRow}>
               <View style={{ flex: 1, paddingRight: 8 }}>
@@ -409,13 +410,17 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
             </View>
 
             <View style={styles.subActionBar}>
-              <Pressable accessibilityRole="button" style={[styles.toolBtn, { backgroundColor: theme.primarySoft }]} onPress={() => onNavigate && onNavigate('scan_meter')}>
-                <Ionicons name="camera-outline" size={16} color={theme.primary} />
-                <AppText style={[styles.toolBtnText, { color: theme.primary }]}>{t("dashboard.scanMeter") || "Quét điện nước AI"}</AppText>
+              <Pressable accessibilityRole="button" style={[styles.toolBtn, { backgroundColor: FEATURE_ICONS.scanMeter.bg, borderColor: `${FEATURE_ICONS.scanMeter.color}30` }]} onPress={() => onNavigate && onNavigate('scan_meter')}>
+                <View style={styles.toolIconBox}>
+                  <Ionicons name={FEATURE_ICONS.scanMeter.icon} size={16} color={FEATURE_ICONS.scanMeter.color} />
+                </View>
+                <AppText style={[styles.toolBtnText, { color: theme.text }]}>{t("dashboard.scanMeter") || "Quét điện nước AI"}</AppText>
               </Pressable>
-              <Pressable accessibilityRole="button" style={[styles.toolBtn, { backgroundColor: theme.primarySoft }]} onPress={() => onNavigate && onNavigate('invoice_bulk')}>
-                <Ionicons name="documents-outline" size={16} color={theme.primary} />
-                <AppText style={[styles.toolBtnText, { color: theme.primary }]}>{t("mobile.invoices.bulk") || "Hàng loạt"}</AppText>
+              <Pressable accessibilityRole="button" style={[styles.toolBtn, { backgroundColor: FEATURE_ICONS.invoiceBulk.bg, borderColor: `${FEATURE_ICONS.invoiceBulk.color}30` }]} onPress={() => onNavigate && onNavigate('invoice_bulk')}>
+                <View style={styles.toolIconBox}>
+                  <Ionicons name={FEATURE_ICONS.invoiceBulk.icon} size={16} color={FEATURE_ICONS.invoiceBulk.color} />
+                </View>
+                <AppText style={[styles.toolBtnText, { color: theme.text }]}>{t("mobile.invoices.bulk") || "Hàng loạt"}</AppText>
               </Pressable>
             </View>
 
@@ -446,11 +451,14 @@ export default function AdminInvoicesScreen({ params, onNavigate }: Props) {
                 <AppText style={[styles.filterText, filter === "paid" && styles.filterTextActive]}>{t("mobile.invoices.paidFilter")}</AppText>
               </Pressable>
             </View>
+
+            <AutomationStatusCard policy={automationPolicy} onConfigure={() => setAutomationVisible(true)} />
           </>
         }
         ListEmptyComponent={<IllustratedEmptyState kind="invoice" title={invoices.length ? t("mobile.invoices.noMatch") : t("mobile.invoices.empty")} description={invoices.length ? t("mobile.invoices.tryFilter") : t("mobile.invoices.emptyDescription")} actionLabel={invoices.length ? undefined : t("mobile.invoices.createInvoice")} actionIcon="receipt-outline" onAction={invoices.length ? undefined : () => setModalVisible(true)} />}
         renderItem={({ item, index }) => (
           <AnimatedEntry delay={Math.min(index, 6) * 45}><Pressable accessibilityRole="button" accessibilityLabel={t("mobile.invoices.open", { roomCode: item.room || item.contractId?.roomId?.roomCode || "N/A" })} style={styles.invoiceCard} onPress={() => handleOpenDetail(item)}>
+            <FeatureIconBox token={FEATURE_ICONS.invoiceCreate} style={{ marginRight: 10 }} accessibilityLabel={t("mobile.invoices.open", { roomCode: item.room || item.contractId?.roomId?.roomCode || "N/A" })} />
             <View style={styles.invoiceInfo}>
               <AppText style={styles.invoicePeriod}>{t("mobile.invoices.code", { code: item.invoiceCode || `HD-${(item.period || "").replace("/", "")}-${(item._id || "000").substring(0, 3).toUpperCase()}` })}</AppText>
               <AppText style={styles.roomCode}>{t("mobile.invoices.room", { roomCode: item.roomCode || item.room || item.contractId?.roomId?.roomCode || "N/A" })}</AppText>
@@ -753,13 +761,25 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginBottom: 10,
   },
   toolBtn: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 999,
-    gap: 6,
-    minHeight: 40,
+    gap: 8,
+    minHeight: 48,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  toolIconBox: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.58)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.78)",
   },
   toolBtnText: {
     fontSize: 13,

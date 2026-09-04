@@ -21,6 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { MeterLedger } from "@/components/meter-ledger";
 import { useLanguage } from "@/components/language-provider";
 import { getStatusText } from "@/lib/status-helpers";
+import { FEATURE_ICONS } from "@/constants/feature-icons";
 
 type CheckoutPreview = {
   roomCode: string;
@@ -381,7 +382,12 @@ export default function ContractsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow={t("nav.overview")} title={t("contracts.title")} description={t("contracts.subtitle")} />
+      <PageHeader
+        eyebrow={t("nav.overview")}
+        title={t("contracts.title")}
+        description={t("contracts.subtitle")}
+        iconToken={FEATURE_ICONS.contracts}
+      />
       <section className="calm-surface flex flex-col gap-4 p-4">
         <div className="flex flex-wrap gap-2">
           {[

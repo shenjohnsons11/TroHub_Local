@@ -20,6 +20,8 @@ import { getStatusText } from "../utils/statusHelpers";
 import { contractService } from "../services/contractService";
 import { Contract } from "../types/Contract";
 import TenantRoomSwitcher from "../components/TenantRoomSwitcher";
+import FeatureIconBox from "../components/ui/FeatureIconBox";
+import { FEATURE_ICONS } from "../constants/featureIcons";
 
 type FilterType = "all" | "unpaid" | "paid";
 
@@ -120,6 +122,7 @@ export default function InvoiceScreen({ params, selectedRoomId, onRoomSelect }: 
                   actionLabel={t("invoices.payNow")}
                   detail={`${unpaidInvoices.length} ${t("invoices.status.unpaid")}`}
                   icon="receipt-outline"
+                  iconToken={FEATURE_ICONS.invoiceCreate}
                   label={t("invoices.totalAmount")}
                   onAction={() => openPaymentModal(unpaidInvoices[0])}
                   value={formatCurrency(unpaidTotal)}
@@ -164,10 +167,13 @@ export default function InvoiceScreen({ params, selectedRoomId, onRoomSelect }: 
               <Card style={styles.invoiceCard}>
                 <AppText style={styles.amount}>{formatCurrency(invoice.numericAmount ?? unformatNumber(invoice.amount))}</AppText>
                 <View style={styles.cardHeader}>
-                  <View style={styles.cardLeft}>
+                  <View style={styles.cardLeftWrap}>
+                    <FeatureIconBox token={FEATURE_ICONS.invoiceCreate} accessibilityLabel={t("invoices.title")} />
+                    <View style={styles.cardLeft}>
                     <AppText style={{ fontSize: 11, fontWeight: '800', color: theme.primary, marginBottom: 2 }}>{t("invoices.code", { code: invoice.id || "" })}</AppText>
                     <AppText style={styles.cardTitle}>{t("invoices.period")}: {invoice.month}</AppText>
                     <AppText style={styles.room}>{t("common.room")} {invoice.room}</AppText>
+                    </View>
                   </View>
                   <View style={[styles.statusBadge, isClosed ? styles.paidBadge : styles.unpaidBadge]}>
                     <AppText style={[styles.statusText, isClosed ? styles.paidText : styles.unpaidText]}>
@@ -282,6 +288,13 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>["theme"]) => StyleSh
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
+  },
+  cardLeftWrap: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingRight: 8,
   },
   cardLeft: {
     flex: 1,

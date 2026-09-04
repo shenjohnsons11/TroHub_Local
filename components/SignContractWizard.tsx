@@ -19,6 +19,8 @@ import AppButton from "./ui/AppButton";
 import ContractViewerModal from "./ContractViewerModal";
 import { formatCurrency, formatMeterReading, unformatNumber } from "../utils/formatters";
 import { useTranslation } from "../contexts/LanguageContext";
+import FeatureIconBox from "./ui/FeatureIconBox";
+import { FEATURE_ICONS } from "../constants/featureIcons";
 
 type Props = {
   visible: boolean;
@@ -285,7 +287,7 @@ export default function SignContractWizard({ visible, contract, onClose, onSign 
               style={[styles.previewPdfBtn, { backgroundColor: theme.primarySoft, borderColor: theme.primary }]}
               onPress={() => setPreviewVisible(true)}
             >
-              <Ionicons name="document-text" size={20} color={theme.primary} />
+              <FeatureIconBox token={FEATURE_ICONS.contracts} size={20} />
               <AppText style={[styles.previewPdfText, { color: theme.primary, fontWeight: "800" }]}>
                 📄 Xem trước toàn bộ hợp đồng
               </AppText>
@@ -306,7 +308,7 @@ export default function SignContractWizard({ visible, contract, onClose, onSign 
               style={[styles.previewPdfBtn, { backgroundColor: theme.primarySoft, borderColor: theme.primary, marginBottom: 14 }]}
               onPress={() => setPreviewVisible(true)}
             >
-              <Ionicons name="document-text" size={20} color={theme.primary} />
+              <FeatureIconBox token={FEATURE_ICONS.contracts} size={20} />
               <AppText style={[styles.previewPdfText, { color: theme.primary, fontWeight: "800" }]}>
                 📄 Xem trước toàn bộ hợp đồng (đã có chữ ký Bên A)
               </AppText>
