@@ -1,19 +1,68 @@
-const express = require('express');
+const express = require("express");
+
 const router = express.Router();
-const repairController = require('../controllers/repairController');
-const { requireAdmin } = require('../middleware/requireAdmin');
-const { requireTenant } = require('../middleware/requireTenant');
 
-// [WEB] Lấy danh sách toàn bộ báo cáo sự cố
-router.get('/', requireAdmin, repairController.getAllRequests);
+const repairController =
+  require("../controllers/repairController");
 
-// [APP] Người thuê gửi báo cáo sự cố mới
-router.post('/', requireTenant, repairController.createRequest);
+const {
+  requireAdmin,
+} = require("../middleware/requireAdmin");
 
-// [WEB] Chủ trọ cập nhật trạng thái & ghi chú
-router.put('/:id', requireAdmin, repairController.updateRequestStatus);
+const {
+  requireTenant,
+} = require("../middleware/requireTenant");
 
-// Xóa yêu cầu sửa chữa (Admin)
-router.delete('/:id', requireAdmin, repairController.deleteRequest);
+/* =========================================================
+   NGƯỜI THUÊ
+========================================================= */
+
+// Lấy danh sách yêu cầu của chính người thuê
+router.get(
+  "/my",
+  requireTenant,
+  repairController.getMyRequests
+);
+
+// Người thuê tạo yêu cầu mới
+router.post(
+  "/",
+  requireTenant,
+  repairController.createRequest
+);
+
+// Người thuê chỉ được xóa yêu cầu của mình
+// khi yêu cầu còn ở trạng thái Chờ tiếp nhận
+router.delete(
+  "/my/:id",
+  requireTenant,
+  repairController.deleteMyRequest
+);
+
+/* =========================================================
+   CHỦ TRỌ
+========================================================= */
+
+// Chủ trọ lấy các yêu cầu thuộc phòng của mình
+router.get(
+  "/",
+  requireAdmin,
+  repairController.getAllRequests
+);
+
+// Chủ trọ cập nhật trạng thái,
+// lịch hẹn, ghi chú, chi phí...
+router.put(
+  "/:id",
+  requireAdmin,
+  repairController.updateRequestStatus
+);
+
+// Chủ trọ xóa
+router.delete(
+  "/:id",
+  requireAdmin,
+  repairController.deleteRequest
+);
 
 module.exports = router;
