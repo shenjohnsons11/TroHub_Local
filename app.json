@@ -7,7 +7,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "trohub",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "assetBundlePatterns": [
       "**/*",
       "node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/*.ttf"
@@ -20,7 +19,6 @@
         "NSSpeechRecognitionUsageDescription": "Cho phép TroHub chuyển giọng nói thành văn bản.",
         "NSMicrophoneUsageDescription": "Cho phép TroHub dùng micro để nhận diện giọng nói."
       }
-
     },
     "android": {
       "adaptiveIcon": {
@@ -29,7 +27,6 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.anonymous.TroHub",
       "permissions": [
@@ -71,7 +68,10 @@
         }
       ],
       "@react-native-community/datetimepicker",
-      "expo-notifications"
+      "expo-font",
+      "expo-image",
+      "expo-status-bar",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
