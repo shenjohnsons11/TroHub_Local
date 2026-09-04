@@ -21,6 +21,8 @@ import { adminService, AdminRoom } from "../services/adminService";
 import { ocrService } from "../services/ocrService";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
 import { useTranslation } from "../contexts/LanguageContext";
+import FeatureIconBox from "../components/ui/FeatureIconBox";
+import { FEATURE_ICONS } from "../constants/featureIcons";
 
 type Props = {
   onBack?: () => void;
@@ -227,7 +229,7 @@ export default function MeterScannerScreen({ onBack, onSuccess }: Props) {
         />
       ) : (
         <View style={styles.permissionContainer}>
-          <Ionicons name="camera-outline" size={64} color="#10B981" />
+          <FeatureIconBox token={FEATURE_ICONS.scanMeter} size={28} />
           <AppText style={styles.permissionTitle}>Quyền truy cập Camera</AppText>
           <AppText style={styles.permissionDesc}>
             Ứng dụng cần quyền Camera để chụp và nhận diện mặt đồng hồ điện nước qua AI Vision.

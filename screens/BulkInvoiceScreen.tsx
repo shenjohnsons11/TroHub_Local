@@ -20,8 +20,9 @@ import ProgressStepper from "../components/ui/ProgressStepper";
 import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
 import MeterCameraModal from "../components/MeterCameraModal";
 import { formatCurrency, formatMeterReading, formatNumberInput, parseMeterReading, unformatNumber } from "../utils/formatters";
-import { consumePendingAIAction } from "../utils/aiActions";
 import { useTranslation } from "../contexts/LanguageContext";
+import FeatureIconBox from "../components/ui/FeatureIconBox";
+import { FEATURE_ICONS } from "../constants/featureIcons";
 
 type IconName = React.ComponentProps<typeof Ionicons>["name"];
 
@@ -210,12 +211,14 @@ export default function BulkInvoiceScreen({ onNavigate }: Props) {
             <AnimatedEntry>
               <GradientHero
                 icon="receipt-outline"
+                iconToken={FEATURE_ICONS.invoiceBulk}
                 label={t("invoices.title")}
                 value={`${selectedCount}/${data.length} ${t("nav.rooms")}`}
                 detail={t("invoices.period")}
               />
             </AnimatedEntry>
             <View style={styles.sectionHeading}>
+              <FeatureIconBox token={FEATURE_ICONS.invoiceBulk} size={20} accessibilityLabel={t("invoices.title")} />
               <AppText style={styles.sectionTitle}>{t("invoices.recordMeter")}</AppText>
               <AppText style={styles.sectionSubtitle}>{t("dashboard.property")}</AppText>
             </View>
@@ -279,25 +282,68 @@ export default function BulkInvoiceScreen({ onNavigate }: Props) {
 
                   </View>
                   <View style={styles.inputRow}>
-                    <InvoiceField label={`${t("utilities.oldElec")} · ${formatMeterReading(item.electricityOld) || "0"} kWh`} icon="flash-outline" iconColor={theme.primary} styles={styles} accessory={<Pressable accessibilityRole="button" accessibilityLabel={`Scan ${item.room}`} disabled={!item.selected || submitting || item.electricityPrice <= 0} onPress={() => setScanTarget({ index, roomCode: item.room, meterType: "electricity" })} style={styles.scanInline}><Ionicons name="camera-outline" size={14} color={theme.primary} /><AppText style={styles.scanInlineText}>OCR</AppText></Pressable>}>
-                      <AppTextInput
-                        style={styles.input}
-                        placeholder="0"
-                        placeholderTextColor={theme.muted}
-                        keyboardType="decimal-pad"
-                        value={item.electricityNew !== undefined ? item.electricityNew : ""}
-                        onChangeText={(value) => handleInputChange(index, "electricityNew", value)}
-                      />
+                    <InvoiceField
+                      label={`${t("utilities.oldElec")} · ${formatMeterReading(item.electricityOld) || "0"} kWh`}
+                      icon="flash-outline"
+                      iconColor={theme.primary}
+                      styles={styles}
+                    >
+                      <View style={styles.meterInputShell}>
+                        <AppTextInput
+                          style={styles.meterInput}
+                          placeholder="0"
+                          placeholderTextColor={theme.muted}
+                          keyboardType="decimal-pad"
+                          value={item.electricityNew !== undefined ? String(item.electricityNew) : ""}
+                          onChangeText={(value) => handleInputChange(index, "electricityNew", value)}
+                          editable={item.selected && !submitting && item.electricityPrice > 0}
+                        />
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={`Scan ${item.room} electricity`}
+                          disabled={!item.selected || submitting || item.electricityPrice <= 0}
+                          onPress={() => setScanTarget({ index, roomCode: item.room, meterType: "electricity" })}
+                          style={[
+                            styles.scanBtn,
+                            (!item.selected || submitting || item.electricityPrice <= 0) && styles.scanBtnDisabled,
+                          ]}
+                        >
+                          <Ionicons name="camera-outline" size={13} color={theme.primary} />
+                          <AppText style={styles.scanBtnText}>OCR</AppText>
+                        </Pressable>
+                      </View>
                     </InvoiceField>
-                    <InvoiceField label={`${t("utilities.oldWater")} · ${formatMeterReading(item.waterOld) || "0"} m³`} icon="water-outline" iconColor={theme.primary} styles={styles} accessory={<Pressable accessibilityRole="button" accessibilityLabel={`Scan ${item.room}`} disabled={!item.selected || submitting || item.waterPrice <= 0} onPress={() => setScanTarget({ index, roomCode: item.room, meterType: "water" })} style={styles.scanInline}><Ionicons name="camera-outline" size={14} color={theme.primary} /><AppText style={styles.scanInlineText}>OCR</AppText></Pressable>}>
-                      <AppTextInput
-                        style={styles.input}
-                        placeholder="0"
-                        placeholderTextColor={theme.muted}
-                        keyboardType="decimal-pad"
-                        value={item.waterNew !== undefined ? item.waterNew : ""}
-                        onChangeText={(value) => handleInputChange(index, "waterNew", value)}
-                      />
+
+                    <InvoiceField
+                      label={`${t("utilities.oldWater")} · ${formatMeterReading(item.waterOld) || "0"} m³`}
+                      icon="water-outline"
+                      iconColor={theme.primary}
+                      styles={styles}
+                    >
+                      <View style={styles.meterInputShell}>
+                        <AppTextInput
+                          style={styles.meterInput}
+                          placeholder="0"
+                          placeholderTextColor={theme.muted}
+                          keyboardType="decimal-pad"
+                          value={item.waterNew !== undefined ? String(item.waterNew) : ""}
+                          onChangeText={(value) => handleInputChange(index, "waterNew", value)}
+                          editable={item.selected && !submitting && item.waterPrice > 0}
+                        />
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={`Scan ${item.room} water`}
+                          disabled={!item.selected || submitting || item.waterPrice <= 0}
+                          onPress={() => setScanTarget({ index, roomCode: item.room, meterType: "water" })}
+                          style={[
+                            styles.scanBtn,
+                            (!item.selected || submitting || item.waterPrice <= 0) && styles.scanBtnDisabled,
+                          ]}
+                        >
+                          <Ionicons name="camera-outline" size={13} color={theme.primary} />
+                          <AppText style={styles.scanBtnText}>OCR</AppText>
+                        </Pressable>
+                      </View>
                     </InvoiceField>
                   </View>
                 </View>
@@ -333,13 +379,14 @@ export default function BulkInvoiceScreen({ onNavigate }: Props) {
   );
 }
 
-function InvoiceField({ label, icon, iconColor, children, styles, accessory }: { label: string; icon?: IconName; iconColor: string; children: React.ReactNode; styles: any; accessory?: React.ReactNode }) {
+function InvoiceField({ label, icon, iconColor, children, styles }: { label: string; icon?: IconName; iconColor: string; children?: React.ReactNode; styles: any }) {
   return (
     <View style={styles.inputGroup}>
       <View style={styles.inputLabelRow}>
-        {icon ? <Ionicons name={icon} size={15} color={iconColor} /> : null}
-        <AppText style={styles.inputLabel}>{label}</AppText>
-        {accessory}
+        {icon ? <Ionicons name={icon} size={14} color={iconColor} /> : null}
+        <AppText style={styles.inputLabel} numberOfLines={1} ellipsizeMode="tail">
+          {label}
+        </AppText>
       </View>
       {children}
     </View>
@@ -372,13 +419,45 @@ function createStyles(theme: any) {
     totalLabel: { color: theme.muted, fontSize: 11, marginTop: 2, marginBottom: 16 },
     tintedSection: { padding: 14, borderRadius: 18, backgroundColor: theme.primarySoft, gap: 12 },
     inputRow: { flexDirection: "row", gap: 10 },
-    inputGroup: { flex: 1 },
+    inputGroup: { flex: 1, minWidth: 0 },
     inputLabelRow: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 6 },
-    inputLabel: { color: theme.muted, fontSize: 11, fontWeight: "800" },
-    input: { minHeight: 46, borderRadius: 15, paddingHorizontal: 12, backgroundColor: theme.surfaceElevated, color: theme.text, fontSize: 14 },
+    inputLabel: { flex: 1, color: theme.muted, fontSize: 11, fontWeight: "800" },
+    input: { minHeight: 46, borderRadius: 15, paddingHorizontal: 12, backgroundColor: theme.surfaceElevated, color: theme.text, fontSize: 14, fontWeight: "700" },
     noMeterText: { minHeight: 46, color: theme.muted, fontSize: 11, paddingTop: 14 },
-    scanInline: { marginLeft: "auto", minHeight: 44, flexDirection: "row", alignItems: "center", gap: 3, borderRadius: 8, paddingHorizontal: 8, backgroundColor: theme.surfaceElevated },
-    scanInlineText: { color: theme.primary, fontSize: 10, fontWeight: "900" },
+    meterInputShell: {
+      flexDirection: "row",
+      alignItems: "center",
+      minHeight: 46,
+      borderRadius: 15,
+      backgroundColor: theme.surfaceElevated,
+      paddingLeft: 12,
+      paddingRight: 6,
+    },
+    meterInput: {
+      flex: 1,
+      height: 46,
+      color: theme.text,
+      fontSize: 14,
+      fontWeight: "700",
+      padding: 0,
+    },
+    scanBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 3,
+      borderRadius: 9,
+      paddingHorizontal: 7,
+      paddingVertical: 6,
+      backgroundColor: theme.primarySoft,
+    },
+    scanBtnDisabled: {
+      opacity: 0.35,
+    },
+    scanBtnText: {
+      color: theme.primary,
+      fontSize: 10.5,
+      fontWeight: "900",
+    },
     footer: { padding: 14, paddingBottom: Platform.OS === "ios" ? 28 : 14, backgroundColor: theme.surface, shadowColor: theme.text, shadowOpacity: 0.1, shadowOffset: { width: 0, height: -5 }, shadowRadius: 14, elevation: 8 },
   });
 }

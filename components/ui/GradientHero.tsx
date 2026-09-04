@@ -3,9 +3,12 @@ import { LinearGradient } from "expo-linear-gradient";
 import { PropsWithChildren } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "@/components/ui/typography";
+import FeatureIconBox from "./FeatureIconBox";
+import type { FeatureIconToken } from "../../constants/featureIcons";
 
 type Props = PropsWithChildren<{
   icon: keyof typeof Ionicons.glyphMap;
+  iconToken?: FeatureIconToken;
   label: string;
   value: string;
   detail?: string;
@@ -16,6 +19,7 @@ type Props = PropsWithChildren<{
 
 export default function GradientHero({
   icon,
+  iconToken,
   label,
   value,
   detail,
@@ -26,9 +30,7 @@ export default function GradientHero({
 }: Props) {
   return (
     <LinearGradient colors={["#075E54", "#04100E"]} style={styles.hero}>
-      <View style={styles.iconTile}>
-        <Ionicons name={icon} size={23} color="#DDFBF0" />
-      </View>
+      {iconToken ? <FeatureIconBox token={iconToken} size={23} /> : <View style={styles.iconTile}><Ionicons name={icon} size={23} color="#DDFBF0" /></View>}
       <AppText style={styles.label}>{label}</AppText>
       <AppText adjustsFontSizeToFit numberOfLines={1} style={styles.value}>{value}</AppText>
       {detail ? <AppText style={styles.detail}>{detail}</AppText> : null}
@@ -59,10 +61,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "rgba(221,251,240,0.14)",
     borderRadius: 16,
-    height: 48,
+    height: 44,
     justifyContent: "center",
     marginBottom: 20,
-    width: 48,
+    width: 44,
   },
   label: { color: "#BFE8DA", fontSize: 12, fontWeight: "800", letterSpacing: 1 },
   value: { color: "#FFFFFF", fontSize: 34, fontWeight: "900", letterSpacing: -1, marginTop: 6 },

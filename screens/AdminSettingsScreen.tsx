@@ -1,41 +1,42 @@
-import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Image, Modal, ScrollView, Switch, StyleSheet, View, Pressable } from "react-native";
+import React, { useState } from "react";
+import {
+  ActivityIndicator,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
 import { AppText, AppTextInput } from "@/components/ui/typography";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useAppTheme } from "../contexts/ThemeContext";
 import { useNotification } from "../hooks/useNotification";
 import { UserProfile } from "../types/UserProfile";
-import ChangePasswordModal from "../components/ChangePasswordModal";
-import SignaturePadModal from "../components/SignaturePadModal";
 import AppButton from "../components/ui/AppButton";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
-import { formatPhone, unformatDigits } from "../utils/formatters";
-import {
-  getExpoPushToken,
-  isPushEnabled,
-  notificationPlatform,
-  requestNotificationPermission,
-  setPushEnabled,
-} from "../services/pushNotificationService";
-import { notificationService } from "../services/notificationService";
-import { useTranslation, useLanguage } from "../contexts/LanguageContext";
-import { adminService, BillingAutomationPolicy } from "../services/adminService";
+import { useTranslation } from "../contexts/LanguageContext";
+import FeatureIconBox from "../components/ui/FeatureIconBox";
+import { FEATURE_ICONS, SYSTEM_ICONS } from "../constants/featureIcons";
 
-const AUTOMATION_DEFAULTS: BillingAutomationPolicy = {
-  autoInvoiceEnabled: true,
-  invoiceDay: 25,
-  dueDay: 5,
-  autoRemindEnabled: true,
-  remindDaysBeforeDue: 2,
-};
-const AUTOMATION_DAYS = Array.from({ length: 31 }, (_, index) => index + 1);
-type AutomationDayField = "invoiceDay" | "dueDay" | "remindDaysBeforeDue";
+const POPULAR_BANKS = [
+  { code: "MB", name: "MBBank" },
+  { code: "VCB", name: "Vietcombank" },
+  { code: "TCB", name: "Techcombank" },
+  { code: "BIDV", name: "BIDV" },
+  { code: "ICB", name: "VietinBank" },
+  { code: "ACB", name: "ACB" },
+  { code: "VPB", name: "VPBank" },
+  { code: "TPB", name: "TPBank" },
+];
 
 type Props = {
   profile: UserProfile;
   onSave: (profile: UserProfile) => void;
   onBack: () => void;
-  onLogout: () => void;
+  onLogout?: () => void;
   onPushTokenChange?: (token: string | null) => void;
   onNavigate?: (tab: any) => void;
 };
@@ -44,140 +45,78 @@ export default function AdminSettingsScreen({
   profile,
   onSave,
   onBack,
-  onLogout,
-  onPushTokenChange,
-  onNavigate,
 }: Props) {
-  const { theme, resolvedTheme, toggleTheme } = useAppTheme();
+  const { theme, resolvedTheme } = useAppTheme();
   const isDark = resolvedTheme === "dark";
   const { t } = useTranslation();
-  const { language, setLanguage } = useLanguage();
   const notification = useNotification();
 
-  const [fullName, setFullName] = useState(profile.fullName || "");
-  const [phone, setPhone] = useState(formatPhone(profile.phone));
-  const [email, setEmail] = useState(profile.email || "");
-  const [cccd, setCccd] = useState(profile.cccd || "");
-  const [propertyAddress, setPropertyAddress] = useState(profile.propertyAddress || "");
-  const [landlordSignature, setLandlordSignature] = useState(profile.landlordSignature || "");
-  const [signatureModalVisible, setSignatureModalVisible] = useState(false);
   const [bankId, setBankId] = useState(profile.bankId || "");
   const [bankAccountNo, setBankAccountNo] = useState(profile.bankAccountNo || "");
   const [bankAccountName, setBankAccountName] = useState(profile.bankAccountName || "");
-  const [passwordVisible, setPasswordVisible] = useState(false);
-  const [pushEnabled, setPushPreference] = useState(false);
-  const [pushLoading, setPushLoading] = useState(false);
-  const [pushError, setPushError] = useState("");
-  const [automationPolicy, setAutomationPolicy] = useState(AUTOMATION_DEFAULTS);
-  const [automationLoading, setAutomationLoading] = useState(true);
-  const [automationSaving, setAutomationSaving] = useState(false);
-  const [dayPicker, setDayPicker] = useState<{ field: AutomationDayField; title: string } | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [qrLoading, setQrLoading] = useState(false);
 
-  useEffect(() => {
-    void isPushEnabled(profile.id).then(setPushPreference);
-  }, [profile.id]);
+  const cleanBankId = bankId.trim().toUpperCase();
+  const cleanAccountNo = bankAccountNo.trim();
+  const cleanAccountName = bankAccountName.trim().toUpperCase();
 
-  useEffect(() => {
-    let active = true;
-    void adminService.getBillingAutomationPolicy()
-      .then((policy) => {
-        if (active) setAutomationPolicy({ ...AUTOMATION_DEFAULTS, ...policy });
-      })
-      .catch(() => notification.error(t("common.error")))
-      .finally(() => {
-        if (active) setAutomationLoading(false);
-      });
-    return () => { active = false; };
-  }, [notification, t]);
+  const isConfigured = Boolean(cleanBankId && cleanAccountNo && cleanAccountName);
 
-  const handlePushChange = async (next: boolean) => {
-    const previous = pushEnabled;
-    setPushLoading(true);
-    setPushError("");
-    try {
-      if (next) {
-        if ((await requestNotificationPermission()) !== "granted") {
-          setPushError(t("common.error"));
-          return;
-        }
-        const token = await getExpoPushToken();
-        if (!token) throw new Error(t("common.error"));
-        await notificationService.registerDevice(token, notificationPlatform());
-        await setPushEnabled(profile.id, true);
-        setPushPreference(true);
-        onPushTokenChange?.(token);
-      } else {
-        const token = await getExpoPushToken();
-        if (token) await notificationService.deactivateDevice(token);
-        await setPushEnabled(profile.id, false);
-        setPushPreference(false);
-        onPushTokenChange?.(null);
+  const qrImageUrl = isConfigured
+    ? `https://img.vietqr.io/image/${cleanBankId}-${cleanAccountNo}-compact2.png?amount=0&addInfo=Thanh%20toan%20tien%20phong&accountName=${encodeURIComponent(cleanAccountName)}`
+    : "";
+
+  const handleSave = async () => {
+    if (cleanBankId || cleanAccountNo || cleanAccountName) {
+      if (!cleanBankId) {
+        notification.error("Vui lòng nhập hoặc chọn mã ngân hàng (BIN / Code)");
+        return;
       }
-    } catch (error: any) {
-      setPushPreference(previous);
-      setPushError(error instanceof Error ? error.message : t("common.error"));
-    } finally {
-      setPushLoading(false);
+      if (!cleanAccountNo) {
+        notification.error("Vui lòng nhập số tài khoản ngân hàng");
+        return;
+      }
+      if (!cleanAccountName) {
+        notification.error("Vui lòng nhập tên chủ tài khoản");
+        return;
+      }
     }
-  };
 
-  const handleSave = () => {
-    if (!fullName.trim()) {
-      notification.error(t("common.error"));
-      return;
-    }
-    if ((bankId || bankAccountNo || bankAccountName) && (!bankId || !bankAccountNo || !bankAccountName)) {
-      notification.error(t("common.error"));
-      return;
-    }
-    onSave({
-      ...profile,
-      fullName: fullName.trim(),
-      phone: unformatDigits(phone),
-      email: email.trim(),
-      cccd: cccd.trim(),
-      propertyAddress: propertyAddress.trim(),
-      bankId: bankId.trim().toUpperCase(),
-      bankAccountNo: bankAccountNo.trim(),
-      bankAccountName: bankAccountName.trim().toUpperCase(),
-      landlordSignature: landlordSignature.trim(),
-    });
-    notification.success(t("common.success"));
-  };
-
-  const handleSaveAutomation = async () => {
     try {
-      setAutomationSaving(true);
-      const saved = await adminService.updateBillingAutomationPolicy(automationPolicy);
-      setAutomationPolicy({ ...AUTOMATION_DEFAULTS, ...saved });
-      notification.success(t("settings.automationSaved"));
-    } catch {
-      notification.error(t("common.error"));
+      setSaving(true);
+      const updated: UserProfile = {
+        ...profile,
+        bankId: cleanBankId,
+        bankAccountNo: cleanAccountNo,
+        bankAccountName: cleanAccountName,
+      };
+      await onSave(updated);
+      notification.success("Đã lưu thông tin tài khoản nhận tiền (VietQR)!");
+    } catch (err: any) {
+      notification.error(err?.message || "Không thể lưu thông tin nhận tiền");
     } finally {
-      setAutomationSaving(false);
+      setSaving(false);
     }
   };
 
-  const selectAutomationDay = (day: number) => {
-    if (!dayPicker) return;
-    setAutomationPolicy((current) => ({ ...current, [dayPicker.field]: day }));
-    setDayPicker(null);
-  };
-
-  const reminderDay = automationPolicy.invoiceDay === 1
-    ? t("settings.previousMonthEnd")
-    : automationPolicy.invoiceDay - 1;
-
-  const inputStyle = [styles.input, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border }];
+  const inputStyle = [
+    styles.input,
+    { backgroundColor: theme.background, color: theme.text, borderColor: theme.border },
+  ];
 
   return (
-    <>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={{ flex: 1 }}
+    >
       <ScrollView
         style={[styles.container, { backgroundColor: theme.background }]}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        {/* Nút Quay lại */}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t("common.back")}
@@ -185,361 +124,231 @@ export default function AdminSettingsScreen({
           onPress={onBack}
         >
           <Ionicons name="arrow-back" size={20} color={theme.primary} />
-          <AppText style={[styles.backText, { color: theme.primary }]}>{t("common.back")}</AppText>
+          <AppText style={[styles.backText, { color: theme.primary }]}>
+            {t("common.back")}
+          </AppText>
         </Pressable>
 
         {/* Hero Section */}
-        <AnimatedEntry delay={50}>
+        <AnimatedEntry delay={40}>
           <View style={[styles.heroCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
-            <View style={[styles.heroIconCircle, { backgroundColor: "rgba(16, 185, 129, 0.15)" }]}>
-              <Ionicons name="settings" size={26} color="#10B981" />
-            </View>
+            <FeatureIconBox token={FEATURE_ICONS.vietqr} size={28} accessibilityLabel="Tài khoản nhận tiền VietQR" />
             <View style={{ flex: 1 }}>
-              <AppText style={[styles.heroTitle, { color: theme.text }]}>Cài đặt Chủ trọ</AppText>
+              <AppText style={[styles.heroTitle, { color: theme.text }]}>
+                Tài khoản nhận tiền (VietQR)
+              </AppText>
               <AppText style={[styles.heroSubtitle, { color: theme.muted }]}>
-                {fullName || "Tài khoản quản trị"}
+                Cấu hình tài khoản ngân hàng để tự động xuất mã QR thanh toán trên hóa đơn & hợp đồng
               </AppText>
             </View>
           </View>
         </AnimatedEntry>
 
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => onNavigate?.("services")}
-          style={[styles.bentoSection, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, flexDirection: "row", alignItems: "center", gap: 12 }]}
-        >
-          <View style={[styles.sectionIcon, { backgroundColor: theme.primarySoft }]}>
-            <Ionicons name="construct-outline" size={18} color={theme.primary} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <AppText style={[styles.cardTitle, { color: theme.text }]}>{t("servicesMobile.title")}</AppText>
-            <AppText style={[styles.pushDescription, { color: theme.muted }]}>{t("servicesMobile.shortcutDescription")}</AppText>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={theme.muted} />
-        </Pressable>
-
-        {/* Thông tin cá nhân */}
-        <AnimatedEntry delay={100}>
+        {/* Card Form Cấu hình VietQR */}
+        <AnimatedEntry delay={90}>
           <View style={[styles.bentoSection, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
             <View style={styles.sectionHeading}>
-              <View style={[styles.sectionIcon, { backgroundColor: "rgba(59, 130, 246, 0.15)" }]}>
-                <Ionicons name="person" size={18} color="#3B82F6" />
-              </View>
-              <AppText style={[styles.cardTitle, { color: theme.text }]}>{t("auth.account")}</AppText>
-            </View>
-            <Field label={t("auth.fullName")} value={fullName} setValue={setFullName} placeholder="Nguyen Van A" style={inputStyle} muted={theme.muted} />
-            <Field label="Số CCCD/CMND Chủ trọ" value={cccd} setValue={setCccd} placeholder="012345678901" keyboardType="number-pad" style={inputStyle} muted={theme.muted} />
-            <Field label={t("auth.phone")} value={phone} setValue={(v: string) => setPhone(formatPhone(v))} placeholder="0901.234.567" keyboardType="number-pad" style={inputStyle} muted={theme.muted} />
-            <Field label={t("auth.email")} value={email} setValue={setEmail} placeholder="landlord@email.com" keyboardType="email-address" style={inputStyle} muted={theme.muted} autoCapitalize="none" />
-            <Field label="Địa chỉ nhà trọ" value={propertyAddress} setValue={setPropertyAddress} placeholder="123 Nguyễn Huệ, Quận 1, TP.HCM" style={inputStyle} muted={theme.muted} />
-          </View>
-        </AnimatedEntry>
-
-        {/* Chữ ký mẫu của Chủ trọ */}
-        <AnimatedEntry delay={120}>
-          <View style={[styles.bentoSection, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
-            <View style={styles.sectionHeading}>
-              <View style={[styles.sectionIcon, { backgroundColor: "rgba(16, 185, 129, 0.15)" }]}>
-                <Ionicons name="create" size={18} color="#10B981" />
-              </View>
-              <View style={styles.automationHeadingCopy}>
-                <AppText style={[styles.cardTitle, { color: theme.text }]}>Chữ ký mẫu Chủ trọ (Bên A)</AppText>
-                <AppText style={[styles.pushDescription, { color: theme.muted }]}>Tự động đóng dấu chữ ký vào hợp đồng PDF</AppText>
-              </View>
+              <Ionicons name="card-outline" size={20} color={theme.primary} />
+              <AppText style={[styles.cardTitle, { color: theme.text }]}>
+                Thông tin tài khoản ngân hàng
+              </AppText>
             </View>
 
-            {landlordSignature ? (
-              <View style={[styles.signatureBox, { borderColor: theme.primary, backgroundColor: "#ffffff" }]}>
-                <Image
-                  source={{ uri: landlordSignature.startsWith("data:") ? landlordSignature : `data:image/png;base64,${landlordSignature}` }}
-                  style={styles.signatureImage}
-                  resizeMode="contain"
-                />
-              </View>
-            ) : (
-              <View style={[styles.signatureEmptyBox, { borderColor: theme.border, backgroundColor: theme.background }]}>
-                <Ionicons name="brush-outline" size={28} color={theme.muted} />
-                <AppText style={[styles.signatureEmptyText, { color: theme.muted }]}>Chưa thiết lập chữ ký mẫu</AppText>
-              </View>
-            )}
-
-            <View style={styles.signatureActions}>
-              <AppButton
-                variant={landlordSignature ? "secondary" : "primary"}
-                icon="brush-outline"
-                onPress={() => setSignatureModalVisible(true)}
-                style={styles.signatureBtn}
-              >
-                {landlordSignature ? "Ký lại / Đổi chữ ký" : "Vẽ hoặc tải chữ ký"}
-              </AppButton>
-              {landlordSignature ? (
-                <AppButton
-                  variant="ghost"
-                  icon="trash-outline"
-                  onPress={() => {
-                    setLandlordSignature("");
-                    onSave({
-                      ...profile,
-                      fullName: fullName.trim(),
-                      phone: unformatDigits(phone),
-                      email: email.trim(),
-                      cccd: cccd.trim(),
-                      propertyAddress: propertyAddress.trim(),
-                      bankId: bankId.trim().toUpperCase(),
-                      bankAccountNo: bankAccountNo.trim(),
-                      bankAccountName: bankAccountName.trim().toUpperCase(),
-                      landlordSignature: "",
-                    });
-                    notification.success("Đã xóa chữ ký mẫu!");
-                  }}
-                  style={styles.signatureDeleteBtn}
-                >
-                  Xóa
-                </AppButton>
-              ) : null}
-            </View>
-          </View>
-        </AnimatedEntry>
-
-        {/* Tài khoản VietQR */}
-        <AnimatedEntry delay={150}>
-          <View style={[styles.bentoSection, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
-            <View style={styles.sectionHeading}>
-              <View style={[styles.sectionIcon, { backgroundColor: "rgba(139, 92, 246, 0.15)" }]}>
-                <Ionicons name="qr-code" size={18} color="#8B5CF6" />
-              </View>
-              <AppText style={[styles.cardTitle, { color: theme.text }]}>Tài khoản nhận tiền (VietQR)</AppText>
-            </View>
             <View style={[styles.note, { backgroundColor: theme.primarySoft }]}>
               <Ionicons name="information-circle" size={18} color={theme.primary} />
               <AppText style={[styles.noteText, { color: theme.text }]}>
-                Mã VietQR động trên hóa đơn sẽ tự động tạo theo thông tin ngân hàng này.
+                Mã VietQR động trên hóa đơn hàng tháng sẽ tự động khớp theo thông tin ngân hàng này. Khách thuê quét mã là tiền về thẳng tài khoản của bạn.
               </AppText>
             </View>
-            <Field label="Mã ngân hàng (BIN / Code)" value={bankId} setValue={setBankId} placeholder="MB / VCB / TCB" style={inputStyle} muted={theme.muted} autoCapitalize="characters" />
-            <Field label="Số tài khoản" value={bankAccountNo} setValue={setBankAccountNo} placeholder="0123456789" keyboardType="number-pad" style={inputStyle} muted={theme.muted} />
-            <Field label="Tên chủ tài khoản" value={bankAccountName} setValue={setBankAccountName} placeholder="NGUYEN VAN A" style={inputStyle} muted={theme.muted} autoCapitalize="characters" />
+
+            {/* Chọn nhanh ngân hàng phổ biến */}
+            <View style={styles.quickBankWrapper}>
+              <AppText style={[styles.quickBankLabel, { color: theme.muted }]}>
+                Gợi ý ngân hàng phổ biến:
+              </AppText>
+              <View style={styles.quickBankChips}>
+                {POPULAR_BANKS.map((b) => {
+                  const isSelected = cleanBankId === b.code;
+                  return (
+                    <Pressable
+                      key={b.code}
+                      onPress={() => setBankId(b.code)}
+                      style={[
+                        styles.bankChip,
+                        {
+                          backgroundColor: isSelected ? theme.primary : theme.background,
+                          borderColor: isSelected ? theme.primary : theme.border,
+                        },
+                      ]}
+                    >
+                      <AppText
+                        style={[
+                          styles.bankChipText,
+                          { color: isSelected ? "#FFFFFF" : theme.text },
+                        ]}
+                      >
+                        {b.code}
+                      </AppText>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Trường nhập liệu */}
+            <View style={styles.field}>
+              <AppText style={[styles.label, { color: theme.muted }]}>
+                Mã ngân hàng (BIN / Viết tắt)
+              </AppText>
+              <AppTextInput
+                style={inputStyle}
+                value={bankId}
+                onChangeText={setBankId}
+                placeholder="MB / VCB / TCB / BIDV..."
+                placeholderTextColor={theme.muted}
+                autoCapitalize="characters"
+              />
+            </View>
+
+            <View style={styles.field}>
+              <AppText style={[styles.label, { color: theme.muted }]}>
+                Số tài khoản ngân hàng
+              </AppText>
+              <AppTextInput
+                style={inputStyle}
+                value={bankAccountNo}
+                onChangeText={setBankAccountNo}
+                placeholder="Nhập số tài khoản (ví dụ: 0123456789)"
+                placeholderTextColor={theme.muted}
+                keyboardType="number-pad"
+              />
+            </View>
+
+            <View style={styles.field}>
+              <AppText style={[styles.label, { color: theme.muted }]}>
+                Tên chủ tài khoản (In hoa không dấu)
+              </AppText>
+              <AppTextInput
+                style={inputStyle}
+                value={bankAccountName}
+                onChangeText={setBankAccountName}
+                placeholder="NGUYEN VAN A"
+                placeholderTextColor={theme.muted}
+                autoCapitalize="characters"
+              />
+            </View>
           </View>
         </AnimatedEntry>
 
-        {/* Tự động hóa hóa đơn */}
-        <AnimatedEntry delay={200}>
-          {automationLoading ? (
-            <View style={[styles.bentoSection, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]} accessibilityLabel={t("common.loading")}>
-              <View style={[styles.skeletonLine, { backgroundColor: theme.border, width: "48%" }]} />
-              <View style={[styles.skeletonLine, { backgroundColor: theme.border, width: "100%" }]} />
-              <View style={[styles.skeletonLine, { backgroundColor: theme.border, width: "74%" }]} />
-            </View>
-          ) : (
-            <>
-              <View style={[styles.bentoSection, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
-                <View style={styles.sectionHeading}>
-                  <View style={[styles.sectionIcon, { backgroundColor: theme.primarySoft }]}><Ionicons name="receipt-outline" size={18} color={theme.primary} /></View>
-                  <View style={styles.automationHeadingCopy}>
-                    <AppText style={[styles.cardTitle, { color: theme.text }]}>{t("settings.autoInvoice")}</AppText>
-                    <AppText style={[styles.pushDescription, { color: theme.muted }]}>{t("settings.autoInvoiceDescription")}</AppText>
-                  </View>
-                  <Switch value={automationPolicy.autoInvoiceEnabled} onValueChange={(value) => setAutomationPolicy((current) => ({ ...current, autoInvoiceEnabled: value }))} trackColor={{ false: isDark ? "#374151" : "#D1D5DB", true: theme.primary }} thumbColor="#FFFFFF" />
-                </View>
-                <DaySettingField label={t("settings.invoiceDay")} value={automationPolicy.invoiceDay} disabled={!automationPolicy.autoInvoiceEnabled} theme={theme} onPress={() => setDayPicker({ field: "invoiceDay", title: t("settings.invoiceDay") })} />
-                <DaySettingField label={t("settings.dueDay")} value={automationPolicy.dueDay} disabled={!automationPolicy.autoInvoiceEnabled} theme={theme} onPress={() => setDayPicker({ field: "dueDay", title: t("settings.dueDay") })} />
-                <View style={[styles.note, { backgroundColor: theme.primarySoft }]}><Ionicons name="calendar-outline" size={18} color={theme.primary} /><AppText style={[styles.noteText, { color: theme.text }]}>{t("settings.invoiceAutomationFlow", { reminderDay, invoiceDay: automationPolicy.invoiceDay })}</AppText></View>
-              </View>
-
-              <View style={[styles.bentoSection, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
-                <View style={styles.sectionHeading}>
-                  <View style={[styles.sectionIcon, { backgroundColor: theme.primarySoft }]}><Ionicons name="notifications-outline" size={18} color={theme.primary} /></View>
-                  <View style={styles.automationHeadingCopy}>
-                    <AppText style={[styles.cardTitle, { color: theme.text }]}>{t("settings.autoRemind")}</AppText>
-                    <AppText style={[styles.pushDescription, { color: theme.muted }]}>{t("settings.autoRemindDescription")}</AppText>
-                  </View>
-                  <Switch value={automationPolicy.autoRemindEnabled} onValueChange={(value) => setAutomationPolicy((current) => ({ ...current, autoRemindEnabled: value }))} trackColor={{ false: isDark ? "#374151" : "#D1D5DB", true: theme.primary }} thumbColor="#FFFFFF" />
-                </View>
-                <DaySettingField label={t("settings.remindDaysBeforeDue")} value={automationPolicy.remindDaysBeforeDue} disabled={!automationPolicy.autoRemindEnabled} theme={theme} onPress={() => setDayPicker({ field: "remindDaysBeforeDue", title: t("settings.remindDaysBeforeDue") })} />
-                <View style={[styles.note, { backgroundColor: theme.primarySoft }]}><Ionicons name="shield-checkmark-outline" size={18} color={theme.primary} /><AppText style={[styles.noteText, { color: theme.text }]}>{t("settings.reminderScheduleHint", { days: automationPolicy.remindDaysBeforeDue })}</AppText></View>
-              </View>
-
-              <AppButton icon="flash-outline" loading={automationSaving} onPress={() => void handleSaveAutomation()} style={styles.automationSave}>{t("settings.saveAutomation")}</AppButton>
-            </>
-          )}
-        </AnimatedEntry>
-
-        {/* Tùy chọn hệ thống */}
-        <AnimatedEntry delay={250}>
+        {/* Card Xem trước thẻ ngân hàng & Mã QR Live */}
+        <AnimatedEntry delay={140}>
           <View style={[styles.bentoSection, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
             <View style={styles.sectionHeading}>
-              <View style={[styles.sectionIcon, { backgroundColor: "rgba(245, 158, 11, 0.15)" }]}>
-                <Ionicons name="options" size={18} color="#F59E0B" />
-              </View>
-              <AppText style={[styles.cardTitle, { color: theme.text }]}>{t("account.appPreferences")}</AppText>
+              <Ionicons name="qr-code-outline" size={20} color={theme.primary} />
+              <AppText style={[styles.cardTitle, { color: theme.text }]}>
+                Xem trước thẻ nhận tiền & Mã VietQR
+              </AppText>
             </View>
 
-            {/* Language switch row */}
-            <View style={styles.pushRow}>
-              <View style={styles.pushCopy}>
-                <AppText style={[styles.pushTitle, { color: theme.text }]}>{t("common.language")}</AppText>
-              </View>
-              <View style={[styles.langSegmented, { backgroundColor: theme.background, borderColor: theme.border }]}>
-                <Pressable
-                  style={[styles.langPill, language === "vi" && { backgroundColor: theme.primary }]}
-                  onPress={() => void setLanguage("vi")}
-                >
-                  <AppText style={[styles.langPillText, { color: language === "vi" ? theme.background : theme.muted }]}>
-                    🇻🇳 VI
+            {/* Card ATM mô phỏng */}
+            <LinearGradient
+              colors={
+                isDark
+                  ? ["#064e3b", "#022c22"]
+                  : ["#10b981", "#047857"]
+              }
+              style={styles.virtualCard}
+            >
+              <View style={styles.cardHeader}>
+                <View style={styles.cardChip}>
+                  <Ionicons name="hardware-chip-outline" size={26} color="#fbbf24" />
+                  <AppText style={styles.cardBankTag}>
+                    {cleanBankId || "NGÂN HÀNG"}
                   </AppText>
-                </Pressable>
-                <Pressable
-                  style={[styles.langPill, language === "en" && { backgroundColor: theme.primary }]}
-                  onPress={() => void setLanguage("en")}
-                >
-                  <AppText style={[styles.langPillText, { color: language === "en" ? theme.background : theme.muted }]}>
-                    🇬🇧 EN
-                  </AppText>
-                </Pressable>
+                </View>
+                <View style={styles.vietqrBadge}>
+                  <AppText style={styles.vietqrBadgeText}>VietQR</AppText>
+                </View>
               </View>
-            </View>
 
-            {/* Dark mode switch row */}
-            <View style={[styles.pushRow, { borderTopWidth: 1, borderTopColor: theme.border, paddingTop: 12 }]}>
-              <View style={styles.pushCopy}>
-                <AppText style={[styles.pushTitle, { color: theme.text }]}>{t("account.themeMode")}</AppText>
-                <AppText style={[styles.pushDescription, { color: theme.muted }]}>
-                  {isDark ? "Chế độ Tối (Dark)" : "Chế độ Sáng (Light)"}
+              <View style={styles.cardBody}>
+                <AppText style={styles.cardNumber}>
+                  {cleanAccountNo || "•••• •••• •••• ••••"}
                 </AppText>
               </View>
-              <Switch value={isDark} onValueChange={toggleTheme} trackColor={{ false: "#E5E7EB", true: "#10B981" }} thumbColor="#FFFFFF" />
-            </View>
 
-            {/* Push notification row */}
-            <View style={[styles.pushRow, { borderTopWidth: 1, borderTopColor: theme.border, paddingTop: 12 }]}>
-              <View style={styles.pushCopy}>
-                <AppText style={[styles.pushTitle, { color: theme.text }]}>{t("account.pushNotifications")}</AppText>
-                <AppText style={[styles.pushDescription, { color: theme.muted }]}>Thông báo sự cố & thanh toán</AppText>
+              <View style={styles.cardFooter}>
+                <View>
+                  <AppText style={styles.cardLabel}>CHỦ TÀI KHOẢN</AppText>
+                  <AppText style={styles.cardHolderName} numberOfLines={1}>
+                    {cleanAccountName || "CHƯA THIẾT LẬP"}
+                  </AppText>
+                </View>
+                <Ionicons name="wifi" size={20} color="rgba(255,255,255,0.7)" />
               </View>
-              {pushLoading ? (
-                <ActivityIndicator color={theme.primary} />
-              ) : (
-                <Switch
-                  value={pushEnabled}
-                  onValueChange={(val) => void handlePushChange(val)}
-                  trackColor={{ false: isDark ? "#374151" : "#E5E7EB", true: "#10B981" }}
-                  thumbColor="#FFFFFF"
-                />
-              )}
-            </View>
-            {pushError ? (
-              <AppText accessibilityRole="alert" style={[styles.pushError, { color: theme.danger }]}>
-                {pushError}
-              </AppText>
-            ) : null}
+            </LinearGradient>
+
+            {/* Live QR Preview */}
+            {isConfigured ? (
+              <View style={[styles.qrPreviewBox, { backgroundColor: "#FFFFFF", borderColor: theme.border }]}>
+                <AppText style={styles.qrTitle}>MÃ VIETQR NHẬN TIỀN MẪU</AppText>
+                <View style={styles.qrImageContainer}>
+                  {qrLoading && (
+                    <ActivityIndicator size="small" color="#10B981" style={StyleSheet.absoluteFill} />
+                  )}
+                  <Image
+                    source={{ uri: qrImageUrl }}
+                    style={styles.qrImage}
+                    resizeMode="contain"
+                    onLoadStart={() => setQrLoading(true)}
+                    onLoadEnd={() => setQrLoading(false)}
+                  />
+                </View>
+                <View style={styles.qrBadgeSuccess}>
+                  <Ionicons name="checkmark-circle" size={15} color="#10B981" />
+                  <AppText style={styles.qrBadgeText}>
+                    Sẵn sàng tạo mã động trên mọi hóa đơn
+                  </AppText>
+                </View>
+              </View>
+            ) : (
+              <View style={[styles.qrEmptyBox, { backgroundColor: theme.background, borderColor: theme.border }]}>
+                <Ionicons name="qr-code-outline" size={36} color={theme.muted} />
+                <AppText style={[styles.qrEmptyText, { color: theme.muted }]}>
+                  Điền đầy đủ Ngân hàng, Số TK và Tên chủ TK bên trên để kích hoạt xem trước mã VietQR
+                </AppText>
+              </View>
+            )}
           </View>
         </AnimatedEntry>
 
-        {/* Nút lưu */}
-        <AnimatedEntry delay={300}>
-          <AppButton icon="save-outline" onPress={handleSave}>
-            {t("common.save")}
-          </AppButton>
-
-          {/* Đổi mật khẩu */}
-          <Pressable
-            accessibilityRole="button"
-            style={[styles.security, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
-            onPress={() => setPasswordVisible(true)}
+        {/* Nút Lưu cấu hình */}
+        <AnimatedEntry delay={180}>
+          <AppButton
+            icon="save-outline"
+            onPress={handleSave}
+            loading={saving}
+            style={styles.saveBtn}
           >
-            <View style={styles.securityLead}>
-              <View style={[styles.sectionIcon, { backgroundColor: "rgba(245, 158, 11, 0.15)" }]}>
-                <Ionicons name="lock-closed" size={18} color="#F59E0B" />
-              </View>
-              <AppText style={[styles.securityText, { color: theme.text }]}>{t("account.changePassword")}</AppText>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={theme.muted} />
-          </Pressable>
-
-          {/* Nút Đăng xuất */}
-          <AppButton icon="log-out-outline" variant="danger" onPress={onLogout} style={styles.logout}>
-            {t("account.logout")}
+            Lưu cấu hình nhận tiền
           </AppButton>
         </AnimatedEntry>
       </ScrollView>
-
-      <ChangePasswordModal visible={passwordVisible} onClose={() => setPasswordVisible(false)} />
-      <SignaturePadModal
-        visible={signatureModalVisible}
-        onSave={(sig) => {
-          const cleanSig = sig.trim();
-          setLandlordSignature(cleanSig);
-          setSignatureModalVisible(false);
-          onSave({
-            ...profile,
-            fullName: fullName.trim(),
-            phone: unformatDigits(phone),
-            email: email.trim(),
-            cccd: cccd.trim(),
-            propertyAddress: propertyAddress.trim(),
-            bankId: bankId.trim().toUpperCase(),
-            bankAccountNo: bankAccountNo.trim(),
-            bankAccountName: bankAccountName.trim().toUpperCase(),
-            landlordSignature: cleanSig,
-          });
-          notification.success("Đã tự động lưu chữ ký mẫu của Chủ trọ!");
-        }}
-        onClose={() => setSignatureModalVisible(false)}
-      />
-      <DayPickerModal visible={dayPicker !== null} title={dayPicker?.title || ""} closeLabel={t("common.close")} selected={dayPicker ? automationPolicy[dayPicker.field] : 1} theme={theme} onSelect={selectAutomationDay} onClose={() => setDayPicker(null)} />
-    </>
-  );
-}
-
-function DaySettingField({ label, value, disabled, theme, onPress }: any) {
-  return (
-    <Pressable accessibilityRole="button" accessibilityLabel={`${label}: ${value}`} accessibilityState={{ disabled }} disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.dayField, { borderColor: theme.border, backgroundColor: theme.background }, disabled && styles.controlDisabled, pressed && !disabled && styles.controlPressed]}>
-      <View><AppText style={[styles.dayFieldLabel, { color: theme.muted }]}>{label}</AppText><AppText style={[styles.dayFieldValue, { color: theme.text }]}>{value}</AppText></View>
-      <Ionicons name="chevron-down" size={18} color={theme.primary} />
-    </Pressable>
-  );
-}
-
-function DayPickerModal({ visible, title, closeLabel, selected, theme, onSelect, onClose }: any) {
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.modalBackdrop}>
-        <Pressable accessibilityRole="button" accessibilityLabel={closeLabel} onPress={onClose} style={StyleSheet.absoluteFill} />
-        <View style={[styles.dayPickerSheet, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
-          <View style={styles.dayPickerHeader}><AppText style={[styles.dayPickerTitle, { color: theme.text }]}>{title}</AppText><Pressable accessibilityRole="button" accessibilityLabel={closeLabel} onPress={onClose} style={styles.modalClose}><Ionicons name="close" size={20} color={theme.text} /></Pressable></View>
-          <ScrollView style={styles.dayPickerList} showsVerticalScrollIndicator={false}>
-            {AUTOMATION_DAYS.map((day) => {
-              const active = day === selected;
-              return <Pressable key={day} accessibilityRole="radio" accessibilityState={{ checked: active }} onPress={() => onSelect(day)} style={[styles.dayOption, { borderBottomColor: theme.border }, active && { backgroundColor: theme.primarySoft }]}><AppText style={[styles.dayOptionText, { color: active ? theme.primary : theme.text }]}>{day}</AppText>{active ? <Ionicons name="checkmark-circle" size={20} color={theme.primary} /> : null}</Pressable>;
-            })}
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
-  );
-}
-
-function Field({ label, value, setValue, placeholder, keyboardType, style, muted, autoCapitalize }: any) {
-  return (
-    <View style={styles.field}>
-      <AppText style={styles.label}>{label}</AppText>
-      <AppTextInput
-        style={style}
-        value={value}
-        onChangeText={setValue}
-        placeholder={placeholder}
-        placeholderTextColor={muted}
-        keyboardType={keyboardType}
-        autoCapitalize={autoCapitalize}
-      />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 18, paddingTop: 24, paddingBottom: 48 },
-  back: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", minHeight: 44, marginBottom: 8 },
+  back: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    alignSelf: "flex-start",
+    minHeight: 44,
+    marginBottom: 8,
+  },
   backText: { fontSize: 14, fontWeight: "900" },
   heroCard: {
     flexDirection: "row",
@@ -550,65 +359,159 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
   },
-  heroIconCircle: { width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center" },
-  heroTitle: { fontSize: 18, fontWeight: "900" },
-  heroSubtitle: { fontSize: 13, fontWeight: "600", marginTop: 2 },
+  heroTitle: { fontSize: 17, fontWeight: "900" },
+  heroSubtitle: { fontSize: 12, fontWeight: "600", marginTop: 3, lineHeight: 17 },
   bentoSection: {
     borderRadius: 22,
     borderWidth: 1,
     padding: 18,
     marginBottom: 16,
   },
-  sectionHeading: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 },
-  sectionIcon: { width: 34, height: 34, alignItems: "center", justifyContent: "center", borderRadius: 12 },
+  sectionHeading: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 12,
+  },
   cardTitle: { fontSize: 15, fontWeight: "900" },
+  note: {
+    flexDirection: "row",
+    gap: 8,
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 14,
+    alignItems: "center",
+  },
+  noteText: { flex: 1, fontSize: 12, lineHeight: 18, fontWeight: "600" },
+  quickBankWrapper: { marginBottom: 12 },
+  quickBankLabel: { fontSize: 11, fontWeight: "700", marginBottom: 8 },
+  quickBankChips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  bankChip: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  bankChipText: { fontSize: 12, fontWeight: "800" },
   field: { marginTop: 12 },
   label: { fontSize: 12, fontWeight: "800", marginBottom: 6 },
-  input: { minHeight: 48, borderRadius: 14, borderWidth: 1, paddingHorizontal: 14, fontSize: 14, fontWeight: "600" },
-  note: { flexDirection: "row", gap: 8, borderRadius: 14, padding: 12, marginTop: 8, alignItems: "center" },
-  noteText: { flex: 1, fontSize: 12, lineHeight: 18, fontWeight: "600" },
-  security: {
-    minHeight: 56,
+  input: {
+    minHeight: 48,
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  virtualCard: {
+    borderRadius: 18,
+    padding: 18,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  cardHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    borderRadius: 18,
-    borderWidth: 1,
-    padding: 14,
-    marginTop: 14,
   },
-  securityLead: { flexDirection: "row", alignItems: "center", gap: 10 },
-  securityText: { fontSize: 14, fontWeight: "800" },
-  logout: { marginTop: 14 },
-  pushRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 16, paddingVertical: 8 },
-  pushCopy: { flex: 1 },
-  pushTitle: { fontSize: 14, fontWeight: "800" },
-  pushDescription: { fontSize: 11, fontWeight: "600", marginTop: 2 },
-  pushError: { fontSize: 12, fontWeight: "700", marginTop: 6 },
-  langSegmented: { flexDirection: "row", borderWidth: 1, borderRadius: 12, padding: 3 },
-  langPill: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 9 },
-  langPillText: { fontSize: 11, fontWeight: "900" },
-  automationHeadingCopy: { flex: 1 },
-  automationSave: { marginBottom: 16 },
-  skeletonLine: { height: 14, borderRadius: 7, marginVertical: 7, opacity: 0.7 },
-  dayField: { minHeight: 58, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 9, marginTop: 10 },
-  dayFieldLabel: { fontSize: 11, fontWeight: "700" },
-  dayFieldValue: { fontSize: 16, fontWeight: "900", marginTop: 2 },
-  controlDisabled: { opacity: 0.45 },
-  controlPressed: { opacity: 0.82, transform: [{ scale: 0.985 }] },
-  modalBackdrop: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(4, 16, 14, 0.52)" },
-  dayPickerSheet: { maxHeight: "72%", borderTopLeftRadius: 22, borderTopRightRadius: 22, borderWidth: 1, paddingHorizontal: 18, paddingTop: 12, paddingBottom: 28 },
-  dayPickerHeader: { minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  dayPickerTitle: { flex: 1, fontSize: 17, fontWeight: "900" },
-  modalClose: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
-  dayPickerList: { maxHeight: 430 },
-  dayOption: { minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: StyleSheet.hairlineWidth, paddingHorizontal: 12 },
-  dayOptionText: { fontSize: 15, fontWeight: "800" },
-  signatureBox: { height: 110, borderRadius: 16, borderWidth: 1.5, borderStyle: "dashed", alignItems: "center", justifyContent: "center", marginTop: 12, padding: 8, overflow: "hidden" },
-  signatureImage: { width: "100%", height: "100%" },
-  signatureEmptyBox: { height: 100, borderRadius: 16, borderWidth: 1, borderStyle: "dashed", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 12 },
-  signatureEmptyText: { fontSize: 12, fontWeight: "600" },
-  signatureActions: { flexDirection: "row", gap: 10, marginTop: 12 },
-  signatureBtn: { flex: 1, minHeight: 44 },
-  signatureDeleteBtn: { minWidth: 70, minHeight: 44 },
+  cardChip: { flexDirection: "row", alignItems: "center", gap: 8 },
+  cardBankTag: {
+    fontSize: 13,
+    fontWeight: "900",
+    color: "#FFFFFF",
+    letterSpacing: 0.8,
+  },
+  vietqrBadge: {
+    backgroundColor: "rgba(255,255,255,0.22)",
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  vietqrBadgeText: {
+    color: "#FFFFFF",
+    fontWeight: "900",
+    fontSize: 12,
+    letterSpacing: 0.5,
+  },
+  cardBody: { marginVertical: 18 },
+  cardNumber: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: "#FFFFFF",
+    letterSpacing: 2,
+    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+  },
+  cardFooter: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+  },
+  cardLabel: {
+    fontSize: 9,
+    fontWeight: "800",
+    color: "rgba(255,255,255,0.65)",
+    letterSpacing: 0.8,
+  },
+  cardHolderName: {
+    fontSize: 13,
+    fontWeight: "900",
+    color: "#FFFFFF",
+    letterSpacing: 0.5,
+    marginTop: 2,
+    maxWidth: 220,
+  },
+  qrPreviewBox: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    alignItems: "center",
+  },
+  qrTitle: {
+    fontSize: 11,
+    fontWeight: "900",
+    color: "#0f172a",
+    letterSpacing: 0.8,
+    marginBottom: 10,
+  },
+  qrImageContainer: {
+    width: 200,
+    height: 200,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  qrImage: { width: "100%", height: "100%" },
+  qrBadgeSuccess: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 10,
+  },
+  qrBadgeText: {
+    fontSize: 11.5,
+    fontWeight: "700",
+    color: "#059669",
+  },
+  qrEmptyBox: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    padding: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  qrEmptyText: {
+    fontSize: 12,
+    fontWeight: "600",
+    textAlign: "center",
+    lineHeight: 18,
+    maxWidth: 260,
+  },
+  saveBtn: { marginTop: 4, marginBottom: 20 },
 });

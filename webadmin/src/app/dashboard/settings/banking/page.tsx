@@ -10,6 +10,7 @@ import { useNotification } from "@/hooks/use-notification";
 import { fetchAPI } from "@/lib/api";
 import { getNotificationMessage } from "@/lib/notification-messages";
 import { useLanguage } from "@/components/language-provider";
+import { FEATURE_ICONS } from "@/constants/feature-icons";
 
 export default function BankingSettingsPage() {
   const { t } = useLanguage();
@@ -44,7 +45,12 @@ export default function BankingSettingsPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <PageHeader eyebrow={t("nav.settings")} title={t("settings.banking.title")} description={t("settings.banking.subtitle")} />
+      <PageHeader
+        eyebrow={t("nav.settings")}
+        title={t("settings.banking.title")}
+        description={t("settings.banking.subtitle")}
+        iconToken={FEATURE_ICONS.vietqr}
+      />
       <div className="grid gap-4 sm:grid-cols-[180px_1fr]">
         <aside className="calm-surface flex flex-col justify-between bg-primary p-5 text-primary-foreground">
           <Landmark aria-hidden="true" className="size-8" />

@@ -23,6 +23,8 @@ import { ContentSkeleton } from "../components/ui/content-skeleton";
 import { MeterReadingCard } from "../components/ui/meter-reading-card";
 import { formatCurrency, formatMeterReading, parseMeterReading, unformatNumber } from "../utils/formatters";
 import { useTranslation } from "../contexts/LanguageContext";
+import FeatureIconBox from "../components/ui/FeatureIconBox";
+import { FEATURE_ICONS } from "../constants/featureIcons";
 
 type Props = {
   onBack?: () => void;
@@ -107,6 +109,7 @@ export default function UtilityScreen({ onBack }: Props) {
                 <AnimatedEntry>
                   <GradientHero
                     icon="speedometer-outline"
+                    iconToken={FEATURE_ICONS.utility}
                     label={`${t("invoices.period")} ${current.month}`}
                     value={`${formatCurrency(unformatNumber(current.electricMoney))} + ${formatCurrency(unformatNumber(current.waterMoney))}`}
                     detail={t("invoices.title")}

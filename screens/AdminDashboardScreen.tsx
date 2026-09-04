@@ -19,6 +19,8 @@ import BentoGridDashboard from "../components/BentoGridDashboard";
 import StandardOperationsDashboard from "../components/StandardOperationsDashboard";
 import AutomationStatusCard from "../components/AutomationStatusCard";
 import QuickAutoBillingModal from "../components/QuickAutoBillingModal";
+import FeatureIconBox from "../components/ui/FeatureIconBox";
+import { FEATURE_ICONS, SYSTEM_ICONS } from "../constants/featureIcons";
 
 type Props = { profile?: UserProfile; refreshKey?: number; onNavigate: (tab: any, params?: any) => void; onOpenSearch?: () => void; onLogout: () => void };
 
@@ -58,13 +60,13 @@ export default function AdminDashboardScreen({ profile, refreshKey = 0, onNaviga
   const maintenanceRooms = stats?.maintenanceRooms || 0;
   const occupancyRate = totalRooms ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
   const quickActions = [
-    [`${t("dashboard.aiAssistant")} 🤖`, "sparkles-outline", () => onNavigate("ai_chat")],
-    [t("dashboard.scanMeter"), "camera-outline", () => onNavigate("scan_meter")],
-    [t("dashboard.addRoom"), "add-circle-outline", () => onNavigate("rooms", { action: "create" })],
-    [t("dashboard.tenantList"), "people-outline", () => onNavigate("tenants")],
-    [t("dashboard.createContract"), "document-text-outline", () => onNavigate("contract", { action: "create" })],
-    [t("dashboard.handleRepair"), "construct-outline", () => onNavigate("repair")],
-  ] as const;
+    { label: `${t("dashboard.aiAssistant")} 🤖`, token: SYSTEM_ICONS.aiAssistant, onPress: () => onNavigate("ai_chat") },
+    { label: t("dashboard.scanMeter"), token: FEATURE_ICONS.scanMeter, onPress: () => onNavigate("scan_meter") },
+    { label: t("dashboard.addRoom"), token: FEATURE_ICONS.rooms, onPress: () => onNavigate("rooms", { action: "create" }) },
+    { label: t("dashboard.tenantList"), token: FEATURE_ICONS.tenants, onPress: () => onNavigate("tenants") },
+    { label: t("dashboard.createContract"), token: FEATURE_ICONS.contractCreate, onPress: () => onNavigate("contract", { action: "create" }) },
+    { label: t("dashboard.handleRepair"), token: FEATURE_ICONS.repairs, onPress: () => onNavigate("repair") },
+  ];
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: theme.background }]} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void loadStats(); }} colors={[theme.primary]} tintColor={theme.primary} />}>
@@ -172,7 +174,7 @@ export default function AdminDashboardScreen({ profile, refreshKey = 0, onNaviga
         <StandardOperationsDashboard stats={stats} onNavigate={onNavigate} />
       )}
 
-      {viewMode === "bento" ? <><AppText style={[styles.sectionTitle, { color: theme.text }]}>{t("dashboard.today")}</AppText><PriorityCard title={t("dashboard.repairs")} count={stats.pendingRepairs} description={t("dashboard.repairHint")} urgent={Boolean(stats.pendingRepairs)} onPress={() => onNavigate("repair")} /><AppText style={[styles.sectionTitle, { color: theme.text }]}>{t("dashboard.quickActions")}</AppText><View style={styles.quickRow}>{quickActions.map(([label, icon, onPress], index) => <AnimatedEntry key={label} delay={index * 45} style={styles.quickWrap}><Pressable accessibilityRole="button" onPress={onPress} style={[styles.quick, { backgroundColor: theme.surfaceElevated, shadowColor: theme.text }]}><View style={[styles.quickIcon, { backgroundColor: theme.primarySoft }]}><Ionicons name={icon} size={22} color={theme.primary} /></View><AppText style={[styles.quickText, { color: theme.text }]}>{label}</AppText></Pressable></AnimatedEntry>)}</View></> : null}
+      {viewMode === "bento" ? <><AppText style={[styles.sectionTitle, { color: theme.text }]}>{t("dashboard.today")}</AppText><PriorityCard title={t("dashboard.repairs")} count={stats.pendingRepairs} description={t("dashboard.repairHint")} urgent={Boolean(stats.pendingRepairs)} onPress={() => onNavigate("repair")} /><AppText style={[styles.sectionTitle, { color: theme.text }]}>{t("dashboard.quickActions")}</AppText><View style={styles.quickRow}>{quickActions.map(({ label, token, onPress }, index) => <AnimatedEntry key={label} delay={index * 45} style={styles.quickWrap}><Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={[styles.quick, { backgroundColor: theme.surfaceElevated, shadowColor: theme.text }]}><FeatureIconBox token={token} /><AppText style={[styles.quickText, { color: theme.text }]}>{label}</AppText></Pressable></AnimatedEntry>)}</View></> : null}
       <QuickAutoBillingModal visible={automationVisible} policy={stats.automation} onClose={() => setAutomationVisible(false)} onSaved={(automation) => setStats((current) => current ? { ...current, automation: { ...automation, issueTime: current.automation.issueTime } } : current)} />
     </ScrollView>
   );
@@ -220,7 +222,6 @@ const styles = StyleSheet.create({
   quickRow: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 10 },
   quickWrap: { width: "48%" },
   quick: { width: "100%", minHeight: 104, alignItems: "center", justifyContent: "center", padding: 12, borderRadius: 20, elevation: 3, shadowOpacity: .1, shadowOffset: { width: 0, height: 4 }, shadowRadius: 9 },
-  quickIcon: { width: 44, height: 44, borderRadius: 15, alignItems: "center", justifyContent: "center" },
   quickText: { fontSize: 11, lineHeight: 15, fontWeight: "800", textAlign: "center", marginTop: 8 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   kpiGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },

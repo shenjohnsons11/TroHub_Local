@@ -28,6 +28,8 @@ import IllustratedEmptyState from "../components/ui/IllustratedEmptyState";
 import { useTranslation } from "../contexts/LanguageContext";
 import TenantRoomSwitcher from "../components/TenantRoomSwitcher";
 import { Contract } from "../types/Contract";
+import FeatureIconBox from "../components/ui/FeatureIconBox";
+import { FEATURE_ICONS } from "../constants/featureIcons";
 
 type Props = {
   selectedRoomId?: string;
@@ -682,15 +684,10 @@ export default function RepairScreen({
                 styles.formCard
               }
             >
-              <AppText
-                style={
-                  styles.sectionTitle
-                }
-              >
-                {t(
-                  "tenantRepair.new",
-                )}
-              </AppText>
+              <View style={styles.sectionHeading}>
+                <FeatureIconBox token={FEATURE_ICONS.repairs} size={20} accessibilityLabel={t("tenantRepair.new")} />
+                <AppText style={styles.sectionTitle}>{t("tenantRepair.new")}</AppText>
+              </View>
 
               <AppText
                 style={styles.label}
@@ -1736,9 +1733,10 @@ const createStyles = (
     },
 
     subtitle: {
-      color: theme.muted,
       fontSize: 13,
-      lineHeight: 20,
+      lineHeight: 18,
+      fontWeight: "700",
+      color: theme.muted,
       marginTop: 6,
       marginBottom: 20,
     },
@@ -1750,6 +1748,13 @@ const createStyles = (
       borderColor:
         "transparent",
       borderRadius: 24,
+    },
+
+    sectionHeading: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      marginBottom: 4,
     },
 
     sectionTitle: {

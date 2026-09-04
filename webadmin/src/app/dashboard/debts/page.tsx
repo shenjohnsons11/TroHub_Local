@@ -14,6 +14,7 @@ import { useNotification } from "@/hooks/use-notification";
 import { fetchAPI } from "@/lib/api";
 import { formatCurrency } from "@/lib/formatters";
 import { useLanguage } from "@/components/language-provider";
+import { FEATURE_ICONS } from "@/constants/feature-icons";
 
 interface Debt {
   contractId: string;
@@ -74,6 +75,7 @@ export default function DebtsPage() {
         eyebrow={t("nav.overview")}
         title={t("debts.title")}
         description={t("debts.subtitle")}
+        iconToken={FEATURE_ICONS.debts}
         action={<Button onClick={loadDebts} variant="outline" aria-label={t("common.loading")}><RefreshCw aria-hidden="true" /> {t("common.loading")}</Button>}
       />
       <div className="grid gap-4 sm:grid-cols-2">

@@ -15,6 +15,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "@/components/ui/typography";
 import { useTranslation } from "../contexts/LanguageContext";
 import { ocrService } from "../services/ocrService";
+import FeatureIconBox from "./ui/FeatureIconBox";
+import { FEATURE_ICONS } from "../constants/featureIcons";
 
 type Props = {
   visible: boolean;
@@ -168,7 +170,7 @@ export default function CCCDScannerModal({ visible, onClose, onScan }: Props) {
 
               {/* Laser / Grid watermark */}
               <View style={styles.cardWatermark}>
-                <Ionicons name="card-outline" size={44} color="rgba(184, 245, 218, 0.2)" />
+                <FeatureIconBox token={FEATURE_ICONS.scanCCCD} size={24} />
                 <AppText style={styles.cardWatermarkText}>CĂN CƯỚC CÔNG DÂN</AppText>
               </View>
             </View>

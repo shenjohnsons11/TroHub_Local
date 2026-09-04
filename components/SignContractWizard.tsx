@@ -23,6 +23,8 @@ import {
   unformatNumber,
 } from "../utils/formatters";
 import { useTranslation } from "../contexts/LanguageContext";
+import FeatureIconBox from "./ui/FeatureIconBox";
+import { FEATURE_ICONS } from "../constants/featureIcons";
 
 type Props = {
   visible: boolean;
@@ -819,24 +821,8 @@ export default function SignContractWizard({
                 )
               }
             >
-              <Ionicons
-                name="document-text"
-                size={20}
-                color={theme.primary}
-              />
-
-              <AppText
-                style={[
-                  styles.previewPdfText,
-                  {
-                    color:
-                      theme.primary,
-
-                    fontWeight:
-                      "800",
-                  },
-                ]}
-              >
+              <FeatureIconBox token={FEATURE_ICONS.contracts} size={20} />
+              <AppText style={[styles.previewPdfText, { color: theme.primary, fontWeight: "800" }]}>
                 📄 Xem trước toàn bộ hợp đồng
               </AppText>
             </Pressable>
@@ -904,24 +890,8 @@ export default function SignContractWizard({
                 )
               }
             >
-              <Ionicons
-                name="document-text"
-                size={20}
-                color={theme.primary}
-              />
-
-              <AppText
-                style={[
-                  styles.previewPdfText,
-                  {
-                    color:
-                      theme.primary,
-
-                    fontWeight:
-                      "800",
-                  },
-                ]}
-              >
+              <FeatureIconBox token={FEATURE_ICONS.contracts} size={20} />
+              <AppText style={[styles.previewPdfText, { color: theme.primary, fontWeight: "800" }]}>
                 📄 Xem trước toàn bộ hợp đồng (đã có chữ ký Bên A)
               </AppText>
             </Pressable>

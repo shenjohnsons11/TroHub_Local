@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -18,8 +19,14 @@ import { useAppTheme } from "../contexts/ThemeContext";
 import { useTranslation, useLanguage } from "../contexts/LanguageContext";
 import { UserProfile } from "../types/UserProfile";
 import ChangePasswordModal from "../components/ChangePasswordModal";
+import SignaturePadModal from "../components/SignaturePadModal";
+import AutomationStatusCard from "../components/AutomationStatusCard";
+import QuickAutoBillingModal from "../components/QuickAutoBillingModal";
+import { adminService, BillingAutomationPolicy } from "../services/adminService";
 import AnimatedEntry from "../components/ui/AnimatedEntry";
 import { formatPhone, formatCCCD, unformatDigits } from "../utils/formatters";
+import FeatureIconBox from "../components/ui/FeatureIconBox";
+import { FEATURE_ICONS, SYSTEM_ICONS } from "../constants/featureIcons";
 import {
   getExpoPushToken,
   isPushEnabled,
@@ -55,6 +62,16 @@ export default function AccountScreen({
 
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [editProfileVisible, setEditProfileVisible] = useState(false);
+  const [signaturePadVisible, setSignaturePadVisible] = useState(false);
+  const [signatureDetailVisible, setSignatureDetailVisible] = useState(false);
+  const [automationPolicy, setAutomationPolicy] = useState<BillingAutomationPolicy>({
+    autoInvoiceEnabled: true,
+    invoiceDay: 25,
+    dueDay: 5,
+    autoRemindEnabled: true,
+    remindDaysBeforeDue: 2,
+  });
+  const [autoBillingModalVisible, setAutoBillingModalVisible] = useState(false);
   const [pushEnabled, setPushPreference] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
   const [pushError, setPushError] = useState("");
@@ -136,6 +153,48 @@ export default function AccountScreen({
   useEffect(() => {
     void isPushEnabled(profile.id).then(setPushPreference);
   }, [profile.id]);
+
+  useEffect(() => {
+    if (isLandlord) {
+      void adminService
+        .getBillingAutomationPolicy()
+        .then((policy) => {
+          if (policy) setAutomationPolicy(policy);
+        })
+        .catch(() => undefined);
+    }
+  }, [isLandlord]);
+
+  const handleSaveSignature = async (sigBase64: string) => {
+    const cleanSig = sigBase64.trim();
+    try {
+      const updated: UserProfile = {
+        ...profile,
+        landlordSignature: cleanSig,
+      };
+      await userService.updateProfile(updated);
+      onProfileUpdate?.(updated);
+      setSignaturePadVisible(false);
+      Alert.alert(t("common.success"), "Đã lưu chữ ký mẫu của Chủ trọ!");
+    } catch (err: any) {
+      Alert.alert(t("common.error"), err?.message || "Không thể lưu chữ ký");
+    }
+  };
+
+  const handleDeleteSignature = async () => {
+    try {
+      const updated: UserProfile = {
+        ...profile,
+        landlordSignature: "",
+      };
+      await userService.updateProfile(updated);
+      onProfileUpdate?.(updated);
+      setSignatureDetailVisible(false);
+      Alert.alert(t("common.success"), "Đã xóa chữ ký mẫu!");
+    } catch (err: any) {
+      Alert.alert(t("common.error"), err?.message || "Không thể xóa chữ ký");
+    }
+  };
 
   const handlePushChange = async (next: boolean) => {
     const previous = pushEnabled;
@@ -301,9 +360,7 @@ export default function AccountScreen({
               style={[styles.bentoTile, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
               onPress={openEditProfile}
             >
-              <View style={[styles.tileIconCircle, { backgroundColor: "rgba(59, 130, 246, 0.15)" }]}>
-                <Ionicons name="person" size={20} color="#3B82F6" />
-              </View>
+              <FeatureIconBox token={SYSTEM_ICONS.profile} size={20} accessibilityLabel={t("account.editProfile")} />
               <AppText style={[styles.tileTitle, { color: theme.text }]}>{t("account.editProfile")}</AppText>
               <AppText style={[styles.tileSubtitle, { color: theme.muted }]}>Tên, SĐT, CCCD, Địa chỉ</AppText>
             </Pressable>
@@ -313,9 +370,7 @@ export default function AccountScreen({
               style={[styles.bentoTile, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
               onPress={() => setPasswordVisible(true)}
             >
-              <View style={[styles.tileIconCircle, { backgroundColor: "rgba(245, 158, 11, 0.15)" }]}>
-                <Ionicons name="lock-closed" size={20} color="#F59E0B" />
-              </View>
+              <FeatureIconBox token={SYSTEM_ICONS.security} size={20} accessibilityLabel={t("account.changePassword")} />
               <AppText style={[styles.tileTitle, { color: theme.text }]}>{t("account.changePassword")}</AppText>
               <AppText style={[styles.tileSubtitle, { color: theme.muted }]}>Bảo mật tài khoản</AppText>
             </Pressable>
@@ -325,9 +380,7 @@ export default function AccountScreen({
               style={[styles.bentoTile, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
               onPress={openEditProfile}
             >
-              <View style={[styles.tileIconCircle, { backgroundColor: "rgba(16, 185, 129, 0.15)" }]}>
-                <Ionicons name="card" size={20} color="#10B981" />
-              </View>
+              <FeatureIconBox token={FEATURE_ICONS.scanCCCD} size={20} accessibilityLabel={t("account.idCard")} />
               <AppText style={[styles.tileTitle, { color: theme.text }]}>{t("account.idCard")}</AppText>
               <AppText style={[styles.tileSubtitle, { color: "#10B981", fontWeight: "800" }]}>
                 {(profile.cccd || profile.idCard) ? formatCCCD(profile.cccd || profile.idCard) : "Chưa xác thực"}
@@ -338,40 +391,94 @@ export default function AccountScreen({
             {isLandlord ? (
               <Pressable
                 style={[styles.bentoTile, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
-                onPress={() => onNavigate?.("admin_settings")}
+                onPress={() => {
+                  if (profile.landlordSignature) {
+                    setSignatureDetailVisible(true);
+                  } else {
+                    setSignaturePadVisible(true);
+                  }
+                }}
               >
-                <View style={[styles.tileIconCircle, { backgroundColor: "rgba(139, 92, 246, 0.15)" }]}>
-                  <Ionicons name="qr-code" size={20} color="#8B5CF6" />
-                </View>
-                <AppText style={[styles.tileTitle, { color: theme.text }]}>{t("account.banking")}</AppText>
-                <AppText style={[styles.tileSubtitle, { color: theme.muted }]}>Cấu hình nhận tiền</AppText>
+                <FeatureIconBox token={SYSTEM_ICONS.signature} size={20} accessibilityLabel="Chữ ký mẫu (Bên A)" />
+                <AppText style={[styles.tileTitle, { color: theme.text }]}>Chữ ký mẫu (Bên A)</AppText>
+                <AppText
+                  style={[
+                    styles.tileSubtitle,
+                    {
+                      color: profile.landlordSignature ? "#10B981" : theme.muted,
+                      fontWeight: profile.landlordSignature ? "800" : "600",
+                    },
+                  ]}
+                >
+                  {profile.landlordSignature ? "Đã sẵn sàng chữ ký" : "Chưa tạo chữ ký"}
+                </AppText>
               </Pressable>
             ) : (
               <Pressable
                 style={[styles.bentoTile, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
                 onPress={() => onNavigate?.("contract")}
               >
-                <View style={[styles.tileIconCircle, { backgroundColor: "rgba(139, 92, 246, 0.15)" }]}>
-                  <Ionicons name="document-text" size={20} color="#8B5CF6" />
-                </View>
+                <FeatureIconBox token={FEATURE_ICONS.contracts} size={20} accessibilityLabel="Hợp đồng thuê" />
                 <AppText style={[styles.tileTitle, { color: theme.text }]}>Hợp đồng thuê</AppText>
                 <AppText style={[styles.tileSubtitle, { color: theme.muted }]}>Xem điều khoản & cọc</AppText>
               </Pressable>
             )}
+
+            {/* Tile 5: Tài khoản nhận tiền (VietQR) */}
+            {isLandlord ? (
+              <Pressable
+                style={[styles.bentoTile, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
+                onPress={() => onNavigate?.("admin_settings")}
+              >
+                <FeatureIconBox token={FEATURE_ICONS.vietqr} size={20} accessibilityLabel={t("account.banking")} />
+                <AppText style={[styles.tileTitle, { color: theme.text }]}>{t("account.banking")}</AppText>
+                <AppText
+                  style={[
+                    styles.tileSubtitle,
+                    {
+                      color: profile.bankAccountNo ? "#10B981" : theme.muted,
+                      fontWeight: profile.bankAccountNo ? "800" : "600",
+                    },
+                  ]}
+                >
+                  {profile.bankAccountNo
+                    ? `${profile.bankId || "VietQR"} · ${profile.bankAccountNo}`
+                    : "Cấu hình nhận tiền"}
+                </AppText>
+              </Pressable>
+            ) : null}
+
+            {/* Tile 6: Dịch vụ đi kèm */}
             {isLandlord ? (
               <Pressable
                 style={[styles.bentoTile, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
                 onPress={() => onNavigate?.("services")}
               >
-                <View style={[styles.tileIconCircle, { backgroundColor: "rgba(16, 185, 129, 0.15)" }]}>
-                  <Ionicons name="construct-outline" size={20} color="#10B981" />
-                </View>
+                <FeatureIconBox token={FEATURE_ICONS.services} size={20} accessibilityLabel={t("servicesMobile.title")} />
                 <AppText style={[styles.tileTitle, { color: theme.text }]}>{t("servicesMobile.title")}</AppText>
                 <AppText style={[styles.tileSubtitle, { color: theme.muted }]}>{t("servicesMobile.shortcutDescription")}</AppText>
               </Pressable>
             ) : null}
           </View>
         </AnimatedEntry>
+
+        {/* ========================================================= */}
+        {/* 2.5 BENTO: TỰ ĐỘNG HÓA HÓA ĐƠN                            */}
+        {/* ========================================================= */}
+        {isLandlord && (
+          <AnimatedEntry delay={170}>
+            <View style={styles.sectionHeaderRow}>
+              <Ionicons name="flash" size={16} color={theme.primary} />
+              <AppText style={[styles.sectionTitle, { color: theme.text }]}>
+                Tự động hóa chu kỳ hóa đơn
+              </AppText>
+            </View>
+            <AutomationStatusCard
+              policy={automationPolicy}
+              onConfigure={() => setAutoBillingModalVisible(true)}
+            />
+          </AnimatedEntry>
+        )}
 
         {/* ========================================================= */}
         {/* 3. BENTO GROUP 2: TÙY CHỌN ỨNG DỤNG                      */}
@@ -389,9 +496,7 @@ export default function AccountScreen({
             {/* Row 1: Ngôn ngữ */}
             <View style={styles.bentoListRow}>
               <View style={styles.rowLeft}>
-                <View style={[styles.rowIconCircle, { backgroundColor: "rgba(16, 185, 129, 0.15)" }]}>
-                  <Ionicons name="globe-outline" size={18} color="#10B981" />
-                </View>
+                <FeatureIconBox token={SYSTEM_ICONS.language} size={18} accessibilityLabel={t("common.language")} />
                 <AppText style={[styles.rowLabel, { color: theme.text }]}>{t("common.language")}</AppText>
               </View>
 
@@ -421,9 +526,7 @@ export default function AccountScreen({
             {/* Row 2: Thông báo đẩy */}
             <View style={styles.bentoListRow}>
               <View style={styles.rowLeft}>
-                <View style={[styles.rowIconCircle, { backgroundColor: "rgba(59, 130, 246, 0.15)" }]}>
-                  <Ionicons name="notifications-outline" size={18} color="#3B82F6" />
-                </View>
+                <FeatureIconBox token={SYSTEM_ICONS.notifications} size={18} accessibilityLabel={t("account.pushNotifications")} />
                 <View>
                   <AppText style={[styles.rowLabel, { color: theme.text }]}>{t("account.pushNotifications")}</AppText>
                   <AppText style={[styles.rowSubLabel, { color: theme.muted }]}>Cảnh báo hóa đơn & sự cố</AppText>
@@ -447,9 +550,7 @@ export default function AccountScreen({
             {/* Row 3: Giao diện sáng / tối */}
             <View style={styles.bentoListRow}>
               <View style={styles.rowLeft}>
-                <View style={[styles.rowIconCircle, { backgroundColor: "rgba(245, 158, 11, 0.15)" }]}>
-                  <Ionicons name={isDark ? "moon-outline" : "sunny-outline"} size={18} color="#F59E0B" />
-                </View>
+                <FeatureIconBox token={SYSTEM_ICONS.preferences} size={18} accessibilityLabel={t("account.themeMode")} />
                 <View>
                   <AppText style={[styles.rowLabel, { color: theme.text }]}>{t("account.themeMode")}</AppText>
                   <AppText style={[styles.rowSubLabel, { color: theme.muted }]}>{isDark ? "Chế độ Tối (Dark)" : "Chế độ Sáng (Light)"}</AppText>
@@ -480,9 +581,7 @@ export default function AccountScreen({
           <View style={[styles.bentoListCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
             <View style={styles.bentoListRow}>
               <View style={styles.rowLeft}>
-                <View style={[styles.rowIconCircle, { backgroundColor: "rgba(107, 114, 128, 0.15)" }]}>
-                  <Ionicons name="shield-outline" size={18} color="#6B7280" />
-                </View>
+                <FeatureIconBox token={SYSTEM_ICONS.security} size={18} accessibilityLabel={t("account.terms")} />
                 <AppText style={[styles.rowLabel, { color: theme.text }]}>{t("account.terms")}</AppText>
               </View>
               <Ionicons name="chevron-forward" size={18} color={theme.muted} />
@@ -492,9 +591,7 @@ export default function AccountScreen({
 
             <View style={styles.bentoListRow}>
               <View style={styles.rowLeft}>
-                <View style={[styles.rowIconCircle, { backgroundColor: "rgba(107, 114, 128, 0.15)" }]}>
-                  <Ionicons name="cube-outline" size={18} color="#6B7280" />
-                </View>
+                <FeatureIconBox token={SYSTEM_ICONS.information} size={18} accessibilityLabel={t("account.appVersion")} />
                 <AppText style={[styles.rowLabel, { color: theme.text }]}>{t("account.appVersion")}</AppText>
               </View>
               <AppText style={[styles.versionPill, { color: theme.primary, backgroundColor: theme.primarySoft }]}>
@@ -524,6 +621,87 @@ export default function AccountScreen({
           </Pressable>
         </AnimatedEntry>
       </ScrollView>
+
+      {/* Signature Pad Modal cho Chủ trọ */}
+      <SignaturePadModal
+        visible={signaturePadVisible}
+        onClose={() => setSignaturePadVisible(false)}
+        onSave={handleSaveSignature}
+      />
+
+      {/* Modal xem trước & quản lý Chữ ký mẫu */}
+      <Modal
+        visible={signatureDetailVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSignatureDetailVisible(false)}
+      >
+        <View style={styles.modalCenterOverlay}>
+          <View style={[styles.signatureDetailCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+            <View style={styles.modalHeader}>
+              <View style={{ flex: 1 }}>
+                <AppText style={[styles.modalTitle, { color: theme.text }]}>Chữ ký mẫu Chủ trọ</AppText>
+                <AppText style={{ color: theme.muted, fontSize: 12, marginTop: 2 }}>Tự động đóng dấu chữ ký Bên A vào hợp đồng</AppText>
+              </View>
+              <Pressable onPress={() => setSignatureDetailVisible(false)} hitSlop={10}>
+                <Ionicons name="close" size={24} color={theme.text} />
+              </Pressable>
+            </View>
+
+            <View style={styles.signaturePreviewSurface}>
+              {profile.landlordSignature ? (
+                <Image
+                  source={{
+                    uri: profile.landlordSignature.startsWith("data:")
+                      ? profile.landlordSignature
+                      : `data:image/png;base64,${profile.landlordSignature}`,
+                  }}
+                  style={styles.signatureImg}
+                  resizeMode="contain"
+                />
+              ) : null}
+            </View>
+
+            <View style={styles.signatureModalActions}>
+              <Pressable
+                style={[styles.sigActionBtn, { backgroundColor: theme.primary }]}
+                onPress={() => {
+                  setSignatureDetailVisible(false);
+                  setSignaturePadVisible(true);
+                }}
+              >
+                <Ionicons name="brush-outline" size={16} color="#FFFFFF" />
+                <AppText style={styles.sigActionText}>Ký lại / Đổi chữ ký</AppText>
+              </Pressable>
+
+              <Pressable
+                style={[styles.sigActionBtn, { backgroundColor: "#EF4444" }]}
+                onPress={() => {
+                  Alert.alert(
+                    "Xóa chữ ký mẫu",
+                    "Bạn có chắc muốn xóa chữ ký mẫu của Chủ trọ?",
+                    [
+                      { text: "Hủy", style: "cancel" },
+                      { text: "Xóa chữ ký", style: "destructive", onPress: () => void handleDeleteSignature() },
+                    ]
+                  );
+                }}
+              >
+                <Ionicons name="trash-outline" size={16} color="#FFFFFF" />
+                <AppText style={styles.sigActionText}>Xóa</AppText>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal Tự động hóa hóa đơn cho Chủ trọ */}
+      <QuickAutoBillingModal
+        visible={autoBillingModalVisible}
+        policy={automationPolicy}
+        onClose={() => setAutoBillingModalVisible(false)}
+        onSaved={(newPolicy) => setAutomationPolicy(newPolicy)}
+      />
 
       {/* ========================================================= */}
       {/* 5. MODAL CHỈNH SỬA HỒ SƠ                                  */}
@@ -729,14 +907,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  tileIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 4,
-  },
   tileTitle: { fontSize: 13, fontWeight: "800" },
   tileSubtitle: { fontSize: 11, fontWeight: "600" },
   bentoListCard: {
@@ -757,7 +927,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   rowLeft: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
-  rowIconCircle: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" },
   rowLabel: { fontSize: 14, fontWeight: "800" },
   rowSubLabel: { fontSize: 11, fontWeight: "600", marginTop: 2 },
   rowDivider: { height: 1, opacity: 0.6 },
@@ -813,4 +982,41 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   saveModalBtnText: { fontSize: 15, fontWeight: "900" },
+  modalCenterOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  signatureDetailCard: {
+    borderRadius: 22,
+    borderWidth: 1,
+    padding: 20,
+    width: "100%",
+    maxWidth: 380,
+  },
+  signaturePreviewSurface: {
+    height: 130,
+    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    padding: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    marginVertical: 14,
+  },
+  signatureImg: { width: "100%", height: "100%" },
+  signatureModalActions: { flexDirection: "row", gap: 10 },
+  sigActionBtn: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  sigActionText: { color: "#FFFFFF", fontWeight: "800", fontSize: 13 },
 });

@@ -2,8 +2,10 @@
 
 import React from "react";
 import { formatCurrency } from "@/lib/formatters";
-import { ArrowUpRight, Camera, FileSignature, ReceiptText, TrendingUp, WalletCards, Wrench } from "lucide-react";
+import { ArrowUpRight, TrendingUp } from "lucide-react";
 import Link from "next/link";
+import { FEATURE_ICONS } from "@/constants/feature-icons";
+import { FeatureIconBox } from "@/components/ui/feature-icon-box";
 
 type Props = {
   stats: any;
@@ -101,30 +103,24 @@ export function BentoGridDashboard({ stats }: Props) {
       <div className="calm-surface rounded-[28px] border border-border/50 bg-card p-6 shadow-sm">
         <span className="text-xs font-black uppercase tracking-wider text-muted-foreground">THAO TÁC NHANH THÔNG MINH (AI QUICK ACTIONS)</span>
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          <Link href="/dashboard/invoices" className="flex items-center gap-3 rounded-2xl bg-gradient-to-r from-emerald-500/10 to-emerald-500/5 p-4 transition-all hover:scale-[1.02] border border-emerald-500/20">
-            <span className="grid size-10 place-items-center rounded-xl bg-emerald-500 text-white shadow-sm">
-              <Camera className="size-5" />
-            </span>
+          <Link href="/dashboard/invoices" className="group flex items-center gap-3.5 rounded-2xl bg-gradient-to-r from-pink-500/10 to-pink-500/5 p-4 transition-all hover:scale-[1.02] border border-pink-500/20">
+            <FeatureIconBox token={FEATURE_ICONS.scanMeter} size="md" />
             <div>
               <p className="font-black text-foreground">Quét điện nước AI 📸</p>
               <p className="text-xs text-muted-foreground">Chụp camera tự chốt số</p>
             </div>
           </Link>
 
-          <Link href="/dashboard/invoices" className="flex items-center gap-3 rounded-2xl bg-gradient-to-r from-blue-500/10 to-blue-500/5 p-4 transition-all hover:scale-[1.02] border border-blue-500/20">
-            <span className="grid size-10 place-items-center rounded-xl bg-blue-500 text-white shadow-sm">
-              <ReceiptText className="size-5" />
-            </span>
+          <Link href="/dashboard/invoices" className="group flex items-center gap-3.5 rounded-2xl bg-gradient-to-r from-indigo-500/10 to-indigo-500/5 p-4 transition-all hover:scale-[1.02] border border-indigo-500/20">
+            <FeatureIconBox token={FEATURE_ICONS.invoiceBulk} size="md" />
             <div>
               <p className="font-black text-foreground">Tạo Hóa Đơn Hàng Loạt</p>
               <p className="text-xs text-muted-foreground">Phát hành tự động 1s</p>
             </div>
           </Link>
 
-          <Link href="/dashboard/contracts/new" className="flex items-center gap-3 rounded-2xl bg-gradient-to-r from-amber-500/10 to-amber-500/5 p-4 transition-all hover:scale-[1.02] border border-amber-500/20">
-            <span className="grid size-10 place-items-center rounded-xl bg-amber-500 text-white shadow-sm">
-              <FileSignature className="size-5" />
-            </span>
+          <Link href="/dashboard/contracts/new" className="group flex items-center gap-3.5 rounded-2xl bg-gradient-to-r from-emerald-500/10 to-emerald-500/5 p-4 transition-all hover:scale-[1.02] border border-emerald-500/20">
+            <FeatureIconBox token={FEATURE_ICONS.contractCreate} size="md" />
             <div>
               <p className="font-black text-foreground">Tạo Hợp Đồng Mới</p>
               <p className="text-xs text-muted-foreground">Dự thảo & Ký điện tử</p>
@@ -135,11 +131,9 @@ export function BentoGridDashboard({ stats }: Props) {
 
       {/* Bottom Row: 2 Square Bento Cards */}
       <div className="grid gap-6 sm:grid-cols-2">
-        <Link href="/dashboard/payments" className="calm-surface group flex flex-col justify-between rounded-[28px] border border-border/50 bg-card p-6 transition-all hover:border-rose-500/30">
+        <Link href="/dashboard/debts" className="calm-surface group flex flex-col justify-between rounded-[28px] border border-border/50 bg-card p-6 transition-all hover:border-rose-500/30">
           <div className="flex items-center justify-between">
-            <span className="grid size-10 place-items-center rounded-xl bg-rose-500/10 text-rose-500">
-              <WalletCards className="size-5" />
-            </span>
+            <FeatureIconBox token={FEATURE_ICONS.debts} size="md" />
             {outstandingDebt > 0 && <span className="size-2.5 rounded-full bg-rose-500 animate-pulse" />}
           </div>
 
@@ -153,11 +147,9 @@ export function BentoGridDashboard({ stats }: Props) {
           </p>
         </Link>
 
-        <Link href="/dashboard/repairs" className="calm-surface group flex flex-col justify-between rounded-[28px] border border-border/50 bg-card p-6 transition-all hover:border-amber-500/30">
+        <Link href="/dashboard/repairs" className="calm-surface group flex flex-col justify-between rounded-[28px] border border-border/50 bg-card p-6 transition-all hover:border-orange-500/30">
           <div className="flex items-center justify-between">
-            <span className="grid size-10 place-items-center rounded-xl bg-amber-500/10 text-amber-500">
-              <Wrench className="size-5" />
-            </span>
+            <FeatureIconBox token={FEATURE_ICONS.repairs} size="md" />
             {pendingRepairs > 0 && <span className="size-2.5 rounded-full bg-amber-500 animate-pulse" />}
           </div>
 

@@ -78,6 +78,7 @@ import {
 import {
   useLanguage,
 } from "@/components/language-provider";
+import { FEATURE_ICONS } from "@/constants/feature-icons";
 
 type Repair = {
   _id: string;
@@ -964,17 +965,11 @@ export default function RepairsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow={t(
-          "nav.overview",
-        )}
-        title={t(
-          "repairs.title",
-        )}
-        description={t(
-          "repairs.subtitle",
-        )}
+        eyebrow={t("nav.overview")}
+        title={t("repairs.title")}
+        description={t("repairs.subtitle")}
+        iconToken={FEATURE_ICONS.repairs}
       />
-
       <section className="calm-surface overflow-hidden">
         {/* SEARCH */}
 

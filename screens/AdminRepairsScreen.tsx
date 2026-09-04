@@ -11,6 +11,8 @@ import AnimatedEntry from "../components/ui/AnimatedEntry";
 import AppButton from "../components/ui/AppButton";
 import { adminService, AdminRepair, AdminRoom, AdminContract } from "../services/adminService";
 import { useTranslation } from "../contexts/LanguageContext";
+import FeatureIconBox from "../components/ui/FeatureIconBox";
+import { FEATURE_ICONS } from "../constants/featureIcons";
 
 type Props = { params?: { repairId?: string } };
 
@@ -186,7 +188,7 @@ export default function AdminRepairsScreen({ params }: Props) {
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <>
-            <GradientHero icon="construct-outline" label={t("mobile.repairs.heroLabel")} value={t("mobile.repairs.heroValue", { count: repairs.filter((repair) => repair.status === 0 || repair.status === 1).length })} detail={t("mobile.repairs.heroDetail", { count: repairs.length })} />
+            <GradientHero icon="construct-outline" iconToken={FEATURE_ICONS.repairs} label={t("mobile.repairs.heroLabel")} value={t("mobile.repairs.heroValue", { count: repairs.filter((repair) => repair.status === 0 || repair.status === 1).length })} detail={t("mobile.repairs.heroDetail", { count: repairs.length })} />
             <View style={styles.sectionHeader}>
               <View style={styles.sectionHeaderCopy}>
                 <AppText style={styles.sectionTitle}>{t("mobile.repairs.sectionTitle")}</AppText>
@@ -224,6 +226,7 @@ export default function AdminRepairsScreen({ params }: Props) {
                     color={selectedIds.includes(item._id) ? theme.primary : theme.muted}
                   />
                 </Pressable>
+                <FeatureIconBox token={FEATURE_ICONS.repairs} size={20} accessibilityLabel={item.title} />
                 <AppText style={styles.roomCode}>{t("mobile.repairs.room", { roomCode: item.contractId?.roomId?.roomCode || "N/A" })}</AppText>
               </View>
               <View style={styles.badges}>

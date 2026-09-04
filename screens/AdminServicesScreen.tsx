@@ -25,6 +25,8 @@ import {
   AdminServicePriceImpact,
 } from "../services/adminService";
 import { formatCurrency, formatNumberInput, unformatNumber } from "../utils/formatters";
+import FeatureIconBox from "../components/ui/FeatureIconBox";
+import { FEATURE_ICONS } from "../constants/featureIcons";
 
 type Props = { onBack?: () => void };
 type Filter = "all" | "active" | "inactive";
@@ -48,16 +50,6 @@ const EMPTY_FORM: FormState = {
   defaultQuantity: "1",
   isActive: true,
 };
-
-function serviceIcon(service: Pick<AdminServiceItem, "name" | "code">): React.ComponentProps<typeof Ionicons>["name"] {
-  const value = `${service.name} ${service.code}`.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[đĐ]/g, "d").toLowerCase();
-  if (value.includes("dien") || value.includes("electric")) return "flash-outline";
-  if (value.includes("nuoc") || value.includes("water")) return "water-outline";
-  if (value.includes("internet") || value.includes("wifi")) return "wifi-outline";
-  if (value.includes("xe") || value.includes("parking")) return "bicycle-outline";
-  if (value.includes("rac") || value.includes("ve sinh")) return "leaf-outline";
-  return "construct-outline";
-}
 
 export default function AdminServicesScreen({ onBack }: Props) {
   const { theme } = useAppTheme();
@@ -276,7 +268,7 @@ export default function AdminServicesScreen({ onBack }: Props) {
         renderItem={({ item }) => (
           <View style={styles.serviceCard}>
             <View style={styles.serviceLead}>
-              <View style={styles.serviceIcon}><Ionicons name={serviceIcon(item)} size={22} color={theme.primary} /></View>
+              <FeatureIconBox token={FEATURE_ICONS.services} accessibilityLabel={item.name} />
               <View style={styles.serviceCopy}>
                 <View style={styles.nameRow}>
                   <AppText style={styles.serviceName}>{item.name}</AppText>
@@ -409,7 +401,6 @@ function createStyles(theme: ReturnType<typeof useAppTheme>["theme"]) {
     countText: { color: theme.muted, fontSize: 12, fontWeight: "700", marginBottom: 2 },
     serviceCard: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: theme.surfaceElevated, borderRadius: 16, padding: 14, marginBottom: 10 },
     serviceLead: { flex: 1, flexDirection: "row", alignItems: "center", gap: 12 },
-    serviceIcon: { width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: theme.primarySoft },
     serviceCopy: { flex: 1 },
     nameRow: { flexDirection: "row", alignItems: "center", gap: 8 },
     serviceName: { flex: 1, color: theme.text, fontSize: 15, fontWeight: "900" },

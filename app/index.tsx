@@ -249,7 +249,7 @@ export default function App() {
                 />
               )}
 
-              {activeTab === "rooms" && <AdminRoomsScreen params={actionParams} />}
+              {activeTab === "rooms" && <AdminRoomsScreen params={actionParams} onNavigate={handleChangeTab} />}
 
               {activeTab === "contract" && <AdminContractsScreen params={actionParams} />}
 

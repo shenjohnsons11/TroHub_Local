@@ -142,7 +142,7 @@ export default function FeatureSearchModal({
             <View style={styles.emptyState}>
               <Ionicons name="search-outline" size={40} color={theme.muted} />
               <AppText style={[styles.emptyText, { color: theme.muted }]}>
-                Không tìm thấy chức năng phù hợp với "{keyword}"
+                Không tìm thấy chức năng phù hợp với &quot;{keyword}&quot;
               </AppText>
             </View>
           }

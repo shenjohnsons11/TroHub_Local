@@ -29,6 +29,20 @@ import AIChatWidget from "@/components/AIChatWidget";
 import { useLanguage } from "@/components/language-provider";
 import { safeJsonParse, safeStorageString, type WebAdminUser } from "@/lib/client-storage";
 import { useNotification } from "@/hooks/use-notification";
+import { FEATURE_ICONS, type FeatureIconToken } from "@/constants/feature-icons";
+import { FeatureIconBox } from "@/components/ui/feature-icon-box";
+
+type NavItem = {
+  key: string;
+  fallback: string;
+  href: string;
+  token: FeatureIconToken;
+};
+
+type NavGroup = {
+  label: string;
+  items: NavItem[];
+};
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -93,23 +107,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     router.replace("/");
   };
 
-  const navGroups = [
+  const navGroups: NavGroup[] = [
     { label: t("common.status") === "Trạng thái" ? "Vận hành" : "Operations", items: [
-      { key: "nav.overview", fallback: "Tổng quan", href: "/dashboard", icon: LayoutDashboard },
-      { key: "nav.rooms", fallback: "Quản lý Phòng", href: "/dashboard/rooms", icon: Home },
-      { key: "nav.tenants", fallback: "Người thuê", href: "/dashboard/tenants", icon: Users },
-      { key: "nav.contracts", fallback: "Hợp đồng", href: "/dashboard/contracts", icon: FileText },
-      { key: "nav.utilities", fallback: "Điện nước", href: "/dashboard/utilities", icon: Droplet },
+      { key: "nav.overview", fallback: "Tổng quan", href: "/dashboard", token: FEATURE_ICONS.overview },
+      { key: "nav.rooms", fallback: "Quản lý Phòng", href: "/dashboard/rooms", token: FEATURE_ICONS.rooms },
+      { key: "nav.tenants", fallback: "Người thuê", href: "/dashboard/tenants", token: FEATURE_ICONS.tenants },
+      { key: "nav.contracts", fallback: "Hợp đồng", href: "/dashboard/contracts", token: FEATURE_ICONS.contracts },
+      { key: "nav.utilities", fallback: "Điện nước", href: "/dashboard/utilities", token: FEATURE_ICONS.utilities },
     ] },
     { label: t("common.status") === "Trạng thái" ? "Tài chính" : "Finance", items: [
-      { key: "nav.invoices", fallback: "Hóa đơn", href: "/dashboard/invoices", icon: Receipt },
-      { key: "nav.debts", fallback: "Công nợ", href: "/dashboard/debts", icon: Wallet },
-      { key: "nav.payments", fallback: "Thanh toán", href: "/dashboard/payments", icon: CreditCard },
-      { key: "nav.services", fallback: "Quản lý dịch vụ", href: "/dashboard/services", icon: Settings2 },
+      { key: "nav.invoices", fallback: "Hóa đơn", href: "/dashboard/invoices", token: FEATURE_ICONS.invoices },
+      { key: "nav.debts", fallback: "Công nợ", href: "/dashboard/debts", token: FEATURE_ICONS.debts },
+      { key: "nav.payments", fallback: "Thanh toán", href: "/dashboard/payments", token: FEATURE_ICONS.payments },
+      { key: "nav.services", fallback: "Quản lý dịch vụ", href: "/dashboard/services", token: FEATURE_ICONS.services },
     ] },
     { label: t("common.status") === "Trạng thái" ? "Hỗ trợ" : "Support", items: [
-      { key: "nav.repairs", fallback: "Sửa chữa", href: "/dashboard/repairs", icon: Wrench },
-      { key: "nav.settings", fallback: "Cài đặt", href: "/dashboard/settings", icon: SlidersHorizontal },
+      { key: "nav.repairs", fallback: "Sửa chữa", href: "/dashboard/repairs", token: FEATURE_ICONS.repairs },
+      { key: "nav.settings", fallback: "Cài đặt", href: "/dashboard/settings", token: FEATURE_ICONS.settings },
     ] },
   ];
   const navItems = navGroups.flatMap((group) => group.items);
@@ -132,23 +146,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <div className="space-y-1">
                 {group.items.map((item) => {
                   const isActive = pathname === item.href || (pathname.startsWith(item.href) && item.href !== "/dashboard");
-                  const Icon = item.icon;
                   const title = t(item.key) || item.fallback;
                   return (
                     <Link
                       key={item.key}
                       href={item.href}
                       aria-current={isActive ? "page" : undefined}
-                      className={`group flex min-h-11 items-center gap-3 rounded-[16px] px-3 py-2.5 text-sm font-bold transition-[background-color,color,transform] duration-200 active:scale-[.98] ${
+                      className={`group flex min-h-11 items-center gap-3 rounded-[16px] px-3 py-2 text-sm font-bold transition-[background-color,color,transform] duration-200 active:scale-[.98] ${
                         isActive
                           ? "bg-primary text-primary-foreground shadow-[0_2px_8px_color-mix(in_srgb,var(--primary)_24%,transparent)]"
                           : "text-muted-foreground hover:bg-accent hover:text-foreground"
                       }`}
                     >
-                      <span className={`grid size-8 place-items-center rounded-xl ${isActive ? "bg-white/14" : "bg-accent group-hover:bg-card"}`}>
-                        <Icon className="size-[18px]" aria-hidden="true" />
-                      </span>
-                      {title}
+                      <FeatureIconBox token={item.token} size="sm" isActive={isActive} />
+                      <span className="truncate">{title}</span>
                     </Link>
                   );
                 })}
@@ -217,7 +228,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <nav className="flex gap-1 overflow-x-auto px-3 pb-3 md:hidden" aria-label="Điều hướng chính">
             {navItems.map((item) => {
               const active = pathname === item.href || (pathname.startsWith(item.href) && item.href !== "/dashboard");
-              const Icon = item.icon;
               return (
                 <Link
                   key={item.href}
@@ -227,8 +237,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     active ? "bg-primary text-primary-foreground" : "bg-card/75 text-muted-foreground"
                   }`}
                 >
-                  <Icon className="size-4" aria-hidden="true" />
-                  {t(item.key)}
+                  <FeatureIconBox token={item.token} size="sm" isActive={active} />
+                  <span>{t(item.key)}</span>
                 </Link>
               );
             })}

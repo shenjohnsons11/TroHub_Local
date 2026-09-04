@@ -17,6 +17,7 @@ import { formatCCCD, formatPhone, unformatDigits } from "@/lib/formatters";
 import { issueTemporaryPassword } from "@/lib/password-reset";
 import { TemporaryPasswordDialog } from "@/components/temporary-password-dialog";
 import { useLanguage } from "@/components/language-provider";
+import { FEATURE_ICONS } from "@/constants/feature-icons";
 
 export default function TenantsPage() {
   const notification = useNotification();
@@ -175,7 +176,12 @@ export default function TenantsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow={t("nav.overview")} title={t("tenants.title")} description={t("tenants.subtitle")} />
+      <PageHeader
+        eyebrow={t("nav.overview")}
+        title={t("tenants.title")}
+        description={t("tenants.subtitle")}
+        iconToken={FEATURE_ICONS.tenants}
+      />
       <section className="calm-surface flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />

@@ -30,6 +30,8 @@ import {
 } from "../utils/formatters";
 import ContractViewerModal from "../components/ContractViewerModal";
 import TenantRoomSwitcher from "../components/TenantRoomSwitcher";
+import FeatureIconBox from "../components/ui/FeatureIconBox";
+import { FEATURE_ICONS } from "../constants/featureIcons";
 
 const getStatusLabel = (
   status: ContractStatus,
@@ -501,6 +503,7 @@ export default function ContractScreen({
                   } — ${contract.endDate
                   }`}
                 icon="document-text-outline"
+                iconToken={FEATURE_ICONS.contracts}
                 label={t(
                   "tenantContract.hero",
                   {
@@ -1428,13 +1431,7 @@ export default function ContractScreen({
                       )
                     }
                   >
-                    <Ionicons
-                      name="document-text"
-                      size={17}
-                      color={
-                        theme.primary
-                      }
-                    />
+                    <FeatureIconBox token={FEATURE_ICONS.contracts} size={17} />
 
                     <AppText
                       style={[

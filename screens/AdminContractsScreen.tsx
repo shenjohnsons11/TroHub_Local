@@ -37,6 +37,8 @@ import {
   unformatNumber,
 } from "../utils/formatters";
 import { useTranslation } from "../contexts/LanguageContext";
+import FeatureIconBox from "../components/ui/FeatureIconBox";
+import { FEATURE_ICONS } from "../constants/featureIcons";
 
 type Props = { params?: any };
 type IconName = React.ComponentProps<typeof Ionicons>["name"];
@@ -444,6 +446,7 @@ export default function AdminContractsScreen({ params }: Props) {
             <AnimatedEntry>
               <GradientHero
                 icon="documents-outline"
+                iconToken={FEATURE_ICONS.contracts}
                 label={t("contractsMobile.heroLabel")}
                 value={t("contractsMobile.heroValue", { count: contracts.length })}
                 detail={t("contractsMobile.heroDetail", { count: contracts.filter((item) => item.status === 1).length })}
@@ -503,9 +506,7 @@ export default function AdminContractsScreen({ params }: Props) {
                 <View style={styles.contractCard}>
                   <View style={styles.cardTop}>
                     <View style={styles.roomIdentity}>
-                      <View style={styles.iconTile}>
-                        <Ionicons name="document-text-outline" size={20} color={theme.primary} />
-                      </View>
+                      <FeatureIconBox token={FEATURE_ICONS.contractCreate} accessibilityLabel={t("contractsMobile.draftLabel", { id: draft.id })} />
                       <View>
                         <AppText style={styles.roomCode}>{t("contractsMobile.draftLabel", { id: draft.id })}</AppText>
                         <AppText style={styles.tenantName}>{t("contractsMobile.draftStep", { step: draft.step })}</AppText>
@@ -556,9 +557,7 @@ export default function AdminContractsScreen({ params }: Props) {
               <View style={styles.contractCard}>
                 <View style={styles.cardTop}>
                   <View style={styles.roomIdentity}>
-                    <View style={styles.iconTile}>
-                      <Ionicons name="home-outline" size={20} color={theme.primary} />
-                    </View>
+                    <FeatureIconBox token={FEATURE_ICONS.contracts} accessibilityLabel={t("contractsMobile.room", { roomCode })} />
                     <View>
                       <AppText style={styles.roomCode}>{t("contractsMobile.room", { roomCode })}</AppText>
                       <AppText style={styles.tenantName}>{tenantName} · {formattedPhone}</AppText>
@@ -1082,9 +1081,7 @@ export default function AdminContractsScreen({ params }: Props) {
 function SectionTitle({ icon, title, subtitle, theme }: { icon: IconName; title: string; subtitle?: string; theme: any }) {
   return (
     <View style={base.sectionTitleRow}>
-      <View style={[base.sectionIcon, { backgroundColor: theme.primarySoft }]}>
-        <Ionicons name={icon} size={20} color={theme.primary} />
-      </View>
+      <FeatureIconBox token={icon === "create-outline" ? FEATURE_ICONS.contractCreate : FEATURE_ICONS.contracts} size={20} />
       <View style={base.sectionCopy}>
         <AppText style={[base.sectionTitle, { color: theme.text }]}>{title}</AppText>
         {subtitle ? <AppText style={[base.sectionSubtitle, { color: theme.muted }]}>{subtitle}</AppText> : null}
@@ -1113,7 +1110,6 @@ function PreviewRow({ label, value, styles }: { label: string; value: string; st
 
 const base = StyleSheet.create({
   sectionTitleRow: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 18 },
-  sectionIcon: { width: 42, height: 42, borderRadius: 14, alignItems: "center", justifyContent: "center" },
   sectionCopy: { flex: 1 },
   sectionTitle: { fontSize: 17, fontWeight: "900" },
   sectionSubtitle: { fontSize: 12, lineHeight: 17, marginTop: 2 },
@@ -1148,7 +1144,6 @@ function createStyles(theme: any) {
     },
     cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 10 },
     roomIdentity: { flex: 1, flexDirection: "row", alignItems: "center", gap: 10 },
-    iconTile: { width: 42, height: 42, borderRadius: 14, backgroundColor: theme.primarySoft, alignItems: "center", justifyContent: "center" },
     roomCode: { color: theme.text, fontSize: 16, fontWeight: "900" },
     tenantName: { color: theme.muted, fontSize: 12, marginTop: 3 },
     statusBadge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },

@@ -15,6 +15,7 @@ import { PageHeader } from "@/components/calm-ops/page-header";
 import { formatCurrency, formatMeterReading, parseMeterReading } from "@/lib/formatters";
 import { consumePendingAIAction } from "@/lib/ai-actions";
 import { useLanguage } from "@/components/language-provider";
+import { FEATURE_ICONS } from "@/constants/feature-icons";
 
 type MeterField = "electricity" | "water";
 
@@ -177,6 +178,7 @@ export default function UtilitiesPage() {
         eyebrow={t("nav.overview")}
         title={t("utilities.title")}
         description={t("utilities.subtitle")}
+        iconToken={FEATURE_ICONS.utilities}
         action={
           <Button onClick={handleSaveBulk} disabled={loading}>
             <Save aria-hidden="true" /> {loading ? t("common.loading") : t("utilities.recordAll")}

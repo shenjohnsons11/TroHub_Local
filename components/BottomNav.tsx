@@ -5,6 +5,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { useAppTheme } from "../contexts/ThemeContext";
 import { useLanguage } from "../contexts/LanguageContext";
+import FeatureIconBox from "./ui/FeatureIconBox";
+import { FEATURE_ICONS, SYSTEM_ICONS, type FeatureIconToken } from "../constants/featureIcons";
 
 type Tab =
   | "home"
@@ -40,6 +42,7 @@ const tenantTabs: {
   label: string;
   icon: IconName;
   activeIcon: IconName;
+  token?: FeatureIconToken;
 }[] = [
   {
     key: "home",
@@ -52,18 +55,21 @@ const tenantTabs: {
     label: "nav.invoices",
     icon: "receipt-outline",
     activeIcon: "receipt",
+    token: FEATURE_ICONS.invoiceCreate,
   },
   {
     key: "repair",
     label: "nav.repairs",
     icon: "construct-outline",
     activeIcon: "construct",
+    token: FEATURE_ICONS.repairs,
   },
   {
     key: "contract",
     label: "nav.contracts",
     icon: "document-text-outline",
     activeIcon: "document-text",
+    token: FEATURE_ICONS.contracts,
   },
   {
     key: "account",
@@ -78,36 +84,42 @@ const landlordTabs: {
   label: string;
   icon: IconName;
   activeIcon: IconName;
+  token?: FeatureIconToken;
 }[] = [
   {
     key: "home",
     label: "nav.overview",
     icon: "grid-outline",
     activeIcon: "grid",
+    token: SYSTEM_ICONS.overview,
   },
   {
     key: "rooms",
     label: "nav.rooms",
     icon: "home-outline",
     activeIcon: "home",
+    token: FEATURE_ICONS.rooms,
   },
   {
     key: "contract",
     label: "nav.contracts",
     icon: "document-text-outline",
     activeIcon: "document-text",
+    token: FEATURE_ICONS.contracts,
   },
   {
     key: "invoice",
     label: "nav.invoices",
     icon: "receipt-outline",
     activeIcon: "receipt",
+    token: FEATURE_ICONS.invoiceCreate,
   },
   {
     key: "repair",
     label: "nav.incident",
     icon: "construct-outline",
     activeIcon: "construct",
+    token: FEATURE_ICONS.repairs,
   },
 ];
 
@@ -139,19 +151,13 @@ export default function BottomNav({ activeTab, onChangeTab, role }: Props) {
                 accessibilityRole="tab"
                 accessibilityState={{ selected: active }}
               >
-                <View
-                  style={[
-                    styles.iconBox,
-                    active && styles.iconBoxActive,
-                    active && { backgroundColor: theme.primarySoft, shadowColor: theme.primary },
-                  ]}
-                >
-                  <Ionicons
-                    name={active ? tab.activeIcon : tab.icon}
-                    size={21}
-                    color={active ? theme.primary : theme.muted}
-                  />
-                </View>
+                {tab.token ? (
+                  <FeatureIconBox token={tab.token} size={21} style={[styles.iconBox, active && styles.iconBoxActive]} accessibilityLabel={t(tab.label)} />
+                ) : (
+                  <View style={[styles.iconBox, active && styles.iconBoxActive, active && { backgroundColor: theme.primarySoft, shadowColor: theme.primary }]}>
+                    <Ionicons name={active ? tab.activeIcon : tab.icon} size={21} color={active ? theme.primary : theme.muted} />
+                  </View>
+                )}
 
                 <AppText style={[styles.label, { color: theme.muted }, active && styles.activeLabel, active && { color: theme.primary }]}>
                   {t(tab.label)}
@@ -195,9 +201,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   iconBox: {
-    width: 38,
-    height: 30,
-    borderRadius: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 3,
